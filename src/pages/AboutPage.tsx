@@ -1,0 +1,72 @@
+import { useLoaderData, useNavigate } from 'react-router';
+import { Box, Card, CardActionArea, CardContent, Grid, Stack, Typography } from '@mui/material';
+import type { AboutPageData } from '@/types';
+
+export default function AboutPage() {
+  const data = useLoaderData() as AboutPageData;
+  const navigate = useNavigate();
+
+  const items = [
+    { icon: '👥', title: '成员', desc: `${data.memberCount} 位成员 · ${data.hostCount} 位 Host`, action: () => navigate('/members') },
+    { icon: '📖', title: '串门原则', desc: '我们怎么定义这个社群' },
+    { icon: '🏠', title: 'Host 手册', desc: '如何在家里办一场串门' },
+    { icon: '✉', title: '串门来信', desc: '写给还没来串门的你' },
+    { icon: '💬', title: '关于我们', desc: '串门儿是怎么开始的' },
+  ];
+
+  return (
+    <Stack spacing={2}>
+      <Card>
+        <CardContent sx={{ textAlign: 'center' }}>
+          <Typography variant="h4" fontWeight={800}>串门儿</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            一群住在新泽西的中国人，试着把陌生人变成邻居，把邻居变成朋友。
+          </Typography>
+          <Grid container spacing={1.5} sx={{ mt: 1 }}>
+            {[
+              { n: data.memberCount, l: '成员' },
+              { n: data.eventCount, l: '活动' },
+              { n: data.months, l: '个月' },
+            ].map((metric) => (
+              <Grid key={metric.l} size={{ xs: 4 }}>
+                <Typography variant="h5" color="primary.main" fontWeight={800}>{metric.n}</Typography>
+                <Typography variant="caption" color="text.secondary">{metric.l}</Typography>
+              </Grid>
+            ))}
+          </Grid>
+        </CardContent>
+      </Card>
+
+      <Grid container spacing={1.5}>
+        {items.map((item) => (
+          <Grid key={item.title} size={{ xs: 12, md: 6 }}>
+            <Card>
+              <CardActionArea onClick={item.action} disabled={!item.action}>
+                <CardContent>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ fontSize: 24 }}>{item.icon}</Box>
+                    <Box>
+                      <Typography fontWeight={700}>{item.title}</Typography>
+                      <Typography variant="body2" color="text.secondary">{item.desc}</Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      <Card>
+        <CardContent>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>串门的信念</Typography>
+          <Stack spacing={0.8}>
+            {['对的人 > 更多人', '贡献的人不花钱', '客厅 > 写字楼', '真诚 > 客气'].map((value) => (
+              <Typography key={value} variant="body2">• {value}</Typography>
+            ))}
+          </Stack>
+        </CardContent>
+      </Card>
+    </Stack>
+  );
+}
