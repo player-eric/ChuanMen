@@ -4,6 +4,7 @@ import {
   AppBar,
   Avatar,
   Badge,
+  Button,
   BottomNavigation,
   BottomNavigationAction,
   Box,
@@ -28,6 +29,7 @@ import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ArrowBackIosNewRoundedIcon from '@mui/icons-material/ArrowBackIosNewRounded';
 import { useTheme } from '@mui/material/styles';
+import { useAuth } from '@/auth/AuthContext';
 
 const pages = [
   { id: '', icon: <HomeRoundedIcon />, label: '动态' },
@@ -62,6 +64,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
+  const { user, setUser } = useAuth();
   const [isEmpty, setIsEmpty] = useState(false);
 
   const title = getTitle(pathname);
@@ -142,8 +145,23 @@ export default function AppLayout() {
                 onClick={() => setIsEmpty(!isEmpty)}
               />
               <Badge color="warning" variant="dot" invisible={pathname !== '/' || isEmpty}>
-                <Avatar sx={{ width: 28, height: 28 }}>Y</Avatar>
+                <Avatar sx={{ width: 28, height: 28 }} src={user?.avatar || undefined}>
+                  {user?.name?.[0] ?? 'U'}
+                </Avatar>
               </Badge>
+              <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 140 }} noWrap>
+                {user?.name}
+              </Typography>
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => {
+                  setUser(null);
+                  navigate('/login');
+                }}
+              >
+                退出
+              </Button>
             </Stack>
           </Toolbar>
         </AppBar>

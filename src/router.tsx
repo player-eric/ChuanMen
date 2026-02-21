@@ -8,6 +8,8 @@ import ProfilePage from '@/pages/ProfilePage';
 import MembersPage from '@/pages/MembersPage';
 import MemberDetailPage from '@/pages/MemberDetailPage';
 import AboutPage from '@/pages/AboutPage';
+import RegisterPage from '@/pages/RegisterPage';
+import LoginPage from '@/pages/LoginPage';
 import {
   fetchFeedData,
   fetchEventsData,
@@ -18,11 +20,32 @@ import {
   fetchMemberDetail,
   fetchAboutData,
 } from '@/mock/api';
+import { redirect } from 'react-router';
+
+const authStorageKey = 'chuanmen.auth.user';
+
+function requireRegistration() {
+  const isRegistered = Boolean(localStorage.getItem(authStorageKey) ?? sessionStorage.getItem(authStorageKey));
+  if (!isRegistered) {
+    throw redirect('/login');
+  }
+
+  return null;
+}
 
 const router = createBrowserRouter([
   {
+    path: '/register',
+    element: <RegisterPage />,
+  },
+  {
+    path: '/login',
+    element: <LoginPage />,
+  },
+  {
     path: '/',
     element: <AppLayout />,
+    loader: requireRegistration,
     children: [
       { index: true, element: <FeedPage />, loader: fetchFeedData },
       { path: 'events', element: <EventsPage />, loader: fetchEventsData },

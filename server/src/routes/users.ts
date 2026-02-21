@@ -19,6 +19,12 @@ usersRouter.post('/', async (req, res, next) => {
   try {
     const payload = createUserSchema.parse(req.body);
 
+    const existedUser = await UserModel.findOne({ email: payload.email }).lean();
+    if (existedUser) {
+      res.status(409).json({ message: 'Email already registered' });
+      return;
+    }
+
     const user = await UserModel.create(payload);
     res.status(201).json(user);
   } catch (error) {
