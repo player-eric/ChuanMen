@@ -149,19 +149,32 @@ export default function AppLayout() {
                   {user?.name?.[0] ?? 'U'}
                 </Avatar>
               </Badge>
-              <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 140 }} noWrap>
-                {user?.name}
-              </Typography>
-              <Button
-                size="small"
-                variant="text"
-                onClick={() => {
-                  setUser(null);
-                  navigate('/login');
-                }}
-              >
-                退出
-              </Button>
+              {user ? (
+                <>
+                  <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 140 }} noWrap>
+                    {user.name}
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={() => {
+                      setUser(null);
+                      navigate('/');
+                    }}
+                  >
+                    退出
+                  </Button>
+                </>
+              ) : (
+                <Stack direction="row" spacing={0.5}>
+                  <Button size="small" variant="text" onClick={() => navigate('/login')}>
+                    登录
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => navigate('/register')}>
+                    注册
+                  </Button>
+                </Stack>
+              )}
             </Stack>
           </Toolbar>
         </AppBar>

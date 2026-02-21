@@ -20,18 +20,6 @@ import {
   fetchMemberDetail,
   fetchAboutData,
 } from '@/mock/api';
-import { redirect } from 'react-router';
-
-const authStorageKey = 'chuanmen.auth.user';
-
-function requireRegistration() {
-  const isRegistered = Boolean(localStorage.getItem(authStorageKey) ?? sessionStorage.getItem(authStorageKey));
-  if (!isRegistered) {
-    throw redirect('/login');
-  }
-
-  return null;
-}
 
 const router = createBrowserRouter([
   {
@@ -45,7 +33,6 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <AppLayout />,
-    loader: requireRegistration,
     children: [
       { index: true, element: <FeedPage />, loader: fetchFeedData },
       { path: 'events', element: <EventsPage />, loader: fetchEventsData },
