@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChuanMen System Test</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 24px; max-width: 860px; }
+      section { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+      h1 { margin-bottom: 8px; }
+      h2 { margin-top: 0; }
+      label { display: block; margin: 8px 0 4px; }
+      input, button, textarea { padding: 8px; font-size: 14px; }
+      input, textarea { width: 100%; box-sizing: border-box; }
+      button { cursor: pointer; margin-top: 8px; }
+      pre { background: #111; color: #c9f7c5; padding: 12px; border-radius: 6px; overflow: auto; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .ok { color: #156f37; }
+      .err { color: #b42318; }
+      .hint { color: #555; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <h1>ChuanMen 本地 System Test</h1>
+    <p class="hint">用于手工测试：用户注册 + 文件上传（预签名 S3/MinIO）</p>
+
+    <section>
+      <h2>1) 健康检查</h2>
+      <button id="btnHealth">检查 /api/health</button>
+      <p id="healthText"></p>
+      <pre id="healthRaw"></pre>
+    </section>
+
+    <section>
+      <h2>2) 用户注册</h2>
+      <label>姓名</label>
+      <input id="name" value="System Test User" />
+      <label>Email</label>
+      <input id="email" value="system.test@example.com" />
+      <label>头像 URL（可选）</label>
+      <input id="avatar" value="" />
+      <label>Bio（可选）</label>
+      <textarea id="bio" rows="2">Hello from system test</textarea>
+      <button id="btnRegister">创建用户</button>
+      <p id="registerText"></p>
+      <pre id="registerRaw"></pre>
+    </section>
+
+    <section>
+      <h2>3) 内容上传（文件直传）</h2>
+      <p class="hint">本地 system test 走后端代理上传，避免本地 MinIO 跨域问题</p>
+      <div class="row">
+        <div>
+          <label>Owner User ID（可选）</label>
+          <input id="ownerId" placeholder="自动填充注册后的 userId" />
+        </div>
+        <div>
+          <label>选择文件</label>
+          <input id="fileInput" type="file" />
+        </div>
+      </div>
+      <button id="btnUpload">开始上传</button>
+      <p id="uploadText"></p>
+      <pre id="uploadRaw"></pre>
+    </section>
+
+    <script>
+      const healthText = document.getElementById('healthText');
+      const healthRaw = document.getElementById('healthRaw');
+      const registerText = document.getElementById('registerText');
+      const registerRaw = document.getElementById('registerRaw');
+      const uploadText = document.getElementById('uploadText');
+      const uploadRaw = document.getElementById('uploadRaw');
+
+      function setStatus(el, message, ok = true) {
+        el.textContent = message;
+        el.className = ok ? 'ok' : 'err';
+      }
+
+      async function requestJson(url, options = {}) {
+        const res = await fetch(url, {
+          headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+          ...options,
+        });
+        const raw = await res.text();
+        let json = null;
+        try { json = JSON.parse(raw); } catch {}
+        if (!res.ok) {
+          throw new Error(json?.message || raw || `${res.status} ${res.statusText}`);
+        }
+        return json;
+      }
+
+      document.getElementById('btnHealth').addEventListener('click', async () => {
+        try {
+          const data = await requestJson('/api/health');
+          setStatus(healthText, '健康检查通过');
+          healthRaw.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          setStatus(healthText, `健康检查失败：${error.message}`, false);
+          healthRaw.textContent = '';
+        }
+      });
+
+      document.getElementById('btnRegister').addEventListener('click', async () => {
+        try {
+          const payload = {
+            name: document.getElementById('name').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            avatar: document.getElementById('avatar').value.trim(),
+            bio: document.getElementById('bio').value.trim(),
+          };
+
+          const data = await requestJson('/api/users', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+          });
+
+          const userId = data._id || data.id || '';
+          if (userId) {
+            document.getElementById('ownerId').value = userId;
+          }
+
+          setStatus(registerText, `用户创建成功：${userId || 'OK'}`);
+          registerRaw.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          setStatus(registerText, `用户创建失败：${error.message}`, false);
+          registerRaw.textContent = '';
+        }
+      });
+
+      document.getElementById('btnUpload').addEventListener('click', async () => {
+        const file = document.getElementById('fileInput').files?.[0];
+        if (!file) {
+          setStatus(uploadText, '请先选择文件', false);
+          return;
+        }
+
+        try {
+          const ownerId = document.getElementById('ownerId').value.trim();
+          const params = new URLSearchParams({
+            fileName: file.name,
+            contentType: file.type || 'application/octet-stream',
+          });
+
+          if (ownerId) {
+            params.set('ownerId', ownerId);
+          }
+
+          const uploadRes = await fetch(`/api/media/upload-proxy?${params.toString()}`, {
+            method: 'POST',
+            headers: { 'Content-Type': file.type || 'application/octet-stream' },
+            body: file,
+          });
+
+          const raw = await uploadRes.text();
+          const data = raw ? JSON.parse(raw) : null;
+
+          if (!uploadRes.ok) {
+            throw new Error(data?.message || raw || `${uploadRes.status} ${uploadRes.statusText}`);
+          }
+
+          setStatus(uploadText, `上传完成：${data?.key || 'OK'}`);
+          uploadRaw.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          setStatus(uploadText, `上传失败：${error.message}`, false);
+          uploadRaw.textContent = '';
+        }
+      });
+    </script>
+  </body>
+</html>
