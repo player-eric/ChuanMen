@@ -10,21 +10,29 @@ import {
   Typography,
 } from '@mui/material';
 import type { ProfilePageData } from '@/types';
+import { useAuth } from '@/auth/AuthContext';
 
 export default function ProfilePage() {
   const data = useLoaderData() as ProfilePageData;
+  const { user } = useAuth();
 
   return (
     <Stack spacing={2}>
       <Card>
         <CardContent sx={{ textAlign: 'center' }}>
-          <Avatar sx={{ width: 64, height: 64, mx: 'auto', mb: 1 }}>Y</Avatar>
-          <Typography variant="h5">Yuan</Typography>
+          <Avatar sx={{ width: 64, height: 64, mx: 'auto', mb: 1 }}>{user?.name?.[0] ?? 'Y'}</Avatar>
+          <Typography variant="h5">{user?.name ?? 'Yuan'}</Typography>
+          {user?.location && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>📍 {user.location}</Typography>
+          )}
           <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 1, flexWrap: 'wrap' }}>
-            <Chip size="small" color="warning" label="🏠 Host ×3" />
+            <Chip size="small" color="warning" label={`🏠 Host ×${data.contribution?.hostCount ?? 0}`} />
             <Chip size="small" color="primary" label="🎬 选片人" />
             <Chip size="small" color="success" label="🔥 氛围担当" />
           </Stack>
+          {user?.bio && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, px: 2 }}>{user.bio}</Typography>
+          )}
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>加入串门儿 142 天</Typography>
         </CardContent>
       </Card>

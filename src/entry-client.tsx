@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { hydrateRoot } from 'react-dom/client';
+import { hydrateRoot, createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
 import AppProviders from '@/AppProviders';
 import { createAppRouter } from '@/router';
@@ -11,13 +11,23 @@ declare global {
   }
 }
 
-const router = createAppRouter(window.__staticRouterHydrationData);
+const container = document.getElementById('root')!;
+const hasSSRContent =
+  container.childNodes.length > 0 &&
+  !(container.childNodes.length === 1 && container.childNodes[0].nodeType === 8); // single comment node = no SSR
 
-hydrateRoot(
-  document.getElementById('root')!,
+const app = (
   <StrictMode>
     <AppProviders>
-      <RouterProvider router={router} />
+      <RouterProvider router={createAppRouter(hasSSRContent ? window.__staticRouterHydrationData : undefined)} />
     </AppProviders>
-  </StrictMode>,
+  </StrictMode>
 );
+
+if (hasSSRContent) {
+  // SSR mode: hydrate server-rendered HTML
+  hydrateRoot(container, app);
+} else {
+  // CSR fallback (e.g. Amplify static hosting)
+  createRoot(container).render(app);
+}

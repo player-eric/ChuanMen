@@ -4,6 +4,28 @@ import type { AuthUser } from '@/types/auth';
 
 const storageKey = 'chuanmen.auth.user';
 
+/**
+ * Hard-coded walkthrough account for UI designers.
+ * Auto-logged-in when no stored user is found.
+ */
+export const WALKTHROUGH_USER: AuthUser = {
+  id: 'walkthrough-yuan-001',
+  name: 'Yuan',
+  email: 'cm@gmail.com',
+  avatar: undefined,
+  bio: '串门儿的运营之一，平时喜欢看电影、做饭、在家招呼朋友。住在 Edison 快两年了，最近迷上了安哲罗普洛斯。',
+  role: 'admin',
+  location: 'Edison, NJ',
+  selfAsFriend: '话不多，但是在的时候你会觉得很安心。带吃的是基本操作。',
+  idealFriend: '不用很外向，但要真诚。能一起安静看完一部电影的那种。',
+  participationPlan: '继续做运营和 Host，希望串门儿能慢慢长大但不变质。',
+  coverImageUrl: undefined,
+  defaultHouseRules: '请换鞋入内 · 有猫（注意过敏）· 10pm 前结束',
+  homeAddress: '789 Elm St, Edison, NJ 08820',
+  hideEmail: false,
+  googleId: 'google-yuan-mock-id',
+};
+
 interface AuthContextValue {
   user: AuthUser | null;
   isRegistered: boolean;
@@ -16,12 +38,13 @@ function readStoredUser(): AuthUser | null {
   try {
     const raw = localStorage.getItem(storageKey) ?? sessionStorage.getItem(storageKey);
     if (!raw) {
-      return null;
+      // Auto-login with walkthrough account for UI demo
+      return WALKTHROUGH_USER;
     }
 
     return JSON.parse(raw) as AuthUser;
   } catch {
-    return null;
+    return WALKTHROUGH_USER;
   }
 }
 

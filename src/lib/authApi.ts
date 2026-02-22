@@ -1,4 +1,5 @@
 import type { AuthUser, RegisterPayload } from '@/types/auth';
+import { WALKTHROUGH_USER } from '@/auth/AuthContext';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -37,6 +38,11 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthUser> 
 }
 
 export async function loginUser(email: string): Promise<AuthUser> {
+  // Hard-coded walkthrough account — no server needed
+  if (email.trim().toLowerCase() === 'cm@gmail.com') {
+    return WALKTHROUGH_USER;
+  }
+
   const response = await fetch(getApiUrl('/api/auth/login'), {
     method: 'POST',
     headers: {

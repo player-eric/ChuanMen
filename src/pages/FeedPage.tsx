@@ -13,6 +13,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import { feedAnnouncements, feedNewRecos, feedNewCards } from '@/mock/api';
 
 /* ═══ Empty Feed ═══ */
 function EmptyFeed() {
@@ -60,25 +61,22 @@ function FullFeed() {
 
   return (
     <Stack spacing={2}>
-      <Card>
-        <CardContent>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Box>
-              <Typography variant="subtitle1" fontWeight={700}>📢 你投的「花样年华」被选中了</Typography>
-              <Typography variant="body2" color="text.secondary">这周六在白开水家放映，要不要来？</Typography>
-            </Box>
-            <Button variant="contained" size="small" onClick={() => navigate('/events')}>看看</Button>
-          </Stack>
-        </CardContent>
-      </Card>
+      {/* Announcements / banners */}
+      {feedAnnouncements.map((item, idx) => (
+        <Card key={idx}>
+          <CardContent>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Box>
+                <Typography variant="subtitle1" fontWeight={700}>{item.title}</Typography>
+                <Typography variant="body2" color="text.secondary">{item.body}</Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary">{item.date}</Typography>
+            </Stack>
+          </CardContent>
+        </Card>
+      ))}
 
-      <Card>
-        <CardContent>
-          <Typography variant="subtitle1" fontWeight={700}>🎉 串门第 50 场活动！</Typography>
-          <Typography variant="body2" color="text.secondary">从去年 10 月到现在，一起看了 32 部电影，吃了 18 顿饭，走了 6 次路。</Typography>
-        </CardContent>
-      </Card>
-
+      {/* Next event + recent card */}
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 7 }}>
           <Card>
@@ -105,7 +103,11 @@ function FullFeed() {
           <Card>
             <CardContent>
               <Typography variant="subtitle1" fontWeight={700}>✉ 新感谢卡</Typography>
-              <Typography variant="body2" color="text.secondary">Yuan 给白开水：谢谢你每次都把地下室收拾得像个小影院。</Typography>
+              {feedNewCards.map((card, i) => (
+                <Typography key={i} variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {card.from}：{card.msg}
+                </Typography>
+              ))}
             </CardContent>
             <CardActions>
               <Button size="small" onClick={() => navigate('/cards')}>去感谢卡页</Button>
@@ -114,26 +116,68 @@ function FullFeed() {
         </Grid>
       </Grid>
 
+      {/* Live events indicator */}
+      <Card sx={{ border: 2, borderColor: 'success.main' }}>
+        <CardActionArea onClick={() => navigate('/events')}>
+          <CardContent>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Box>
+                <Typography variant="subtitle1" fontWeight={700}>● 正在进行：日料之夜 · 手卷寿司</Typography>
+                <Typography variant="body2" color="text.secondary">Yuan Host · 6 人参加</Typography>
+              </Box>
+              <Chip size="small" color="success" label="进行中" />
+            </Stack>
+          </CardContent>
+        </CardActionArea>
+      </Card>
+
+      {/* New recommendations */}
       <Card>
         <CardContent>
-          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>🎬 新片推荐</Typography>
+          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>📝 新推荐</Typography>
           <Stack spacing={1}>
-            {[
-              { name: '大橙子', title: '重庆森林', year: '1994', dir: '王家卫', votes: 7 },
-              { name: 'Yuan', title: '永恒和一日', year: '1998', dir: '安哲罗普洛斯', votes: 4 },
-            ].map((movie) => (
-              <Box key={movie.title} sx={{ p: 1.2, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+            {feedNewRecos.map((reco) => (
+              <Box key={reco.id} sx={{ p: 1.2, border: 1, borderColor: 'divider', borderRadius: 2 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Box>
-                    <Typography fontWeight={700}>{movie.title}</Typography>
-                    <Typography variant="caption" color="text.secondary">{movie.year} · {movie.dir} · {movie.name} 推荐</Typography>
+                    <Typography fontWeight={700}>{reco.title}</Typography>
+                    <Typography variant="caption" color="text.secondary">{reco.from} · {reco.date}</Typography>
                   </Box>
-                  <Chip label={`▲ ${movie.votes}`} size="small" />
+                  <Chip label={reco.type === 'movie' ? '🎬' : reco.type === 'restaurant' ? '🍽️' : '📍'} size="small" />
                 </Stack>
               </Box>
             ))}
           </Stack>
         </CardContent>
+        <CardActions>
+          <Button size="small" onClick={() => navigate('/discover')}>查看所有推荐</Button>
+        </CardActions>
+      </Card>
+
+      {/* Popular proposals teaser */}
+      <Card>
+        <CardContent>
+          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>💡 热门想法</Typography>
+          <Stack spacing={1}>
+            {[
+              { name: 'Derek', title: '春天 kayaking，Raritan River', votes: 9 },
+              { name: '小鱼', title: '有人想打羽毛球吗', votes: 8 },
+              { name: '奶茶', title: '奶茶 tasting 大会！带大家试喝新品', votes: 7 },
+            ].map((p, i) => (
+              <Stack key={i} direction="row" justifyContent="space-between" alignItems="center"
+                sx={{ p: 1, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+                <Box>
+                  <Typography variant="body2" fontWeight={700}>{p.title}</Typography>
+                  <Typography variant="caption" color="text.secondary">{p.name}</Typography>
+                </Box>
+                <Chip label={`🙋 ${p.votes}`} size="small" variant="outlined" />
+              </Stack>
+            ))}
+          </Stack>
+        </CardContent>
+        <CardActions>
+          <Button size="small" onClick={() => navigate('/events/proposals')}>查看全部想法</Button>
+        </CardActions>
       </Card>
     </Stack>
   );

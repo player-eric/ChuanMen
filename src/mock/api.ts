@@ -7,9 +7,12 @@ import type {
   ProfilePageData, MemberDetailData, AboutPageData, FeedPageData,
 } from '@/types';
 import {
-  membersData, upcomingEvents, liveEvents, proposals, pastEvents,
-  moviePool, movieScreened, cardPeople, quickMessages, myCards,
+  membersData, upcomingEvents, liveEvents, endedEvents, cancelledEvents,
+  proposals, pastEvents,
+  moviePool, movieScreened,
+  cardPeople, quickMessages, myCards, cardsSent,
   profileStats, recentActivity,
+  feedAnnouncements, feedNewRecos, feedNewCards,
 } from './data';
 import { photos } from '@/theme';
 
@@ -23,12 +26,17 @@ export async function fetchFeedData(): Promise<FeedPageData> {
 
 export async function fetchEventsData(): Promise<EventsPageData> {
   await delay();
-  return { upcoming: [...upcomingEvents, ...liveEvents], proposals, past: pastEvents };
+  return {
+    upcoming: [...upcomingEvents, ...liveEvents, ...endedEvents, ...cancelledEvents],
+    proposals,
+    past: pastEvents,
+  };
 }
 
 export async function fetchEventDetail(eventId: number) {
   await delay();
-  return upcomingEvents.find((event) => event.id === eventId) ?? null;
+  const all = [...upcomingEvents, ...liveEvents, ...endedEvents, ...cancelledEvents];
+  return all.find((event) => event.id === eventId) ?? null;
 }
 
 export async function fetchEventProposalsData() {
@@ -60,17 +68,14 @@ export async function fetchProfileData(): Promise<ProfilePageData> {
   await delay();
   return {
     stats: profileStats,
-    recentCards: [
-      { from: '白开水', msg: '地下室像个小影院', stamp: '🎬', date: '02.08', photo: photos.movieNight, priv: false },
-      { from: 'Tiffy', msg: '氛围超棒！', stamp: '🍳', date: '02.01', priv: true },
-    ],
+    recentCards: myCards.slice(0, 5),
     recentActivity,
     contribution: {
-      hostCount: 3,
+      hostCount: 6,
       eventCount: 18,
       movieCount: 12,
-      cardsSent: 8,
-      cardsReceived: 5,
+      cardsSent: cardsSent.length,
+      cardsReceived: myCards.length,
     },
   };
 }
@@ -90,9 +95,12 @@ export async function fetchMembersData() {
 export async function fetchAboutData(): Promise<AboutPageData> {
   await delay();
   return {
-    memberCount: 42,
+    memberCount: membersData.length,
     hostCount: membersData.filter((m) => m.host > 0).length,
-    eventCount: 50,
+    eventCount: pastEvents.length + upcomingEvents.length + liveEvents.length,
     months: 8,
   };
 }
+
+/** Feed data helpers — exported for FeedPage to use directly */
+export { feedAnnouncements, feedNewRecos, feedNewCards };
