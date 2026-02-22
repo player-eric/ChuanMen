@@ -3,6 +3,7 @@ import { hydrateRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
 import AppProviders from '@/AppProviders';
 import { createAppRouter } from '@/router';
+import './tailwind.css';
 
 declare global {
   interface Window {

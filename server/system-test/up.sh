@@ -2,7 +2,7 @@
 set -euo pipefail
 
 NETWORK_NAME="chuanmen-system-test"
-MONGO_CONTAINER="chuanmen-mongo"
+POSTGRES_CONTAINER="chuanmen-postgres"
 MINIO_CONTAINER="chuanmen-minio"
 SERVER_CONTAINER="chuanmen-server"
 SERVER_IMAGE="chuanmen-server-system-test"
@@ -11,13 +11,16 @@ MC_CONFIG_DIR="$PWD/.mc-config"
 echo "[1/8] Create network"
 docker network inspect "$NETWORK_NAME" >/dev/null 2>&1 || docker network create "$NETWORK_NAME" >/dev/null
 
-echo "[2/8] Start MongoDB"
-docker rm -f "$MONGO_CONTAINER" >/dev/null 2>&1 || true
+echo "[2/8] Start PostgreSQL"
+docker rm -f "$POSTGRES_CONTAINER" >/dev/null 2>&1 || true
 docker run -d \
-  --name "$MONGO_CONTAINER" \
+  --name "$POSTGRES_CONTAINER" \
   --network "$NETWORK_NAME" \
-  -p 27017:27017 \
-  mongo:7 >/dev/null
+  -p 5432:5432 \
+  -e POSTGRES_USER=chuanmen \
+  -e POSTGRES_PASSWORD=chuanmen \
+  -e POSTGRES_DB=chuanmen_dev \
+  postgres:16-alpine >/dev/null
 
 echo "[3/8] Start MinIO"
 docker rm -f "$MINIO_CONTAINER" >/dev/null 2>&1 || true
@@ -64,8 +67,7 @@ docker run -d \
   -e PORT=4000 \
   -e FRONTEND_ORIGIN=http://localhost:4000 \
   -e TRUST_PROXY=false \
-  -e MONGODB_URI="mongodb://$MONGO_CONTAINER:27017/chuanmen_dev" \
-  -e MONGODB_DB_NAME=chuanmen_dev \
+  -e DATABASE_URL="postgresql://chuanmen:chuanmen@$POSTGRES_CONTAINER:5432/chuanmen_dev?schema=public" \
   -e AWS_REGION=ap-southeast-1 \
   -e AWS_ACCESS_KEY_ID=minioadmin \
   -e AWS_SECRET_ACCESS_KEY=minioadmin \
@@ -74,9 +76,13 @@ docker run -d \
   -e AWS_S3_FORCE_PATH_STYLE=true \
   -e AWS_S3_PUBLIC_BASE_URL=http://localhost:9000/chuanmen-media-dev \
   -e S3_PRESIGN_EXPIRES_SECONDS=900 \
+  -e AWS_SES_FROM_EMAIL=noreply@chuanmen.local \
   "$SERVER_IMAGE" >/dev/null
 
-echo "[8/8] Done"
+echo "[8/8] Apply Prisma migrations"
+docker exec "$SERVER_CONTAINER" npx prisma migrate deploy >/dev/null
+
+echo "[9/9] Done"
 echo "System test URL: http://localhost:4000/system-test/"
 echo "API health URL:   http://localhost:4000/api/health"
 echo "MinIO console:    http://localhost:9001  (minioadmin / minioadmin)"

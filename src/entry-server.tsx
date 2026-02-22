@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
-import { renderToString } from 'react-dom/server';
+import { PassThrough } from 'node:stream';
+import { renderToPipeableStream } from 'react-dom/server';
 import {
   createStaticHandler,
   createStaticRouter,
@@ -34,13 +35,45 @@ export async function render(url: string): Promise<SsrRenderResult> {
   }
 
   const router = createStaticRouter(dataRoutes, context);
-  const html = renderToString(
+  const element = (
     <StrictMode>
       <AppProviders>
         <StaticRouterProvider router={router} context={context} />
       </AppProviders>
-    </StrictMode>,
+    </StrictMode>
   );
+
+  const html = await new Promise<string>((resolve, reject) => {
+    let content = '';
+    const stream = new PassThrough();
+    const timeout = setTimeout(() => abort(), 10000);
+
+    stream.on('data', (chunk: Buffer | string) => {
+      content += chunk.toString();
+    });
+
+    stream.on('end', () => {
+      clearTimeout(timeout);
+      resolve(content);
+    });
+    stream.on('error', (error: Error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+
+    const { pipe, abort } = renderToPipeableStream(element, {
+      onAllReady() {
+        pipe(stream);
+      },
+      onShellError(error) {
+        reject(error);
+      },
+      onError(error) {
+        console.error('SSR stream error:', error);
+      },
+    });
+
+  });
 
   return {
     html,

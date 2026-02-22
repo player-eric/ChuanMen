@@ -1,0 +1,641 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipStatus {
+  contributor
+  regular
+}
+
+enum EventTag {
+  movie
+  chuanmen
+  holiday
+  hiking
+  outdoor
+  small_group
+  other
+}
+
+enum EventPhase {
+  invite
+  open
+  closed
+}
+
+enum EventStatus {
+  scheduled
+  completed
+  cancelled
+}
+
+enum EventSignupStatus {
+  invited
+  accepted
+  waitlist
+  declined
+  cancelled
+}
+
+enum RecommendationCategory {
+  movie
+  recipe
+  music
+  place
+}
+
+enum RecommendationStatus {
+  candidate
+  featured
+  archived
+}
+
+enum MovieStatus {
+  candidate
+  screened
+}
+
+enum ProposalStatus {
+  discussing
+  scheduled
+  completed
+  cancelled
+}
+
+enum PostcardVisibility {
+  public
+  private
+}
+
+enum SeedStatus {
+  active
+  paused
+  completed
+  cancelled
+}
+
+enum SeedCollaboratorStatus {
+  invited
+  active
+  rejected
+  left
+}
+
+enum AboutContentType {
+  principle
+  host_guide
+  letter
+  about
+}
+
+enum WeeklyLotteryStatus {
+  pending
+  accepted
+  completed
+  skipped
+}
+
+enum AgentPushGoal {
+  A
+  B
+  C
+  D
+  E
+  F
+  G
+}
+
+enum AgentPushChannel {
+  email
+  web
+  feed
+}
+
+enum PushFrequency {
+  low
+  normal
+  high
+}
+
+enum MediaAssetStatus {
+  pending
+  uploaded
+}
+
+enum InteractionEntityType {
+  event
+  movie
+  proposal
+  postcard
+  seed
+  seed_update
+  discussion
+  discussion_reply
+  comment
+}
+
+model User {
+  id                   String              @id @default(cuid())
+  name                 String
+  email                String              @unique
+  avatar               String              @default("")
+  bio                  String              @default("")
+  role                 String              @default("member")
+  city                 String              @default("")
+  hostCount            Int                 @default(0)
+  participationCount   Int                 @default(0)
+  proposalCount        Int                 @default(0)
+  postcardSentCount    Int                 @default(0)
+  postcardReceivedCount Int                @default(0)
+  membershipStatus     MembershipStatus    @default(regular)
+  lastActiveAt         DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  operatorRoles        UserOperatorRole[]
+  socialTitles         UserSocialTitle[]
+  preferences          UserPreference?
+  hostedEvents         Event[]             @relation("EventHost")
+  coHostedEvents       EventCoHost[]
+  excludedEvents       EventVisibilityExclusion[]
+  recordedEvents       Event[]             @relation("EventRecorder")
+  eventSignups         EventSignup[]
+  recommendedMovies    Movie[]             @relation("MovieRecommender")
+  movieVotes           MovieVote[]
+  authoredProposals    Proposal[]          @relation("ProposalAuthor")
+  organizedProposals   Proposal[]          @relation("ProposalOrganizer")
+  proposalVotes        ProposalVote[]
+  postcardsSent        Postcard[]          @relation("PostcardFrom")
+  postcardsReceived    Postcard[]          @relation("PostcardTo")
+  seeds                Seed[]              @relation("SeedAuthor")
+  seedCollaborations   SeedCollaborator[]
+  seedUpdates          SeedUpdate[]        @relation("SeedUpdateAuthor")
+  discussions          Discussion[]
+  discussionReplies    DiscussionReply[]
+  likes                Like[]
+  comments             Comment[]
+  weeklyLotteries      WeeklyLottery[]
+  experimentPairingsA  ExperimentPairing[] @relation("PairingA")
+  experimentPairingsB  ExperimentPairing[] @relation("PairingB")
+  agentPushes          AgentPush[]
+  mediaAssets          MediaAsset[]
+  recommendations      Recommendation[]
+}
+
+model UserOperatorRole {
+  id        String   @id @default(cuid())
+  userId    String
+  value     String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, value])
+}
+
+model UserSocialTitle {
+  id        String   @id @default(cuid())
+  userId    String
+  value     String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, value])
+}
+
+model UserPreference {
+  id            String           @id @default(cuid())
+  userId        String           @unique
+  pushEmail     Boolean          @default(true)
+  pushFrequency PushFrequency    @default(normal)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mutedGoals    UserMutedGoal[]
+}
+
+model UserMutedGoal {
+  id               String         @id @default(cuid())
+  userPreferenceId String
+  value            String
+
+  userPreference   UserPreference @relation(fields: [userPreferenceId], references: [id], onDelete: Cascade)
+
+  @@unique([userPreferenceId, value])
+}
+
+model Event {
+  id                     String                    @id @default(cuid())
+  title                  String
+  hostId                 String
+  proposalId             String?
+  titleImageUrl          String                    @default("")
+  description            String                    @default("")
+  houseRules             String                    @default("")
+  location               String                    @default("")
+  startsAt               DateTime
+  endsAt                 DateTime?
+  capacity               Int                       @default(10)
+  tag                    EventTag                  @default(other)
+  phase                  EventPhase                @default(invite)
+  status                 EventStatus               @default(scheduled)
+  selectedMovieId        String?
+  recap                  String                    @default("")
+  recapPhotoUrls         String[]
+  recorderUserId         String?
+  waitlistEnabled        Boolean                   @default(true)
+  isWeeklyLotteryEvent   Boolean                   @default(false)
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+
+  host                   User                      @relation("EventHost", fields: [hostId], references: [id], onDelete: Restrict)
+  proposal               Proposal?                 @relation("EventProposal", fields: [proposalId], references: [id], onDelete: SetNull)
+  selectedMovie          Movie?                    @relation("EventSelectedMovie", fields: [selectedMovieId], references: [id], onDelete: SetNull)
+  recorder               User?                     @relation("EventRecorder", fields: [recorderUserId], references: [id], onDelete: SetNull)
+  coHosts                EventCoHost[]
+  visibilityExclusions   EventVisibilityExclusion[]
+  signups                EventSignup[]
+  postcards              Postcard[]
+  weeklyLotteryEntries   WeeklyLottery[]
+  screenedMovies         MovieScreening[]
+
+  @@index([startsAt, phase])
+  @@index([startsAt(sort: Desc), status])
+}
+
+model EventCoHost {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+
+  event      Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model EventVisibilityExclusion {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+
+  event      Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model EventSignup {
+  id          String            @id @default(cuid())
+  eventId     String
+  userId      String
+  invitedById String?
+  status      EventSignupStatus @default(invited)
+  invitedAt   DateTime?
+  respondedAt DateTime?
+  participated Boolean          @default(false)
+  checkedInAt DateTime?
+  note        String            @default("")
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  event       Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId, status, createdAt])
+}
+
+model Recommendation {
+  id          String                 @id @default(cuid())
+  category    RecommendationCategory
+  title       String
+  description String                 @default("")
+  authorId    String
+  sourceUrl   String                 @default("")
+  coverUrl    String                 @default("")
+  voteCount   Int                    @default(0)
+  status      RecommendationStatus   @default(candidate)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  author      User                   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  tags        RecommendationTag[]
+
+  @@index([category, createdAt(sort: Desc)])
+  @@index([title])
+}
+
+model RecommendationTag {
+  id               String          @id @default(cuid())
+  recommendationId String
+  value            String
+
+  recommendation   Recommendation  @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  @@unique([recommendationId, value])
+}
+
+model Movie {
+  id            String       @id @default(cuid())
+  title         String
+  year          Int?
+  director      String       @default("")
+  poster        String       @default("")
+  doubanUrl     String       @default("")
+  doubanRating  Float?
+  synopsis      String       @default("")
+  recommendedById String
+  status        MovieStatus  @default(candidate)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  recommendedBy User         @relation("MovieRecommender", fields: [recommendedById], references: [id], onDelete: Restrict)
+  screenedEvents MovieScreening[]
+  votes         MovieVote[]
+  selectedInEvents Event[]   @relation("EventSelectedMovie")
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([title])
+}
+
+model MovieScreening {
+  id       String   @id @default(cuid())
+  movieId  String
+  eventId  String
+
+  movie    Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, eventId])
+}
+
+model MovieVote {
+  id        String   @id @default(cuid())
+  movieId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, userId])
+}
+
+model Proposal {
+  id            String        @id @default(cuid())
+  title         String
+  description   String        @default("")
+  authorId      String
+  organizerId   String?
+  status        ProposalStatus @default(discussing)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  author        User          @relation("ProposalAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  organizer     User?         @relation("ProposalOrganizer", fields: [organizerId], references: [id], onDelete: SetNull)
+  events        Event[]       @relation("EventProposal")
+  votes         ProposalVote[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([title])
+}
+
+model ProposalVote {
+  id          String   @id @default(cuid())
+  proposalId  String
+  userId      String
+  createdAt   DateTime @default(now())
+
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([proposalId, userId])
+}
+
+model Postcard {
+  id         String            @id @default(cuid())
+  fromId     String
+  toId       String
+  eventId    String?
+  message    String
+  visibility PostcardVisibility @default(private)
+  photoUrl   String            @default("")
+  createdAt  DateTime          @default(now())
+
+  from       User              @relation("PostcardFrom", fields: [fromId], references: [id], onDelete: Restrict)
+  to         User              @relation("PostcardTo", fields: [toId], references: [id], onDelete: Restrict)
+  event      Event?            @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  tags       PostcardTag[]
+
+  @@index([toId, createdAt(sort: Desc)])
+  @@index([fromId, createdAt(sort: Desc)])
+}
+
+model PostcardTag {
+  id         String    @id @default(cuid())
+  postcardId String
+  value      String
+
+  postcard   Postcard  @relation(fields: [postcardId], references: [id], onDelete: Cascade)
+
+  @@unique([postcardId, value])
+}
+
+model Seed {
+  id          String      @id @default(cuid())
+  title       String
+  description String      @default("")
+  authorId    String
+  status      SeedStatus  @default(active)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  author      User        @relation("SeedAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  collaborators SeedCollaborator[]
+  updates     SeedUpdate[]
+
+  @@index([status, updatedAt(sort: Desc)])
+  @@index([title])
+}
+
+model SeedCollaborator {
+  id         String                 @id @default(cuid())
+  seedId     String
+  userId     String
+  roleLabel  String                 @default("")
+  status     SeedCollaboratorStatus @default(active)
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+
+  seed       Seed                   @relation(fields: [seedId], references: [id], onDelete: Cascade)
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([seedId, userId])
+}
+
+model SeedUpdate {
+  id         String      @id @default(cuid())
+  seedId     String
+  authorId   String
+  content    String
+  createdAt  DateTime    @default(now())
+
+  seed       Seed        @relation(fields: [seedId], references: [id], onDelete: Cascade)
+  author     User        @relation("SeedUpdateAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  media      SeedUpdateMedia[]
+
+  @@index([seedId, createdAt(sort: Desc)])
+}
+
+model SeedUpdateMedia {
+  id          String      @id @default(cuid())
+  seedUpdateId String
+  url         String
+
+  seedUpdate  SeedUpdate  @relation(fields: [seedUpdateId], references: [id], onDelete: Cascade)
+}
+
+model Discussion {
+  id         String      @id @default(cuid())
+  authorId   String
+  title      String
+  body       String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  author     User        @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  replies    DiscussionReply[]
+
+  @@index([createdAt(sort: Desc)])
+}
+
+model DiscussionReply {
+  id            String           @id @default(cuid())
+  discussionId  String
+  authorId      String
+  parentReplyId String?
+  content       String
+  createdAt     DateTime         @default(now())
+
+  discussion    Discussion       @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  author        User             @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  parentReply   DiscussionReply? @relation("DiscussionReplyTree", fields: [parentReplyId], references: [id], onDelete: SetNull)
+  childReplies  DiscussionReply[] @relation("DiscussionReplyTree")
+
+  @@index([discussionId, createdAt])
+}
+
+model Like {
+  id         String                 @id @default(cuid())
+  entityType InteractionEntityType
+  entityId   String
+  userId     String
+  createdAt  DateTime               @default(now())
+
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([entityType, entityId, userId])
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+}
+
+model Comment {
+  id              String                 @id @default(cuid())
+  entityType      InteractionEntityType
+  entityId        String
+  authorId        String
+  content         String
+  parentCommentId String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  author          User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentComment   Comment?               @relation("CommentTree", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  childComments   Comment[]              @relation("CommentTree")
+
+  @@index([entityType, entityId, createdAt])
+}
+
+model AboutContent {
+  id         String           @id @default(cuid())
+  type       AboutContentType
+  title      String
+  contentMd  String
+  published  Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([type, updatedAt(sort: Desc)])
+}
+
+model WeeklyLottery {
+  id            String              @id @default(cuid())
+  weekKey       String              @unique
+  weekNumber    Int
+  drawnMemberId String
+  status        WeeklyLotteryStatus @default(pending)
+  eventId       String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  drawnMember   User                @relation(fields: [drawnMemberId], references: [id], onDelete: Restrict)
+  event         Event?              @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+}
+
+model ExperimentPairing {
+  id           String   @id @default(cuid())
+  experimentId String
+  userAId      String
+  userBId      String
+  metAt        DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userA        User     @relation("PairingA", fields: [userAId], references: [id], onDelete: Restrict)
+  userB        User     @relation("PairingB", fields: [userBId], references: [id], onDelete: Restrict)
+
+  @@unique([experimentId, userAId, userBId])
+}
+
+model AgentPush {
+  id         String          @id @default(cuid())
+  userId     String?
+  goal       AgentPushGoal
+  channel    AgentPushChannel
+  content    String
+  actionUrl  String          @default("")
+  isApproved Boolean         @default(false)
+  sentAt     DateTime?
+  opened     Boolean         @default(false)
+  acted      Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  user       User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([channel, sentAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model MediaAsset {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  ownerId     String?
+  contentType String
+  fileSize    Int              @default(0)
+  status      MediaAssetStatus @default(pending)
+  url         String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  owner       User?            @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+}

@@ -5,7 +5,8 @@ COPY package.json package-lock.json* ./
 RUN npm ci
 
 COPY tsconfig.json ./
-COPY src ./src
+COPY prisma ./prisma
+COPY src_v2 ./src_v2
 COPY public ./public
 RUN npm run build
 
@@ -17,6 +18,7 @@ COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
 
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/public ./public
 EXPOSE 4000
 
