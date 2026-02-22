@@ -24,6 +24,7 @@ import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 /* ── Mock events for admin ── */
 const upcomingEvents = [
@@ -57,6 +58,8 @@ export default function AdminEventsPage() {
   const [tab, setTab] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<(typeof upcomingEvents)[0] | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<(typeof upcomingEvents)[0] | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<(typeof upcomingEvents)[0] | null>(null);
 
   return (
     <Stack spacing={2}>
@@ -103,7 +106,7 @@ export default function AdminEventsPage() {
                   <Stack direction="row" spacing={0.5}>
                     <IconButton size="small" onClick={() => setDetailEvent(evt)}><VisibilityRoundedIcon fontSize="small" /></IconButton>
                     <IconButton size="small"><EditRoundedIcon fontSize="small" /></IconButton>
-                    <IconButton size="small" color="error"><DeleteRoundedIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" color="error" onClick={() => setConfirmDelete(evt)}><DeleteRoundedIcon fontSize="small" /></IconButton>
                   </Stack>
                 </Box>
                 {i < upcomingEvents.length - 1 && <Divider />}
@@ -201,10 +204,32 @@ export default function AdminEventsPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailEvent(null)}>关闭</Button>
-          <Button variant="outlined" color="error">取消活动</Button>
+          <Button variant="outlined" color="error" onClick={() => { setConfirmCancel(detailEvent); }}>取消活动</Button>
           <Button variant="contained">编辑活动</Button>
         </DialogActions>
       </Dialog>
+
+      {/* ── Confirm: delete event ── */}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="确认删除活动"
+        message={`确定要删除「${confirmDelete?.title ?? ''}」吗？删除后所有报名信息将丢失，此操作不可撤回。`}
+        confirmLabel="删除"
+        confirmColor="error"
+        onConfirm={() => setConfirmDelete(null)}
+        onCancel={() => setConfirmDelete(null)}
+      />
+
+      {/* ── Confirm: cancel event ── */}
+      <ConfirmDialog
+        open={!!confirmCancel}
+        title="确认取消活动"
+        message={`确定要取消「${confirmCancel?.title ?? ''}」吗？已报名的成员将收到通知。`}
+        confirmLabel="取消活动"
+        confirmColor="warning"
+        onConfirm={() => { setConfirmCancel(null); setDetailEvent(null); }}
+        onCancel={() => setConfirmCancel(null)}
+      />
     </Stack>
   );
 }

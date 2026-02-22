@@ -25,6 +25,7 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import BlockRoundedIcon from '@mui/icons-material/BlockRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 /* ── Mock data ── */
 const allMembers = [
@@ -67,6 +68,12 @@ export default function AdminMembersPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<(typeof allMembers)[0] | null>(null);
   const [applicantDialog, setApplicantDialog] = useState<(typeof pendingApplicants)[0] | null>(null);
+
+  // Confirmation states
+  const [confirmDeny, setConfirmDeny] = useState<(typeof pendingApplicants)[0] | null>(null);
+  const [confirmToggle, setConfirmToggle] = useState<(typeof allMembers)[0] | null>(null);
+  const [confirmApprove, setConfirmApprove] = useState<(typeof pendingApplicants)[0] | null>(null);
+  const [confirmSaveEdit, setConfirmSaveEdit] = useState(false);
 
   const filtered = allMembers.filter((m) => {
     if (search && !m.name.toLowerCase().includes(search.toLowerCase()) && !m.email.toLowerCase().includes(search.toLowerCase())) return false;
@@ -138,7 +145,7 @@ export default function AdminMembersPage() {
                       <IconButton size="small" onClick={() => { setSelectedMember(m); setEditOpen(true); }}>
                         <EditRoundedIcon fontSize="small" />
                       </IconButton>
-                      <IconButton size="small" color={m.status === 'active' ? 'warning' : 'success'}>
+                      <IconButton size="small" color={m.status === 'active' ? 'warning' : 'success'} onClick={() => setConfirmToggle(m)}>
                         {m.status === 'active' ? <BlockRoundedIcon fontSize="small" /> : <CheckCircleRoundedIcon fontSize="small" />}
                       </IconButton>
                     </Stack>
@@ -178,7 +185,7 @@ export default function AdminMembersPage() {
                       <Button size="small" variant="contained" color="success" onClick={() => setApplicantDialog(a)}>
                         通过
                       </Button>
-                      <Button size="small" variant="outlined" color="error">
+                      <Button size="small" variant="outlined" color="error" onClick={() => setConfirmDeny(a)}>
                         拒绝
                       </Button>
                       <Button size="small" variant="text" onClick={() => setApplicantDialog(a)}>
@@ -210,7 +217,7 @@ export default function AdminMembersPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditOpen(false)}>取消</Button>
-          <Button variant="contained" onClick={() => setEditOpen(false)}>保存</Button>
+          <Button variant="contained" onClick={() => setConfirmSaveEdit(true)}>保存</Button>
         </DialogActions>
       </Dialog>
 
@@ -229,10 +236,56 @@ export default function AdminMembersPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button color="error" onClick={() => setApplicantDialog(null)}>拒绝</Button>
-          <Button variant="contained" color="success" onClick={() => setApplicantDialog(null)}>批准</Button>
+          <Button color="error" onClick={() => { setConfirmDeny(applicantDialog); }}>拒绝</Button>
+          <Button variant="contained" color="success" onClick={() => { setConfirmApprove(applicantDialog); }}>批准</Button>
         </DialogActions>
       </Dialog>
+
+      {/* ── Confirm: deny applicant ── */}
+      <ConfirmDialog
+        open={!!confirmDeny}
+        title="确认拒绝申请"
+        message={`确定要拒绝「${confirmDeny?.name ?? ''}」的入社申请吗？此操作不可撤回。`}
+        confirmLabel="拒绝"
+        confirmColor="error"
+        onConfirm={() => { setConfirmDeny(null); setApplicantDialog(null); }}
+        onCancel={() => setConfirmDeny(null)}
+      />
+
+      {/* ── Confirm: approve applicant ── */}
+      <ConfirmDialog
+        open={!!confirmApprove}
+        title="确认批准申请"
+        message={`确定要批准「${confirmApprove?.name ?? ''}」的入社申请吗？`}
+        confirmLabel="批准"
+        confirmColor="success"
+        onConfirm={() => { setConfirmApprove(null); setApplicantDialog(null); }}
+        onCancel={() => setConfirmApprove(null)}
+      />
+
+      {/* ── Confirm: suspend / activate member ── */}
+      <ConfirmDialog
+        open={!!confirmToggle}
+        title={confirmToggle?.status === 'active' ? '确认停用成员' : '确认激活成员'}
+        message={confirmToggle?.status === 'active'
+          ? `确定要将「${confirmToggle?.name ?? ''}」设为休眠状态吗？该成员将暂时无法参加活动。`
+          : `确定要重新激活「${confirmToggle?.name ?? ''}」吗？`}
+        confirmLabel={confirmToggle?.status === 'active' ? '停用' : '激活'}
+        confirmColor={confirmToggle?.status === 'active' ? 'warning' : 'success'}
+        onConfirm={() => setConfirmToggle(null)}
+        onCancel={() => setConfirmToggle(null)}
+      />
+
+      {/* ── Confirm: save member edit ── */}
+      <ConfirmDialog
+        open={confirmSaveEdit}
+        title="确认保存修改"
+        message={`确定要保存对「${selectedMember?.name ?? ''}」的修改吗？`}
+        confirmLabel="保存"
+        confirmColor="primary"
+        onConfirm={() => { setConfirmSaveEdit(false); setEditOpen(false); }}
+        onCancel={() => setConfirmSaveEdit(false)}
+      />
     </Stack>
   );
 }
