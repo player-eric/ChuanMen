@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>串门儿 ChuanMen — UI 测试指南 v1.0</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif; font-size: 11pt; line-height: 1.7; color: #1a1a1a; }
+  h1 { font-size: 22pt; margin-bottom: 4px; }
+  h2 { font-size: 15pt; margin-top: 28px; padding-bottom: 4px; border-bottom: 2px solid #1976d2; color: #1976d2; page-break-after: avoid; }
+  h3 { font-size: 12pt; margin-top: 16px; color: #333; page-break-after: avoid; }
+  p, li { margin-top: 4px; }
+  ul, ol { padding-left: 20px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 10pt; }
+  th, td { border: 1px solid #ccc; padding: 5px 8px; text-align: left; }
+  th { background: #f0f4ff; font-weight: 700; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 9pt; font-weight: 600; }
+  .badge-blue { background: #e3f2fd; color: #1565c0; }
+  .badge-green { background: #e8f5e9; color: #2e7d32; }
+  .badge-orange { background: #fff3e0; color: #e65100; }
+  .badge-red { background: #fce4ec; color: #c62828; }
+  .badge-purple { background: #f3e5f5; color: #7b1fa2; }
+  code { background: #f5f5f5; padding: 1px 5px; border-radius: 3px; font-size: 10pt; }
+  .cover { text-align: center; padding: 80px 0 40px; }
+  .cover .subtitle { font-size: 13pt; color: #666; margin-top: 8px; }
+  .cover .meta { font-size: 10pt; color: #999; margin-top: 24px; }
+  .toc { page-break-after: always; }
+  .toc ul { list-style: none; padding: 0; }
+  .toc li { padding: 3px 0; border-bottom: 1px dotted #ddd; }
+  .toc li a { text-decoration: none; color: #1976d2; }
+  .note { background: #fff8e1; border-left: 4px solid #ffc107; padding: 8px 12px; margin: 8px 0; font-size: 10pt; }
+  .tip { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 8px 12px; margin: 8px 0; font-size: 10pt; }
+  .warn { background: #fce4ec; border-left: 4px solid #e53935; padding: 8px 12px; margin: 8px 0; font-size: 10pt; }
+  .section { page-break-inside: avoid; }
+  .page-break { page-break-before: always; }
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li::before { content: "☐ "; font-size: 12pt; }
+  .flow { font-size: 10pt; color: #555; margin: 4px 0; }
+  .flow b { color: #1976d2; }
+</style>
+</head>
+<body>
+
+<!-- ===== COVER ===== -->
+<div class="cover">
+  <h1>🏠 串门儿 ChuanMen</h1>
+  <h1>UI / 功能测试指南</h1>
+  <div class="subtitle">面向 UI 设计师 & 业务利益相关者</div>
+  <div class="meta">
+    版本 1.0 · 2025-02-22<br>
+    技术栈：React 19 + MUI v7 + React Router 7 + Vite 6<br>
+    部署：AWS Amplify (静态 CSR) / Node.js SSR
+  </div>
+</div>
+
+<!-- ===== TOC ===== -->
+<div class="toc">
+  <h2>目录</h2>
+  <ul>
+    <li><a href="#s0">0. 快速开始 — 环境与登录</a></li>
+    <li><a href="#s1">1. 首页 · 动态 (Feed)</a></li>
+    <li><a href="#s2">2. 活动模块 (Events)</a></li>
+    <li><a href="#s3">3. 推荐 · 发现 (Discover)</a></li>
+    <li><a href="#s4">4. 感谢卡 (Cards)</a></li>
+    <li><a href="#s5">5. 个人页 (Profile)</a></li>
+    <li><a href="#s6">6. 成员墙 (Members)</a></li>
+    <li><a href="#s7">7. 关于串门儿 (About)</a></li>
+    <li><a href="#s8">8. 公告详情页 (Announcements)</a></li>
+    <li><a href="#s9">9. 申请加入 / 注册 / 登录</a></li>
+    <li><a href="#s10">10. 账号设置 (Settings)</a></li>
+    <li><a href="#s11">11. 管理后台 (Admin Portal)</a></li>
+    <li><a href="#s12">12. 全局导航 & 响应式</a></li>
+    <li><a href="#s13">13. 深色模式</a></li>
+    <li><a href="#s14">14. 已知限制 & 注意事项</a></li>
+    <li><a href="#s15">15. 完整路由清单</a></li>
+  </ul>
+</div>
+
+<!-- ===== SECTION 0 ===== -->
+<h2 id="s0">0. 快速开始 — 环境与登录</h2>
+
+<h3>0.1 访问地址</h3>
+<table>
+  <tr><th>环境</th><th>地址</th><th>说明</th></tr>
+  <tr><td>Amplify 线上</td><td>你的 Amplify App URL</td><td>静态 CSR 模式，推荐测试</td></tr>
+  <tr><td>本地开发</td><td><code>http://localhost:5173</code></td><td><code>npm run dev</code> 启动</td></tr>
+  <tr><td>本地生产预览</td><td><code>http://localhost:4173</code></td><td><code>npm run build && npm run start</code></td></tr>
+</table>
+
+<h3>0.2 测试账号</h3>
+<div class="tip">
+  <strong>唯一可用的测试账号：</strong><code>cm@gmail.com</code><br>
+  登录后身份为 <strong>Yuan</strong>（管理员 / 超级 Host），可访问所有功能包括管理后台。<br>
+  其他邮箱登录会提示："当前仅支持测试账号 cm@gmail.com 登录"。
+</div>
+
+<h3>0.3 登录流程</h3>
+<ol>
+  <li>首次打开网站 → 默认<strong>未登录</strong>状态</li>
+  <li>右上角点击 <strong>「登录」</strong> 按钮 → 进入登录页</li>
+  <li>页面展示蓝色提示框，标注测试账号 <code>cm@gmail.com</code></li>
+  <li>输入邮箱 → 点登录 → 自动跳转首页</li>
+  <li>登录后右上角出现头像 + <strong>「退出」</strong> 按钮</li>
+</ol>
+
+<h3>0.4 退出登录</h3>
+<p>右上角点击 <strong>「退出」</strong> → 清除会话 → 回到未登录首页。</p>
+
+<div class="note"><strong>提示：</strong>所有数据为 Mock（硬编码），表单提交不会真正保存。刷新页面数据恢复原样。</div>
+
+<!-- ===== SECTION 1 ===== -->
+<div class="page-break"></div>
+<h2 id="s1">1. 首页 · 动态 (Feed)</h2>
+<p class="flow">路由：<b>/</b></p>
+
+<h3>未登录状态</h3>
+<ul class="checklist">
+  <li>显示欢迎卡片「👋 欢迎来到串门儿！」</li>
+  <li>4 个引导入口卡片：看看活动、推荐电影、了解串门、寄感谢卡</li>
+  <li>底部提示：「动态流会随着你参加活动慢慢丰富起来 ✨」</li>
+  <li>底部 Tab 栏不显示（未登录状态隐藏）</li>
+</ul>
+
+<h3>登录后状态（完整动态流）</h3>
+<ul class="checklist">
+  <li><strong>公告卡片 ×3</strong>（可点击进入详情页）：
+    <ul>
+      <li>🎉 春季招新（02.15）</li>
+      <li>📋 社区公约更新（02.01）</li>
+      <li>🏠 新 Host 培训（01.20）</li>
+    </ul>
+  </li>
+  <li>每张公告卡片右侧显示日期 + 「查看详情」小标签</li>
+  <li><strong>下一场活动卡</strong>：电影夜 · 花样年华（头像组 + 「还剩 4 位」标签）</li>
+  <li><strong>新感谢卡卡片</strong>：3 条最新感谢卡摘要</li>
+  <li><strong>正在进行</strong>：绿色边框卡片，「● 正在进行：日料之夜 · 手卷寿司」</li>
+  <li><strong>新推荐</strong>：3 条推荐（餐厅/电影/好去处），带类别图标</li>
+  <li><strong>热门想法</strong>：Top 3 提案（Kayaking 9票 / 羽毛球 8票 / 奶茶 7票）</li>
+</ul>
+
+<!-- ===== SECTION 2 ===== -->
+<div class="page-break"></div>
+<h2 id="s2">2. 活动模块 (Events)</h2>
+
+<h3>2.1 活动列表页</h3>
+<p class="flow">路由：<b>/events</b>（底部 Tab「活动」）</p>
+<ul class="checklist">
+  <li>顶部 3 个入口按钮：「活动提案」「活动记录」「发起小局」</li>
+  <li><strong>7 个即将到来的活动</strong>（open 阶段）：电影夜·花样年华、周末Potluck、日式咖喱研究会、元宵 Potluck、烘焙下午茶、羽毛球、户外写生</li>
+  <li><strong>2 个 Live 活动</strong>（进行中）：日料之夜·手卷寿司、重庆森林·私人邀请</li>
+  <li><strong>1 个已结束活动</strong>：打羽毛球</li>
+  <li><strong>1 个已取消活动</strong>：滑雪·Mountain Creek</li>
+  <li>每个活动卡片显示：标题、Host、日期、地点、人数/总数、阶段标签</li>
+</ul>
+
+<h3>2.2 活动详情页</h3>
+<p class="flow">路由：<b>/events/:eventId</b>（点击任意活动卡片进入，如 /events/1）</p>
+<ul class="checklist">
+  <li>活动标题、日期、Host、地点、场景、描述</li>
+  <li>House rules 显示</li>
+  <li>参加人列表（头像 + 名字）</li>
+  <li>「我要参加」按钮</li>
+</ul>
+
+<h3>2.3 活动提案页</h3>
+<p class="flow">路由：<b>/events/proposals</b></p>
+<ul class="checklist">
+  <li>7 个提案（Derek Kayaking 9票、小鱼羽毛球 8票…Tiffy 爬山 5票）</li>
+  <li>每个提案显示：发起人、标题、投票数、感兴趣的人、时间</li>
+  <li>「添加想法」入口按钮</li>
+</ul>
+
+<h3>2.4 添加想法页</h3>
+<p class="flow">路由：<b>/events/proposals/new</b></p>
+<ul class="checklist">
+  <li>表单：标题、描述、提交按钮</li>
+</ul>
+
+<h3>2.5 活动记录页</h3>
+<p class="flow">路由：<b>/events/history</b></p>
+<ul class="checklist">
+  <li>12 个历史活动，每个显示：标题、Host、日期、人数、照片数、留言数</li>
+</ul>
+
+<h3>2.6 发起小局页</h3>
+<p class="flow">路由：<b>/events/small-group/new</b></p>
+<ul class="checklist">
+  <li>表单输入：活动名称、日期、地点、人数、描述等</li>
+</ul>
+
+<!-- ===== SECTION 3 ===== -->
+<div class="page-break"></div>
+<h2 id="s3">3. 推荐 · 发现 (Discover)</h2>
+
+<h3>3.1 推荐主页</h3>
+<p class="flow">路由：<b>/discover</b>（底部 Tab「推荐」）</p>
+<ul class="checklist">
+  <li><strong>电影池</strong>（12 部电影）：花样年华(12票/本周放映)、重庆森林(11票)、请以你的名字呼唤我(10票)... 大佛普拉斯(5票)</li>
+  <li>每部电影显示：片名、年份、导演、投票数、推荐人</li>
+  <li><strong>已放映</strong>（6 部）：寄生虫、千与千寻、春光乍泄、东京物语、坠落的审判、完美的日子</li>
+  <li>推荐分类入口：电影、菜谱、音乐、好店</li>
+</ul>
+
+<h3>3.2 电影详情页</h3>
+<p class="flow">路由：<b>/discover/movies/:movieId</b>（如 /discover/movies/1）</p>
+<ul class="checklist">
+  <li>电影标题、年份、导演、推荐人、投票数</li>
+</ul>
+
+<h3>3.3 分类推荐列表</h3>
+<p class="flow">路由：<b>/discover/:category</b>（如 /discover/movie, /discover/recipe）</p>
+<ul class="checklist">
+  <li>对应分类的推荐列表</li>
+  <li>「添加推荐」入口</li>
+</ul>
+
+<h3>3.4 添加推荐</h3>
+<p class="flow">路由：<b>/discover/:category/add</b></p>
+
+<h3>3.5 推荐详情</h3>
+<p class="flow">路由：<b>/discover/:category/:recommendationId</b></p>
+
+<!-- ===== SECTION 4 ===== -->
+<h2 id="s4">4. 感谢卡 (Cards)</h2>
+<p class="flow">路由：<b>/cards</b>（底部 Tab「感谢卡」）</p>
+<ul class="checklist">
+  <li><strong>收到的卡片 ×10</strong>：白开水、Tiffy、大橙子、星星、Leo、小鱼、阿德、Mia、奶茶、Derek</li>
+  <li>每张卡片显示：发送人、消息、印章 emoji、日期、是否私密</li>
+  <li>部分卡片带照片（movieNight / cozy / potluck / nature 主题照片）</li>
+  <li><strong>写卡片区域</strong>：8 个可选收件人 + 6 条快捷消息</li>
+  <li>快捷消息包括：谢谢你的招待🏠 / 做的菜太好吃了🍳 / 聊天很开心💬 / 下次还想见到你👋 / 你选的电影太好了🎬 / 这次徒步好开心🥾</li>
+</ul>
+
+<!-- ===== SECTION 5 ===== -->
+<h2 id="s5">5. 个人页 (Profile)</h2>
+<p class="flow">路由：<b>/profile</b>（底部 Tab「我」）</p>
+<ul class="checklist">
+  <li>显示 Yuan 的姓名、📍 Edison, NJ、个人简介</li>
+  <li><strong>统计卡</strong>：24 活动 / 6 Host / 15 推荐 / 48 投票</li>
+  <li><strong>贡献数据</strong>：Host 次数、参加活动数、推荐电影数、寄出/收到卡片数</li>
+  <li><strong>最近感谢卡</strong>：最新 5 张</li>
+  <li><strong>最近动态</strong>：8 条（电影夜·寄生虫 → Fall Hike·Watchung）</li>
+</ul>
+
+<!-- ===== SECTION 6 ===== -->
+<div class="page-break"></div>
+<h2 id="s6">6. 成员墙 (Members)</h2>
+<p class="flow">路由：<b>/members</b>（汉堡菜单 / 侧边栏进入）</p>
+<ul class="checklist">
+  <li><strong>12 位成员卡片</strong>：Yuan、白开水、大橙子、星星、Tiffy、小鱼、Leo、Mia、阿德、奶茶、Derek、小樱</li>
+  <li>每张卡片显示：名字、角色、Host 次数、标签、badge</li>
+</ul>
+
+<h3>6.1 成员详情页</h3>
+<p class="flow">路由：<b>/members/:name</b>（如 /members/Yuan, /members/白开水）</p>
+<ul class="checklist">
+  <li>成员完整信息：姓名、角色、位置、bio、自述 as friend、理想朋友、参与计划</li>
+  <li>封面图（如有）</li>
+  <li>共同数据：共同电影、共同活动、参与活动数、互换卡片数</li>
+</ul>
+
+<!-- ===== SECTION 7 ===== -->
+<h2 id="s7">7. 关于串门儿 (About)</h2>
+<p class="flow">路由：<b>/about</b>（汉堡菜单 / 侧边栏进入）</p>
+<ul class="checklist">
+  <li>社区统计：成员数、Host 数、活动数、运营月数</li>
+  <li>4 个内容入口：串门原则、Host 手册、串门来信、关于我们</li>
+</ul>
+
+<h3>7.1 内容详情</h3>
+<p class="flow">路由：<b>/about/:contentType</b>（principle / host_guide / letter / about）</p>
+<ul class="checklist">
+  <li>串门原则：6 条核心原则</li>
+  <li>Host 手册：4 条 Host 指南</li>
+  <li>串门来信：3 段欢迎信</li>
+  <li>关于我们：3 段社区介绍</li>
+</ul>
+
+<!-- ===== SECTION 8 ===== -->
+<h2 id="s8">8. 公告详情页 (Announcements)</h2>
+<p class="flow">路由：<b>/announcements/:slug</b>（从首页公告卡片点击进入）</p>
+
+<table>
+  <tr><th>公告</th><th>Slug</th><th>内容亮点</th></tr>
+  <tr><td>🎉 春季招新</td><td><code>spring-2025-recruit</code></td><td>招新时间、推荐条件（4项）、推荐流程（4步）、评判标准、FAQ（3个）、CTA「立即推荐朋友」</td></tr>
+  <tr><td>📋 社区公约 v2.0</td><td><code>community-guidelines-v2</code></td><td>基本原则（5条）、取消政策（4条/新增）、隐私保护（4条/新增）、违规处理（4级）、生效时间</td></tr>
+  <tr><td>🏠 Host 培训</td><td><code>host-training</code></td><td>培训安排（限8人）、培训内容（4部分/90分钟）、培训后获得（4项）、适合谁（4条）、往期 Host 语录（3人）、CTA「我要报名培训」</td></tr>
+</table>
+
+<ul class="checklist">
+  <li>每个公告页有标签（招新/公告/培训）+ 日期</li>
+  <li>分段卡片展示，清晰的信息层级</li>
+  <li>底部「← 返回动态」按钮</li>
+</ul>
+
+<!-- ===== SECTION 9 ===== -->
+<div class="page-break"></div>
+<h2 id="s9">9. 申请加入 / 注册 / 登录</h2>
+
+<h3>9.1 登录页</h3>
+<p class="flow">路由：<b>/login</b></p>
+<ul class="checklist">
+  <li>蓝色提示框显示测试账号 <code>cm@gmail.com</code></li>
+  <li>邮箱输入框 + 「保持登录」复选框 + 登录按钮</li>
+  <li>输入非 cm@gmail.com → 错误提示「当前仅支持测试账号登录」</li>
+  <li>底部「还没有账号？去注册」链接</li>
+</ul>
+
+<h3>9.2 注册页</h3>
+<p class="flow">路由：<b>/register</b></p>
+<ul class="checklist">
+  <li>注册表单：姓名、邮箱、头像、简介</li>
+</ul>
+
+<h3>9.3 申请加入页</h3>
+<p class="flow">路由：<b>/apply</b></p>
+<ul class="checklist">
+  <li>完整申请表单：昵称、邮箱、位置、自我介绍、自述 as friend、理想朋友、参与计划、微信号、推荐来源、封面图上传</li>
+</ul>
+
+<!-- ===== SECTION 10 ===== -->
+<h2 id="s10">10. 账号设置 (Settings)</h2>
+<p class="flow">路由：<b>/settings</b>（汉堡菜单 / 侧边栏进入）</p>
+<ul class="checklist">
+  <li>个人信息编辑表单</li>
+  <li>隐私设置</li>
+</ul>
+
+<!-- ===== SECTION 11 ===== -->
+<div class="page-break"></div>
+<h2 id="s11">11. 管理后台 (Admin Portal)</h2>
+<div class="warn"><strong>仅管理员可访问。</strong>必须使用 cm@gmail.com 登录后才能进入。非管理员访问 /admin 会显示「⛔ 无权限访问」。</div>
+<p class="flow">入口：汉堡菜单或侧边栏底部 <b>「管理后台」</b> → <b>/admin</b></p>
+
+<h3>11.1 仪表盘</h3>
+<p class="flow">路由：<b>/admin</b></p>
+<ul class="checklist">
+  <li><strong>4 个统计卡</strong>：活跃成员 12 / 本月活动 6 / 待处理申请 3 / 通讯订阅 28</li>
+  <li><strong>3 个快捷入口</strong>：成员管理、活动管理、发送通讯</li>
+  <li><strong>最近动态</strong>（8 条）：申请、活动创建、投票、通讯发送、Host 审批、公约发布</li>
+</ul>
+
+<h3>11.2 成员管理</h3>
+<p class="flow">路由：<b>/admin/members</b></p>
+<ul class="checklist">
+  <li>Tab 1 — <strong>成员列表</strong>（12 位）：搜索栏 + 角色筛选、数据表格（名字、邮箱、角色、状态、Host次数、参加活动次数）、编辑/暂停按钮</li>
+  <li>Tab 2 — <strong>待审核</strong>（3 位申请者）：张三、Emily、阿杰，每人显示推荐人、位置、自我介绍、通过/拒绝/详情按钮</li>
+  <li>编辑弹窗：可修改姓名、邮箱、角色、位置</li>
+  <li>申请详情弹窗：完整申请信息</li>
+</ul>
+
+<h3>11.3 活动管理</h3>
+<p class="flow">路由：<b>/admin/events</b></p>
+<ul class="checklist">
+  <li>Tab 1 — <strong>即将到来</strong>（5 个活动）：表格展示，每行有查看/编辑/删除按钮</li>
+  <li>Tab 2 — <strong>已结束</strong>（6 个）：参加人数、照片数、感谢卡数统计</li>
+  <li>Tab 3 — <strong>已取消</strong>（1 个）：滑雪 · Mountain Creek，附取消原因</li>
+  <li>「创建活动」按钮 → 弹窗表单（名称、时间、地点、类型、人数、描述、House Rules）</li>
+  <li>活动详情弹窗 → 可编辑 / 取消活动</li>
+</ul>
+
+<h3>11.4 社区通讯</h3>
+<p class="flow">路由：<b>/admin/newsletters</b></p>
+<ul class="checklist">
+  <li>Tab 1 — <strong>已发送</strong>（4 期通讯）：每期显示主题、发送日期、收件人数、打开率、点击率</li>
+  <li>Tab 2 — <strong>草稿</strong>（1 篇未完成草稿）</li>
+  <li>Tab 3 — <strong>订阅管理</strong>：订阅分组（全部28人、活跃12人、Host5人、管理员2人、新成员3人）+ 发送统计（4期、平均打开率71%、平均点击率34%）</li>
+  <li>「写通讯」按钮 → 撰写弹窗（主题、收件人、正文）→ 保存草稿 / 发送</li>
+  <li>可预览已发送通讯（完整正文）、可复制营模板</li>
+</ul>
+
+<h3>11.5 系统设置</h3>
+<p class="flow">路由：<b>/admin/settings</b></p>
+<ul class="checklist">
+  <li><strong>社区设置</strong>：社区名称、最大成员数(50)、默认活动人数上限(8)、休眠判定(3个月)</li>
+  <li><strong>成员资格</strong>：需要推荐人(开)、自动批准(关)、取消惩罚机制(开) — 各有开关</li>
+  <li><strong>通知设置</strong>：邮件通知开关</li>
+  <li><strong>管理员账号</strong>：Yuan(超级管理员) + 大橙子(管理员)，显示测试账号提示</li>
+  <li>保存 / 重置按钮</li>
+</ul>
+
+<!-- ===== SECTION 12 ===== -->
+<div class="page-break"></div>
+<h2 id="s12">12. 全局导航 & 响应式</h2>
+
+<h3>12.1 移动端 (< 900px)</h3>
+<ul class="checklist">
+  <li>顶部 AppBar：汉堡菜单 + 页面标题 + 暗色切换 + 登录/退出</li>
+  <li>汉堡菜单 Drawer：用户信息、成员墙、关于串门儿、账号设置、管理后台(仅admin)、退出登录</li>
+  <li>底部 5-Tab 导航栏（仅登录后）：动态、推荐、活动、感谢卡、我</li>
+  <li>子页面显示返回箭头（替代汉堡图标）</li>
+</ul>
+
+<h3>12.2 桌面端 (≥ 900px)</h3>
+<ul class="checklist">
+  <li>左侧 240px 永久 Drawer：品牌名 + 5 个主导航 + 成员墙/关于/设置/管理后台</li>
+  <li>底部 Tab 栏隐藏</li>
+  <li>内容区最大宽度 1100px，居中</li>
+</ul>
+
+<h3>12.3 导航一致性检查</h3>
+<ul class="checklist">
+  <li>所有子页面返回按钮能正确回退</li>
+  <li>页面标题与当前路由一致（如 /events → 「活动」，/profile → 「我的页面」）</li>
+  <li>浏览器标题同步更新（格式：串门儿 - XXX）</li>
+</ul>
+
+<!-- ===== SECTION 13 ===== -->
+<h2 id="s13">13. 深色模式</h2>
+<ul class="checklist">
+  <li>右上角太阳/月亮图标切换</li>
+  <li>所有页面在深色模式下可读性正常</li>
+  <li>卡片、表格、弹窗背景正确适配</li>
+  <li>管理后台也支持深色模式切换</li>
+</ul>
+
+<!-- ===== SECTION 14 ===== -->
+<h2 id="s14">14. 已知限制 & 注意事项</h2>
+<table>
+  <tr><th>项目</th><th>说明</th></tr>
+  <tr><td>数据持久化</td><td>所有数据为前端 Mock，刷新后重置。仅登录状态存储在 localStorage。</td></tr>
+  <tr><td>表单提交</td><td>按钮可点击但不会真正保存数据（无后端连接）。</td></tr>
+  <tr><td>图片</td><td>使用 Unsplash 占位图，加载速度受网络影响。</td></tr>
+  <tr><td>测试账号</td><td>仅 cm@gmail.com 可登录，其他邮箱会报错。</td></tr>
+  <tr><td>管理后台</td><td>编辑/删除/发送等操作有 UI 反馈但无实际后端逻辑。</td></tr>
+  <tr><td>SSR vs CSR</td><td>Amplify 部署为纯 CSR（客户端渲染），首屏加载可能一瞬白屏。本地 npm run dev 为 SSR 模式。</td></tr>
+  <tr><td>推荐详情</td><td>/discover/:category/:id 页面为通用模板，内容较简单。</td></tr>
+</table>
+
+<!-- ===== SECTION 15 ===== -->
+<div class="page-break"></div>
+<h2 id="s15">15. 完整路由清单</h2>
+<table>
+  <tr><th>#</th><th>路由</th><th>页面名称</th><th>需登录</th><th>需管理员</th></tr>
+  <tr><td>1</td><td>/</td><td>动态 Feed</td><td></td><td></td></tr>
+  <tr><td>2</td><td>/login</td><td>登录</td><td></td><td></td></tr>
+  <tr><td>3</td><td>/register</td><td>注册</td><td></td><td></td></tr>
+  <tr><td>4</td><td>/events</td><td>活动列表</td><td></td><td></td></tr>
+  <tr><td>5</td><td>/events/:eventId</td><td>活动详情</td><td></td><td></td></tr>
+  <tr><td>6</td><td>/events/proposals</td><td>活动提案</td><td></td><td></td></tr>
+  <tr><td>7</td><td>/events/proposals/new</td><td>添加想法</td><td></td><td></td></tr>
+  <tr><td>8</td><td>/events/history</td><td>活动记录</td><td></td><td></td></tr>
+  <tr><td>9</td><td>/events/small-group/new</td><td>发起小局</td><td></td><td></td></tr>
+  <tr><td>10</td><td>/discover</td><td>推荐 · 发现</td><td></td><td></td></tr>
+  <tr><td>11</td><td>/discover/movies/:movieId</td><td>电影详情</td><td></td><td></td></tr>
+  <tr><td>12</td><td>/discover/:category</td><td>分类推荐列表</td><td></td><td></td></tr>
+  <tr><td>13</td><td>/discover/:category/add</td><td>添加推荐</td><td></td><td></td></tr>
+  <tr><td>14</td><td>/discover/:category/:id</td><td>推荐详情</td><td></td><td></td></tr>
+  <tr><td>15</td><td>/cards</td><td>感谢卡</td><td></td><td></td></tr>
+  <tr><td>16</td><td>/profile</td><td>个人页</td><td></td><td></td></tr>
+  <tr><td>17</td><td>/members</td><td>成员墙</td><td>✔</td><td></td></tr>
+  <tr><td>18</td><td>/members/:name</td><td>成员详情</td><td>✔</td><td></td></tr>
+  <tr><td>19</td><td>/about</td><td>关于串门儿</td><td></td><td></td></tr>
+  <tr><td>20</td><td>/about/:contentType</td><td>关于内容详情</td><td></td><td></td></tr>
+  <tr><td>21</td><td>/announcements/:slug</td><td>公告详情</td><td></td><td></td></tr>
+  <tr><td>22</td><td>/apply</td><td>申请加入</td><td></td><td></td></tr>
+  <tr><td>23</td><td>/settings</td><td>账号设置</td><td>✔</td><td></td></tr>
+  <tr><td>24</td><td>/admin</td><td>管理仪表盘</td><td>✔</td><td>✔</td></tr>
+  <tr><td>25</td><td>/admin/members</td><td>成员管理</td><td>✔</td><td>✔</td></tr>
+  <tr><td>26</td><td>/admin/events</td><td>活动管理</td><td>✔</td><td>✔</td></tr>
+  <tr><td>27</td><td>/admin/newsletters</td><td>社区通讯</td><td>✔</td><td>✔</td></tr>
+  <tr><td>28</td><td>/admin/settings</td><td>系统设置</td><td>✔</td><td>✔</td></tr>
+</table>
+
+<div class="tip" style="margin-top: 24px;">
+  <strong>快速 Walkthrough 路径（推荐顺序）：</strong><br>
+  1. 打开首页（未登录）→ 2. 点「登录」→ 3. 输入 cm@gmail.com → 4. 浏览首页动态 → 5. 点公告进详情 →<br>
+  6. 活动 Tab → 7. 点活动卡片看详情 → 8. 提案页 → 9. 活动记录 → 10. 推荐 Tab → 11. 点电影看详情 →<br>
+  12. 感谢卡 Tab → 13. 个人页 Tab → 14. 汉堡菜单 → 成员墙 → 15. 点成员看详情 → 16. 关于串门儿 →<br>
+  17. 管理后台 → 18. 仪表盘 → 成员管理 → 活动管理 → 通讯 → 设置 → 19. 返回前台 → 20. 退出登录
+</div>
+
+</body>
+</html>
