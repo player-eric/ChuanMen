@@ -18,7 +18,7 @@ import { useAuth } from '@/auth/AuthContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const { user, setUser } = useAuth();
 
   const [email, setEmail] = useState('');
   const [remember, setRemember] = useState(true);
@@ -28,6 +28,12 @@ export default function LoginPage() {
   useEffect(() => {
     document.title = '串门儿 - 登录';
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [navigate, user]);
 
   const onSubmit = async () => {
     if (!email.trim()) {
@@ -53,7 +59,15 @@ export default function LoginPage() {
     <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2, bgcolor: 'background.default' }}>
       <Card sx={{ width: '100%', maxWidth: 520 }}>
         <CardContent>
-          <Stack spacing={2}>
+          <Stack
+            spacing={2}
+            component="form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void onSubmit();
+            }}
+            autoComplete="on"
+          >
             <Box>
               <Typography variant="h5" fontWeight={700}>登录串门儿</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -65,9 +79,11 @@ export default function LoginPage() {
 
             <TextField
               label="邮箱"
+              name="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               type="email"
+              autoComplete="email"
               required
               fullWidth
             />
@@ -77,7 +93,7 @@ export default function LoginPage() {
               label="保持登录"
             />
 
-            <Button variant="contained" onClick={onSubmit} disabled={isSubmitting}>
+            <Button type="submit" variant="contained" disabled={isSubmitting}>
               {isSubmitting ? '登录中...' : '登录'}
             </Button>
 

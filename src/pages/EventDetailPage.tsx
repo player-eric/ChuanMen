@@ -9,6 +9,7 @@ import {
   CardContent,
   Chip,
   Alert,
+  Snackbar,
   Stack,
   Typography,
 } from '@mui/material';
@@ -22,7 +23,15 @@ export default function EventDetailPage() {
   const { user } = useAuth();
   const loadedEvent = useLoaderData() as EventData | null;
   const [event, setEvent] = useState<EventData | null>(loadedEvent);
-  const [actionError, setActionError] = useState('');
+  const [flash, setFlash] = useState<{
+    open: boolean;
+    severity: 'success' | 'error';
+    message: string;
+  }>({
+    open: false,
+    severity: 'success',
+    message: '',
+  });
 
   useEffect(() => {
     const run = async () => {
@@ -70,20 +79,44 @@ export default function EventDetailPage() {
       return;
     }
     if (!user?.id) {
-      setActionError('请先登录后再报名');
+      setFlash({ open: true, severity: 'error', message: '请先登录后再报名' });
       return;
     }
     try {
       await signupEvent(eventId, user.id);
-      setActionError('');
+      setFlash({ open: true, severity: 'success', message: '报名参加成功' });
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : '报名失败，请稍后重试');
+      setFlash({
+        open: true,
+        severity: 'error',
+        message: error instanceof Error ? error.message : '报名失败，请稍后重试',
+      });
     }
   };
 
   return (
     <Stack spacing={2}>
-      {actionError && <Alert severity="error">{actionError}</Alert>}
+      <Snackbar
+        open={flash.open}
+        autoHideDuration={3500}
+        onClose={() => setFlash((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          severity={flash.severity}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => setFlash((prev) => ({ ...prev, open: false }))}
+            >
+              取消
+            </Button>
+          }
+        >
+          {flash.message}
+        </Alert>
+      </Snackbar>
       <Card>
         <CardContent>
           <Stack spacing={1.5}>

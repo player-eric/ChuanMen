@@ -16,7 +16,7 @@ import { useAuth } from '@/auth/AuthContext';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const { user, setUser } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -28,6 +28,12 @@ export default function RegisterPage() {
   useEffect(() => {
     document.title = '串门儿 - 注册';
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [navigate, user]);
 
   const onSubmit = async () => {
     if (!name.trim() || !email.trim()) {
@@ -59,7 +65,15 @@ export default function RegisterPage() {
     <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2, bgcolor: 'background.default' }}>
       <Card sx={{ width: '100%', maxWidth: 520 }}>
         <CardContent>
-          <Stack spacing={2}>
+          <Stack
+            spacing={2}
+            component="form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void onSubmit();
+            }}
+            autoComplete="on"
+          >
             <Box>
               <Typography variant="h5" fontWeight={700}>欢迎加入串门儿</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -71,35 +85,43 @@ export default function RegisterPage() {
 
             <TextField
               label="姓名"
+              name="name"
               value={name}
               onChange={(event) => setName(event.target.value)}
+              autoComplete="name"
               required
               fullWidth
             />
             <TextField
               label="邮箱"
+              name="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               type="email"
+              autoComplete="email"
               required
               fullWidth
             />
             <TextField
               label="头像 URL（可选）"
+              name="photo"
               value={avatar}
               onChange={(event) => setAvatar(event.target.value)}
+              autoComplete="photo"
               fullWidth
             />
             <TextField
               label="个人简介（可选）"
+              name="bio"
               value={bio}
               onChange={(event) => setBio(event.target.value)}
               multiline
               minRows={3}
+              autoComplete="off"
               fullWidth
             />
 
-            <Button variant="contained" onClick={onSubmit} disabled={isSubmitting}>
+            <Button type="submit" variant="contained" disabled={isSubmitting}>
               {isSubmitting ? '注册中...' : '注册并进入'}
             </Button>
 
