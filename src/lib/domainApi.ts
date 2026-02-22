@@ -1,3 +1,5 @@
+import { fetchRecommendations, fetchRecommendationById } from '@/mock/api';
+
 type EntityMap = Record<string, unknown>;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
@@ -16,6 +18,9 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const data = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(data?.message ?? '请求失败，请稍后重试');
+  }
+  if (data === null) {
+    throw new Error('Invalid JSON response');
   }
   return data as T;
 }
@@ -85,9 +90,14 @@ export async function createProposal(payload: {
 }
 
 export async function searchRecommendations(category: RecommendationCategory, keyword: string) {
-  return requestJson<{ items: EntityMap[] }>(
-    `/api/search/recommendations${toQueryString({ category, q: keyword })}`,
-  );
+  try {
+    return await requestJson<{ items: EntityMap[] }>(
+      `/api/search/recommendations${toQueryString({ category, q: keyword })}`,
+    );
+  } catch {
+    // Fallback to local mock data (CSR / Amplify without backend)
+    return fetchRecommendations(category, keyword);
+  }
 }
 
 export async function createRecommendation(payload: {
@@ -106,5 +116,12 @@ export async function createRecommendation(payload: {
 }
 
 export async function getRecommendationById(id: string) {
-  return requestJson<EntityMap>(`/api/recommendations/${id}`);
+  try {
+    return await requestJson<EntityMap>(`/api/recommendations/${id}`);
+  } catch {
+    // Fallback to local mock data (CSR / Amplify without backend)
+    const item = await fetchRecommendationById(id);
+    if (!item) throw new Error('未找到该推荐');
+    return item;
+  }
 }

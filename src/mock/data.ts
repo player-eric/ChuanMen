@@ -330,6 +330,61 @@ export const recentActivity = [
   { name: 'Fall Hike · Watchung', date: '11.16', emoji: '🍂' },
 ];
 
+/** ===== Recommendations — 电影 / 菜谱 / 音乐 / 好店 ===== */
+export interface RecoItem {
+  _id: string;
+  category: 'movie' | 'recipe' | 'music' | 'place';
+  title: string;
+  description: string;
+  sourceUrl?: string;
+  tags?: string[];
+  voteCount: number;
+  authorName: string;
+  createdAt: string;
+}
+
+export const recommendationItems: RecoItem[] = [
+  /* ── 电影 movie ── */
+  { _id: 'reco-m1', category: 'movie', title: '花样年华', description: '王家卫 2000 年经典，梁朝伟张曼玉主演。暧昧、克制、旗袍和 Nat King Cole，每一帧都是画。', sourceUrl: 'https://movie.douban.com/subject/1291557/', tags: ['王家卫', '文艺', '爱情'], voteCount: 14, authorName: 'Yuan', createdAt: '2025-12-10' },
+  { _id: 'reco-m2', category: 'movie', title: '重庆森林', description: '又一部王家卫，1994 年。快节奏拼贴两段都市爱情，凤梨罐头和加州之梦。适合和朋友看完讨论到深夜。', sourceUrl: 'https://movie.douban.com/subject/1291999/', tags: ['王家卫', '文艺', '香港'], voteCount: 11, authorName: '大橙子', createdAt: '2025-12-15' },
+  { _id: 'reco-m3', category: 'movie', title: '寄生虫', description: '奉俊昊 2019 年金棕榈。穷人一家渗透进富人家庭，反转再反转。看完沉默五分钟。', sourceUrl: 'https://movie.douban.com/subject/27010768/', tags: ['韩国', '悬疑', '社会'], voteCount: 13, authorName: '白开水', createdAt: '2025-11-28' },
+  { _id: 'reco-m4', category: 'movie', title: '千与千寻', description: '宫崎骏代表作，2001。少女千寻误入神灵世界的冒险。无论看多少遍都会哭。', sourceUrl: 'https://movie.douban.com/subject/1291561/', tags: ['动画', '宫崎骏', '奇幻'], voteCount: 10, authorName: '星星', createdAt: '2025-12-01' },
+  { _id: 'reco-m5', category: 'movie', title: '燃烧女子的肖像', description: '瑟琳·席安玛 2019。18世纪法国小岛，画家与贵族小姐目光交汇。审美 ∞，看完沉浸式失恋。', sourceUrl: 'https://movie.douban.com/subject/30257175/', tags: ['法国', '爱情', '女性'], voteCount: 7, authorName: 'Tiffy', createdAt: '2026-01-05' },
+  { _id: 'reco-m6', category: 'movie', title: '小偷家族', description: '是枝裕和 2018。东京底层"家族"相依为命的故事，温柔到令人心碎。', sourceUrl: 'https://movie.douban.com/subject/27622447/', tags: ['日本', '家庭', '温情'], voteCount: 9, authorName: '奶茶', createdAt: '2025-12-20' },
+  { _id: 'reco-m7', category: 'movie', title: '坠落的审判', description: '茹斯汀·特里耶 2023 金棕榈。丈夫坠楼，妻子被审。真相在法庭与回忆之间反复横跳。', sourceUrl: 'https://movie.douban.com/subject/35942138/', tags: ['法国', '悬疑', '法庭'], voteCount: 8, authorName: 'Leo', createdAt: '2026-01-15' },
+  { _id: 'reco-m8', category: 'movie', title: '完美的日子', description: '维姆·文德斯 2023。役所广司饰演东京公厕清洁工，每天重复的日常却自带诗意。', sourceUrl: 'https://movie.douban.com/subject/36151692/', tags: ['日本', '文艺', '日常'], voteCount: 6, authorName: 'Yuan', createdAt: '2026-01-20' },
+
+  /* ── 菜谱 recipe ── */
+  { _id: 'reco-r1', category: 'recipe', title: '红烧肉（本帮做法）', description: 'Tiffy 秘方，冰糖炒色、加黄酒慢炖两小时。肥而不腻，入口即化。Potluck 王牌菜。', sourceUrl: 'https://www.xiachufang.com/recipe/100416436/', tags: ['本帮菜', '硬菜', '下饭'], voteCount: 12, authorName: 'Tiffy', createdAt: '2025-12-05' },
+  { _id: 'reco-r2', category: 'recipe', title: '酸菜鱼', description: '白开水的拿手菜。新鲜黑鱼片厚切，自家腌的酸菜，汤底酸辣鲜香。冬天来一锅巨舒服。', sourceUrl: 'https://www.xiachufang.com/recipe/104664725/', tags: ['川菜', '汤', '鱼'], voteCount: 10, authorName: '白开水', createdAt: '2025-11-20' },
+  { _id: 'reco-r3', category: 'recipe', title: '日式咖喱饭', description: '小樱推荐的简单日式晚餐。洋葱炒到半透明是灵魂。加一块 Vermont Curry 咖喱块，配米饭绝了。', tags: ['日料', '简单', '下饭'], voteCount: 8, authorName: '小樱', createdAt: '2025-12-18' },
+  { _id: 'reco-r4', category: 'recipe', title: '提拉米苏', description: 'Tiffy 烘焙课上教的版本。马斯卡彭 + 浓缩咖啡 + 手指饼干，冷藏一夜后口感最佳。', sourceUrl: 'https://www.xiachufang.com/recipe/103508518/', tags: ['甜品', '意式', '烘焙'], voteCount: 9, authorName: 'Tiffy', createdAt: '2026-01-10' },
+  { _id: 'reco-r5', category: 'recipe', title: '葱油拌面', description: '十五分钟搞定的深夜食堂。小葱慢慢炸到金黄酥脆，浇在热面上再加一勺生抽。Yuan 的 go-to 懒人餐。', tags: ['面食', '快手', '上海'], voteCount: 11, authorName: 'Yuan', createdAt: '2025-12-25' },
+  { _id: 'reco-r6', category: 'recipe', title: '手卷寿司', description: '上次日料之夜的明星菜！海苔 + 醋饭 + 新鲜刺身，diy 随意组合。小樱教的折法超简单。', tags: ['日料', '聚会', '互动'], voteCount: 7, authorName: '小樱', createdAt: '2026-02-01' },
+  { _id: 'reco-r7', category: 'recipe', title: '麻婆豆腐', description: '正宗川味，花椒一定要用汉源的。嫩豆腐切块别搅碎，最后撒上一把葱花。白开水的下饭神器。', sourceUrl: 'https://www.xiachufang.com/recipe/102893598/', tags: ['川菜', '下饭', '豆腐'], voteCount: 8, authorName: '白开水', createdAt: '2026-01-08' },
+  { _id: 'reco-r8', category: 'recipe', title: '司康 Scone', description: '英式下午茶标配。面团不要过度揉，保持粗糙感才会外酥内软。配草莓酱和 clotted cream。', tags: ['烘焙', '下午茶', '英式'], voteCount: 6, authorName: 'Tiffy', createdAt: '2026-02-10' },
+
+  /* ── 音乐 music ── */
+  { _id: 'reco-u1', category: 'music', title: 'Khruangbin — Con Todo El Mundo', description: '泰式放克 × 中东迷幻 × 得州吉他。适合做饭或开车时听，整张专辑零废曲。阿德电影夜前暖场必放。', sourceUrl: 'https://open.spotify.com/album/42j41uUwuHZT3bnklMGlPZ', tags: ['放克', '世界音乐', '氛围'], voteCount: 9, authorName: '阿德', createdAt: '2025-12-12' },
+  { _id: 'reco-u2', category: 'music', title: '万能青年旅店 — 冀西南林路行', description: '等了十年的第二张。《泥河》《采石》，器乐编排太牛了。听完想辞职去旷野发呆。', sourceUrl: 'https://open.spotify.com/album/6wfKOYAHYjMqcVGqNljaMr', tags: ['摇滚', '国摇', '独立'], voteCount: 11, authorName: '阿德', createdAt: '2025-11-30' },
+  { _id: 'reco-u3', category: 'music', title: 'Norah Jones — Come Away with Me', description: '经典爵士 vocal。适合雨天、适合读书、适合一个人喝红酒。奶茶店 BGM 常驻选手。', sourceUrl: 'https://open.spotify.com/album/1aBJp2ZBn3GlVgaFMJYafR', tags: ['爵士', '人声', '安静'], voteCount: 7, authorName: '奶茶', createdAt: '2026-01-02' },
+  { _id: 'reco-u4', category: 'music', title: '椎名林檎 — 無罪モラトリアム', description: '日本摇滚女王出道专辑。《丸の内サディスティック》一首封神。嗓音太有辨识度了。', sourceUrl: 'https://open.spotify.com/album/59GRdGeBEGkzsvnhHCqo5x', tags: ['日摇', '另类', '女声'], voteCount: 8, authorName: '小樱', createdAt: '2025-12-22' },
+  { _id: 'reco-u5', category: 'music', title: 'Radiohead — OK Computer', description: '1997 年神作。《Karma Police》《No Surprises》，整张专辑像一场关于科技异化的预言。', sourceUrl: 'https://open.spotify.com/album/6dVIqQ8qmQ5GBnJ9shOYGE', tags: ['另类摇滚', '经典', '英摇'], voteCount: 10, authorName: 'Leo', createdAt: '2026-01-18' },
+  { _id: 'reco-u6', category: 'music', title: '落日飞车 — Cassa Nova', description: '台湾 city pop / dream pop。《My Jinji》火遍全球不是没有道理的。夏天开车太爽了。', sourceUrl: 'https://open.spotify.com/album/4nLpuoCSeHHC7lkC8XVJWE', tags: ['dream pop', '台湾', '夏天'], voteCount: 8, authorName: '阿德', createdAt: '2026-02-05' },
+  { _id: 'reco-u7', category: 'music', title: 'Yo-Yo Ma — Soul of the Tango', description: '马友友演绎皮亚佐拉探戈。大提琴的每一弓都在叹息。看王家卫电影前听超合适。', sourceUrl: 'https://open.spotify.com/album/2vEQwi4GnISdFm5KCHNOjK', tags: ['古典', '探戈', '大提琴'], voteCount: 6, authorName: 'Yuan', createdAt: '2025-12-28' },
+  { _id: 'reco-u8', category: 'music', title: '陈绮贞 — 太阳', description: '吉他清新民谣。《旅行的意义》之外整张都好听。适合周末下午窝在沙发上听。', sourceUrl: 'https://open.spotify.com/album/1oIFkLDakYcwAH5UtCKhNM', tags: ['民谣', '台湾', '清新'], voteCount: 7, authorName: '星星', createdAt: '2026-01-25' },
+
+  /* ── 好店 place ── */
+  { _id: 'reco-p1', category: 'place', title: '鼎泰丰 Din Tai Fung（Flushing）', description: '法拉盛天景广场 B1。小笼包皮薄汁多，排骨炒饭也绝了。周末排队 40 分钟起，建议工作日去。', sourceUrl: 'https://www.dintaifungusa.com/us/locations.html', tags: ['中餐', '小笼包', '法拉盛'], voteCount: 13, authorName: '星星', createdAt: '2025-12-08' },
+  { _id: 'reco-p2', category: 'place', title: 'Ramen Nagomi（Edison）', description: 'Edison 本地最佳拉面。豚骨浓厚，溏心蛋完美。老板是日本人，味道非常正宗。', tags: ['日料', '拉面', 'Edison'], voteCount: 10, authorName: '白开水', createdAt: '2025-11-25' },
+  { _id: 'reco-p3', category: 'place', title: 'Mitsuwa Marketplace（Edgewater）', description: '新泽西最大的日系超市，吃的逛的都有。二楼美食广场推荐博多拉面和天妇罗。', sourceUrl: 'https://www.mitsuwa.com/stores/edgewater/', tags: ['超市', '日本', '逛街'], voteCount: 9, authorName: '小樱', createdAt: '2025-12-14' },
+  { _id: 'reco-p4', category: 'place', title: 'Bread & Salt（Jersey City）', description: 'JC 的意大利面包房 / 比萨店。focaccia 是全纽约 / 新泽西最好吃的，没有之一。周末常卖光。', sourceUrl: 'https://www.breadandsaltbakery.com/', tags: ['面包', '意大利', 'JC'], voteCount: 11, authorName: '大橙子', createdAt: '2025-12-20' },
+  { _id: 'reco-p5', category: 'place', title: 'Storm King Art Center', description: 'Hudson Valley 露天雕塑公园。秋天去最美，大草坪 + 巨型雕塑，拍照圣地。开车一小时左右。', sourceUrl: 'https://stormking.org/', tags: ['艺术', '户外', '拍照'], voteCount: 8, authorName: 'Tiffy', createdAt: '2026-01-12' },
+  { _id: 'reco-p6', category: 'place', title: 'Cafe Peanut（Princeton）', description: 'Princeton 小镇上的独立咖啡馆。手冲豆子水准很高，空间安静适合工作。周末有 pastry 出炉。', tags: ['咖啡', 'Princeton', '安静'], voteCount: 6, authorName: '星星', createdAt: '2026-01-28' },
+  { _id: 'reco-p7', category: 'place', title: '小肥羊 Happy Lamb（Edison）', description: 'Edison Route 27 上的火锅连锁。锅底比海底捞正宗，羊肉非常新鲜。四人以上去最划算。', tags: ['火锅', 'Edison', '聚餐'], voteCount: 10, authorName: 'Tiffy', createdAt: '2026-02-08' },
+  { _id: 'reco-p8', category: 'place', title: 'Grounds for Sculpture（Hamilton）', description: '汉密尔顿雕塑花园，春夏超出片。买票后可以在园内餐厅吃法餐。适合一日游。', sourceUrl: 'https://www.groundsforsculpture.org/', tags: ['艺术', '花园', '约会'], voteCount: 7, authorName: '大橙子', createdAt: '2026-02-15' },
+];
+
 /** ===== Feed ===== */
 export const feedAnnouncements = [
   { id: 'ann-1', slug: 'spring-2025-recruit', title: '🎉 串门 2025 春季招新开始啦！', body: '欢迎推荐你身边有趣的朋友加入我们的社区。点击了解详情。', date: '02.15' },

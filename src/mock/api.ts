@@ -13,7 +13,9 @@ import {
   cardPeople, quickMessages, myCards, cardsSent,
   profileStats, recentActivity,
   feedAnnouncements, feedNewRecos, feedNewCards,
+  recommendationItems,
 } from './data';
+import type { RecoItem } from './data';
 import { photos } from '@/theme';
 
 /** Simulate network delay */
@@ -104,3 +106,31 @@ export async function fetchAboutData(): Promise<AboutPageData> {
 
 /** Feed data helpers — exported for FeedPage to use directly */
 export { feedAnnouncements, feedNewRecos, feedNewCards };
+
+/* ═══ Recommendations — mock fallback for CSR / Amplify ═══ */
+
+export async function fetchRecommendations(
+  category: string,
+  keyword: string,
+): Promise<{ items: Record<string, unknown>[] }> {
+  await delay();
+  let items: RecoItem[] = recommendationItems.filter((r) => r.category === category);
+  if (keyword) {
+    const q = keyword.toLowerCase();
+    items = items.filter(
+      (r) =>
+        r.title.toLowerCase().includes(q) ||
+        r.description.toLowerCase().includes(q) ||
+        (r.tags ?? []).some((t) => t.toLowerCase().includes(q)),
+    );
+  }
+  return { items: items as unknown as Record<string, unknown>[] };
+}
+
+export async function fetchRecommendationById(
+  id: string,
+): Promise<Record<string, unknown> | null> {
+  await delay();
+  const item = recommendationItems.find((r) => r._id === id) ?? null;
+  return item as unknown as Record<string, unknown> | null;
+}
