@@ -21,7 +21,7 @@ usersRouter.post('/', async (req, res, next) => {
 
     const existedUser = await UserModel.findOne({ email: payload.email }).lean();
     if (existedUser) {
-      res.status(409).json({ message: 'Email already registered' });
+      res.status(409).json({ message: '邮箱已被注册' });
       return;
     }
 
@@ -36,13 +36,13 @@ usersRouter.get('/:userId', async (req, res, next) => {
   try {
     const { userId } = req.params;
     if (!mongoose.isValidObjectId(userId)) {
-      res.status(400).json({ message: 'Invalid user id' });
+      res.status(400).json({ message: '无效的用户标识' });
       return;
     }
 
     const user = await UserModel.findById(userId).lean();
     if (!user) {
-      res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: '用户不存在' });
       return;
     }
 
@@ -56,7 +56,7 @@ usersRouter.patch('/:userId', async (req, res, next) => {
   try {
     const { userId } = req.params;
     if (!mongoose.isValidObjectId(userId)) {
-      res.status(400).json({ message: 'Invalid user id' });
+      res.status(400).json({ message: '无效的用户标识' });
       return;
     }
 
@@ -68,7 +68,7 @@ usersRouter.patch('/:userId', async (req, res, next) => {
     }).lean();
 
     if (!user) {
-      res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: '用户不存在' });
       return;
     }
 

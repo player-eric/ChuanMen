@@ -25,7 +25,7 @@ mediaRouter.post('/presign', async (req, res, next) => {
     const payload = presignSchema.parse(req.body);
 
     if (payload.ownerId && !mongoose.isValidObjectId(payload.ownerId)) {
-      res.status(400).json({ message: 'Invalid ownerId' });
+      res.status(400).json({ message: '用户标识参数无效' });
       return;
     }
 
@@ -71,7 +71,7 @@ mediaRouter.post('/complete', async (req, res, next) => {
     ).lean();
 
     if (!media) {
-      res.status(404).json({ message: 'Media key not found' });
+      res.status(404).json({ message: '未找到对应的媒体标识' });
       return;
     }
 
@@ -85,7 +85,7 @@ mediaRouter.get('/download-url', async (req, res, next) => {
   try {
     const key = req.query.key;
     if (typeof key !== 'string' || !key) {
-      res.status(400).json({ message: 'Missing key' });
+      res.status(400).json({ message: '缺少资源标识参数' });
       return;
     }
 
@@ -106,17 +106,17 @@ mediaRouter.post('/upload-proxy', express.raw({ type: '*/*', limit: '20mb' }), a
     const ownerId = typeof req.query.ownerId === 'string' ? req.query.ownerId : '';
 
     if (!fileName) {
-      res.status(400).json({ message: 'Missing fileName query parameter' });
+      res.status(400).json({ message: '缺少文件名查询参数' });
       return;
     }
 
     if (ownerId && !mongoose.isValidObjectId(ownerId)) {
-      res.status(400).json({ message: 'Invalid ownerId' });
+      res.status(400).json({ message: '用户标识参数无效' });
       return;
     }
 
     if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
-      res.status(400).json({ message: 'Empty file body' });
+      res.status(400).json({ message: '文件内容为空' });
       return;
     }
 

@@ -1,31 +1,80 @@
 # ChuanMen
 
-## Claude Code GitHub App
+## 本地联调（UI + 真实 MongoDB + MinIO + API）
 
-This repository is integrated with [Claude Code](https://claude.ai/code) via the [claude-code-action](https://github.com/anthropics/claude-code-action). Claude can respond to `@claude` mentions in issues and pull requests to answer questions, review code, and implement changes.
+目标：本地验证注册、登录，以及后端数据写入/读取相关功能。
 
-### Setup (one-time, requires repo admin)
+### 0) 前置条件
 
-1. Install the [Claude GitHub App](https://github.com/apps/claude) on this repository.
-2. Add your `ANTHROPIC_API_KEY` as a repository secret:
-   - Go to **Settings → Secrets and variables → Actions → New repository secret**
-   - Name: `ANTHROPIC_API_KEY`
-   - Value: your Anthropic API key from [console.anthropic.com](https://console.anthropic.com)
+- 安装并启动 Docker Desktop
+- Node.js 18+
 
-### Usage
+### 1) 安装依赖
 
-Mention `@claude` in any issue or pull request comment to interact with Claude:
+在仓库根目录执行：
 
-```
-@claude Can you review this code and suggest improvements?
+```bash
+npm install
+npm --prefix server install
 ```
 
-## 本地开发（含用户注册）
+### 2) 启动后端 Docker 联调栈
 
-前端已接入真实注册流程，注册数据写入 `server` 的 MongoDB。
+在仓库根目录执行：
 
-1. 启动后端（任选其一）：
-	- Docker system test：在 `server` 目录执行 `npm run system:test:up`
-	- 本地直跑：在 `server` 目录配置 `.env.development` 后执行 `npm run dev`
-2. 启动前端：在仓库根目录执行 `npm run dev`
-3. 打开前端地址后会先进入 `/register`，注册成功才可访问全站页面。
+```bash
+npm run system:test:up
+```
+
+该命令会启动：
+
+- MongoDB（`localhost:27017`）
+- MinIO（`localhost:9000`，Console 在 `localhost:9001`）
+- API Server（`localhost:4000`）
+
+可用检查：
+
+- 健康检查：`http://localhost:4000/api/health`
+- 系统测试页（上传/媒体流）：`http://localhost:4000/system-test/`
+- MinIO Console：`http://localhost:9001`（`minioadmin / minioadmin`）
+
+查看后端日志：
+
+```bash
+npm run system:test:logs
+```
+
+停止栈：
+
+```bash
+npm run system:test:down
+```
+
+### 3) 启动前端
+
+在另一个终端（仓库根目录）执行：
+
+```bash
+npm run dev
+```
+
+前端默认 `http://localhost:5173`。当前 Vite 已配置 `/api -> http://localhost:4000` 代理，因此无需额外改 `.env`。
+
+### 4) UI 测试路径（注册 / 登录）
+
+1. 打开 `http://localhost:5173/register`
+2. 用新邮箱注册（会调用 `POST /api/users`，写入 MongoDB）
+3. 退出后打开 `http://localhost:5173/login`
+4. 用同一邮箱登录（会调用 `POST /api/auth/login`）
+
+### 5) 数据操作验证（可选）
+
+注册完成后，浏览器开发者工具可直接验证接口：
+
+- `GET /api/users/:userId`
+- `PATCH /api/users/:userId`
+- `POST /api/media/presign`
+- `POST /api/media/complete`
+- `GET /api/media/download-url?key=...`
+
+也可以打开系统测试页做媒体上传联调：`http://localhost:4000/system-test/`

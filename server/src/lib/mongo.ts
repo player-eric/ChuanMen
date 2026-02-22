@@ -15,6 +15,6 @@ export async function connectMongo(): Promise<void> {
 
   isConnected = true;
   mongoose.connection.on('error', (error) => {
-    console.error('MongoDB connection error:', error);
+    console.error('MongoDB 连接错误：', error);
   });
 }

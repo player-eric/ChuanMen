@@ -3,7 +3,7 @@ import { ZodError } from 'zod';
 
 export function notFoundHandler(req: Request, res: Response): void {
   res.status(404).json({
-    message: `Route not found: ${req.method} ${req.originalUrl}`,
+    message: `路由不存在：${req.method} ${req.originalUrl}`,
   });
 }
 
@@ -15,7 +15,7 @@ export function errorHandler(
 ): void {
   if (error instanceof ZodError) {
     res.status(400).json({
-      message: 'Invalid request payload',
+      message: '请求参数不合法',
       issues: error.issues,
     });
     return;
@@ -26,5 +26,5 @@ export function errorHandler(
     return;
   }
 
-  res.status(500).json({ message: 'Unknown server error' });
+  res.status(500).json({ message: '未知服务器错误' });
 }

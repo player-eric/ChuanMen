@@ -17,12 +17,12 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((value) => value === 'true'),
-  MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
+  MONGODB_URI: z.string().min(1, '必须配置 MONGODB_URI'),
   MONGODB_DB_NAME: z.string().min(1).default('chuanmen'),
-  AWS_REGION: z.string().min(1, 'AWS_REGION is required'),
-  AWS_ACCESS_KEY_ID: z.string().min(1, 'AWS_ACCESS_KEY_ID is required'),
-  AWS_SECRET_ACCESS_KEY: z.string().min(1, 'AWS_SECRET_ACCESS_KEY is required'),
-  AWS_S3_BUCKET: z.string().min(1, 'AWS_S3_BUCKET is required'),
+  AWS_REGION: z.string().min(1, '必须配置 AWS_REGION'),
+  AWS_ACCESS_KEY_ID: z.string().min(1, '必须配置 AWS_ACCESS_KEY_ID'),
+  AWS_SECRET_ACCESS_KEY: z.string().min(1, '必须配置 AWS_SECRET_ACCESS_KEY'),
+  AWS_S3_BUCKET: z.string().min(1, '必须配置 AWS_S3_BUCKET'),
   AWS_S3_ENDPOINT: z.string().optional().default(''),
   AWS_S3_FORCE_PATH_STYLE: z
     .string()
@@ -35,7 +35,7 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error('❌ Invalid environment variables:', parsed.error.flatten().fieldErrors);
+  console.error('❌ 环境变量校验失败：', parsed.error.flatten().fieldErrors);
   process.exit(1);
 }
 

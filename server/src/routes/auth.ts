@@ -14,7 +14,7 @@ authRouter.post('/login', async (req, res, next) => {
 
     const user = await UserModel.findOne({ email: payload.email.toLowerCase() }).lean();
     if (!user) {
-      res.status(404).json({ message: 'User not found, please register first' });
+      res.status(404).json({ message: '用户不存在，请先注册' });
       return;
     }
 

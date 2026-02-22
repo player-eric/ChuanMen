@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "system:test:up": "npm --prefix server run system:test:up",
+    "system:test:down": "npm --prefix server run system:test:down",
+    "system:test:logs": "npm --prefix server run system:test:logs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

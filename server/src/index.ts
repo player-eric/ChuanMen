@@ -11,6 +11,6 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((error) => {
-  console.error('❌ Server startup failed:', error);
+  console.error('❌ 服务启动失败：', error);
   process.exit(1);
 });
