@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Card,
+  CardActionArea,
   CardActions,
   CardContent,
   Chip,
@@ -81,20 +82,22 @@ function FullFeed() {
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 7 }}>
           <Card>
-            <CardContent>
-              <Typography variant="h6">周六电影夜 · 花样年华</Typography>
-              <Typography variant="body2" color="text.secondary">2.22 周六 7pm · 白开水家</Typography>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2 }}>
-                <AvatarGroup max={5}>
-                  {['白开水', 'Yuan', '大橙子', '星星', 'Tiffy'].map((name) => (
-                    <Avatar key={name}>{name[0]}</Avatar>
-                  ))}
-                </AvatarGroup>
-                <Chip color="success" size="small" label="还剩 4 位" />
-              </Stack>
-            </CardContent>
+            <CardActionArea onClick={() => navigate('/events/1')}>
+              <CardContent>
+                <Typography variant="h6">周六电影夜 · 花样年华</Typography>
+                <Typography variant="body2" color="text.secondary">2.22 周六 7pm · 白开水家</Typography>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2 }}>
+                  <AvatarGroup max={5}>
+                    {['白开水', 'Yuan', '大橙子', '星星', 'Tiffy'].map((name) => (
+                      <Avatar key={name}>{name[0]}</Avatar>
+                    ))}
+                  </AvatarGroup>
+                  <Chip color="success" size="small" label="还剩 4 位" />
+                </Stack>
+              </CardContent>
+            </CardActionArea>
             <CardActions>
-              <Button size="small" onClick={() => navigate('/events')}>查看活动详情</Button>
+              <Button size="small" onClick={() => navigate('/events/1')}>查看活动详情</Button>
             </CardActions>
           </Card>
         </Grid>

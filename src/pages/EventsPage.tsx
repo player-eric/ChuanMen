@@ -6,6 +6,7 @@ import {
   Box,
   Button,
   Card,
+  CardActionArea,
   CardActions,
   CardContent,
   Chip,
@@ -110,29 +111,31 @@ export default function EventsPage() {
             {data.upcoming.map((evt) => (
               <Grid key={evt.id} size={{ xs: 12, md: 6 }}>
                 <Card sx={{ height: '100%' }}>
-                  <CardContent>
-                    <Stack spacing={1.5}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography variant="h6">{evt.title}</Typography>
-                        {evt.phase === 'invite' && <Chip size="small" color="warning" label="邀请" />}
+                  <CardActionArea onClick={() => navigate(`/events/${evt.id}`)}>
+                    <CardContent>
+                      <Stack spacing={1.5}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                          <Typography variant="h6">{evt.title}</Typography>
+                          {evt.phase === 'invite' && <Chip size="small" color="warning" label="邀请" />}
+                        </Stack>
+                        <Typography variant="body2" color="text.secondary">{evt.date} · {evt.location}</Typography>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Avatar sx={{ width: 26, height: 26 }}>{evt.host[0]}</Avatar>
+                          <Typography variant="body2" color="text.secondary">{evt.host} Host</Typography>
+                        </Stack>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                          <AvatarGroup max={4}>
+                            {evt.people.map((name) => (
+                              <Avatar key={name}>{name[0]}</Avatar>
+                            ))}
+                          </AvatarGroup>
+                          <Typography variant="body2" color={evt.spots > 0 ? 'success.main' : 'text.secondary'}>
+                            还剩 {evt.spots} 位
+                          </Typography>
+                        </Stack>
                       </Stack>
-                      <Typography variant="body2" color="text.secondary">{evt.date} · {evt.location}</Typography>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Avatar sx={{ width: 26, height: 26 }}>{evt.host[0]}</Avatar>
-                        <Typography variant="body2" color="text.secondary">{evt.host} Host</Typography>
-                      </Stack>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <AvatarGroup max={4}>
-                          {evt.people.map((name) => (
-                            <Avatar key={name}>{name[0]}</Avatar>
-                          ))}
-                        </AvatarGroup>
-                        <Typography variant="body2" color={evt.spots > 0 ? 'success.main' : 'text.secondary'}>
-                          还剩 {evt.spots} 位
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                  </CardContent>
+                    </CardContent>
+                  </CardActionArea>
                   <CardActions>
                     <Button size="small" onClick={() => navigate(`/events/${evt.id}`)}>查看详情</Button>
                   </CardActions>

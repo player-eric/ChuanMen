@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   Card,
+  CardActionArea,
   CardContent,
   Chip,
   Grid,
@@ -126,25 +127,29 @@ function MoviesSection() {
           {pool.map((m) => (
             <Grid key={m.id} size={{ xs: 12, md: 6 }}>
               <Card>
-                <CardContent>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Box>
-                      <Typography fontWeight={700} sx={{ cursor: 'pointer' }} onClick={() => navigate(`/discover/movies/${m.id}`)}>{m.title}</Typography>
-                      <Typography variant="body2" color="text.secondary">{m.year} · {m.dir}</Typography>
-                      <Typography variant="caption" color="text.secondary">{m.by} 推荐</Typography>
-                    </Box>
-                    <Button
-                      onClick={() => toggle(m.id)}
-                      variant={votes[m.id] ? 'contained' : 'outlined'}
-                      size="small"
-                      disabled={!user}
-                    >
-                      ▲ {m.v + (votes[m.id] ? 1 : 0)}
-                    </Button>
-                  </Stack>
-                  {m.status && <Chip sx={{ mt: 1 }} size="small" color="success" label={`✓ ${m.status}`} />}
-                  <Button sx={{ mt: 1 }} size="small" onClick={() => navigate(`/discover/movies/${m.id}`)}>查看电影详情</Button>
-                </CardContent>
+                <CardActionArea onClick={() => navigate(`/discover/movies/${m.id}`)}>
+                  <CardContent>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Box>
+                        <Typography fontWeight={700}>{m.title}</Typography>
+                        <Typography variant="body2" color="text.secondary">{m.year} · {m.dir}</Typography>
+                        <Typography variant="caption" color="text.secondary">{m.by} 推荐</Typography>
+                      </Box>
+                      <Button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggle(m.id);
+                        }}
+                        variant={votes[m.id] ? 'contained' : 'outlined'}
+                        size="small"
+                        disabled={!user}
+                      >
+                        ▲ {m.v + (votes[m.id] ? 1 : 0)}
+                      </Button>
+                    </Stack>
+                    {m.status && <Chip sx={{ mt: 1 }} size="small" color="success" label={`✓ ${m.status}`} />}
+                  </CardContent>
+                </CardActionArea>
               </Card>
             </Grid>
           ))}

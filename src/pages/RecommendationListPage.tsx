@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Card,
+  CardActionArea,
   CardContent,
   InputAdornment,
   Stack,
@@ -106,15 +107,14 @@ export default function RecommendationListPage() {
       <Stack spacing={1.5}>
         {items.map((item) => (
           <Card key={String(item._id)}>
-            <CardContent>
-              <Typography fontWeight={700}>{String(item.title ?? '')}</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                {String(item.description ?? '')}
-              </Typography>
-              <Button sx={{ mt: 1 }} size="small" onClick={() => navigate(`/discover/${currentCategory}/${String(item._id)}`)}>
-                查看详情
-              </Button>
-            </CardContent>
+            <CardActionArea onClick={() => navigate(`/discover/${currentCategory}/${String(item._id)}`)}>
+              <CardContent>
+                <Typography fontWeight={700}>{String(item.title ?? '')}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {String(item.description ?? '')}
+                </Typography>
+              </CardContent>
+            </CardActionArea>
           </Card>
         ))}
       </Stack>
