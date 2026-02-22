@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router';
 import {
   Alert,
@@ -24,6 +24,10 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    document.title = '串门儿 - 登录';
+  }, []);
 
   const onSubmit = async () => {
     if (!email.trim()) {

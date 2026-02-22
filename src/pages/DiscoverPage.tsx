@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLoaderData } from 'react-router';
+import { useLoaderData, useNavigate } from 'react-router';
 import {
   Box,
   Button,
@@ -44,6 +44,7 @@ export default function DiscoverPage() {
 }
 
 function MoviesSection() {
+  const navigate = useNavigate();
   const data = useLoaderData() as DiscoverPageData;
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'pool' | 'screened'>('pool');
@@ -116,7 +117,7 @@ function MoviesSection() {
                 <CardContent>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Box>
-                      <Typography fontWeight={700}>{m.title}</Typography>
+                      <Typography fontWeight={700} sx={{ cursor: 'pointer' }} onClick={() => navigate(`/discover/movies/${m.id}`)}>{m.title}</Typography>
                       <Typography variant="body2" color="text.secondary">{m.year} · {m.dir}</Typography>
                       <Typography variant="caption" color="text.secondary">{m.by} 推荐</Typography>
                     </Box>
@@ -129,6 +130,7 @@ function MoviesSection() {
                     </Button>
                   </Stack>
                   {m.status && <Chip sx={{ mt: 1 }} size="small" color="success" label={`✓ ${m.status}`} />}
+                  <Button sx={{ mt: 1 }} size="small" onClick={() => navigate(`/discover/movies/${m.id}`)}>查看电影详情</Button>
                 </CardContent>
               </Card>
             </Grid>

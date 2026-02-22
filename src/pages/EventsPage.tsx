@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLoaderData } from 'react-router';
+import { useLoaderData, useNavigate } from 'react-router';
 import {
   Avatar,
   AvatarGroup,
@@ -66,6 +66,7 @@ function EventDetailDialog({ evt, open, onClose }: { evt: EventData | null; open
 }
 
 export default function EventsPage() {
+  const navigate = useNavigate();
   const data = useLoaderData() as EventsPageData;
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [selected, setSelected] = useState<EventData | null>(null);
@@ -123,7 +124,7 @@ export default function EventsPage() {
                     </Stack>
                   </CardContent>
                   <CardActions>
-                    <Button size="small" onClick={() => setSelected(evt)}>查看详情</Button>
+                    <Button size="small" onClick={() => navigate(`/events/${evt.id}`)}>查看详情</Button>
                   </CardActions>
                 </Card>
               </Grid>
@@ -132,7 +133,10 @@ export default function EventsPage() {
 
           <Card>
             <CardContent>
-              <Typography variant="subtitle1" sx={{ mb: 1.5 }}>💡 大家的想法</Typography>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                <Typography variant="subtitle1">💡 大家的想法</Typography>
+                <Button size="small" onClick={() => navigate('/events/proposals')}>查看全部</Button>
+              </Stack>
               <Stack spacing={1.2}>
                 {data.proposals.map((proposal, idx) => (
                   <Box key={idx} sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 2 }}>
@@ -150,7 +154,11 @@ export default function EventsPage() {
       )}
 
       {tab === 'past' && (
-        <Grid container spacing={2}>
+        <Stack spacing={2}>
+          <Box sx={{ textAlign: 'right' }}>
+            <Button size="small" onClick={() => navigate('/events/history')}>进入活动记录页</Button>
+          </Box>
+          <Grid container spacing={2}>
           {data.past.map((evt, idx) => (
             <Grid key={idx} size={{ xs: 12, md: 6 }}>
               <Card>
@@ -162,7 +170,8 @@ export default function EventsPage() {
               </Card>
             </Grid>
           ))}
-        </Grid>
+          </Grid>
+        </Stack>
       )}
 
       <Box sx={{ position: 'fixed', right: { xs: 16, md: 32 }, bottom: { xs: 84, md: 24 } }}>

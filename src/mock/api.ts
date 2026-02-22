@@ -26,9 +26,29 @@ export async function fetchEventsData(): Promise<EventsPageData> {
   return { upcoming: upcomingEvents, proposals, past: pastEvents };
 }
 
+export async function fetchEventDetail(eventId: number) {
+  await delay();
+  return upcomingEvents.find((event) => event.id === eventId) ?? null;
+}
+
+export async function fetchEventProposalsData() {
+  await delay();
+  return proposals;
+}
+
+export async function fetchEventRecordsData() {
+  await delay();
+  return pastEvents;
+}
+
 export async function fetchDiscoverData(): Promise<DiscoverPageData> {
   await delay();
   return { pool: moviePool, screened: movieScreened };
+}
+
+export async function fetchMovieDetail(movieId: number) {
+  await delay();
+  return moviePool.find((movie) => movie.id === movieId) ?? null;
 }
 
 export async function fetchCardsData(): Promise<CardsPageData> {

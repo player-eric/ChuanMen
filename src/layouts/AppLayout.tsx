@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import {
   AppBar,
@@ -37,12 +37,19 @@ const pages = [
   { id: 'discover', icon: <ThumbUpRoundedIcon />, label: '推荐' },
   { id: 'cards', icon: <MailRoundedIcon />, label: '感谢卡' },
   { id: 'profile', icon: <PersonRoundedIcon />, label: '我' },
+  { id: 'about', icon: <InfoOutlinedIcon />, label: '关于' },
 ];
 
 function getTitle(pathname: string): string {
-  if (pathname === '/') return '串门儿';
+  if (pathname === '/') return '动态';
   if (pathname === '/events') return '活动';
+  if (pathname.startsWith('/events/')) {
+    if (pathname === '/events/proposals') return '活动提案';
+    if (pathname === '/events/history') return '活动记录';
+    return '活动详情';
+  }
   if (pathname === '/discover') return '推荐';
+  if (pathname.startsWith('/discover/movies/')) return '电影详情';
   if (pathname === '/cards') return '感谢卡';
   if (pathname === '/profile') return '我的页面';
   if (pathname === '/members') return '成员墙';
@@ -55,6 +62,8 @@ function getBackTarget(pathname: string): string | null {
   if (pathname === '/about') return '/';
   if (pathname === '/members') return '/about';
   if (pathname.startsWith('/members/')) return null; // use browser back
+  if (pathname === '/events/proposals' || pathname === '/events/history' || pathname.startsWith('/events/')) return '/events';
+  if (pathname.startsWith('/discover/movies/')) return '/discover';
   return null;
 }
 
@@ -71,11 +80,17 @@ export default function AppLayout() {
   const backTarget = getBackTarget(pathname);
   const isSubPage = pathname === '/about' || pathname === '/members' || pathname.startsWith('/members/');
   const isDetailPage = pathname.startsWith('/members/');
+  const showBackButton = isSubPage && pathname !== '/about';
 
   const activeTab = pages.find((p) => {
-    if (p.id === '' && (pathname === '/' || pathname === '/about' || pathname === '/members' || pathname.startsWith('/members/'))) return true;
+    if (p.id === '' && pathname === '/') return true;
+    if (p.id === 'about' && (pathname === '/about' || pathname === '/members' || pathname.startsWith('/members/'))) return true;
     return pathname === `/${p.id}`;
   })?.id ?? '';
+
+  useEffect(() => {
+    document.title = `串门儿 - ${title}`;
+  }, [title]);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex' }}>
@@ -91,9 +106,6 @@ export default function AppLayout() {
           <Toolbar>
             <Stack direction="row" spacing={1} alignItems="center">
               <Typography variant="h6">串门儿</Typography>
-              <IconButton size="small" onClick={() => navigate('/about')}>
-                <InfoOutlinedIcon fontSize="small" />
-              </IconButton>
             </Stack>
           </Toolbar>
           <Box sx={{ px: 1 }}>
@@ -116,7 +128,7 @@ export default function AppLayout() {
         <AppBar position="sticky" color="transparent" elevation={0} sx={{ backdropFilter: 'blur(10px)', borderBottom: 1, borderColor: 'divider' }}>
           <Toolbar sx={{ justifyContent: 'space-between' }}>
             <Stack direction="row" spacing={1} alignItems="center">
-              {isSubPage && (
+              {showBackButton && (
                 <IconButton
                   size="small"
                   onClick={() => {

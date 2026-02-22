@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router';
 import {
   Alert,
@@ -24,6 +24,10 @@ export default function RegisterPage() {
   const [bio, setBio] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    document.title = '串门儿 - 注册';
+  }, []);
 
   const onSubmit = async () => {
     if (!name.trim() || !email.trim()) {
