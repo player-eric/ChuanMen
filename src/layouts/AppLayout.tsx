@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import {
   AppBar,
@@ -8,7 +8,6 @@ import {
   BottomNavigation,
   BottomNavigationAction,
   Box,
-  Chip,
   Drawer,
   IconButton,
   List,
@@ -95,7 +94,6 @@ export default function AppLayout() {
   const location = useLocation();
   const pathname = location.pathname;
   const { user, setUser } = useAuth();
-  const [isEmpty, setIsEmpty] = useState(false);
 
   const title = getTitle(pathname);
   const backTarget = getBackTarget(pathname);
@@ -173,13 +171,7 @@ export default function AppLayout() {
               </Typography>
             </Stack>
             <Stack direction="row" spacing={1} alignItems="center">
-              <Chip
-                size="small"
-                color={isEmpty ? 'warning' : 'default'}
-                label={isEmpty ? '新用户' : '老用户'}
-                onClick={() => setIsEmpty(!isEmpty)}
-              />
-              <Badge color="warning" variant="dot" invisible={pathname !== '/' || isEmpty}>
+              <Badge color="warning" variant="dot" invisible={pathname !== '/'}>
                 <Avatar sx={{ width: 28, height: 28 }} src={user?.avatar || undefined}>
                   {user?.name?.[0] ?? 'U'}
                 </Avatar>
@@ -215,7 +207,7 @@ export default function AppLayout() {
         </AppBar>
 
         <Box
-          key={pathname + String(isEmpty)}
+          key={pathname}
           sx={{
             px: { xs: 2, sm: 3, md: 4 },
             py: 2,
@@ -224,7 +216,7 @@ export default function AppLayout() {
             mx: 'auto',
           }}
         >
-          <Outlet context={{ isEmpty }} />
+          <Outlet context={{ isEmpty: false }} />
         </Box>
 
         {!isDesktop && (
