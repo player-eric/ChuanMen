@@ -27,8 +27,11 @@ import MailRoundedIcon from '@mui/icons-material/MailRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ArrowBackIosNewRoundedIcon from '@mui/icons-material/ArrowBackIosNewRounded';
+import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
+import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
 import { useTheme } from '@mui/material/styles';
 import { useAuth } from '@/auth/AuthContext';
+import { useColorMode } from '@/AppProviders';
 
 const pages = [
   { id: '', icon: <HomeRoundedIcon />, label: '动态' },
@@ -94,6 +97,7 @@ export default function AppLayout() {
   const location = useLocation();
   const pathname = location.pathname;
   const { user, setUser } = useAuth();
+  const { mode, toggleColorMode } = useColorMode();
 
   const title = getTitle(pathname);
   const backTarget = getBackTarget(pathname);
@@ -171,6 +175,9 @@ export default function AppLayout() {
               </Typography>
             </Stack>
             <Stack direction="row" spacing={1} alignItems="center">
+              <IconButton size="small" onClick={toggleColorMode} aria-label={mode === 'dark' ? '切换到浅色模式' : '切换到深色模式'}>
+                {mode === 'dark' ? <LightModeRoundedIcon fontSize="small" /> : <DarkModeRoundedIcon fontSize="small" />}
+              </IconButton>
               <Badge color="warning" variant="dot" invisible={pathname !== '/'}>
                 <Avatar sx={{ width: 28, height: 28 }} src={user?.avatar || undefined}>
                   {user?.name?.[0] ?? 'U'}
