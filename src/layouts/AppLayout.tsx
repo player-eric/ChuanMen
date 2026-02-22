@@ -3,7 +3,6 @@ import { Outlet, useNavigate, useLocation } from 'react-router';
 import {
   AppBar,
   Avatar,
-  Badge,
   Button,
   BottomNavigation,
   BottomNavigationAction,
@@ -299,14 +298,17 @@ export default function AppLayout() {
                 {mode === 'dark' ? <LightModeRoundedIcon fontSize="small" /> : <DarkModeRoundedIcon fontSize="small" />}
               </IconButton>
               {user ? (
-                <Badge color="warning" variant="dot" invisible={pathname !== '/'}>
-                  <Avatar sx={{ width: 28, height: 28 }} src={user.avatar || undefined}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Avatar sx={{ width: 28, height: 28, cursor: 'pointer' }} src={user.avatar || undefined} onClick={() => navigate('/profile')}>
                     {user.name?.[0] ?? 'U'}
                   </Avatar>
-                </Badge>
+                  <Button size="small" color="inherit" onClick={() => { setUser(null); navigate('/'); }}>
+                    退出
+                  </Button>
+                </Stack>
               ) : (
-                <Button size="small" variant="outlined" onClick={() => navigate('/apply')}>
-                  申请加入
+                <Button size="small" variant="outlined" onClick={() => navigate('/login')}>
+                  登录
                 </Button>
               )}
             </Stack>

@@ -73,6 +73,9 @@ export default function LoginPage() {
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 输入注册邮箱即可登录。
               </Typography>
+              <Alert severity="info" sx={{ mt: 1 }}>
+                测试账号：<strong>cm@gmail.com</strong>
+              </Alert>
             </Box>
 
             {errorMessage && <Alert severity="error">{errorMessage}</Alert>}

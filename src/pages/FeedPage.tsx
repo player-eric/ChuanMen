@@ -64,15 +64,20 @@ function FullFeed() {
       {/* Announcements / banners */}
       {feedAnnouncements.map((item, idx) => (
         <Card key={idx}>
-          <CardContent>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="subtitle1" fontWeight={700}>{item.title}</Typography>
-                <Typography variant="body2" color="text.secondary">{item.body}</Typography>
-              </Box>
-              <Typography variant="caption" color="text.secondary">{item.date}</Typography>
-            </Stack>
-          </CardContent>
+          <CardActionArea onClick={() => navigate(`/announcements/${item.slug}`)}>
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={700}>{item.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">{item.body}</Typography>
+                </Box>
+                <Stack alignItems="flex-end" spacing={0.5}>
+                  <Typography variant="caption" color="text.secondary">{item.date}</Typography>
+                  <Chip label="查看详情" size="small" variant="outlined" />
+                </Stack>
+              </Stack>
+            </CardContent>
+          </CardActionArea>
         </Card>
       ))}
 

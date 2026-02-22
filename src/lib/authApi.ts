@@ -43,6 +43,9 @@ export async function loginUser(email: string): Promise<AuthUser> {
     return WALKTHROUGH_USER;
   }
 
+  // Only the walkthrough account is allowed in demo mode
+  throw new Error('当前仅支持测试账号 cm@gmail.com 登录');
+
   const response = await fetch(getApiUrl('/api/auth/login'), {
     method: 'POST',
     headers: {

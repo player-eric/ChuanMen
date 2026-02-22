@@ -37,14 +37,10 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 function readStoredUser(): AuthUser | null {
   try {
     const raw = localStorage.getItem(storageKey) ?? sessionStorage.getItem(storageKey);
-    if (!raw) {
-      // Auto-login with walkthrough account for UI demo
-      return WALKTHROUGH_USER;
-    }
-
+    if (!raw) return null;
     return JSON.parse(raw) as AuthUser;
   } catch {
-    return WALKTHROUGH_USER;
+    return null;
   }
 }
 

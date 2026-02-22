@@ -332,9 +332,9 @@ export const recentActivity = [
 
 /** ===== Feed ===== */
 export const feedAnnouncements = [
-  { id: 'ann-1', title: '🎉 串门 2025 春季招新开始啦！', body: '欢迎推荐你身边有趣的朋友加入我们的社区。点击了解详情。', date: '02.15' },
-  { id: 'ann-2', title: '📋 社区公约更新', body: '我们更新了社区公约 v2.0，请大家查看。主要增加了关于活动取消政策的说明。', date: '02.01' },
-  { id: 'ann-3', title: '🏠 新 Host 培训', body: '想成为 Host？我们将在本月举办一次线上 Host 培训会。感兴趣请报名！', date: '01.20' },
+  { id: 'ann-1', slug: 'spring-2025-recruit', title: '🎉 串门 2025 春季招新开始啦！', body: '欢迎推荐你身边有趣的朋友加入我们的社区。点击了解详情。', date: '02.15' },
+  { id: 'ann-2', slug: 'community-guidelines-v2', title: '📋 社区公约更新', body: '我们更新了社区公约 v2.0，请大家查看。主要增加了关于活动取消政策的说明。', date: '02.01' },
+  { id: 'ann-3', slug: 'host-training', title: '🏠 新 Host 培训', body: '想成为 Host？我们将在本月举办一次线上 Host 培训会。感兴趣请报名！', date: '01.20' },
 ];
 
 export const feedNewRecos = [

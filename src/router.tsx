@@ -22,6 +22,7 @@ import LoginPage from '@/pages/LoginPage';
 import SmallGroupCreatePage from '@/pages/SmallGroupCreatePage';
 import ProposalCreatePage from '@/pages/ProposalCreatePage';
 import ApplyPage from '@/pages/ApplyPage';
+import AnnouncementPage from '@/pages/AnnouncementPage';
 import SettingsPage from '@/pages/SettingsPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import {
@@ -82,6 +83,7 @@ export const appRoutes: RouteObject[] = [
       },
       { path: 'about', element: <AboutPage />, loader: fetchAboutData },
       { path: 'about/:contentType', element: <AboutContentPage /> },
+      { path: 'announcements/:slug', element: <AnnouncementPage /> },
       { path: 'apply', element: <ApplyPage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],
