@@ -24,6 +24,12 @@ import ProposalCreatePage from '@/pages/ProposalCreatePage';
 import ApplyPage from '@/pages/ApplyPage';
 import AnnouncementPage from '@/pages/AnnouncementPage';
 import SettingsPage from '@/pages/SettingsPage';
+import AdminLayout from '@/layouts/AdminLayout';
+import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
+import AdminMembersPage from '@/pages/admin/AdminMembersPage';
+import AdminEventsPage from '@/pages/admin/AdminEventsPage';
+import AdminNewslettersPage from '@/pages/admin/AdminNewslettersPage';
+import AdminSettingsPage from '@/pages/admin/AdminSettingsPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import {
   fetchFeedData,
@@ -86,6 +92,17 @@ export const appRoutes: RouteObject[] = [
       { path: 'announcements/:slug', element: <AnnouncementPage /> },
       { path: 'apply', element: <ApplyPage /> },
       { path: 'settings', element: <SettingsPage /> },
+    ],
+  },
+  {
+    path: '/admin',
+    element: <AdminLayout />,
+    children: [
+      { index: true, element: <AdminDashboardPage /> },
+      { path: 'members', element: <AdminMembersPage /> },
+      { path: 'events', element: <AdminEventsPage /> },
+      { path: 'newsletters', element: <AdminNewslettersPage /> },
+      { path: 'settings', element: <AdminSettingsPage /> },
     ],
   },
   {

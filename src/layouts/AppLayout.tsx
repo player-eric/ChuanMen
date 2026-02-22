@@ -258,6 +258,12 @@ export default function AppLayout() {
                   <ListItemText primary="账号设置" />
                 </ListItemButton>
               )}
+              {user?.role === 'admin' && (
+                <ListItemButton selected={pathname.startsWith('/admin')} onClick={() => navigate('/admin')}>
+                  <ListItemIcon><AdminPanelSettingsRoundedIcon /></ListItemIcon>
+                  <ListItemText primary="管理后台" />
+                </ListItemButton>
+              )}
             </List>
           </Box>
         </Drawer>
