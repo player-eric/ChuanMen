@@ -1,4 +1,5 @@
-import { useLoaderData, useNavigate } from 'react-router';
+import { useEffect, useState } from 'react';
+import { useLoaderData, useNavigate, useParams } from 'react-router';
 import {
   Avatar,
   AvatarGroup,
@@ -7,14 +8,50 @@ import {
   Card,
   CardContent,
   Chip,
+  Alert,
   Stack,
   Typography,
 } from '@mui/material';
 import type { EventData } from '@/types';
+import { getEventById, signupEvent } from '@/lib/domainApi';
+import { useAuth } from '@/auth/AuthContext';
 
 export default function EventDetailPage() {
   const navigate = useNavigate();
-  const event = useLoaderData() as EventData | null;
+  const { eventId } = useParams();
+  const { user } = useAuth();
+  const loadedEvent = useLoaderData() as EventData | null;
+  const [event, setEvent] = useState<EventData | null>(loadedEvent);
+  const [actionError, setActionError] = useState('');
+
+  useEffect(() => {
+    const run = async () => {
+      if (!eventId || loadedEvent) {
+        return;
+      }
+      try {
+        const item = await getEventById(eventId);
+        setEvent({
+          id: 0,
+          title: String(item.title ?? ''),
+          host: 'Host',
+          date: new Date(String(item.startsAt ?? new Date().toISOString())).toLocaleString('zh-CN'),
+          location: String(item.location ?? ''),
+          scene: 'small-group',
+          film: undefined,
+          spots: Math.max(0, Number(item.capacity ?? 0)),
+          total: Number(item.capacity ?? 0),
+          people: [],
+          phase: String(item.phase ?? 'open') === 'invite' ? 'invite' : 'open',
+          desc: String(item.description ?? ''),
+        });
+      } catch {
+        setEvent(null);
+      }
+    };
+
+    void run();
+  }, [eventId, loadedEvent]);
 
   if (!event) {
     return (
@@ -27,8 +64,26 @@ export default function EventDetailPage() {
     );
   }
 
+  const onSignup = async () => {
+    if (!eventId || eventId.length !== 24) {
+      navigate('/events');
+      return;
+    }
+    if (!user?.id) {
+      setActionError('请先登录后再报名');
+      return;
+    }
+    try {
+      await signupEvent(eventId, user.id);
+      setActionError('');
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : '报名失败，请稍后重试');
+    }
+  };
+
   return (
     <Stack spacing={2}>
+      {actionError && <Alert severity="error">{actionError}</Alert>}
       <Card>
         <CardContent>
           <Stack spacing={1.5}>
@@ -70,7 +125,7 @@ export default function EventDetailPage() {
       </Card>
 
       <Box>
-        <Button variant="contained" fullWidth>
+        <Button variant="contained" fullWidth onClick={onSignup}>
           {event.phase === 'invite' ? '接受邀请' : '报名参加'}
         </Button>
       </Box>

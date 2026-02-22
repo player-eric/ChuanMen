@@ -19,21 +19,23 @@ import type { DiscoverPageData } from '@/types';
 
 /* ═══ DiscoverPage ═══ */
 export default function DiscoverPage() {
+  const navigate = useNavigate();
   return (
     <Box>
       <Stack direction="row" spacing={1} sx={{ mb: 2, overflowX: 'auto', pb: 0.5 }}>
         {[
-          { key: 'movies', label: '🎬 电影', active: true },
-          { key: 'food', label: '🍜 菜谱', active: false },
+          { key: 'movie', label: '🎬 电影', active: true },
+          { key: 'recipe', label: '🍜 菜谱', active: false },
           { key: 'music', label: '🎵 音乐', active: false },
-          { key: 'places', label: '📍 好店', active: false },
+          { key: 'place', label: '📍 好店', active: false },
         ].map((cat) => (
           <Chip
             key={cat.key}
             label={cat.label}
             color={cat.active ? 'primary' : 'default'}
             variant={cat.active ? 'filled' : 'outlined'}
-            clickable={false}
+            clickable
+            onClick={() => navigate(`/discover/${cat.key}`)}
             sx={{ opacity: cat.active ? 1 : 0.65 }}
           />
         ))}
@@ -75,6 +77,10 @@ function MoviesSection() {
           ),
         }}
       />
+      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+        <Button variant="contained" onClick={() => navigate('/discover/movie/add')}>添加电影</Button>
+        <Button variant="outlined" onClick={() => navigate('/discover/movie')}>查看全部电影</Button>
+      </Stack>
 
       {results && !added && (
         <Card sx={{ mb: 2 }}>

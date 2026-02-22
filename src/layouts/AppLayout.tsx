@@ -45,10 +45,21 @@ function getTitle(pathname: string): string {
   if (pathname === '/events') return '活动';
   if (pathname.startsWith('/events/')) {
     if (pathname === '/events/proposals') return '活动提案';
+    if (pathname === '/events/proposals/new') return '添加想法';
     if (pathname === '/events/history') return '活动记录';
+    if (pathname === '/events/small-group/new') return '发起小局';
     return '活动详情';
   }
   if (pathname === '/discover') return '推荐';
+  if (pathname === '/discover/movie') return '电影推荐';
+  if (pathname === '/discover/recipe') return '菜谱推荐';
+  if (pathname === '/discover/music') return '音乐推荐';
+  if (pathname === '/discover/place') return '好店推荐';
+  if (pathname === '/discover/movie/add') return '添加电影';
+  if (pathname === '/discover/recipe/add') return '添加菜谱';
+  if (pathname === '/discover/music/add') return '添加音乐';
+  if (pathname === '/discover/place/add') return '添加好店';
+  if (/^\/discover\/(movie|recipe|music|place)\/.+/.test(pathname) && !pathname.endsWith('/add')) return '推荐详情';
   if (pathname.startsWith('/discover/movies/')) return '电影详情';
   if (pathname === '/cards') return '感谢卡';
   if (pathname === '/profile') return '我的页面';
@@ -64,6 +75,11 @@ function getBackTarget(pathname: string): string | null {
   if (pathname.startsWith('/members/')) return null; // use browser back
   if (pathname === '/events/proposals' || pathname === '/events/history' || pathname.startsWith('/events/')) return '/events';
   if (pathname.startsWith('/discover/movies/')) return '/discover';
+  if (pathname.startsWith('/discover/movie/')) return '/discover/movie';
+  if (pathname.startsWith('/discover/recipe/')) return '/discover/recipe';
+  if (pathname.startsWith('/discover/music/')) return '/discover/music';
+  if (pathname.startsWith('/discover/place/')) return '/discover/place';
+  if (pathname === '/discover/movie' || pathname === '/discover/recipe' || pathname === '/discover/music' || pathname === '/discover/place') return '/discover';
   return null;
 }
 
@@ -85,6 +101,8 @@ export default function AppLayout() {
   const activeTab = pages.find((p) => {
     if (p.id === '' && pathname === '/') return true;
     if (p.id === 'about' && (pathname === '/about' || pathname === '/members' || pathname.startsWith('/members/'))) return true;
+    if (p.id === 'events' && pathname.startsWith('/events')) return true;
+    if (p.id === 'discover' && pathname.startsWith('/discover')) return true;
     return pathname === `/${p.id}`;
   })?.id ?? '';
 
@@ -210,9 +228,21 @@ export default function AppLayout() {
               showLabels
               value={activeTab}
               onChange={(_, value) => navigate(value === '' ? '/' : `/${value}`)}
+              sx={{ justifyContent: 'center', gap: 0.5, px: 0.5 }}
             >
               {pages.map((p) => (
-                <BottomNavigationAction key={p.id} value={p.id} label={p.label} icon={p.icon} />
+                <BottomNavigationAction
+                  key={p.id}
+                  value={p.id}
+                  label={p.label}
+                  icon={p.icon}
+                  sx={{
+                    minWidth: 0,
+                    maxWidth: 'none',
+                    px: 0.75,
+                    '& .MuiBottomNavigationAction-label': { fontSize: '0.7rem' },
+                  }}
+                />
               ))}
             </BottomNavigation>
           </Paper>

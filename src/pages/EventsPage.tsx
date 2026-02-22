@@ -91,8 +91,8 @@ export default function EventsPage() {
               </Typography>
             </CardContent>
             <CardActions>
-              <Button variant="contained" startIcon={<HomeOutlinedIcon />}>发起小局</Button>
-              <Button>查看历史</Button>
+              <Button variant="contained" startIcon={<HomeOutlinedIcon />} onClick={() => navigate('/events/small-group/new')}>发起小局</Button>
+              <Button onClick={() => navigate('/events/history')}>查看历史</Button>
             </CardActions>
           </Card>
 
@@ -143,7 +143,7 @@ export default function EventsPage() {
                     <Typography fontWeight={700}>{proposal.title}</Typography>
                     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 0.5 }}>
                       <Typography variant="caption" color="text.secondary">{proposal.name} · {proposal.time}</Typography>
-                      <Button size="small" variant="outlined">🙋 {proposal.votes}</Button>
+                      <Button size="small" variant="outlined" onClick={() => navigate('/events/proposals')}>🙋 {proposal.votes}</Button>
                     </Stack>
                   </Box>
                 ))}
@@ -176,8 +176,8 @@ export default function EventsPage() {
 
       <Box sx={{ position: 'fixed', right: { xs: 16, md: 32 }, bottom: { xs: 84, md: 24 } }}>
         <SpeedDial icon={<AddRoundedIcon />} ariaLabel="create event" direction="up">
-          <SpeedDialAction icon={<HomeOutlinedIcon />} tooltipTitle="发起活动" />
-          <SpeedDialAction icon={<LightbulbOutlinedIcon />} tooltipTitle="提一个想法" />
+          <SpeedDialAction icon={<HomeOutlinedIcon />} tooltipTitle="发起小局" onClick={() => navigate('/events/small-group/new')} />
+          <SpeedDialAction icon={<LightbulbOutlinedIcon />} tooltipTitle="提一个想法" onClick={() => navigate('/events/proposals/new')} />
         </SpeedDial>
       </Box>
 
