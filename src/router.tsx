@@ -15,10 +15,12 @@ import ProfilePage from '@/pages/ProfilePage';
 import MembersPage from '@/pages/MembersPage';
 import MemberDetailPage from '@/pages/MemberDetailPage';
 import AboutPage from '@/pages/AboutPage';
+import AboutContentPage from '@/pages/AboutContentPage';
 import RegisterPage from '@/pages/RegisterPage';
 import LoginPage from '@/pages/LoginPage';
 import SmallGroupCreatePage from '@/pages/SmallGroupCreatePage';
 import ProposalCreatePage from '@/pages/ProposalCreatePage';
+import NotFoundPage from '@/pages/NotFoundPage';
 import {
   fetchFeedData,
   fetchEventsData,
@@ -76,7 +78,12 @@ const router = createBrowserRouter([
         loader: ({ params }) => fetchMemberDetail(decodeURIComponent(params.name!)),
       },
       { path: 'about', element: <AboutPage />, loader: fetchAboutData },
+      { path: 'about/:contentType', element: <AboutContentPage /> },
     ],
+  },
+  {
+    path: '*',
+    element: <NotFoundPage />,
   },
 ]);
 

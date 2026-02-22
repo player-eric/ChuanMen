@@ -1,8 +1,11 @@
-import { useLoaderData } from 'react-router';
+import { useLoaderData, useNavigate } from 'react-router';
 import { Avatar, Box, Button, Card, CardContent, Chip, Grid, Stack, Typography } from '@mui/material';
 import type { MemberDetailData } from '@/types';
+import { useAuth } from '@/auth/AuthContext';
 
 export default function MemberDetailPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const data = useLoaderData() as MemberDetailData | null;
 
   if (!data?.member) {
@@ -64,7 +67,9 @@ export default function MemberDetailPage() {
               : <Typography variant="body2" color="text.secondary">暂无共同活动</Typography>}
           </Stack>
 
-          <Button variant="contained" sx={{ mt: 2 }}>✉ 寄张感谢卡</Button>
+          <Button variant="contained" sx={{ mt: 2 }} onClick={() => navigate('/cards')} disabled={!user}>
+            {user ? '✉ 寄张感谢卡' : '登录后可寄感谢卡'}
+          </Button>
         </CardContent>
       </Card>
     </Stack>

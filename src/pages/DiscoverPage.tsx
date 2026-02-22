@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import type { DiscoverPageData } from '@/types';
+import { useAuth } from '@/auth/AuthContext';
 
 /* ═══ DiscoverPage ═══ */
 export default function DiscoverPage() {
@@ -47,6 +48,7 @@ export default function DiscoverPage() {
 
 function MoviesSection() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const data = useLoaderData() as DiscoverPageData;
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'pool' | 'screened'>('pool');
@@ -78,7 +80,9 @@ function MoviesSection() {
         }}
       />
       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-        <Button variant="contained" onClick={() => navigate('/discover/movie/add')}>添加电影</Button>
+        <Button variant="contained" onClick={() => navigate('/discover/movie/add')} disabled={!user}>
+          {user ? '添加电影' : '登录后可添加电影'}
+        </Button>
         <Button variant="outlined" onClick={() => navigate('/discover/movie')}>查看全部电影</Button>
       </Stack>
 
@@ -93,7 +97,9 @@ function MoviesSection() {
                   <Typography fontWeight={700}>{m.title}</Typography>
                   <Typography variant="body2" color="text.secondary">{m.year} · {m.dir} · ⭐{m.rating}</Typography>
                 </Box>
-                <Button onClick={() => { if (i === 0) setAdded(true); }} variant="contained" size="small">推荐</Button>
+                <Button onClick={() => { if (i === 0) setAdded(true); }} variant="contained" size="small" disabled={!user}>
+                  {user ? '推荐' : '登录后可推荐'}
+                </Button>
               </Stack>
             ))}
             </Stack>
@@ -131,6 +137,7 @@ function MoviesSection() {
                       onClick={() => toggle(m.id)}
                       variant={votes[m.id] ? 'contained' : 'outlined'}
                       size="small"
+                      disabled={!user}
                     >
                       ▲ {m.v + (votes[m.id] ? 1 : 0)}
                     </Button>

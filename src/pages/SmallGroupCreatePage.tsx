@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
@@ -14,6 +14,16 @@ export default function SmallGroupCreatePage() {
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { replace: true });
+    }
+  }, [navigate, user]);
+
+  if (!user) {
+    return null;
+  }
 
   const onSubmit = async () => {
     if (!user?.id) {

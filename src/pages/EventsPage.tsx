@@ -26,6 +26,7 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import type { EventData, EventsPageData } from '@/types';
+import { useAuth } from '@/auth/AuthContext';
 
 function EventDetailDialog({ evt, open, onClose }: { evt: EventData | null; open: boolean; onClose: () => void }) {
   if (!evt) return null;
@@ -67,9 +68,11 @@ function EventDetailDialog({ evt, open, onClose }: { evt: EventData | null; open
 
 export default function EventsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const data = useLoaderData() as EventsPageData;
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [selected, setSelected] = useState<EventData | null>(null);
+  const canInteract = Boolean(user);
 
   return (
     <Box>
@@ -91,7 +94,14 @@ export default function EventsPage() {
               </Typography>
             </CardContent>
             <CardActions>
-              <Button variant="contained" startIcon={<HomeOutlinedIcon />} onClick={() => navigate('/events/small-group/new')}>发起小局</Button>
+              <Button
+                variant="contained"
+                startIcon={<HomeOutlinedIcon />}
+                onClick={() => navigate('/events/small-group/new')}
+                disabled={!canInteract}
+              >
+                {canInteract ? '发起小局' : '登录后可发起小局'}
+              </Button>
               <Button onClick={() => navigate('/events/history')}>查看历史</Button>
             </CardActions>
           </Card>
@@ -176,8 +186,18 @@ export default function EventsPage() {
 
       <Box sx={{ position: 'fixed', right: { xs: 16, md: 32 }, bottom: { xs: 84, md: 24 } }}>
         <SpeedDial icon={<AddRoundedIcon />} ariaLabel="create event" direction="up">
-          <SpeedDialAction icon={<HomeOutlinedIcon />} tooltipTitle="发起小局" onClick={() => navigate('/events/small-group/new')} />
-          <SpeedDialAction icon={<LightbulbOutlinedIcon />} tooltipTitle="提一个想法" onClick={() => navigate('/events/proposals/new')} />
+          <SpeedDialAction
+            icon={<HomeOutlinedIcon />}
+            tooltipTitle={canInteract ? '发起小局' : '登录后可发起小局'}
+            onClick={() => navigate('/events/small-group/new')}
+            FabProps={{ disabled: !canInteract }}
+          />
+          <SpeedDialAction
+            icon={<LightbulbOutlinedIcon />}
+            tooltipTitle={canInteract ? '提一个想法' : '登录后可提想法'}
+            onClick={() => navigate('/events/proposals/new')}
+            FabProps={{ disabled: !canInteract }}
+          />
         </SpeedDial>
       </Box>
 

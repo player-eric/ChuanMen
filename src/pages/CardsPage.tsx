@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLoaderData, useNavigate, useOutletContext } from 'react-router';
 import {
   Avatar,
+  Alert,
   Box,
   Button,
   Card,
@@ -21,6 +22,7 @@ import {
   Typography,
 } from '@mui/material';
 import type { CardsPageData } from '@/types';
+import { useAuth } from '@/auth/AuthContext';
 
 function EmptyCards() {
   const navigate = useNavigate();
@@ -43,6 +45,8 @@ export default function CardsPage() {
 }
 
 function FullCards() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const data = useLoaderData() as CardsPageData;
   const [step, setStep] = useState(0);
   const [who, setWho] = useState<string | null>(null);
@@ -75,7 +79,13 @@ function FullCards() {
         </CardContent>
       </Card>
 
-      {!sent ? (
+      {!user && (
+        <Alert severity="info" action={<Button color="inherit" size="small" onClick={() => navigate('/login')}>去登录</Button>}>
+          游客为只读模式，登录后可寄感谢卡。
+        </Alert>
+      )}
+
+      {user && !sent ? (
         <Card>
           <CardContent>
             <Typography variant="h6" sx={{ mb: 2 }}>寄一张感谢卡</Typography>
@@ -186,7 +196,7 @@ function FullCards() {
             )}
           </CardContent>
         </Card>
-      ) : (
+      ) : user ? (
         <Card>
           <CardContent sx={{ textAlign: 'center' }}>
             <Typography color="success.main" fontWeight={700}>✓ 已寄出</Typography>
@@ -194,7 +204,7 @@ function FullCards() {
             <Button onClick={reset} sx={{ mt: 1.5 }}>再寄一张</Button>
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
       <Card>
         <CardContent>

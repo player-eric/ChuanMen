@@ -158,8 +158,8 @@ export default function EventDetailPage() {
       </Card>
 
       <Box>
-        <Button variant="contained" fullWidth onClick={onSignup}>
-          {event.phase === 'invite' ? '接受邀请' : '报名参加'}
+        <Button variant="contained" fullWidth onClick={onSignup} disabled={!user}>
+          {!user ? '登录后可报名' : event.phase === 'invite' ? '接受邀请' : '报名参加'}
         </Button>
       </Box>
     </Stack>

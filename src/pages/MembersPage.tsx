@@ -1,19 +1,43 @@
+import { useMemo, useState } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
-import { Avatar, Card, CardActionArea, CardContent, Chip, Grid, Stack, Typography } from '@mui/material';
+import { Avatar, Card, CardActionArea, CardContent, Chip, Grid, InputAdornment, Stack, TextField, Typography } from '@mui/material';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import type { MemberData } from '@/types';
 
 export default function MembersPage() {
   const { members } = useLoaderData() as { members: MemberData[] };
   const navigate = useNavigate();
+  const [keyword, setKeyword] = useState('');
+
+  const filteredMembers = useMemo(() => {
+    const q = keyword.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((member) => {
+      const searchable = `${member.name} ${member.role} ${member.titles.join(' ')}`.toLowerCase();
+      return searchable.includes(q);
+    });
+  }, [keyword, members]);
 
   return (
     <Stack spacing={2}>
+      <TextField
+        placeholder="搜索成员、称号、角色"
+        value={keyword}
+        onChange={(event) => setKeyword(event.target.value)}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchRoundedIcon fontSize="small" />
+            </InputAdornment>
+          ),
+        }}
+      />
       <Typography variant="body2" color="text.secondary">
-        {members.length} 位成员 · {members.filter((member) => member.host > 0).length} 位 Host
+        {filteredMembers.length} / {members.length} 位成员 · {members.filter((member) => member.host > 0).length} 位 Host
       </Typography>
 
       <Grid container spacing={1.5}>
-        {members.map((member) => (
+        {filteredMembers.map((member) => (
           <Grid key={member.name} size={{ xs: 12, sm: 6, md: 4 }}>
             <Card>
               <CardActionArea onClick={() => navigate(`/members/${encodeURIComponent(member.name)}`)}>
@@ -37,6 +61,10 @@ export default function MembersPage() {
           </Grid>
         ))}
       </Grid>
+
+      {filteredMembers.length === 0 && (
+        <Typography variant="body2" color="text.secondary">没有匹配成员，请更换关键词</Typography>
+      )}
     </Stack>
   );
 }

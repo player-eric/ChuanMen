@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { Alert, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
@@ -28,6 +28,16 @@ export default function RecommendationCreatePage() {
   const [tagsText, setTagsText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { replace: true });
+    }
+  }, [navigate, user]);
+
+  if (!user) {
+    return null;
+  }
 
   const onSubmit = async () => {
     if (!user?.id) {

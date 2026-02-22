@@ -66,11 +66,16 @@ function getTitle(pathname: string): string {
   if (pathname === '/members') return '成员墙';
   if (pathname.startsWith('/members/')) return decodeURIComponent(pathname.split('/members/')[1]);
   if (pathname === '/about') return '关于串门儿';
+  if (pathname === '/about/principle') return '串门原则';
+  if (pathname === '/about/host_guide') return 'Host 手册';
+  if (pathname === '/about/letter') return '串门来信';
+  if (pathname === '/about/about') return '关于我们';
   return '串门儿';
 }
 
 function getBackTarget(pathname: string): string | null {
   if (pathname === '/about') return '/';
+  if (pathname.startsWith('/about/')) return '/about';
   if (pathname === '/members') return '/about';
   if (pathname.startsWith('/members/')) return null; // use browser back
   if (pathname === '/events/proposals' || pathname === '/events/history' || pathname.startsWith('/events/')) return '/events';

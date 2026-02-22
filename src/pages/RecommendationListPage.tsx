@@ -14,6 +14,7 @@ import {
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import type { RecommendationCategory } from '@/lib/domainApi';
 import { searchRecommendations } from '@/lib/domainApi';
+import { useAuth } from '@/auth/AuthContext';
 
 const categoryMap: Record<RecommendationCategory, { title: string; icon: string }> = {
   movie: { title: '电影推荐', icon: '🎬' },
@@ -28,6 +29,7 @@ function isCategory(value: string | undefined): value is RecommendationCategory 
 
 export default function RecommendationListPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { category } = useParams();
   const [keyword, setKeyword] = useState('');
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
@@ -84,8 +86,14 @@ export default function RecommendationListPage() {
               ),
             }}
           />
-          <Button sx={{ mt: 1.5 }} component={RouterLink} to={`/discover/${currentCategory}/add`} variant="contained">
-            添加{meta.title.replace('推荐', '')}
+          <Button
+            sx={{ mt: 1.5 }}
+            component={RouterLink}
+            to={`/discover/${currentCategory}/add`}
+            variant="contained"
+            disabled={!user}
+          >
+            {user ? `添加${meta.title.replace('推荐', '')}` : `登录后可添加${meta.title.replace('推荐', '')}`}
           </Button>
         </CardContent>
       </Card>
