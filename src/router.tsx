@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router';
+import type { RouteObject } from 'react-router';
 import AppLayout from '@/layouts/AppLayout';
 import FeedPage from '@/pages/FeedPage';
 import EventsPage from '@/pages/EventsPage';
@@ -36,7 +37,7 @@ import {
   fetchAboutData,
 } from '@/mock/api';
 
-const router = createBrowserRouter([
+export const appRoutes: RouteObject[] = [
   {
     path: '/register',
     element: <RegisterPage />,
@@ -85,6 +86,12 @@ const router = createBrowserRouter([
     path: '*',
     element: <NotFoundPage />,
   },
-]);
+];
 
-export default router;
+export function createAppRouter(hydrationData?: any) {
+  return createBrowserRouter(appRoutes, {
+    hydrationData,
+  });
+}
+
+export default createAppRouter;

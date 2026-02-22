@@ -4,9 +4,13 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
+    "dev": "PORT=5173 node ssr-server.mjs",
+    "dev:csr": "vite",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "tsc -b && vite build --outDir dist/client",
+    "build:server": "vite build --ssr src/entry-server.tsx --outDir dist/server",
+    "start": "PORT=4173 NODE_ENV=production node ssr-server.mjs",
+    "preview": "PORT=4173 NODE_ENV=production node ssr-server.mjs",
     "system:test:up": "npm --prefix server run system:test:up",
     "system:test:down": "npm --prefix server run system:test:down",
     "system:test:logs": "npm --prefix server run system:test:logs"
