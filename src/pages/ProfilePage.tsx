@@ -6,7 +6,6 @@ import {
   CardContent,
   Chip,
   Grid,
-  LinearProgress,
   Stack,
   Typography,
 } from '@mui/material';
@@ -43,16 +42,25 @@ export default function ProfilePage() {
         ))}
       </Grid>
 
+      {/* v2.1 §4.8: fact-based contribution, no scoring/ranking */}
       <Card>
         <CardContent>
-          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>贡献记录</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            本月 Host 1 次 · 收到 5 张感谢卡 · 推荐 3 部电影
-          </Typography>
-          <LinearProgress variant="determinate" value={85} />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-            贡献度 85% · 超过 90% 的成员
-          </Typography>
+          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>本月贡献</Typography>
+          <Grid container spacing={1}>
+            {[
+              { label: 'Host', value: `${data.contribution?.hostCount ?? 0} 次` },
+              { label: '参加活动', value: `${data.contribution?.eventCount ?? 0} 场` },
+              { label: '推荐电影', value: `${data.contribution?.movieCount ?? 0} 部` },
+              { label: '收到感谢卡', value: `${data.contribution?.cardsReceived ?? 0} 张` },
+              { label: '寄出感谢卡', value: `${data.contribution?.cardsSent ?? 0} 张` },
+            ].map((item) => (
+              <Grid key={item.label} size={{ xs: 6 }}>
+                <Typography variant="body2" color="text.secondary">
+                  {item.label}：<b>{item.value}</b>
+                </Typography>
+              </Grid>
+            ))}
+          </Grid>
         </CardContent>
       </Card>
 

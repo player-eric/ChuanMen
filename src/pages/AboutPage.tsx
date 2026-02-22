@@ -1,10 +1,12 @@
 import { useLoaderData, useNavigate } from 'react-router';
-import { Box, Card, CardActionArea, CardContent, Grid, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, CardActionArea, CardContent, Grid, Stack, Typography } from '@mui/material';
 import type { AboutPageData } from '@/types';
+import { useAuth } from '@/auth/AuthContext';
 
 export default function AboutPage() {
   const data = useLoaderData() as AboutPageData;
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const items = [
     { icon: '👥', title: '成员', desc: `${data.memberCount} 位成员 · ${data.hostCount} 位 Host`, action: () => navigate('/members') },
@@ -21,6 +23,9 @@ export default function AboutPage() {
           <Typography variant="h4" fontWeight={800}>串门儿</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             一群住在新泽西的中国人，试着把陌生人变成邻居，把邻居变成朋友。
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            我们通过小型聚会认识彼此——电影夜、Potluck、徒步、咖啡闲聊。每次不超过 10 个人，在谁的客厅、谁的厨房。来了就是朋友，走了还是朋友。
           </Typography>
           <Grid container spacing={1.5} sx={{ mt: 1 }}>
             {[
@@ -61,12 +66,25 @@ export default function AboutPage() {
         <CardContent>
           <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>串门的信念</Typography>
           <Stack spacing={0.8}>
-            {['对的人 > 更多人', '贡献的人不花钱', '客厅 > 写字楼', '真诚 > 客气'].map((value) => (
+            {['对的人 > 更多人', '相互支持 > 社交隔绝', '客厅 > 写字楼', '真诚 > 客气'].map((value) => (
               <Typography key={value} variant="body2">• {value}</Typography>
             ))}
           </Stack>
         </CardContent>
       </Card>
+
+      {/* v2.1 §4.7: bottom CTA for non-logged-in users */}
+      {!user && (
+        <Button
+          variant="contained"
+          size="large"
+          fullWidth
+          onClick={() => navigate('/apply')}
+          sx={{ py: 1.5, fontWeight: 700 }}
+        >
+          申请加入串门儿 →
+        </Button>
+      )}
     </Stack>
   );
 }

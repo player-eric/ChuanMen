@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 
+// v2.1: AgentPush removed. This service now creates Announcements instead.
 export async function runAgentCycle(app: FastifyInstance) {
   const candidates = await app.prisma.recommendation.findMany({
     where: { status: 'candidate' },
@@ -11,18 +12,8 @@ export async function runAgentCycle(app: FastifyInstance) {
     return { generated: 0 };
   }
 
-  const writes = candidates.map((item) =>
-    app.prisma.agentPush.create({
-      data: {
-        goal: 'C',
-        channel: 'feed',
-        content: `AI 推荐关注：${item.title}`,
-        actionUrl: `/discover/${item.category}/${item.id}`,
-        isApproved: false,
-      },
-    }),
-  );
-
-  await app.prisma.$transaction(writes);
-  return { generated: writes.length };
+  // v2.1: Replaced agentPush with announcement (requires an admin authorId)
+  // For now this is a no-op placeholder until admin user seeding is implemented
+  app.log.info(`Agent cycle found ${candidates.length} candidates (announcement creation pending admin setup)`);
+  return { generated: 0 };
 }

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import {
   AppBar,
@@ -8,6 +8,7 @@ import {
   BottomNavigation,
   BottomNavigationAction,
   Box,
+  Divider,
   Drawer,
   IconButton,
   List,
@@ -25,7 +26,12 @@ import EventRoundedIcon from '@mui/icons-material/EventRounded';
 import ThumbUpRoundedIcon from '@mui/icons-material/ThumbUpRounded';
 import MailRoundedIcon from '@mui/icons-material/MailRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
+import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
+import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
+import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import ArrowBackIosNewRoundedIcon from '@mui/icons-material/ArrowBackIosNewRounded';
 import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
 import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
@@ -33,13 +39,13 @@ import { useTheme } from '@mui/material/styles';
 import { useAuth } from '@/auth/AuthContext';
 import { useColorMode } from '@/AppProviders';
 
-const pages = [
+/* ── Bottom Tab 栏: 5 tabs (v2.1 §4.0) ── */
+const bottomTabs = [
   { id: '', icon: <HomeRoundedIcon />, label: '动态' },
-  { id: 'events', icon: <EventRoundedIcon />, label: '活动' },
   { id: 'discover', icon: <ThumbUpRoundedIcon />, label: '推荐' },
+  { id: 'events', icon: <EventRoundedIcon />, label: '活动' },
   { id: 'cards', icon: <MailRoundedIcon />, label: '感谢卡' },
   { id: 'profile', icon: <PersonRoundedIcon />, label: '我' },
-  { id: 'about', icon: <InfoOutlinedIcon />, label: '关于' },
 ];
 
 function getTitle(pathname: string): string {
@@ -65,6 +71,7 @@ function getTitle(pathname: string): string {
   if (pathname.startsWith('/discover/movies/')) return '电影详情';
   if (pathname === '/cards') return '感谢卡';
   if (pathname === '/profile') return '我的页面';
+  if (pathname === '/settings') return '账号设置';
   if (pathname === '/members') return '成员墙';
   if (pathname.startsWith('/members/')) return decodeURIComponent(pathname.split('/members/')[1]);
   if (pathname === '/about') return '关于串门儿';
@@ -72,14 +79,17 @@ function getTitle(pathname: string): string {
   if (pathname === '/about/host_guide') return 'Host 手册';
   if (pathname === '/about/letter') return '串门来信';
   if (pathname === '/about/about') return '关于我们';
+  if (pathname === '/apply') return '申请加入';
   return '串门儿';
 }
 
 function getBackTarget(pathname: string): string | null {
   if (pathname === '/about') return '/';
   if (pathname.startsWith('/about/')) return '/about';
-  if (pathname === '/members') return '/about';
-  if (pathname.startsWith('/members/')) return null; // use browser back
+  if (pathname === '/members') return '/';
+  if (pathname.startsWith('/members/')) return null;
+  if (pathname === '/settings') return null;
+  if (pathname === '/apply') return '/about';
   if (pathname === '/events/proposals' || pathname === '/events/history' || pathname.startsWith('/events/')) return '/events';
   if (pathname.startsWith('/discover/movies/')) return '/discover';
   if (pathname.startsWith('/discover/movie/')) return '/discover/movie';
@@ -88,6 +98,24 @@ function getBackTarget(pathname: string): string | null {
   if (pathname.startsWith('/discover/place/')) return '/discover/place';
   if (pathname === '/discover/movie' || pathname === '/discover/recipe' || pathname === '/discover/music' || pathname === '/discover/place') return '/discover';
   return null;
+}
+
+/** Routes that show a back button instead of the hamburger */
+function isSubRoute(pathname: string): boolean {
+  return (
+    pathname === '/about' ||
+    pathname.startsWith('/about/') ||
+    pathname === '/members' ||
+    pathname.startsWith('/members/') ||
+    pathname === '/settings' ||
+    pathname === '/apply' ||
+    pathname.startsWith('/events/') ||
+    pathname.startsWith('/discover/movies/') ||
+    pathname.startsWith('/discover/movie') ||
+    pathname.startsWith('/discover/recipe') ||
+    pathname.startsWith('/discover/music') ||
+    pathname.startsWith('/discover/place')
+  );
 }
 
 export default function AppLayout() {
@@ -99,15 +127,14 @@ export default function AppLayout() {
   const { user, setUser } = useAuth();
   const { mode, toggleColorMode } = useColorMode();
 
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   const title = getTitle(pathname);
   const backTarget = getBackTarget(pathname);
-  const isSubPage = pathname === '/about' || pathname === '/members' || pathname.startsWith('/members/');
-  const isDetailPage = pathname.startsWith('/members/');
-  const showBackButton = isSubPage && pathname !== '/about';
+  const showBack = isSubRoute(pathname);
 
-  const activeTab = pages.find((p) => {
+  const activeTab = bottomTabs.find((p) => {
     if (p.id === '' && pathname === '/') return true;
-    if (p.id === 'about' && (pathname === '/about' || pathname === '/members' || pathname.startsWith('/members/'))) return true;
     if (p.id === 'events' && pathname.startsWith('/events')) return true;
     if (p.id === 'discover' && pathname.startsWith('/discover')) return true;
     return pathname === `/${p.id}`;
@@ -117,8 +144,79 @@ export default function AppLayout() {
     document.title = `串门儿 - ${title}`;
   }, [title]);
 
+  const handleDrawerNav = (path: string) => {
+    setDrawerOpen(false);
+    navigate(path);
+  };
+
+  /* ── Hamburger Drawer (v2.1 §4.0) ── */
+  const drawerContent = (
+    <Box sx={{ width: 280 }}>
+      {/* User info section */}
+      <Box sx={{ p: 2, pt: 3 }}>
+        {user ? (
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Avatar sx={{ width: 40, height: 40 }} src={user.avatar || undefined}>
+              {user.name?.[0] ?? 'U'}
+            </Avatar>
+            <Box>
+              <Typography variant="subtitle2" fontWeight={700}>{user.name}</Typography>
+              <Typography variant="caption" color="text.secondary">{user.email}</Typography>
+            </Box>
+          </Stack>
+        ) : (
+          <Button variant="outlined" fullWidth onClick={() => handleDrawerNav('/login')}>
+            登录
+          </Button>
+        )}
+      </Box>
+      <Divider />
+
+      {/* Navigation */}
+      <List>
+        {user && (
+          <ListItemButton onClick={() => handleDrawerNav('/members')}>
+            <ListItemIcon><PeopleRoundedIcon /></ListItemIcon>
+            <ListItemText primary="成员墙" />
+          </ListItemButton>
+        )}
+        <ListItemButton onClick={() => handleDrawerNav('/about')}>
+          <ListItemIcon><InfoOutlinedIcon /></ListItemIcon>
+          <ListItemText primary="关于串门儿" />
+        </ListItemButton>
+      </List>
+      <Divider />
+
+      {/* More */}
+      {user && (
+        <>
+          <List>
+            <ListItemButton onClick={() => handleDrawerNav('/settings')}>
+              <ListItemIcon><SettingsRoundedIcon /></ListItemIcon>
+              <ListItemText primary="账号设置" />
+            </ListItemButton>
+            {user.role === 'admin' && (
+              <ListItemButton onClick={() => handleDrawerNav('/admin')}>
+                <ListItemIcon><AdminPanelSettingsRoundedIcon /></ListItemIcon>
+                <ListItemText primary="管理后台" />
+              </ListItemButton>
+            )}
+          </List>
+          <Divider />
+          <List>
+            <ListItemButton onClick={() => { setDrawerOpen(false); setUser(null); navigate('/'); }}>
+              <ListItemIcon><LogoutRoundedIcon /></ListItemIcon>
+              <ListItemText primary="退出登录" />
+            </ListItemButton>
+          </List>
+        </>
+      )}
+    </Box>
+  );
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex' }}>
+      {/* Desktop sidebar (v2.1 §4.0) */}
       {isDesktop && (
         <Drawer
           variant="permanent"
@@ -129,13 +227,11 @@ export default function AppLayout() {
           }}
         >
           <Toolbar>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Typography variant="h6">串门儿</Typography>
-            </Stack>
+            <Typography variant="h6" sx={{ cursor: 'pointer' }} onClick={() => navigate('/')}>串门儿</Typography>
           </Toolbar>
           <Box sx={{ px: 1 }}>
             <List>
-              {pages.map((p) => {
+              {bottomTabs.map((p) => {
                 const isActive = activeTab === p.id;
                 return (
                   <ListItemButton key={p.id} selected={isActive} onClick={() => navigate(p.id === '' ? '/' : `/${p.id}`)}>
@@ -145,31 +241,55 @@ export default function AppLayout() {
                 );
               })}
             </List>
+            <Divider sx={{ my: 1 }} />
+            <List>
+              {user && (
+                <ListItemButton selected={pathname === '/members'} onClick={() => navigate('/members')}>
+                  <ListItemIcon><PeopleRoundedIcon /></ListItemIcon>
+                  <ListItemText primary="成员墙" />
+                </ListItemButton>
+              )}
+              <ListItemButton selected={pathname.startsWith('/about')} onClick={() => navigate('/about')}>
+                <ListItemIcon><InfoOutlinedIcon /></ListItemIcon>
+                <ListItemText primary="关于串门儿" />
+              </ListItemButton>
+              {user && (
+                <ListItemButton selected={pathname === '/settings'} onClick={() => navigate('/settings')}>
+                  <ListItemIcon><SettingsRoundedIcon /></ListItemIcon>
+                  <ListItemText primary="账号设置" />
+                </ListItemButton>
+              )}
+            </List>
           </Box>
         </Drawer>
       )}
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
+        {/* Top AppBar: hamburger/back + title + status (v2.1 §4.0) */}
         <AppBar position="sticky" color="transparent" elevation={0} sx={{ backdropFilter: 'blur(10px)', borderBottom: 1, borderColor: 'divider' }}>
           <Toolbar sx={{ justifyContent: 'space-between' }}>
             <Stack direction="row" spacing={1} alignItems="center">
-              {showBackButton && (
+              {showBack ? (
                 <IconButton
                   size="small"
                   onClick={() => {
-                    if (isDetailPage) navigate(-1);
-                    else if (backTarget) navigate(backTarget);
+                    if (backTarget) navigate(backTarget);
+                    else navigate(-1);
                   }}
                 >
                   <ArrowBackIosNewRoundedIcon fontSize="small" />
                 </IconButton>
+              ) : (
+                !isDesktop && (
+                  <IconButton size="small" onClick={() => setDrawerOpen(true)}>
+                    <MenuRoundedIcon />
+                  </IconButton>
+                )
               )}
               <Typography
                 variant="h6"
-                sx={{ cursor: !isSubPage ? 'pointer' : 'default' }}
-                onClick={() => {
-                  if (!isSubPage) navigate('/about');
-                }}
+                sx={{ cursor: pathname === '/' ? 'pointer' : 'default' }}
+                onClick={() => { if (pathname === '/') navigate('/about'); }}
               >
                 {title}
               </Typography>
@@ -178,40 +298,30 @@ export default function AppLayout() {
               <IconButton size="small" onClick={toggleColorMode} aria-label={mode === 'dark' ? '切换到浅色模式' : '切换到深色模式'}>
                 {mode === 'dark' ? <LightModeRoundedIcon fontSize="small" /> : <DarkModeRoundedIcon fontSize="small" />}
               </IconButton>
-              <Badge color="warning" variant="dot" invisible={pathname !== '/'}>
-                <Avatar sx={{ width: 28, height: 28 }} src={user?.avatar || undefined}>
-                  {user?.name?.[0] ?? 'U'}
-                </Avatar>
-              </Badge>
               {user ? (
-                <>
-                  <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 140 }} noWrap>
-                    {user.name}
-                  </Typography>
-                  <Button
-                    size="small"
-                    variant="text"
-                    onClick={() => {
-                      setUser(null);
-                      navigate('/');
-                    }}
-                  >
-                    退出
-                  </Button>
-                </>
+                <Badge color="warning" variant="dot" invisible={pathname !== '/'}>
+                  <Avatar sx={{ width: 28, height: 28 }} src={user.avatar || undefined}>
+                    {user.name?.[0] ?? 'U'}
+                  </Avatar>
+                </Badge>
               ) : (
-                <Stack direction="row" spacing={0.5}>
-                  <Button size="small" variant="text" onClick={() => navigate('/login')}>
-                    登录
-                  </Button>
-                  <Button size="small" variant="outlined" onClick={() => navigate('/register')}>
-                    注册
-                  </Button>
-                </Stack>
+                <Button size="small" variant="outlined" onClick={() => navigate('/apply')}>
+                  申请加入
+                </Button>
               )}
             </Stack>
           </Toolbar>
         </AppBar>
+
+        {/* Mobile hamburger drawer */}
+        <Drawer
+          anchor="left"
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          ModalProps={{ slotProps: { backdrop: { sx: { bgcolor: 'rgba(0,0,0,0.5)' } } } }}
+        >
+          {drawerContent}
+        </Drawer>
 
         <Box
           key={pathname}
@@ -226,7 +336,8 @@ export default function AppLayout() {
           <Outlet context={{ isEmpty: false }} />
         </Box>
 
-        {!isDesktop && (
+        {/* Bottom Tab Bar — 5 tabs, hidden when not logged in (v2.1 §4.0) */}
+        {!isDesktop && user && (
           <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, borderTop: 1, borderColor: 'divider' }} elevation={6}>
             <BottomNavigation
               showLabels
@@ -234,7 +345,7 @@ export default function AppLayout() {
               onChange={(_, value) => navigate(value === '' ? '/' : `/${value}`)}
               sx={{ justifyContent: 'center', gap: 0.5, px: 0.5 }}
             >
-              {pages.map((p) => (
+              {bottomTabs.map((p) => (
                 <BottomNavigationAction
                   key={p.id}
                   value={p.id}

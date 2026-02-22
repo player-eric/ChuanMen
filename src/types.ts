@@ -1,4 +1,4 @@
-/** Shared TypeScript types */
+/** Shared TypeScript types (v2.1) */
 
 export interface MemberMutual {
   movies: string[];
@@ -9,27 +9,44 @@ export interface MemberMutual {
 
 export interface MemberData {
   name: string;
+  email?: string;
+  hideEmail?: boolean;
   role: string;
   host: number;
   badge?: string;
   titles: string[];
   mutual: MemberMutual;
+  bio?: string;
+  selfAsFriend?: string;
+  idealFriend?: string;
+  participationPlan?: string;
+  coverImageUrl?: string;
+  location?: string;
 }
+
+export type EventPhase = 'invite' | 'open' | 'live' | 'ended' | 'cancelled';
 
 export interface EventData {
   id: number;
   title: string;
   host: string;
   date: string;
+  endDate?: string;
+  inviteDeadline?: string;
   location: string;
+  locationPrivate?: string;
+  isHomeEvent?: boolean;
   scene: string;
   film?: string;
   spots: number;
   total: number;
   people: string[];
-  phase: 'open' | 'invite';
+  phase: EventPhase;
   invitedBy?: string;
   desc: string;
+  houseRules?: string;
+  photoCount?: number;
+  commentCount?: number;
 }
 
 export interface PastEvent {
@@ -39,6 +56,8 @@ export interface PastEvent {
   people: number;
   scene: string;
   film?: string;
+  photoCount?: number;
+  commentCount?: number;
 }
 
 export interface Proposal {
@@ -67,6 +86,8 @@ export interface MovieScreened {
   host: string;
 }
 
+export type PostcardSourceType = 'free' | 'purchased';
+
 export interface CardReceived {
   from: string;
   msg: string;
@@ -74,6 +95,7 @@ export interface CardReceived {
   date: string;
   photo?: string;
   priv: boolean;
+  sourceType?: PostcardSourceType;
 }
 
 export interface Collaborator {
@@ -100,12 +122,20 @@ export interface CardsPageData {
   people: { name: string; ctx: string; badge?: string }[];
   quickMessages: string[];
   myCards: CardReceived[];
+  credits: number;
 }
 
 export interface ProfilePageData {
   stats: { n: string; l: string }[];
   recentCards: CardReceived[];
   recentActivity: { name: string; date: string; role?: string; emoji: string }[];
+  contribution: {
+    hostCount: number;
+    eventCount: number;
+    movieCount: number;
+    cardsSent: number;
+    cardsReceived: number;
+  };
 }
 
 export interface MemberDetailData {

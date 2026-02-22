@@ -38,4 +38,57 @@ export class UserRepository {
       },
     });
   }
+
+  // v2.1: Create applicant from /apply form
+  createApplicant(input: {
+    displayName: string;
+    location: string;
+    bio: string;
+    selfAsFriend: string;
+    idealFriend: string;
+    participationPlan: string;
+    email: string;
+    wechatId: string;
+    referralSource?: string;
+    coverImageUrl?: string;
+  }) {
+    return this.prisma.user.create({
+      data: {
+        name: input.displayName,
+        email: input.email,
+        bio: input.bio,
+        location: input.location,
+        selfAsFriend: input.selfAsFriend,
+        idealFriend: input.idealFriend,
+        participationPlan: input.participationPlan,
+        wechatId: input.wechatId,
+        referralSource: input.referralSource ?? '',
+        coverImageUrl: input.coverImageUrl ?? '',
+        userStatus: 'applicant',
+      },
+    });
+  }
+
+  // v2.1: Update user settings
+  updateSettings(
+    userId: string,
+    data: {
+      name?: string;
+      location?: string;
+      bio?: string;
+      selfAsFriend?: string;
+      idealFriend?: string;
+      participationPlan?: string;
+      email?: string;
+      coverImageUrl?: string;
+      defaultHouseRules?: string;
+      homeAddress?: string;
+      hideEmail?: boolean;
+    },
+  ) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+  }
 }

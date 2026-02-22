@@ -34,24 +34,25 @@ npm run dev
 - `.env.development.example`
 - `.env.production.example`
 
-## API（迁移后的基础路由）
+## API（v2.1 路由）
 
 - `GET /api/health`
 - `GET /api/users`
 - `POST /api/users`
+- `POST /api/users/apply` — 提交申请（v2.1）
+- `PATCH /api/users/me/settings` — 更新设置（v2.1）
 - `GET /api/events`
 - `POST /api/events`
 - `GET /api/recommendations`
 - `POST /api/recommendations`
 - `POST /api/media/presign`
 - `POST /api/email/send`
-- `POST /api/agent/tick`
 
-## EventBridge + AI Agent
+## EventBridge + Email System
 
-- Worker：`src_v2/workers/agentTick.ts`
-- 手动执行：`npm run agent:tick`
-- 线上建议由 EventBridge 定时触发 ECS Task 或调用 `/api/agent/tick`
+v2.1 replaces AgentPush with email-based notifications (SES).
+- Worker：`src_v2/workers/agentTick.ts`（legacy, replaced by email rules）
+- 线上通过 EventBridge 定时触发 ECS Task
 
 ## Docker / System Test
 

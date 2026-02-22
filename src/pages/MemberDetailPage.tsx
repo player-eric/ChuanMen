@@ -1,5 +1,5 @@
 import { useLoaderData, useNavigate } from 'react-router';
-import { Avatar, Box, Button, Card, CardContent, Chip, Grid, Stack, Typography } from '@mui/material';
+import { Avatar, Box, Button, Card, CardContent, Chip, Divider, Grid, Stack, Typography } from '@mui/material';
 import type { MemberDetailData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 
@@ -16,13 +16,27 @@ export default function MemberDetailPage() {
 
   return (
     <Stack spacing={2}>
+      {/* Cover image */}
+      {member.coverImageUrl && (
+        <Box sx={{ borderRadius: 2, overflow: 'hidden', height: 160 }}>
+          <img src={member.coverImageUrl} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </Box>
+      )}
+
       <Card>
         <CardContent>
           <Stack direction="row" spacing={1.5} alignItems="center">
             <Avatar sx={{ width: 58, height: 58 }}>{member.name[0]}</Avatar>
             <Box>
               <Typography variant="h6">{member.name}</Typography>
+              {member.location && (
+                <Typography variant="caption" color="text.secondary">📍 {member.location}</Typography>
+              )}
               <Typography variant="body2" color="text.secondary">{member.role}</Typography>
+              {/* v2.1: show email if not hidden, only visible to logged-in users */}
+              {user && member.email && !member.hideEmail && (
+                <Typography variant="caption" color="text.secondary">{member.email}</Typography>
+              )}
               <Stack direction="row" spacing={0.8} sx={{ mt: 0.8 }}>
                 {member.titles.map((title) => <Chip key={title} size="small" color="warning" label={title} />)}
               </Stack>
@@ -30,6 +44,41 @@ export default function MemberDetailPage() {
           </Stack>
         </CardContent>
       </Card>
+
+      {/* v2.1 §4.9: Bio & self-description fields */}
+      {(member.bio || member.selfAsFriend || member.idealFriend || member.participationPlan) && (
+        <Card>
+          <CardContent>
+            {member.bio && (
+              <>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>关于我</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>{member.bio}</Typography>
+              </>
+            )}
+            {member.selfAsFriend && (
+              <>
+                <Divider sx={{ my: 1.5 }} />
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>作为朋友，我</Typography>
+                <Typography variant="body2" color="text.secondary">{member.selfAsFriend}</Typography>
+              </>
+            )}
+            {member.idealFriend && (
+              <>
+                <Divider sx={{ my: 1.5 }} />
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>我理想中的朋友</Typography>
+                <Typography variant="body2" color="text.secondary">{member.idealFriend}</Typography>
+              </>
+            )}
+            {member.participationPlan && (
+              <>
+                <Divider sx={{ my: 1.5 }} />
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>参与计划</Typography>
+                <Typography variant="body2" color="text.secondary">{member.participationPlan}</Typography>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Grid container spacing={1.2}>
         {[

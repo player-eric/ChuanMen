@@ -21,7 +21,7 @@ function EmptyFeed() {
     <Stack spacing={2}>
       <Card>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 1 }}>🤖 欢迎来到串门儿！</Typography>
+          <Typography variant="h6" sx={{ mb: 1 }}>👋 欢迎来到串门儿！</Typography>
           <Typography variant="body2" color="text.secondary">
             串门儿是一群住在新泽西的朋友，通过小型聚会认识彼此。先看看最近有什么活动，或者去推荐页选一部想看的电影。
           </Typography>
@@ -64,7 +64,7 @@ function FullFeed() {
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Box>
-              <Typography variant="subtitle1" fontWeight={700}>🤖 你投的「花样年华」被选中了</Typography>
+              <Typography variant="subtitle1" fontWeight={700}>📢 你投的「花样年华」被选中了</Typography>
               <Typography variant="body2" color="text.secondary">这周六在白开水家放映，要不要来？</Typography>
             </Box>
             <Button variant="contained" size="small" onClick={() => navigate('/events')}>看看</Button>

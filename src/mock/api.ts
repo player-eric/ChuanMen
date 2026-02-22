@@ -7,7 +7,7 @@ import type {
   ProfilePageData, MemberDetailData, AboutPageData, FeedPageData,
 } from '@/types';
 import {
-  membersData, upcomingEvents, proposals, pastEvents,
+  membersData, upcomingEvents, liveEvents, proposals, pastEvents,
   moviePool, movieScreened, cardPeople, quickMessages, myCards,
   profileStats, recentActivity,
 } from './data';
@@ -23,7 +23,7 @@ export async function fetchFeedData(): Promise<FeedPageData> {
 
 export async function fetchEventsData(): Promise<EventsPageData> {
   await delay();
-  return { upcoming: upcomingEvents, proposals, past: pastEvents };
+  return { upcoming: [...upcomingEvents, ...liveEvents], proposals, past: pastEvents };
 }
 
 export async function fetchEventDetail(eventId: number) {
@@ -53,7 +53,7 @@ export async function fetchMovieDetail(movieId: number) {
 
 export async function fetchCardsData(): Promise<CardsPageData> {
   await delay();
-  return { people: cardPeople, quickMessages, myCards };
+  return { people: cardPeople, quickMessages, myCards, credits: 6 };
 }
 
 export async function fetchProfileData(): Promise<ProfilePageData> {
@@ -65,6 +65,13 @@ export async function fetchProfileData(): Promise<ProfilePageData> {
       { from: 'Tiffy', msg: '氛围超棒！', stamp: '🍳', date: '02.01', priv: true },
     ],
     recentActivity,
+    contribution: {
+      hostCount: 3,
+      eventCount: 18,
+      movieCount: 12,
+      cardsSent: 8,
+      cardsReceived: 5,
+    },
   };
 }
 

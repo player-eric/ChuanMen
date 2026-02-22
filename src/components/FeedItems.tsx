@@ -5,7 +5,6 @@ import { Ava, AvaStack, Card, Btn } from './Atoms';
 import { Poster } from './Poster';
 import { PostCard } from './PostCard';
 import { ScenePhoto } from './ScenePhoto';
-import type { Collaborator } from '@/types';
 
 /* ═══ FeedTime ═══ */
 export function FeedTime({ label }: { label: string }) {
@@ -160,7 +159,7 @@ export function FeedMovie({ name, title, year, dir, votes: initV }: FeedMoviePro
   );
 }
 
-/* ═══ FeedMilestone ═══ */
+/* ═══ FeedMilestone (v2.1: "系统横幅" not "Agent 横幅") ═══ */
 export function FeedMilestone({ text, emoji }: { text: string; emoji: string }) {
   return (
     <Card glow>
@@ -214,117 +213,9 @@ export function FeedProposal({ name, title, votes: initV, interested }: FeedProp
   );
 }
 
-/* ═══ FeedSeed ═══ */
-interface FeedSeedProps {
-  name: string; project: string; update: string;
-  collaborators?: Collaborator[]; navTarget?: string;
-}
+/* ═══ FeedSeed: removed in v2.1 (moved to V2) ═══ */
 
-export function FeedSeed({ name, project, update, collaborators, navTarget }: FeedSeedProps) {
-  const navigate = useNavigate();
-  const goNav = navTarget ? () => navigate(navTarget) : undefined;
-  const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
-
-  return (
-    <Card>
-      <div style={{ padding: 14 }}>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <Ava name={name} size={32} onTap={() => goMember(name)} />
-          <div>
-            <div style={{ fontSize: 12 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 更新了种子计划</div>
-            <div style={{ fontSize: 10, color: c.text3 }}>昨天</div>
-          </div>
-        </div>
-        <div onClick={goNav} style={{ cursor: goNav ? 'pointer' : 'default' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
-            <span style={{ fontSize: 12 }}>{'🌱'}</span>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{project}</span>
-          </div>
-          <div style={{ fontSize: 12, color: c.text2, lineHeight: 1.6, marginBottom: 8 }}>{update}</div>
-        </div>
-        {collaborators && collaborators.length > 0 && (
-          <div style={{ padding: '8px 10px', background: c.s2, borderRadius: 6, marginBottom: 8, border: `1px solid ${c.line}` }}>
-            <div style={{ fontSize: 9, color: c.text3, marginBottom: 6, letterSpacing: '0.04em' }}>协作者</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {collaborators.map((col, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Ava name={col.name} size={18} />
-                  <span style={{ fontSize: 11, fontWeight: 600 }}>{col.name}</span>
-                  <span style={{ fontSize: 9, color: c.text3, padding: '1px 6px', background: c.s3, borderRadius: 3 }}>{col.role}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Btn small>{'👏'} 加油</Btn>
-          <Btn small>💬 留言</Btn>
-          <Btn small>🤝 参与协作</Btn>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/* ═══ FeedDiscussion ═══ */
-interface FeedDiscussionProps {
-  name: string; topic: string; body: string;
-  replies: number; replyPreviews?: { name: string; text: string }[];
-  navTarget?: string;
-}
-
-export function FeedDiscussion({ name, topic, body, replies, replyPreviews, navTarget }: FeedDiscussionProps) {
-  const [showReply, setShowReply] = useState(false);
-  const navigate = useNavigate();
-  const goNav = navTarget ? () => navigate(navTarget) : undefined;
-  const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
-
-  return (
-    <Card>
-      <div style={{ padding: 14 }}>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <Ava name={name} size={32} onTap={() => goMember(name)} />
-          <div>
-            <div style={{ fontSize: 12 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 发起了话题</div>
-            <div style={{ fontSize: 10, color: c.text3 }}>3 小时前</div>
-          </div>
-        </div>
-        <div onClick={goNav} style={{ cursor: goNav ? 'pointer' : 'default' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{topic}</div>
-          <div style={{ fontSize: 12, color: c.text2, lineHeight: 1.6, marginBottom: 10 }}>{body}</div>
-        </div>
-        {replyPreviews && replyPreviews.length > 0 && (
-          <div style={{ borderTop: `1px solid ${c.line}`, paddingTop: 8, marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {replyPreviews.map((r, i) => (
-              <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                <Ava name={r.name} size={18} onTap={() => goMember(r.name)} />
-                <div style={{ flex: 1 }}>
-                  <span onClick={() => goMember(r.name)} style={{ fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>{r.name}</span>
-                  <span style={{ fontSize: 11, color: c.text2, marginLeft: 4 }}>{r.text}</span>
-                </div>
-              </div>
-            ))}
-            {replies > replyPreviews.length && (
-              <div style={{ fontSize: 10, color: c.warm, cursor: 'pointer', paddingLeft: 24 }}>查看全部 {replies} 条回复 →</div>
-            )}
-          </div>
-        )}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Btn small filled onClick={() => setShowReply(!showReply)}>💬 回复</Btn>
-          <Btn small>{'👍'} {(replies || 0) + 3}</Btn>
-        </div>
-        {showReply && (
-          <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
-            <div style={{ flex: 1, background: c.s2, borderRadius: 6, padding: '6px 10px', border: `1px solid ${c.line}` }}>
-              <input type="text" placeholder="说点什么..." style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: c.text, fontSize: 11 }} />
-            </div>
-            <button style={{ padding: '6px 12px', borderRadius: 6, background: c.warm, border: 'none', color: c.bg, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>发送</button>
-          </div>
-        )}
-      </div>
-    </Card>
-  );
-}
+/* ═══ FeedDiscussion: removed from feed in v2.1 (moved to V2) ═══ */
 
 /* ═══ FeedCompactMovie ═══ */
 interface FeedCompactMovieProps {

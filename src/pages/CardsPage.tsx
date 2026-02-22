@@ -10,7 +10,6 @@ import {
   Chip,
   FormControlLabel,
   Grid,
-  LinearProgress,
   Radio,
   RadioGroup,
   Stack,
@@ -69,13 +68,16 @@ function FullCards() {
 
   return (
     <Stack spacing={2}>
+      {/* v2.1: Credits system - 累计不清零 */}
       <Card>
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-            <Typography variant="body2" color="text.secondary">本月还能寄 <b>2 / 4</b> 张</Typography>
-            <Typography variant="caption" color="text.secondary">月底清零</Typography>
+            <Typography variant="body2" color="text.secondary">可用额度: <b>{data.credits ?? 0}</b> 张</Typography>
+            <Typography variant="caption" color="text.secondary">累计不清零</Typography>
           </Stack>
-          <LinearProgress variant="determinate" value={50} />
+          <Button size="small" variant="outlined" onClick={() => { /* TODO: purchase flow */ }}>
+            $5/张 购买感谢卡
+          </Button>
         </CardContent>
       </Card>
 

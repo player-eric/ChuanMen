@@ -25,7 +25,16 @@ enum EventTag {
 enum EventPhase {
   invite
   open
-  closed
+  live
+  ended
+  cancelled
+}
+
+enum UserStatus {
+  applicant
+  approved
+  rejected
+  banned
 }
 
 enum EventStatus {
@@ -36,9 +45,11 @@ enum EventStatus {
 
 enum EventSignupStatus {
   invited
+  offered
   accepted
   waitlist
   declined
+  rejected
   cancelled
 }
 
@@ -72,6 +83,7 @@ enum PostcardVisibility {
   private
 }
 
+// v2.1: Seed moved to V2, enums kept for migration compatibility
 enum SeedStatus {
   active
   paused
@@ -100,21 +112,9 @@ enum WeeklyLotteryStatus {
   skipped
 }
 
-enum AgentPushGoal {
-  A
-  B
-  C
-  D
-  E
-  F
-  G
-}
-
-enum AgentPushChannel {
-  email
-  web
-  feed
-}
+// v2.1: AgentPush enums removed (kept for migration reference)
+// enum AgentPushGoal { A B C D E F G }
+// enum AgentPushChannel { email web feed }
 
 enum PushFrequency {
   low
@@ -132,11 +132,12 @@ enum InteractionEntityType {
   movie
   proposal
   postcard
+  // v2.1: seed moved to V2, discussion_reply removed (use unified comment)
   seed
   seed_update
   discussion
-  discussion_reply
   comment
+  announcement
 }
 
 model User {
@@ -152,7 +153,20 @@ model User {
   proposalCount        Int                 @default(0)
   postcardSentCount    Int                 @default(0)
   postcardReceivedCount Int                @default(0)
-  membershipStatus     MembershipStatus    @default(regular)
+  membershipStatus     MembershipStatus    @default(regular)  // v2.1 new fields
+  userStatus           UserStatus          @default(applicant)
+  googleId             String?             @unique
+  wechatId             String              @default("")
+  hideEmail            Boolean             @default(false)
+  location             String              @default("")
+  selfAsFriend         String              @default("")
+  idealFriend          String              @default("")
+  participationPlan    String              @default("")
+  coverImageUrl        String              @default("")
+  referralSource       String              @default("")
+  defaultHouseRules    String              @default("")
+  homeAddress          String              @default("")
+  postcardCredits      Int                 @default(2)
   lastActiveAt         DateTime?
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
@@ -176,15 +190,16 @@ model User {
   seedCollaborations   SeedCollaborator[]
   seedUpdates          SeedUpdate[]        @relation("SeedUpdateAuthor")
   discussions          Discussion[]
-  discussionReplies    DiscussionReply[]
+  // v2.1: DiscussionReply removed, use unified Comment model
   likes                Like[]
   comments             Comment[]
   weeklyLotteries      WeeklyLottery[]
   experimentPairingsA  ExperimentPairing[] @relation("PairingA")
   experimentPairingsB  ExperimentPairing[] @relation("PairingB")
-  agentPushes          AgentPush[]
   mediaAssets          MediaAsset[]
   recommendations      Recommendation[]
+  postcardPurchases    PostcardPurchase[]
+  announcements        Announcement[]       @relation("AnnouncementAuthor")
 }
 
 model UserOperatorRole {
@@ -252,6 +267,10 @@ model Event {
   recorderUserId         String?
   waitlistEnabled        Boolean                   @default(true)
   isWeeklyLotteryEvent   Boolean                   @default(false)
+  // v2.1 new fields
+  inviteDeadline         DateTime?
+  isHomeEvent            Boolean                   @default(false)
+  locationPrivate        Boolean                   @default(false)
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt
 
@@ -299,6 +318,7 @@ model EventSignup {
   invitedById String?
   status      EventSignupStatus @default(invited)
   invitedAt   DateTime?
+  offeredAt   DateTime?
   respondedAt DateTime?
   participated Boolean          @default(false)
   checkedInAt DateTime?
@@ -512,26 +532,13 @@ model Discussion {
   updatedAt  DateTime    @updatedAt
 
   author     User        @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  replies    DiscussionReply[]
+  // v2.1: replies now use unified Comment model (entityType=discussion)
 
   @@index([createdAt(sort: Desc)])
 }
 
-model DiscussionReply {
-  id            String           @id @default(cuid())
-  discussionId  String
-  authorId      String
-  parentReplyId String?
-  content       String
-  createdAt     DateTime         @default(now())
-
-  discussion    Discussion       @relation(fields: [discussionId], references: [id], onDelete: Cascade)
-  author        User             @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  parentReply   DiscussionReply? @relation("DiscussionReplyTree", fields: [parentReplyId], references: [id], onDelete: SetNull)
-  childReplies  DiscussionReply[] @relation("DiscussionReplyTree")
-
-  @@index([discussionId, createdAt])
-}
+// v2.1: DiscussionReply removed — use Comment model with entityType=discussion instead
+// model DiscussionReply { ... }
 
 model Like {
   id         String                 @id @default(cuid())
@@ -606,23 +613,34 @@ model ExperimentPairing {
   @@unique([experimentId, userAId, userBId])
 }
 
-model AgentPush {
-  id         String          @id @default(cuid())
-  userId     String?
-  goal       AgentPushGoal
-  channel    AgentPushChannel
-  content    String
-  actionUrl  String          @default("")
-  isApproved Boolean         @default(false)
-  sentAt     DateTime?
-  opened     Boolean         @default(false)
-  acted      Boolean         @default(false)
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+// v2.1: AgentPush removed, replaced by email system (managed outside Prisma for now)
+// Kept as comment for migration reference:
+// model AgentPush { ... }
 
-  user       User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+model Announcement {
+  id         String   @id @default(cuid())
+  authorId   String
+  title      String
+  body       String
+  published  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@index([channel, sentAt(sort: Desc)])
+  author     User     @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([createdAt(sort: Desc)])
+}
+
+model PostcardPurchase {
+  id        String   @id @default(cuid())
+  userId    String
+  quantity  Int
+  amountUsd Int
+  stripeId  String   @default("")
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
   @@index([userId, createdAt(sort: Desc)])
 }
 

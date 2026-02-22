@@ -71,18 +71,23 @@ export default function EventsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const data = useLoaderData() as EventsPageData;
-  const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [tab, setTab] = useState<'signup' | 'live' | 'ended'>('signup');
   const [selected, setSelected] = useState<EventData | null>(null);
   const canInteract = Boolean(user);
+
+  /* v2.1 §4.4: split events by phase */
+  const signupEvents = data.upcoming.filter((e) => e.phase === 'invite' || e.phase === 'open');
+  const liveEventsFiltered = data.upcoming.filter((e) => e.phase === 'live');
 
   return (
     <Box>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
-        <Tab value="upcoming" label={`即将到来 (${data.upcoming.length})`} />
-        <Tab value="past" label="过往活动" />
+        <Tab value="signup" label={`报名中 (${signupEvents.length})`} />
+        <Tab value="live" label={`进行中 (${liveEventsFiltered.length})`} />
+        <Tab value="ended" label="已结束" />
       </Tabs>
 
-      {tab === 'upcoming' && (
+      {tab === 'signup' && (
         <Stack spacing={2}>
           <Card>
             <CardContent>
@@ -108,7 +113,7 @@ export default function EventsPage() {
           </Card>
 
           <Grid container spacing={2}>
-            {data.upcoming.map((evt) => (
+            {signupEvents.map((evt) => (
               <Grid key={evt.id} size={{ xs: 12, md: 6 }}>
                 <Card sx={{ height: '100%' }}>
                   <CardActionArea onClick={() => navigate(`/events/${evt.id}`)}>
@@ -116,13 +121,22 @@ export default function EventsPage() {
                       <Stack spacing={1.5}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
                           <Typography variant="h6">{evt.title}</Typography>
-                          {evt.phase === 'invite' && <Chip size="small" color="warning" label="邀请" />}
+                          {evt.phase === 'invite' && <Chip size="small" color="warning" label="🔒 邀请" />}
+                          {evt.isHomeEvent && <Chip size="small" variant="outlined" label="🏠 在家" />}
                         </Stack>
                         <Typography variant="body2" color="text.secondary">{evt.date} · {evt.location}</Typography>
+                        {evt.isHomeEvent && evt.phase !== 'invite' && (
+                          <Typography variant="caption" color="text.secondary">📍 报名后可见完整地址</Typography>
+                        )}
                         <Stack direction="row" spacing={1} alignItems="center">
                           <Avatar sx={{ width: 26, height: 26 }}>{evt.host[0]}</Avatar>
                           <Typography variant="body2" color="text.secondary">{evt.host} Host</Typography>
                         </Stack>
+                        {evt.houseRules && (
+                          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            🏠 {evt.houseRules}
+                          </Typography>
+                        )}
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
                           <AvatarGroup max={4}>
                             {evt.people.map((name) => (
@@ -166,7 +180,42 @@ export default function EventsPage() {
         </Stack>
       )}
 
-      {tab === 'past' && (
+      {tab === 'live' && (
+        <Stack spacing={2}>
+          {liveEventsFiltered.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 4 }}>
+              目前没有进行中的活动
+            </Typography>
+          ) : (
+            <Grid container spacing={2}>
+              {liveEventsFiltered.map((evt) => (
+                <Grid key={evt.id} size={{ xs: 12, md: 6 }}>
+                  <Card sx={{ height: '100%', border: 2, borderColor: 'success.main' }}>
+                    <CardActionArea onClick={() => navigate(`/events/${evt.id}`)}>
+                      <CardContent>
+                        <Stack spacing={1.5}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Typography variant="h6">{evt.title}</Typography>
+                            <Chip size="small" color="success" label="● 进行中" />
+                          </Stack>
+                          <Typography variant="body2" color="text.secondary">{evt.date} · {evt.location}</Typography>
+                          <AvatarGroup max={6}>
+                            {evt.people.map((name) => (
+                              <Avatar key={name}>{name[0]}</Avatar>
+                            ))}
+                          </AvatarGroup>
+                        </Stack>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Stack>
+      )}
+
+      {tab === 'ended' && (
         <Stack spacing={2}>
           <Box sx={{ textAlign: 'right' }}>
             <Button size="small" onClick={() => navigate('/events/history')}>进入活动记录页</Button>
@@ -177,7 +226,11 @@ export default function EventsPage() {
               <Card>
                 <CardContent>
                   <Typography variant="subtitle1">{evt.title}</Typography>
-                  <Typography variant="body2" color="text.secondary">{evt.date} · {evt.host} Host · {evt.people} 人</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {evt.date} · {evt.host} Host · {evt.people} 人
+                    {evt.photoCount ? ` · 📷 ${evt.photoCount}` : ''}
+                    {evt.commentCount ? ` · 💬 ${evt.commentCount}` : ''}
+                  </Typography>
                   {evt.film && <Chip sx={{ mt: 1 }} size="small" label={`🎬 ${evt.film}`} />}
                 </CardContent>
               </Card>
