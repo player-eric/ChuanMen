@@ -102,8 +102,8 @@ export default function LoginPage() {
 
             <Typography variant="body2" color="text.secondary">
               还没有账号？
-              <Link component={RouterLink} to="/register" sx={{ ml: 0.5 }}>
-                去注册
+              <Link component={RouterLink} to="/apply" sx={{ ml: 0.5 }}>
+                申请加入
               </Link>
             </Typography>
           </Stack>

@@ -7,13 +7,14 @@ import type {
   ProfilePageData, MemberDetailData, AboutPageData, FeedPageData,
 } from '@/types';
 import {
-  membersData, upcomingEvents, liveEvents, endedEvents, cancelledEvents,
+  membersData, upcomingEvents, endedEvents, cancelledEvents,
   proposals, pastEvents,
   moviePool, movieScreened,
+  bookPool, bookRead, bookDetailMap,
   cardPeople, quickMessages, myCards, cardsSent,
-  profileStats, recentActivity,
   feedAnnouncements, feedNewRecos, feedNewCards,
   recommendationItems,
+  feedItems, movieDetailMap,
 } from './data';
 import type { RecoItem } from './data';
 import { photos } from '@/theme';
@@ -23,13 +24,13 @@ const delay = (ms = 80) => new Promise<void>((r) => setTimeout(r, ms));
 
 export async function fetchFeedData(): Promise<FeedPageData> {
   await delay();
-  return { members: membersData };
+  return { members: membersData, items: feedItems };
 }
 
 export async function fetchEventsData(): Promise<EventsPageData> {
   await delay();
   return {
-    upcoming: [...upcomingEvents, ...liveEvents, ...endedEvents, ...cancelledEvents],
+    upcoming: [...upcomingEvents, ...endedEvents, ...cancelledEvents],
     proposals,
     past: pastEvents,
   };
@@ -37,13 +38,18 @@ export async function fetchEventsData(): Promise<EventsPageData> {
 
 export async function fetchEventDetail(eventId: number) {
   await delay();
-  const all = [...upcomingEvents, ...liveEvents, ...endedEvents, ...cancelledEvents];
+  const all = [...upcomingEvents, ...endedEvents, ...cancelledEvents];
   return all.find((event) => event.id === eventId) ?? null;
 }
 
 export async function fetchEventProposalsData() {
   await delay();
   return proposals;
+}
+
+export async function fetchProposalDetail(proposalId: number) {
+  await delay();
+  return proposals.find((p) => p.id === proposalId) ?? null;
 }
 
 export async function fetchEventRecordsData() {
@@ -53,25 +59,107 @@ export async function fetchEventRecordsData() {
 
 export async function fetchDiscoverData(): Promise<DiscoverPageData> {
   await delay();
-  return { pool: moviePool, screened: movieScreened };
+  return { pool: moviePool, screened: movieScreened, bookPool, bookRead };
 }
 
 export async function fetchMovieDetail(movieId: number) {
   await delay();
-  return moviePool.find((movie) => movie.id === movieId) ?? null;
+  return movieDetailMap[movieId] ?? moviePool.find((movie) => movie.id === movieId) ?? null;
+}
+
+export async function fetchBookDetail(bookId: number) {
+  await delay();
+  return bookDetailMap[bookId] ?? bookPool.find((book) => book.id === bookId) ?? null;
 }
 
 export async function fetchCardsData(): Promise<CardsPageData> {
   await delay();
-  return { people: cardPeople, quickMessages, myCards, credits: 6 };
+  return { people: cardPeople, quickMessages, myCards, sentCards: cardsSent, credits: 6 };
 }
 
 export async function fetchProfileData(): Promise<ProfilePageData> {
   await delay();
+
+  const userName = 'Yuan';
+  const member = membersData.find((m) => m.name === userName);
+
+  // My movies
+  const myMovies = moviePool.filter((m) => m.by === userName);
+  const screenedCount = myMovies.filter((m) => m.status === '已放映' || m.status === '本周放映').length;
+
+  // My events — from upcoming + ended, where user is in people or is host
+  const allEvents = [...upcomingEvents, ...endedEvents];
+  const myEvents = allEvents
+    .filter((e) => e.people.includes(userName) || e.host === userName)
+    .map((e) => ({
+      id: e.id,
+      title: e.title,
+      date: e.date,
+      scene: e.scene,
+      role: e.host === userName ? 'Host' : undefined,
+    }));
+
+  // Vote count — sum of votes on movies the user recommended
+  const voteCount = myMovies.reduce((sum, m) => sum + m.v, 0);
+
+  // Proposal count
+  const proposalCount = proposals.filter((p) => p.name === userName).length;
+
+  // Timeline — merge events, movies, cards, proposals
+  const timeline: ProfilePageData['timeline'] = [];
+
+  // Events user participated in
+  for (const e of allEvents.filter((ev) => ev.people.includes(userName) || ev.host === userName)) {
+    const emoji = e.host === userName ? '🏠' : '📅';
+    const action = e.host === userName ? `Host 了「${e.title}」` : `参加了「${e.title}」`;
+    timeline.push({ date: e.date.split(' ')[0], type: 'event', text: `${emoji} ${action}`, link: `/events/${e.id}` });
+  }
+
+  // Movies user recommended
+  for (const m of myMovies) {
+    timeline.push({ date: '', type: 'movie', text: `🎬 推荐了「${m.title}」`, link: `/discover/movies/${m.id}` });
+  }
+
+  // Cards received
+  for (const card of myCards.slice(0, 5)) {
+    timeline.push({ date: card.date, type: 'card', text: `💌 收到 ${card.from} 的感谢卡` });
+  }
+
+  // Cards sent
+  for (const card of cardsSent.slice(0, 3)) {
+    timeline.push({ date: card.date, type: 'card', text: `✉️ 寄出了一张感谢卡` });
+  }
+
+  // Sort by date descending (MM.DD format)
+  timeline.sort((a, b) => {
+    const toNum = (d: string) => {
+      if (!d) return 0;
+      const [m, dd] = d.split('.');
+      return Number(m) * 100 + Number(dd);
+    };
+    return toNum(b.date) - toNum(a.date);
+  });
+
+  // Most shared experiences — member with highest evtCount (excluding self)
+  const others = membersData.filter((m) => m.name !== userName);
+  const sortedByEvents = [...others].sort((a, b) => b.mutual.evtCount - a.mutual.evtCount);
+  const mostShared = sortedByEvents[0] ?? null;
+
+  // Closest taste — member with most mutual movies (excluding self)
+  const sortedByMovies = [...others].sort((a, b) => b.mutual.movies.length - a.mutual.movies.length);
+  const closestTaste = sortedByMovies[0] ?? null;
+
   return {
-    stats: profileStats,
-    recentCards: myCards.slice(0, 5),
-    recentActivity,
+    titles: member?.titles ?? [],
+    role: member?.role ?? '',
+    participationStats: {
+      eventCount: member?.mutual.evtCount ?? 0,
+      hostCount: member?.host ?? 0,
+      movieCount: myMovies.length,
+      screenedCount,
+      proposalCount,
+      voteCount,
+    },
     contribution: {
       hostCount: 6,
       eventCount: 18,
@@ -79,6 +167,16 @@ export async function fetchProfileData(): Promise<ProfilePageData> {
       cardsSent: cardsSent.length,
       cardsReceived: myCards.length,
     },
+    myMovies,
+    myEvents,
+    recentCards: myCards.slice(0, 5),
+    timeline: timeline.slice(0, 15),
+    mostSharedWith: mostShared
+      ? { name: mostShared.name, evtCount: mostShared.mutual.evtCount, cards: mostShared.mutual.cards }
+      : null,
+    closestTaste: closestTaste
+      ? { name: closestTaste.name, movies: closestTaste.mutual.movies }
+      : null,
   };
 }
 
@@ -99,7 +197,7 @@ export async function fetchAboutData(): Promise<AboutPageData> {
   return {
     memberCount: membersData.length,
     hostCount: membersData.filter((m) => m.host > 0).length,
-    eventCount: pastEvents.length + upcomingEvents.length + liveEvents.length,
+    eventCount: pastEvents.length + upcomingEvents.length + endedEvents.length,
     months: 8,
   };
 }

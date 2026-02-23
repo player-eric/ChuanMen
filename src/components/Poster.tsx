@@ -1,4 +1,5 @@
-import { c, posters as posterData } from '@/theme';
+import { useColors } from '@/hooks/useColors';
+import { posters as posterData } from '@/theme';
 
 interface PosterProps {
   title: string;
@@ -7,6 +8,7 @@ interface PosterProps {
 }
 
 export function Poster({ title, w = 48, h = 66 }: PosterProps) {
+  const c = useColors();
   const p = posterData[title] || {
     bg: `linear-gradient(135deg, ${c.s3}, ${c.s2})`,
     accent: c.text3,

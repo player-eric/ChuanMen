@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { Alert, Button, Card, CardContent, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
 import { getRecommendationById, type RecommendationCategory } from '@/lib/domainApi';
+import { RichTextViewer } from '@/components/RichTextEditor';
 
 function isCategory(value: string | undefined): value is RecommendationCategory {
   return value === 'movie' || value === 'recipe' || value === 'music' || value === 'place';
@@ -43,9 +44,9 @@ export default function RecommendationDetailPage() {
       <Card>
         <CardContent>
           <Typography variant="h5" fontWeight={700}>{String(item.title ?? '')}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            {String(item.description ?? '')}
-          </Typography>
+          <Box sx={{ mt: 1 }}>
+            <RichTextViewer html={String(item.description ?? '')} />
+          </Box>
           {!!item.sourceUrl && (
             <Button sx={{ mt: 1 }} size="small" href={String(item.sourceUrl)} target="_blank" rel="noreferrer">
               打开来源链接

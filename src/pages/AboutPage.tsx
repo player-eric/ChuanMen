@@ -85,6 +85,27 @@ export default function AboutPage() {
           申请加入串门儿 →
         </Button>
       )}
+
+      {/* Legal Disclaimer */}
+      <Box sx={{ pt: 1, pb: 2 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', lineHeight: 1.8 }}>
+          串门儿是非营利性社区活动组织，不提供任何商业服务。活动中的人身安全、财产损失由参与者自行负责。
+          使用本平台即表示您同意我们的{' '}
+          <Typography
+            component="span"
+            variant="caption"
+            color="primary"
+            sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+            onClick={() => navigate('/about/legal')}
+          >
+            免责声明与隐私政策
+          </Typography>
+          。
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
+          © {new Date().getFullYear()} 串门儿 ChuanMen. All rights reserved.
+        </Typography>
+      </Box>
     </Stack>
   );
 }

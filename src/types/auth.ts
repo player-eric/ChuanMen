@@ -21,6 +21,7 @@ export interface RegisterPayload {
   email: string;
   avatar?: string;
   bio?: string;
+  coverImageUrl?: string;
 }
 
 export interface ApplyPayload {

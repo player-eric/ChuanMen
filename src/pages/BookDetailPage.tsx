@@ -9,33 +9,24 @@ import {
   CardActionArea,
   CardContent,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Snackbar,
-  Alert,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
-import type { EventComment, MovieDetailData, MoviePool } from '@/types';
+import type { EventComment, BookDetailData, BookPool } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
-import { upcomingEvents, endedEvents, pastEvents } from '@/mock/data';
 import { RichTextViewer } from '@/components/RichTextEditor';
 
-export default function MovieDetailPage() {
+export default function BookDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const c = useColors();
-  const raw = useLoaderData() as MovieDetailData | MoviePool | null;
+  const raw = useLoaderData() as BookDetailData | BookPool | null;
   const [voted, setVoted] = useState(false);
   const [comments, setComments] = useState<EventComment[]>([]);
   const [commentText, setCommentText] = useState('');
-  const [nominateOpen, setNominateOpen] = useState(false);
-  const [flash, setFlash] = useState<{ open: boolean; severity: 'success' | 'error'; message: string }>({ open: false, severity: 'success', message: '' });
 
   useEffect(() => {
     if (raw && 'comments' in raw && raw.comments) {
@@ -47,7 +38,7 @@ export default function MovieDetailPage() {
     return (
       <Card>
         <CardContent>
-          <Typography variant="h6">电影不存在</Typography>
+          <Typography variant="h6">书籍不存在</Typography>
           <Button sx={{ mt: 1 }} onClick={() => navigate('/discover')}>返回推荐页</Button>
         </CardContent>
       </Card>
@@ -55,64 +46,21 @@ export default function MovieDetailPage() {
   }
 
   const isDetail = 'voters' in raw;
-  const movie = raw as MovieDetailData;
-  const basic = raw as MoviePool;
-  const title = isDetail ? movie.title : basic.title;
-  const year = isDetail ? movie.year : basic.year;
-  const dir = isDetail ? movie.dir : basic.dir;
-  const by = isDetail ? movie.by : basic.by;
-  const status = isDetail ? movie.status : basic.status;
-  const v = isDetail ? movie.v : basic.v;
+  const book = raw as BookDetailData;
+  const basic = raw as BookPool;
+  const title = isDetail ? book.title : basic.title;
+  const year = isDetail ? book.year : basic.year;
+  const author = isDetail ? book.author : basic.author;
+  const by = isDetail ? book.by : basic.by;
+  const status = isDetail ? book.status : basic.status;
+  const v = isDetail ? book.v : basic.v;
 
   // Poster gradient data
   const poster = posters[title] || { bg: `linear-gradient(135deg, ${c.s3}, ${c.s2})`, accent: c.text3, sub: '' };
 
-  // Event connections — match by film title
-  const upcomingFilm = upcomingEvents.filter((e) => e.film === title && (e.phase === 'open' || e.phase === 'invite' || e.phase === 'closed'));
-  const endedFilm = endedEvents.filter((e) => e.film === title);
-  const pastFilm = pastEvents.filter((e) => e.film === title);
-
-  // Merge ended events + pastEvents + screenings for history section
-  const historyItems: { title: string; date: string; host: string; eventId?: number; people?: number }[] = [];
-
-  // From endedEvents
-  for (const e of endedFilm) {
-    historyItems.push({ title: e.title, date: e.date, host: e.host, eventId: e.id, people: e.people.length });
-  }
-  // From pastEvents
-  for (const e of pastFilm) {
-    historyItems.push({ title: e.title, date: e.date, host: e.host, people: e.people });
-  }
-  // From screenings (only those not already covered by pastEvents/endedEvents)
-  if (isDetail) {
-    for (const s of movie.screenings) {
-      const alreadyCovered = historyItems.some((h) => h.date === s.date && h.host === s.host);
-      // Also skip if this screening maps to an upcoming/live event
-      const isUpcomingOrLive = upcomingFilm.some((e) => e.id === s.eventId);
-      if (!alreadyCovered && !isUpcomingOrLive) {
-        historyItems.push({ title: s.eventTitle, date: s.date, host: s.host, eventId: s.eventId });
-      }
-    }
-  }
-
-  // Upcoming movieNight events this movie can be nominated to
-  const movieId = isDetail ? movie.id : basic.id;
-  const nominatableEvents = upcomingEvents.filter(
-    (e) => e.scene === 'movieNight' && (e.phase === 'invite' || e.phase === 'open') && !(e.nominations ?? []).includes(movieId),
-  );
-
   return (
     <Box sx={{ maxWidth: 680, mx: 'auto' }}>
       <Stack spacing={2}>
-        <Snackbar
-          open={flash.open}
-          autoHideDuration={3500}
-          onClose={() => setFlash((prev) => ({ ...prev, open: false }))}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        >
-          <Alert severity={flash.severity}>{flash.message}</Alert>
-        </Snackbar>
-
         {/* 1. Hero Poster Header */}
         <Card sx={{ overflow: 'hidden' }}>
           <Box
@@ -122,7 +70,6 @@ export default function MovieDetailPage() {
               background: poster.bg,
             }}
           >
-            {/* Gradient overlay at bottom */}
             <Box
               sx={{
                 position: 'absolute',
@@ -130,7 +77,6 @@ export default function MovieDetailPage() {
                 background: 'linear-gradient(transparent 30%, rgba(0,0,0,0.7) 100%)',
               }}
             />
-            {/* Title & info at bottom */}
             <Box sx={{ position: 'absolute', bottom: 20, left: 20, right: 20, zIndex: 1 }}>
               <Typography
                 variant="h4"
@@ -151,7 +97,7 @@ export default function MovieDetailPage() {
                   textShadow: '0 1px 4px rgba(0,0,0,0.5)',
                 }}
               >
-                {year} · {dir}
+                {year} · {author}
               </Typography>
               {poster.sub && (
                 <Typography
@@ -167,25 +113,25 @@ export default function MovieDetailPage() {
           {/* Chips bar below hero */}
           <CardContent sx={{ pt: 1.5, pb: 1.5 }}>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {isDetail && movie.genre && <Chip size="small" variant="outlined" label={movie.genre} />}
-              {isDetail && movie.duration && <Chip size="small" variant="outlined" label={movie.duration} />}
-              {isDetail && movie.rating && <Chip size="small" variant="outlined" label={`⭐ ${movie.rating}`} />}
+              {isDetail && book.genre && <Chip size="small" variant="outlined" label={book.genre} />}
+              {isDetail && book.pages && <Chip size="small" variant="outlined" label={book.pages} />}
+              {isDetail && book.rating && <Chip size="small" variant="outlined" label={`⭐ ${book.rating}`} />}
               {status && <Chip size="small" color="success" label={`✓ ${status}`} />}
             </Stack>
           </CardContent>
         </Card>
 
         {/* 2. Synopsis */}
-        {isDetail && movie.synopsis && (
+        {isDetail && book.synopsis && (
           <Card>
             <CardContent>
               <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>简介</Typography>
-              <RichTextViewer html={movie.synopsis} />
+              <RichTextViewer html={book.synopsis} />
             </CardContent>
           </Card>
         )}
 
-        {/* 3. Recommender — clickable row */}
+        {/* 3. Recommender */}
         <Card>
           <CardActionArea onClick={() => navigate(`/members/${encodeURIComponent(by)}`)}>
             <CardContent>
@@ -211,12 +157,12 @@ export default function MovieDetailPage() {
                 size="small"
                 onClick={() => setVoted(!voted)}
               >
-                ▲ {voted ? '已投票' : '我想看'}
+                ▲ {voted ? '已投票' : '我想读'}
               </Button>
             </Stack>
-            {isDetail && movie.voters.length > 0 && (
+            {isDetail && book.voters.length > 0 && (
               <AvatarGroup max={10} sx={{ justifyContent: 'flex-start' }}>
-                {movie.voters.map((name) => (
+                {book.voters.map((name) => (
                   <Avatar
                     key={name}
                     sx={{ width: 32, height: 32, cursor: 'pointer' }}
@@ -230,83 +176,22 @@ export default function MovieDetailPage() {
           </CardContent>
         </Card>
 
-        {/* 4b. Nominate to upcoming movieNight */}
-        {user && nominatableEvents.length > 0 && !status?.includes('已放映') && (
-          <Button
-            variant="outlined"
-            fullWidth
-            onClick={() => setNominateOpen(true)}
-          >
-            🎬 提名到下次电影夜
-          </Button>
-        )}
-
-        {/* Nominate to event dialog */}
-        <Dialog open={nominateOpen} onClose={() => setNominateOpen(false)} maxWidth="xs" fullWidth>
-          <DialogTitle>选择要提名到的电影夜</DialogTitle>
-          <DialogContent>
-            <Stack spacing={1} sx={{ mt: 1 }}>
-              {nominatableEvents.map((evt) => (
-                <Card key={evt.id} variant="outlined">
-                  <CardActionArea onClick={() => {
-                    setNominateOpen(false);
-                    setFlash({ open: true, severity: 'success', message: `已提名「${title}」到「${evt.title}」` });
-                  }}>
-                    <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-                      <Typography variant="body2" fontWeight={600}>{evt.title}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {evt.date} · {evt.host} Host · 还剩 {evt.spots} 位
-                      </Typography>
-                    </CardContent>
-                  </CardActionArea>
-                </Card>
-              ))}
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setNominateOpen(false)}>取消</Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* 5. Upcoming screenings */}
-        {upcomingFilm.length > 0 && (
+        {/* 5. Reading history (discussions) */}
+        {isDetail && book.discussions.length > 0 && (
           <Card>
             <CardContent>
-              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>即将放映</Typography>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>阅读记录</Typography>
               <Stack spacing={1}>
-                {upcomingFilm.map((event) => (
-                  <Card key={event.id} variant="outlined">
-                    <CardActionArea onClick={() => navigate(`/events/${event.id}`)}>
-                      <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                        <Typography variant="body2" fontWeight={600}>{event.title}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {event.date} · {event.host} Host · 还剩 {event.spots} 位
-                        </Typography>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* 6. History screenings */}
-        {historyItems.length > 0 && (
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>历史放映</Typography>
-              <Stack spacing={1}>
-                {historyItems.map((item, i) => (
+                {book.discussions.map((item, i) => (
                   <Card key={i} variant="outlined">
                     <CardActionArea
                       onClick={() => item.eventId && navigate(`/events/${item.eventId}`)}
                       disabled={!item.eventId}
                     >
                       <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                        <Typography variant="body2" fontWeight={600}>{item.title}</Typography>
+                        <Typography variant="body2" fontWeight={600}>{item.eventTitle}</Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {item.date} · {item.host} Host{item.people ? ` · ${item.people} 人` : ''}
+                          {item.date} · {item.host} Host
                         </Typography>
                       </CardContent>
                     </CardActionArea>
@@ -317,7 +202,7 @@ export default function MovieDetailPage() {
           </Card>
         )}
 
-        {/* 8. Comments */}
+        {/* 6. Comments */}
         <Card>
           <CardContent>
             <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>

@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode, MouseEventHandler } from 'react';
-import { c, hf } from '@/theme';
+import { useColors } from '@/hooks/useColors';
+import { hf } from '@/theme';
 
 /* ═══ Avatar ═══ */
 interface AvaProps {
@@ -11,6 +12,7 @@ interface AvaProps {
 }
 
 export function Ava({ name, size = 28, border, badge, onTap }: AvaProps) {
+  const c = useColors();
   return (
     <div style={{ position: 'relative', flexShrink: 0, cursor: onTap ? 'pointer' : undefined }} onClick={onTap}>
       <div
@@ -38,6 +40,7 @@ interface AvaStackProps {
 }
 
 export function AvaStack({ names, size = 22 }: AvaStackProps) {
+  const c = useColors();
   return (
     <div style={{ display: 'flex' }}>
       {names.slice(0, 5).map((n, i) => (
@@ -63,6 +66,7 @@ export function AvaStack({ names, size = 22 }: AvaStackProps) {
 
 /* ═══ Stamp ═══ */
 export function Stamp({ emoji = '✉', size = 24 }: { emoji?: string; size?: number }) {
+  const c = useColors();
   return (
     <div
       style={{
@@ -79,11 +83,13 @@ export function Stamp({ emoji = '✉', size = 24 }: { emoji?: string; size?: num
 }
 
 /* ═══ Badge ═══ */
-export function Badge({ children, color = c.warm }: { children: ReactNode; color?: string }) {
+export function Badge({ children, color }: { children: ReactNode; color?: string }) {
+  const c = useColors();
+  const badgeColor = color ?? c.warm;
   return (
     <span
       style={{
-        padding: '2px 7px', background: color + '18', color,
+        padding: '2px 7px', background: badgeColor + '18', color: badgeColor,
         fontSize: 9, borderRadius: 4, fontWeight: 600,
       }}
     >
@@ -102,6 +108,7 @@ interface BtnProps {
 }
 
 export function Btn({ children, filled, small, onClick, disabled }: BtnProps) {
+  const c = useColors();
   return (
     <button
       onClick={disabled ? undefined : onClick}
@@ -120,6 +127,7 @@ export function Btn({ children, filled, small, onClick, disabled }: BtnProps) {
 
 /* ═══ Separator ═══ */
 export function Sep() {
+  const c = useColors();
   return <div style={{ height: 1, background: c.line, margin: '12px 0' }} />;
 }
 
@@ -131,6 +139,7 @@ interface SectionProps {
 }
 
 export function Section({ title, right, children }: SectionProps) {
+  const c = useColors();
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, padding: '0 2px' }}>
@@ -150,6 +159,7 @@ interface CardProps {
 }
 
 export function Card({ children, glow, style = {} }: CardProps) {
+  const c = useColors();
   return (
     <div
       style={{

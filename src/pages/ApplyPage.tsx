@@ -1,6 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Checkbox,
+  FormControl,
+  FormControlLabel,
+  FormGroup,
+  FormLabel,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 
 const welcomeText = `你好，欢迎来串门儿！
 
@@ -24,7 +38,7 @@ export default function ApplyPage() {
     bio: '',
     selfAsFriend: '',
     idealFriend: '',
-    participationPlan: '',
+    participationPlan: [] as string[],
     email: '',
     wechatId: '',
     referralSource: '',
@@ -34,7 +48,7 @@ export default function ApplyPage() {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
-  const requiredFilled = form.displayName && form.location && form.bio && form.selfAsFriend && form.idealFriend && form.participationPlan && form.email && form.wechatId;
+  const requiredFilled = form.displayName && form.location && form.bio && form.selfAsFriend && form.idealFriend && form.participationPlan.length > 0 && form.email && form.wechatId;
 
   const handleSubmit = () => {
     if (!requiredFilled) return;
@@ -113,14 +127,36 @@ export default function ApplyPage() {
         onChange={update('idealFriend')}
       />
 
-      <TextField
-        label="你可能会怎样参与串门儿？"
-        required
-        multiline
-        minRows={3}
-        value={form.participationPlan}
-        onChange={update('participationPlan')}
-      />
+      <FormControl required>
+        <FormLabel sx={{ fontWeight: 700, mb: 1 }}>你可能会怎么参与串门儿 *</FormLabel>
+        <FormGroup>
+          {[
+            '仅参加活动',
+            '参加活动，提供反馈',
+            '可以做Host组织活动，家里客厅还不太想开放',
+            '可以做Host组织活动，让朋友们来家里串门',
+            '可以做志愿者或其他（比如拍照摄影、视频剪辑、活动支持等）',
+          ].map((option) => (
+            <FormControlLabel
+              key={option}
+              control={
+                <Checkbox
+                  checked={form.participationPlan.includes(option)}
+                  onChange={(e) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      participationPlan: e.target.checked
+                        ? [...prev.participationPlan, option]
+                        : prev.participationPlan.filter((v) => v !== option),
+                    }));
+                  }}
+                />
+              }
+              label={option}
+            />
+          ))}
+        </FormGroup>
+      </FormControl>
 
       <TextField
         label="Email"
@@ -146,8 +182,15 @@ export default function ApplyPage() {
         helperText="可选"
       />
 
-      {/* TODO: Cover image upload */}
-      <Alert severity="info">封面图上传功能即将上线（可选）</Alert>
+      <Box>
+        <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>封面图（可选）</Typography>
+        <Button variant="outlined" disabled fullWidth>
+          上传封面图（即将开放）
+        </Button>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+          封面图将展示在你的个人页面顶部，通过申请后也可以在设置中上传
+        </Typography>
+      </Box>
 
       <Button
         variant="contained"

@@ -1,13 +1,13 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, Navigate } from 'react-router';
 import type { RouteObject } from 'react-router';
 import AppLayout from '@/layouts/AppLayout';
 import FeedPage from '@/pages/FeedPage';
 import EventsPage from '@/pages/EventsPage';
 import EventDetailPage from '@/pages/EventDetailPage';
-import EventProposalsPage from '@/pages/EventProposalsPage';
 import EventRecordsPage from '@/pages/EventRecordsPage';
 import DiscoverPage from '@/pages/DiscoverPage';
 import MovieDetailPage from '@/pages/MovieDetailPage';
+import BookDetailPage from '@/pages/BookDetailPage';
 import RecommendationListPage from '@/pages/RecommendationListPage';
 import RecommendationCreatePage from '@/pages/RecommendationCreatePage';
 import RecommendationDetailPage from '@/pages/RecommendationDetailPage';
@@ -19,8 +19,9 @@ import AboutPage from '@/pages/AboutPage';
 import AboutContentPage from '@/pages/AboutContentPage';
 import RegisterPage from '@/pages/RegisterPage';
 import LoginPage from '@/pages/LoginPage';
-import SmallGroupCreatePage from '@/pages/SmallGroupCreatePage';
+import EventCreatePage from '@/pages/EventCreatePage';
 import ProposalCreatePage from '@/pages/ProposalCreatePage';
+import ProposalDetailPage from '@/pages/ProposalDetailPage';
 import ApplyPage from '@/pages/ApplyPage';
 import AnnouncementPage from '@/pages/AnnouncementPage';
 import SettingsPage from '@/pages/SettingsPage';
@@ -29,16 +30,18 @@ import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
 import AdminMembersPage from '@/pages/admin/AdminMembersPage';
 import AdminEventsPage from '@/pages/admin/AdminEventsPage';
 import AdminNewslettersPage from '@/pages/admin/AdminNewslettersPage';
+import AdminTitlesPage from '@/pages/admin/AdminTitlesPage';
 import AdminSettingsPage from '@/pages/admin/AdminSettingsPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import {
   fetchFeedData,
   fetchEventsData,
   fetchEventDetail,
-  fetchEventProposalsData,
+  fetchProposalDetail,
   fetchEventRecordsData,
   fetchDiscoverData,
   fetchMovieDetail,
+  fetchBookDetail,
   fetchCardsData,
   fetchProfileData,
   fetchMembersData,
@@ -66,15 +69,26 @@ export const appRoutes: RouteObject[] = [
         element: <EventDetailPage />,
         loader: ({ params }) => fetchEventDetail(Number(params.eventId)),
       },
-      { path: 'events/proposals', element: <EventProposalsPage />, loader: fetchEventProposalsData },
+      { path: 'events/proposals', element: <Navigate to="/events" replace /> },
       { path: 'events/proposals/new', element: <ProposalCreatePage /> },
+      {
+        path: 'events/proposals/:proposalId',
+        element: <ProposalDetailPage />,
+        loader: ({ params }) => fetchProposalDetail(Number(params.proposalId)),
+      },
       { path: 'events/history', element: <EventRecordsPage />, loader: fetchEventRecordsData },
-      { path: 'events/small-group/new', element: <SmallGroupCreatePage /> },
+      { path: 'events/new', element: <EventCreatePage /> },
+      { path: 'events/small-group/new', element: <Navigate to="/events/new" replace /> },
       { path: 'discover', element: <DiscoverPage />, loader: fetchDiscoverData },
       {
         path: 'discover/movies/:movieId',
         element: <MovieDetailPage />,
         loader: ({ params }) => fetchMovieDetail(Number(params.movieId)),
+      },
+      {
+        path: 'discover/books/:bookId',
+        element: <BookDetailPage />,
+        loader: ({ params }) => fetchBookDetail(Number(params.bookId)),
       },
       { path: 'discover/:category', element: <RecommendationListPage /> },
       { path: 'discover/:category/add', element: <RecommendationCreatePage /> },
@@ -101,6 +115,7 @@ export const appRoutes: RouteObject[] = [
       { index: true, element: <AdminDashboardPage /> },
       { path: 'members', element: <AdminMembersPage /> },
       { path: 'events', element: <AdminEventsPage /> },
+      { path: 'titles', element: <AdminTitlesPage /> },
       { path: 'newsletters', element: <AdminNewslettersPage /> },
       { path: 'settings', element: <AdminSettingsPage /> },
     ],

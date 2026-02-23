@@ -121,6 +121,15 @@ export default function RegisterPage() {
               fullWidth
             />
 
+            <Box>
+              <Button variant="outlined" disabled fullWidth>
+                上传封面图（即将开放）
+              </Button>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                封面图将展示在你的个人页面顶部
+              </Typography>
+            </Box>
+
             <Button type="submit" variant="contained" disabled={isSubmitting}>
               {isSubmitting ? '注册中...' : '注册并进入'}
             </Button>

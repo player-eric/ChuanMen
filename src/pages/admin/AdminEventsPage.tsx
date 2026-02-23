@@ -51,7 +51,7 @@ const cancelledEvents = [
 const phaseColors: Record<string, 'primary' | 'success' | 'warning' | 'default'> = {
   invite: 'warning',
   open: 'success',
-  live: 'primary',
+  closed: 'primary',
 };
 
 export default function AdminEventsPage() {

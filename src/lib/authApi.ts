@@ -34,6 +34,7 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthUser> 
     avatar: data.avatar,
     bio: data.bio,
     role: data.role,
+    coverImageUrl: data.cover_image_url,
   };
 }
 

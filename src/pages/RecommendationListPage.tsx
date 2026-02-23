@@ -16,6 +16,8 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import type { RecommendationCategory } from '@/lib/domainApi';
 import { searchRecommendations } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
+import { Poster } from '@/components/Poster';
+import { moviePool } from '@/mock/data';
 
 const categoryMap: Record<RecommendationCategory, { title: string; icon: string }> = {
   movie: { title: '电影推荐', icon: '🎬' },
@@ -105,18 +107,33 @@ export default function RecommendationListPage() {
       {!loading && items.length === 0 && <Typography color="text.secondary">暂无数据</Typography>}
 
       <Stack spacing={1.5}>
-        {items.map((item) => (
-          <Card key={String(item._id)}>
-            <CardActionArea onClick={() => navigate(`/discover/${currentCategory}/${String(item._id)}`)}>
-              <CardContent>
-                <Typography fontWeight={700}>{String(item.title ?? '')}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  {String(item.description ?? '')}
-                </Typography>
-              </CardContent>
-            </CardActionArea>
-          </Card>
-        ))}
+        {items.map((item) => {
+          const title = String(item.title ?? '');
+          // For movie items, link to MovieDetailPage if we have a matching movie
+          const movieMatch = currentCategory === 'movie' ? moviePool.find((m) => m.title === title) : null;
+          const href = movieMatch
+            ? `/discover/movies/${movieMatch.id}`
+            : `/discover/${currentCategory}/${String(item._id)}`;
+          return (
+            <Card key={String(item._id)}>
+              <CardActionArea onClick={() => navigate(href)}>
+                <CardContent>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    {currentCategory === 'movie' && (
+                      <Poster title={title} w={40} h={56} />
+                    )}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography fontWeight={700}>{title}</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {String(item.description ?? '')}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          );
+        })}
       </Stack>
     </Stack>
   );

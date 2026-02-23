@@ -2,6 +2,7 @@ import { useLoaderData, useNavigate } from 'react-router';
 import { Avatar, Box, Button, Card, CardContent, Chip, Divider, Grid, Stack, Typography } from '@mui/material';
 import type { MemberDetailData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
+import { RichTextViewer } from '@/components/RichTextEditor';
 
 export default function MemberDetailPage() {
   const navigate = useNavigate();
@@ -52,28 +53,28 @@ export default function MemberDetailPage() {
             {member.bio && (
               <>
                 <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>关于我</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>{member.bio}</Typography>
+                <RichTextViewer html={member.bio} />
               </>
             )}
             {member.selfAsFriend && (
               <>
                 <Divider sx={{ my: 1.5 }} />
                 <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>作为朋友，我</Typography>
-                <Typography variant="body2" color="text.secondary">{member.selfAsFriend}</Typography>
+                <RichTextViewer html={member.selfAsFriend} />
               </>
             )}
             {member.idealFriend && (
               <>
                 <Divider sx={{ my: 1.5 }} />
                 <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>我理想中的朋友</Typography>
-                <Typography variant="body2" color="text.secondary">{member.idealFriend}</Typography>
+                <RichTextViewer html={member.idealFriend} />
               </>
             )}
             {member.participationPlan && (
               <>
                 <Divider sx={{ my: 1.5 }} />
                 <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>参与计划</Typography>
-                <Typography variant="body2" color="text.secondary">{member.participationPlan}</Typography>
+                <RichTextViewer html={member.participationPlan} />
               </>
             )}
           </CardContent>

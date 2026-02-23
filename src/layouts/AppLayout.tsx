@@ -40,20 +40,25 @@ import { useColorMode } from '@/AppProviders';
 
 /* ── Bottom Tab 栏: 5 tabs (v2.1 §4.0) ── */
 const bottomTabs = [
-  { id: '', icon: <HomeRoundedIcon />, label: '动态' },
-  { id: 'discover', icon: <ThumbUpRoundedIcon />, label: '推荐' },
-  { id: 'events', icon: <EventRoundedIcon />, label: '活动' },
-  { id: 'cards', icon: <MailRoundedIcon />, label: '感谢卡' },
-  { id: 'profile', icon: <PersonRoundedIcon />, label: '我' },
+  { id: '', icon: <HomeRoundedIcon />, label: '动态', auth: true },
+  { id: 'discover', icon: <ThumbUpRoundedIcon />, label: '推荐', auth: true },
+  { id: 'events', icon: <EventRoundedIcon />, label: '活动', auth: true },
+  { id: 'cards', icon: <MailRoundedIcon />, label: '感谢卡', auth: true },
+  { id: 'profile', icon: <PersonRoundedIcon />, label: '我', auth: true },
 ];
+
+/** Routes that require login */
+const authPaths = ['/', '/discover', '/events', '/cards', '/profile', '/members', '/settings'];
 
 function getTitle(pathname: string): string {
   if (pathname === '/') return '动态';
   if (pathname === '/events') return '活动';
   if (pathname.startsWith('/events/')) {
-    if (pathname === '/events/proposals') return '活动提案';
-    if (pathname === '/events/proposals/new') return '添加想法';
+    if (pathname === '/events/proposals') return '活动创意';
+    if (pathname === '/events/proposals/new') return '添加创意';
+    if (/^\/events\/proposals\/\d+$/.test(pathname)) return '创意详情';
     if (pathname === '/events/history') return '活动记录';
+    if (pathname === '/events/new') return '发起活动';
     if (pathname === '/events/small-group/new') return '发起小局';
     return '活动详情';
   }
@@ -89,7 +94,8 @@ function getBackTarget(pathname: string): string | null {
   if (pathname.startsWith('/members/')) return null;
   if (pathname === '/settings') return null;
   if (pathname === '/apply') return '/about';
-  if (pathname === '/events/proposals' || pathname === '/events/history' || pathname.startsWith('/events/')) return '/events';
+  if (pathname.startsWith('/events/proposals/')) return '/events';
+  if (pathname === '/events/history' || pathname.startsWith('/events/')) return '/events';
   if (pathname.startsWith('/discover/movies/')) return '/discover';
   if (pathname.startsWith('/discover/movie/')) return '/discover/movie';
   if (pathname.startsWith('/discover/recipe/')) return '/discover/recipe';
@@ -132,6 +138,12 @@ export default function AppLayout() {
   const backTarget = getBackTarget(pathname);
   const showBack = isSubRoute(pathname);
 
+  // Guest access: check if current path needs auth
+  const needsAuth = !user && authPaths.some((p) => p === '/' ? pathname === '/' : pathname.startsWith(p));
+
+  // Tabs visible to current user
+  const visibleTabs = user ? bottomTabs : [];
+
   const activeTab = bottomTabs.find((p) => {
     if (p.id === '' && pathname === '/') return true;
     if (p.id === 'events' && pathname.startsWith('/events')) return true;
@@ -164,8 +176,8 @@ export default function AppLayout() {
             </Box>
           </Stack>
         ) : (
-          <Button variant="outlined" fullWidth onClick={() => handleDrawerNav('/login')}>
-            登录
+          <Button variant="outlined" fullWidth onClick={() => handleDrawerNav('/apply')}>
+            申请加入
           </Button>
         )}
       </Box>
@@ -229,8 +241,9 @@ export default function AppLayout() {
             <Typography variant="h6" sx={{ cursor: 'pointer' }} onClick={() => navigate('/')}>串门儿</Typography>
           </Toolbar>
           <Box sx={{ px: 1 }}>
+            {visibleTabs.length > 0 && (
             <List>
-              {bottomTabs.map((p) => {
+              {visibleTabs.map((p) => {
                 const isActive = activeTab === p.id;
                 return (
                   <ListItemButton key={p.id} selected={isActive} onClick={() => navigate(p.id === '' ? '/' : `/${p.id}`)}>
@@ -240,6 +253,7 @@ export default function AppLayout() {
                 );
               })}
             </List>
+            )}
             <Divider sx={{ my: 1 }} />
             <List>
               {user && (
@@ -298,6 +312,11 @@ export default function AppLayout() {
               >
                 {title}
               </Typography>
+              {pathname === '/' && (
+                <IconButton size="small" onClick={() => navigate('/about')}>
+                  <InfoOutlinedIcon fontSize="small" />
+                </IconButton>
+              )}
             </Stack>
             <Stack direction="row" spacing={1} alignItems="center">
               <IconButton size="small" onClick={toggleColorMode} aria-label={mode === 'dark' ? '切换到浅色模式' : '切换到深色模式'}>
@@ -313,8 +332,8 @@ export default function AppLayout() {
                   </Button>
                 </Stack>
               ) : (
-                <Button size="small" variant="outlined" onClick={() => navigate('/login')}>
-                  登录
+                <Button size="small" variant="outlined" onClick={() => navigate('/apply')}>
+                  申请加入
                 </Button>
               )}
             </Stack>
@@ -341,11 +360,24 @@ export default function AppLayout() {
             mx: 'auto',
           }}
         >
-          <Outlet context={{ isEmpty: false }} />
+          {needsAuth ? (
+            <Stack spacing={2} alignItems="center" sx={{ py: 8, textAlign: 'center' }}>
+              <Typography variant="h5" fontWeight={700}>需要登录才能查看</Typography>
+              <Typography variant="body2" color="text.secondary">
+                登录后可查看动态、活动、推荐和感谢卡
+              </Typography>
+              <Stack direction="row" spacing={1.5}>
+                <Button variant="contained" onClick={() => navigate('/login')}>去登录</Button>
+                <Button variant="outlined" onClick={() => navigate('/apply')}>申请加入</Button>
+              </Stack>
+            </Stack>
+          ) : (
+            <Outlet context={{ isEmpty: false }} />
+          )}
         </Box>
 
         {/* Bottom Tab Bar — 5 tabs, hidden when not logged in (v2.1 §4.0) */}
-        {!isDesktop && user && (
+        {!isDesktop && visibleTabs.length > 0 && (
           <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, borderTop: 1, borderColor: 'divider' }} elevation={6}>
             <BottomNavigation
               showLabels
@@ -353,7 +385,7 @@ export default function AppLayout() {
               onChange={(_, value) => navigate(value === '' ? '/' : `/${value}`)}
               sx={{ justifyContent: 'center', gap: 0.5, px: 0.5 }}
             >
-              {bottomTabs.map((p) => (
+              {visibleTabs.map((p) => (
                 <BottomNavigationAction
                   key={p.id}
                   value={p.id}

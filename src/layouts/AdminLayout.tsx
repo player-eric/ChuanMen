@@ -22,6 +22,7 @@ import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import EventRoundedIcon from '@mui/icons-material/EventRounded';
 import EmailRoundedIcon from '@mui/icons-material/EmailRounded';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
+import MilitaryTechRoundedIcon from '@mui/icons-material/MilitaryTechRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
@@ -33,6 +34,7 @@ const adminNav = [
   { id: '', icon: <DashboardRoundedIcon />, label: '仪表盘' },
   { id: 'members', icon: <PeopleRoundedIcon />, label: '成员管理' },
   { id: 'events', icon: <EventRoundedIcon />, label: '活动管理' },
+  { id: 'titles', icon: <MilitaryTechRoundedIcon />, label: '称号管理' },
   { id: 'newsletters', icon: <EmailRoundedIcon />, label: '社区通讯' },
   { id: 'settings', icon: <SettingsRoundedIcon />, label: '系统设置' },
 ];

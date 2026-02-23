@@ -1,19 +1,31 @@
-import { useNavigate, useOutletContext } from 'react-router';
+import React from 'react';
+import { useNavigate, useLoaderData, useOutletContext } from 'react-router';
 import {
-  Avatar,
-  AvatarGroup,
   Box,
   Button,
   Card,
-  CardActionArea,
-  CardActions,
   CardContent,
-  Chip,
   Grid,
   Stack,
   Typography,
 } from '@mui/material';
-import { feedAnnouncements, feedNewRecos, feedNewCards } from '@/mock/api';
+import { useAuth } from '@/auth/AuthContext';
+import type { FeedPageData, FeedItem } from '@/types';
+import {
+  FeedTime,
+  FeedActivity,
+  FeedCard,
+  FeedMovie,
+  FeedMilestone,
+  FeedProposal,
+  FeedCompactMovie,
+  FeedCompactProposal,
+  FeedBook,
+  FeedCompactBook,
+  FeedSmallGroup,
+  FeedCompactSmallGroup,
+  FeedCommentNotice,
+} from '@/components/FeedItems';
 
 /* ═══ Empty Feed ═══ */
 function EmptyFeed() {
@@ -55,137 +67,77 @@ function EmptyFeed() {
   );
 }
 
-/* ═══ Full Feed ═══ */
+/* ═══ Grid size helpers ═══ */
+const fullWidth = { xs: 12 } as const;
+const halfWidth = { xs: 12, md: 6 } as const;
+
+function gridSizeFor(type: FeedItem['type']) {
+  if (type === 'time' || type === 'milestone') return fullWidth;
+  return halfWidth;
+}
+
+/* ═══ Full Feed (Timeline) ═══ */
 function FullFeed() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { items } = useLoaderData() as FeedPageData;
+
+  const canInteract = Boolean(user);
 
   return (
-    <Stack spacing={2}>
-      {/* Announcements / banners */}
-      {feedAnnouncements.map((item, idx) => (
-        <Card key={idx}>
-          <CardActionArea onClick={() => navigate(`/announcements/${item.slug}`)}>
-            <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Box>
-                  <Typography variant="subtitle1" fontWeight={700}>{item.title}</Typography>
-                  <Typography variant="body2" color="text.secondary">{item.body}</Typography>
-                </Box>
-                <Stack alignItems="flex-end" spacing={0.5}>
-                  <Typography variant="caption" color="text.secondary">{item.date}</Typography>
-                  <Chip label="查看详情" size="small" variant="outlined" />
-                </Stack>
-              </Stack>
-            </CardContent>
-          </CardActionArea>
-        </Card>
-      ))}
-
-      {/* Next event + recent card */}
+    <Box>
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Card>
-            <CardActionArea onClick={() => navigate('/events/1')}>
-              <CardContent>
-                <Typography variant="h6">周六电影夜 · 花样年华</Typography>
-                <Typography variant="body2" color="text.secondary">2.22 周六 7pm · 白开水家</Typography>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2 }}>
-                  <AvatarGroup max={5}>
-                    {['白开水', 'Yuan', '大橙子', '星星', 'Tiffy'].map((name) => (
-                      <Avatar key={name}>{name[0]}</Avatar>
-                    ))}
-                  </AvatarGroup>
-                  <Chip color="success" size="small" label="还剩 4 位" />
-                </Stack>
-              </CardContent>
-            </CardActionArea>
-            <CardActions>
-              <Button size="small" onClick={() => navigate('/events/1')}>查看活动详情</Button>
-            </CardActions>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle1" fontWeight={700}>✉ 新感谢卡</Typography>
-              {feedNewCards.map((card, i) => (
-                <Typography key={i} variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  {card.from}：{card.msg}
-                </Typography>
-              ))}
-            </CardContent>
-            <CardActions>
-              <Button size="small" onClick={() => navigate('/cards')}>去感谢卡页</Button>
-            </CardActions>
-          </Card>
-        </Grid>
+        {items.map((item, idx) => (
+          <Grid key={idx} size={gridSizeFor(item.type)} sx={
+            (item.type !== 'time' && item.type !== 'milestone')
+              ? { display: 'grid', '& > *': { minHeight: 0 } }
+              : undefined
+          }>
+            {renderFeedItem(item)}
+          </Grid>
+        ))}
       </Grid>
 
-      {/* Live events indicator */}
-      <Card sx={{ border: 2, borderColor: 'success.main' }}>
-        <CardActionArea onClick={() => navigate('/events')}>
-          <CardContent>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="subtitle1" fontWeight={700}>● 正在进行：日料之夜 · 手卷寿司</Typography>
-                <Typography variant="body2" color="text.secondary">Yuan Host · 6 人参加</Typography>
-              </Box>
-              <Chip size="small" color="success" label="进行中" />
-            </Stack>
-          </CardContent>
-        </CardActionArea>
-      </Card>
-
-      {/* New recommendations */}
-      <Card>
-        <CardContent>
-          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>📝 新推荐</Typography>
-          <Stack spacing={1}>
-            {feedNewRecos.map((reco) => (
-              <Box key={reco.id} sx={{ p: 1.2, border: 1, borderColor: 'divider', borderRadius: 2 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Box>
-                    <Typography fontWeight={700}>{reco.title}</Typography>
-                    <Typography variant="caption" color="text.secondary">{reco.from} · {reco.date}</Typography>
-                  </Box>
-                  <Chip label={reco.type === 'movie' ? '🎬' : reco.type === 'restaurant' ? '🍽️' : '📍'} size="small" />
-                </Stack>
-              </Box>
-            ))}
-          </Stack>
-        </CardContent>
-        <CardActions>
-          <Button size="small" onClick={() => navigate('/discover')}>查看所有推荐</Button>
-        </CardActions>
-      </Card>
-
-      {/* Popular proposals teaser */}
-      <Card>
-        <CardContent>
-          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>💡 热门想法</Typography>
-          <Stack spacing={1}>
-            {[
-              { name: 'Derek', title: '春天 kayaking，Raritan River', votes: 9 },
-              { name: '小鱼', title: '有人想打羽毛球吗', votes: 8 },
-              { name: '奶茶', title: '奶茶 tasting 大会！带大家试喝新品', votes: 7 },
-            ].map((p, i) => (
-              <Stack key={i} direction="row" justifyContent="space-between" alignItems="center"
-                sx={{ p: 1, border: 1, borderColor: 'divider', borderRadius: 2 }}>
-                <Box>
-                  <Typography variant="body2" fontWeight={700}>{p.title}</Typography>
-                  <Typography variant="caption" color="text.secondary">{p.name}</Typography>
-                </Box>
-                <Chip label={`🙋 ${p.votes}`} size="small" variant="outlined" />
-              </Stack>
-            ))}
-          </Stack>
-        </CardContent>
-        <CardActions>
-          <Button size="small" onClick={() => navigate('/events/proposals')}>查看全部想法</Button>
-        </CardActions>
-      </Card>
-    </Stack>
+      <Stack spacing={1} sx={{ position: 'fixed', right: { xs: 16, md: 32 }, bottom: { xs: 84, md: 24 }, alignItems: 'stretch' }}>
+        <Button variant="contained" size="small" onClick={() => navigate('/events/new')} disabled={!canInteract}
+          sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start' }}>
+          + 发起活动
+        </Button>
+        <Button variant="outlined" size="small" onClick={() => navigate('/events/proposals/new')} disabled={!canInteract}
+          sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start', bgcolor: 'background.paper' }}>
+          💡 提创意
+        </Button>
+        <Button variant="outlined" size="small" onClick={() => navigate('/cards')} disabled={!canInteract}
+          sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start', bgcolor: 'background.paper' }}>
+          ✉ 寄感谢卡
+        </Button>
+        <Button variant="outlined" size="small" onClick={() => navigate('/discover')} disabled={!canInteract}
+          sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start', bgcolor: 'background.paper' }}>
+          👍 推荐电影
+        </Button>
+      </Stack>
+    </Box>
   );
+}
+
+/* ═══ Render a single FeedItem ═══ */
+function renderFeedItem(item: FeedItem) {
+  if (item.type === 'time') return <FeedTime label={item.label} />;
+  const { type, ...props } = item;
+  switch (type) {
+    case 'activity':       return <FeedActivity {...props as React.ComponentProps<typeof FeedActivity>} />;
+    case 'card':           return <FeedCard {...props as React.ComponentProps<typeof FeedCard>} />;
+    case 'movie':          return <FeedMovie {...props as React.ComponentProps<typeof FeedMovie>} />;
+    case 'milestone':      return <FeedMilestone {...props as React.ComponentProps<typeof FeedMilestone>} />;
+    case 'proposal':       return <FeedProposal {...props as React.ComponentProps<typeof FeedProposal>} />;
+    case 'compactMovie':   return <FeedCompactMovie {...props as React.ComponentProps<typeof FeedCompactMovie>} />;
+    case 'compactProposal': return <FeedCompactProposal {...props as React.ComponentProps<typeof FeedCompactProposal>} />;
+    case 'book':           return <FeedBook {...props as React.ComponentProps<typeof FeedBook>} />;
+    case 'compactBook':    return <FeedCompactBook {...props as React.ComponentProps<typeof FeedCompactBook>} />;
+    case 'smallGroup':     return <FeedSmallGroup {...props as React.ComponentProps<typeof FeedSmallGroup>} />;
+    case 'compactSmallGroup': return <FeedCompactSmallGroup {...props as React.ComponentProps<typeof FeedCompactSmallGroup>} />;
+    case 'commentNotice':  return <FeedCommentNotice {...props as React.ComponentProps<typeof FeedCommentNotice>} />;
+  }
 }
 
 /* ═══ FeedPage ═══ */
