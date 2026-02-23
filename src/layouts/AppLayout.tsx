@@ -59,7 +59,7 @@ function getTitle(pathname: string): string {
     if (/^\/events\/proposals\/\d+$/.test(pathname)) return '创意详情';
     if (pathname === '/events/history') return '活动记录';
     if (pathname === '/events/new') return '发起活动';
-    if (pathname === '/events/small-group/new') return '发起小局';
+    if (pathname === '/events/small-group/new') return '发起小聚';
     return '活动详情';
   }
   if (pathname === '/discover') return '推荐';

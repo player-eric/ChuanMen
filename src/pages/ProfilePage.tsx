@@ -40,13 +40,15 @@ export default function ProfilePage() {
     || data.myMovies.length > 0
     || data.recentCards.length > 0;
 
-  const coverUrl = user?.coverImageUrl || photos.cozy;
+  const rawCover = user?.coverImageUrl || photos.cozy;
+  const isGradient = rawCover.startsWith('linear-gradient') || rawCover.startsWith('radial-gradient');
+  const coverBg = isGradient ? rawCover : `url(${rawCover}) center/cover no-repeat`;
 
   return (
     <Stack spacing={2}>
       {/* Cover Image */}
       <Box sx={{ borderRadius: 2, overflow: 'hidden', height: 160 }}>
-        <div style={{ width: '100%', height: '100%', background: coverUrl, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+        <div style={{ width: '100%', height: '100%', background: coverBg }} />
       </Box>
 
       {/* Profile Header */}
@@ -270,12 +272,42 @@ export default function ProfilePage() {
         </Card>
       )}
 
+      {/* Upcoming Events */}
+      {data.upcomingEvents.length > 0 && (
+        <Card>
+          <CardContent>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+              📅 即将参加
+            </Typography>
+            <Stack spacing={1}>
+              {data.upcomingEvents.map((event) => (
+                <CardActionArea
+                  key={event.id}
+                  onClick={() => navigate(`/events/${event.id}`)}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1 }}>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" noWrap>
+                        {sceneEmoji[event.scene] ?? '📅'} {event.title}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">{event.date}</Typography>
+                    </Box>
+                    {event.role && <Chip size="small" color="warning" label={`🏠 ${event.role}`} />}
+                  </Stack>
+                </CardActionArea>
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
       {/* My Events */}
       {data.myEvents.length > 0 && (
         <Card>
           <CardContent>
             <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-              📅 我参与的活动
+              📅 参加过的活动
             </Typography>
             <Stack spacing={1}>
               {data.myEvents.slice(0, 8).map((event) => (

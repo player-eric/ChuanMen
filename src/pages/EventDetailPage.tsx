@@ -28,7 +28,7 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
-import type { EventComment, EventData, EventPhoto, TaskRole } from '@/types';
+import type { EventComment, EventData, EventPhoto, FoodOption, TaskRole } from '@/types';
 import { getEventById, signupEvent } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
@@ -38,11 +38,15 @@ import { moviePool, movieDetailMap, membersData, taskPresets } from '@/mock/data
 
 const sceneToTag: Record<string, string> = {
   movieNight: '电影夜',
-  potluck: 'Potluck',
-  hike: '徒步',
-  coffee: '咖啡',
+  hike: '户外',
   sports: '运动',
-  'small-group': '小局',
+};
+
+const foodLabel: Record<FoodOption, string> = {
+  potluck: 'Potluck · 每人带一道菜',
+  host_cook: 'Host 准备',
+  eat_out: '出去吃',
+  none: '',
 };
 
 const phaseLabel: Record<string, { label: string; color: 'warning' | 'success' | 'primary' | 'default' }> = {
@@ -263,7 +267,21 @@ export default function EventDetailPage() {
               )}
             </Stack>
 
-            {/* 5. House rules */}
+            {/* 5. Food arrangement */}
+            {event.foodOption && event.foodOption !== 'none' && (
+              <Stack spacing={0.5} sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  🍽️ {foodLabel[event.foodOption]}
+                </Typography>
+                {event.foodOption === 'eat_out' && event.restaurantLocation && (
+                  <Typography variant="body2" color="text.secondary">
+                    📍 {event.restaurantLocation}
+                  </Typography>
+                )}
+              </Stack>
+            )}
+
+            {/* 6. House rules */}
             {event.houseRules && (
               <Card variant="outlined" sx={{ mb: 2, bgcolor: 'action.hover' }}>
                 <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>

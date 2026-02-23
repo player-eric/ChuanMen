@@ -42,11 +42,9 @@ export const titleDefinitions: TitleDefinition[] = [
  * ═══════════════════════════════════════════════════════════ */
 export const taskPresets: Record<string, string[]> = {
   '电影夜': ['选片', '场地 & 设备', '零食 / 饮料', '拍照', '修图上传'],
-  'Potluck': ['主食', '饮料', '甜点', '拍照', '修图上传'],
-  '徒步':   ['路线规划', '开车', '拍照', '修图上传'],
-  '咖啡':   ['选咖啡馆', '拍照', '修图上传'],
+  '茶话会/分享会': ['主题分享人', '场地', '拍照', '修图上传'],
+  '户外':   ['路线规划', '开车', '拍照', '修图上传'],
   '运动':   ['场地预约', '拍照', '修图上传'],
-  '小局':   ['场地', '食物 / 饮料', '拍照', '修图上传'],
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -202,6 +200,7 @@ export const upcomingEvents: EventData[] = [
     location: 'Edison, NJ', locationPrivate: '456 Oak Ave, Edison, NJ 08820',
     isHomeEvent: true, scene: 'potluck', spots: 2, total: 8,
     people: ['Tiffy', '大橙子', '星星', 'Yuan', '小鱼', '奶茶'], phase: 'open',
+    foodOption: 'potluck',
     desc: '铜锅涮肉！食材 AA，Tiffy 准备锅底和蘸料。请自带一道菜或甜点。',
     houseRules: '请自带一道菜 · 有猫，注意过敏 · 车可以停车库前面',
     tasks: [
@@ -248,6 +247,7 @@ export const upcomingEvents: EventData[] = [
     endDate: '3.01 5pm',
     location: 'Montclair, NJ', scene: 'coffee', spots: 3, total: 4,
     people: ['阿德'], phase: 'open',
+    foodOption: 'eat_out', restaurantLocation: 'Watchung Booksellers Café, Montclair',
     desc: '不用主题、不用准备，就是坐下来喝杯咖啡聊聊天。',
     tasks: [
       { role: '选咖啡馆', name: '阿德' },
@@ -260,6 +260,7 @@ export const upcomingEvents: EventData[] = [
     location: 'Edison, NJ', locationPrivate: '456 Oak Ave, Edison, NJ 08820',
     isHomeEvent: true, scene: 'potluck', spots: 4, total: 6,
     people: ['Tiffy', 'Mia'], phase: 'open',
+    foodOption: 'host_cook',
     desc: 'Tiffy 教大家做司康和提拉米苏！食材全包，带着肚子来就好。',
     houseRules: '请自带围裙（如果有的话）· 有猫',
     tasks: [
@@ -327,6 +328,7 @@ export const endedEvents: EventData[] = [
     isHomeEvent: true, scene: 'potluck', spots: 0, total: 6,
     people: ['Yuan', '白开水', '小樱', '奶茶', 'Tiffy', '阿德'],
     phase: 'ended',
+    foodOption: 'host_cook',
     desc: '大家一起动手做手卷寿司！Yuan 准备食材，小樱指导技术。吃完还有抹茶冰淇淋。',
     houseRules: '请换鞋入内 · 有猫 · 10pm 前收拾完',
     tasks: [
@@ -612,7 +614,7 @@ export const feedItems: FeedItem[] = [
     comments: [{ name: 'Yuan', text: '哈哈不客气！下次继续', date: '02.22' }],
   },
   {
-    type: 'smallGroup', name: '星星', title: '本周小局 · 散步聊天',
+    type: 'smallGroup', name: '星星', title: '本周小聚 · 散步聊天',
     date: '2.23 周日 3pm', location: 'Princeton, NJ', weekNumber: 12,
     people: ['星星', 'Yuan', '小鱼'], capacity: 6,
     description: '下午在 Princeton 校园散步聊天，走累了去喝咖啡。',
@@ -630,7 +632,7 @@ export const feedItems: FeedItem[] = [
   },
   {
     type: 'actionNotice', action: 'event_join', name: 'Mia',
-    targetTitle: '本周小局 · 散步聊天', time: '2 小时前',
+    targetTitle: '本周小聚 · 散步聊天', time: '2 小时前',
     navTarget: '/events/7',
     likes: 2, likedBy: ['星星', 'Yuan'], comments: [],
   },
@@ -680,7 +682,7 @@ export const feedItems: FeedItem[] = [
     ],
   },
   {
-    type: 'smallGroup', name: 'Tiffy', title: '小局 · 在家做饭吃',
+    type: 'smallGroup', name: 'Tiffy', title: '小聚 · 在家做饭吃',
     date: '2.20 周四 6pm', location: 'Edison, NJ', weekNumber: 11,
     people: ['Tiffy', '白开水', '奶茶', '星星'], capacity: 6,
     description: '做几道拿手菜，人少吃得舒服。',
@@ -798,7 +800,7 @@ export const feedItems: FeedItem[] = [
     likes: 4, likedBy: ['Yuan', '小樱', '奶茶', '星星'], comments: [],
   },
   {
-    type: 'compactSmallGroup', name: '阿德', title: '小局 · 录音棚参观',
+    type: 'compactSmallGroup', name: '阿德', title: '小聚 · 录音棚参观',
     date: '2.14 周五 7pm', location: 'Montclair, NJ', weekNumber: 10,
     people: ['阿德', 'Leo', '大橙子'], capacity: 4,
     time: '1 周前', isPrivate: false,
@@ -883,7 +885,7 @@ export const feedItems: FeedItem[] = [
     comments: [{ name: '阿德', text: '哈哈 下次走平路', date: '02.09' }],
   },
   {
-    type: 'compactSmallGroup', name: 'Derek', title: '小局 · 周末晨跑',
+    type: 'compactSmallGroup', name: 'Derek', title: '小聚 · 周末晨跑',
     date: '2.1 周六 7am', location: 'Ridgewood, NJ', weekNumber: 9,
     people: ['Derek', '阿德', 'Leo', '大橙子'], capacity: 6,
     time: '3 周前', isPrivate: false,

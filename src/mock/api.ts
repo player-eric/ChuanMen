@@ -87,10 +87,21 @@ export async function fetchProfileData(): Promise<ProfilePageData> {
   const myMovies = moviePool.filter((m) => m.by === userName);
   const screenedCount = myMovies.filter((m) => m.status === '已放映' || m.status === '本周放映').length;
 
-  // My events — from upcoming + ended, where user is in people or is host
+  // My upcoming events — not yet ended/cancelled
+  const myUpcoming = upcomingEvents
+    .filter((e) => (e.phase === 'open' || e.phase === 'invite' || e.phase === 'closed') && (e.people.includes(userName) || e.host === userName))
+    .map((e) => ({
+      id: e.id,
+      title: e.title,
+      date: e.date,
+      scene: e.scene,
+      role: e.host === userName ? 'Host' : undefined,
+    }));
+
+  // My past events — from upcoming (ended) + endedEvents
   const allEvents = [...upcomingEvents, ...endedEvents];
   const myEvents = allEvents
-    .filter((e) => e.people.includes(userName) || e.host === userName)
+    .filter((e) => (e.phase === 'ended' || !('phase' in e)) && (e.people.includes(userName) || e.host === userName))
     .map((e) => ({
       id: e.id,
       title: e.title,
@@ -168,6 +179,7 @@ export async function fetchProfileData(): Promise<ProfilePageData> {
       cardsReceived: myCards.length,
     },
     myMovies,
+    upcomingEvents: myUpcoming,
     myEvents,
     recentCards: myCards.slice(0, 5),
     timeline: timeline.slice(0, 15),

@@ -553,8 +553,8 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           <Ava name={name} size={32} badge="🎲" onTap={() => goMember(name)} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 发起了小局</div>
-            <div style={{ fontSize: 12, color: c.text3 }}>做东 · {date}</div>
+            <div style={{ fontSize: 14 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 发起了小聚</div>
+            <div style={{ fontSize: 12, color: c.text3 }}>Host · {date}</div>
           </div>
           <div style={{
             padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,

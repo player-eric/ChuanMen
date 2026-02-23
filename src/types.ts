@@ -34,6 +34,8 @@ export interface EventPhoto {
 
 export type EventPhase = 'invite' | 'open' | 'closed' | 'ended' | 'cancelled';
 
+export type FoodOption = 'potluck' | 'host_cook' | 'eat_out' | 'none';
+
 export interface EventData {
   id: number;
   title: string;
@@ -54,6 +56,8 @@ export interface EventData {
   desc: string;
   houseRules?: string;
   isPrivate?: boolean;
+  foodOption?: FoodOption;
+  restaurantLocation?: string;
   photoCount?: number;
   commentCount?: number;
   comments?: EventComment[];
@@ -317,6 +321,7 @@ export interface ProfilePageData {
     cardsReceived: number;
   };
   myMovies: MoviePool[];
+  upcomingEvents: { id: number; title: string; date: string; scene: string; role?: string }[];
   myEvents: { id: number; title: string; date: string; scene: string; role?: string }[];
   recentCards: CardReceived[];
   timeline: { date: string; type: string; text: string; link?: string }[];

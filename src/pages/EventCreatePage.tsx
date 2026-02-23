@@ -27,11 +27,11 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import { useAuth } from '@/auth/AuthContext';
 import { moviePool, membersData, taskPresets } from '@/mock/data';
-import type { TaskRole } from '@/types';
+import type { FoodOption, TaskRole } from '@/types';
 import { Poster } from '@/components/Poster';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 
-const tagOptions = ['电影夜', 'Potluck', '徒步', '咖啡', '运动', '小局', '其他'];
+const tagOptions = ['电影夜', '茶话会/分享会', '户外', '运动', '其他'];
 
 /** Combine date + time strings into datetime-local value */
 function combineDT(date: string, time: string) {
@@ -80,6 +80,10 @@ export default function EventCreatePage() {
   const [moviePickerTarget, setMoviePickerTarget] = useState<'film' | 'nomination'>('film');
   const [movieSearch, setMovieSearch] = useState('');
 
+  // Food option state
+  const [foodOption, setFoodOption] = useState<FoodOption>('none');
+  const [restaurantLocation, setRestaurantLocation] = useState('');
+
   // Task (分工) state
   const [tasks, setTasks] = useState<TaskRole[]>([]);
 
@@ -123,8 +127,7 @@ export default function EventCreatePage() {
   if (!user) return null;
 
   const isMovieNight = tags.includes('电影夜');
-  const isSmallGroup = tags.includes('小局');
-  const capMax = isSmallGroup ? 10 : 50;
+  const capMax = 50;
 
   const filteredMembers = useMemo(() => {
     const q = inviteSearch.toLowerCase();
@@ -181,7 +184,7 @@ export default function EventCreatePage() {
             onChange={(e) => setName(e.target.value)}
             fullWidth
             required
-            placeholder={isSmallGroup ? '本周小局 · 散步聊天' : undefined}
+            placeholder={undefined}
           />
 
           <Box>
@@ -283,7 +286,7 @@ export default function EventCreatePage() {
             value={capacity}
             onChange={(e) => setCapacity(Math.max(2, Math.min(capMax, Number(e.target.value) || 8)))}
             fullWidth
-            helperText={isSmallGroup ? '小局容量 2-10 人' : undefined}
+            helperText={undefined}
           />
 
           <Box>
@@ -291,6 +294,37 @@ export default function EventCreatePage() {
             <Suspense fallback={<div style={{ minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>加载编辑器...</div>}>
               <RichTextEditorLazy content={description} onChange={setDescription} placeholder="活动说明..." />
             </Suspense>
+          </Box>
+
+          {/* 吃什么 — food arrangement */}
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>吃什么</Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {([
+                { value: 'potluck' as FoodOption, label: 'Potluck' },
+                { value: 'host_cook' as FoodOption, label: 'Host 准备' },
+                { value: 'eat_out' as FoodOption, label: '出去吃' },
+                { value: 'none' as FoodOption, label: '不涉及' },
+              ]).map((opt) => (
+                <Chip
+                  key={opt.value}
+                  label={opt.label}
+                  onClick={() => setFoodOption(opt.value)}
+                  color={foodOption === opt.value ? 'primary' : 'default'}
+                  variant={foodOption === opt.value ? 'filled' : 'outlined'}
+                />
+              ))}
+            </Stack>
+            {foodOption === 'eat_out' && (
+              <TextField
+                label="餐厅地址"
+                value={restaurantLocation}
+                onChange={(e) => setRestaurantLocation(e.target.value)}
+                fullWidth
+                placeholder="餐厅名称和地址"
+                sx={{ mt: 1.5 }}
+              />
+            )}
           </Box>
 
           {/* 分工 — task assignment */}

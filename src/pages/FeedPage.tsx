@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLoaderData, useOutletContext } from 'react-router';
 import {
   Box,
@@ -6,6 +6,7 @@ import {
   Card,
   CardContent,
   Grid,
+  Snackbar,
   Stack,
   Typography,
 } from '@mui/material';
@@ -27,6 +28,9 @@ import {
   FeedCommentNotice,
   FeedActionNotice,
 } from '@/components/FeedItems';
+
+/* ═══ Mock: current small-group draw ═══ */
+const currentDraw = { person: '星星', week: 12 };
 
 /* ═══ Empty Feed ═══ */
 function EmptyFeed() {
@@ -82,11 +86,45 @@ function FullFeed() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { items } = useLoaderData() as FeedPageData;
+  const [snackMsg, setSnackMsg] = useState('');
 
   const canInteract = Boolean(user);
+  const isDrawnPerson = user?.name === currentDraw.person;
 
   return (
     <Box>
+      {isDrawnPerson && (
+        <Card sx={{ mb: 2, border: '1px solid', borderColor: 'primary.light', bgcolor: 'primary.50' }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ mb: 1 }}>🎲 本周轮到你 Host！</Typography>
+            <Typography variant="body2" color="text.secondary">
+              约谁、做什么、几个人，你说了算。
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              咖啡、散步、看电影都可以，2-6人。
+            </Typography>
+            <Stack direction="row" spacing={1.5} sx={{ mt: 2 }}>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => navigate('/events/new', { state: { preTag: '小聚' } })}
+                sx={{ textTransform: 'none' }}
+              >
+                🏠 发起小聚
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setSnackMsg('已跳过，系统将重新抽签')}
+                sx={{ textTransform: 'none' }}
+              >
+                这周不行
+              </Button>
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
       <Grid container spacing={2}>
         {items.map((item, idx) => (
           <Grid key={idx} size={gridSizeFor(item.type)} sx={
@@ -117,6 +155,13 @@ function FullFeed() {
           👍 推荐电影
         </Button>
       </Stack>
+
+      <Snackbar
+        open={Boolean(snackMsg)}
+        autoHideDuration={3000}
+        onClose={() => setSnackMsg('')}
+        message={snackMsg}
+      />
     </Box>
   );
 }
