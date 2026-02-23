@@ -50,7 +50,7 @@ export default function EventCreatePage() {
   const preTag = (routeLocation.state as { preTag?: string } | null)?.preTag;
 
   const [name, setName] = useState(fromProposal?.title ?? '');
-  const [tag, setTag] = useState(preTag ?? '');
+  const [tags, setTags] = useState<string[]>(preTag ? [preTag] : []);
   const [startDate, setStartDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -89,13 +89,16 @@ export default function EventCreatePage() {
     }
   }, [navigate, user]);
 
-  // Auto-fill task presets when tag changes (only when tasks are empty)
+  // Auto-fill task presets when tags change (only when tasks are empty)
   useEffect(() => {
-    if (tag && taskPresets[tag] && tasks.length === 0) {
-      setTasks(taskPresets[tag].map((role) => ({ role })));
+    if (tags.length > 0 && tasks.length === 0) {
+      const roles = [...new Set(tags.flatMap((t) => taskPresets[t] ?? []))];
+      if (roles.length > 0) {
+        setTasks(roles.map((role) => ({ role })));
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tag]);
+  }, [tags]);
 
   // Auto-fill end = same day + 3h when start is set
   useEffect(() => {
@@ -108,19 +111,19 @@ export default function EventCreatePage() {
     }
   }, [startDate, startTime, endDate, endTime]);
 
-  // Reset movie state when tag changes away from 电影夜
+  // Reset movie state when tags no longer include 电影夜
   useEffect(() => {
-    if (tag !== '电影夜') {
+    if (!tags.includes('电影夜')) {
       setFilmMode('nominate');
       setSelectedFilm(null);
       setNominations([]);
     }
-  }, [tag]);
+  }, [tags]);
 
   if (!user) return null;
 
-  const isMovieNight = tag === '电影夜';
-  const isSmallGroup = tag === '小局';
+  const isMovieNight = tags.includes('电影夜');
+  const isSmallGroup = tags.includes('小局');
   const capMax = isSmallGroup ? 10 : 50;
 
   const filteredMembers = useMemo(() => {
@@ -188,9 +191,9 @@ export default function EventCreatePage() {
                 <Chip
                   key={t}
                   label={t}
-                  onClick={() => setTag(tag === t ? '' : t)}
-                  color={tag === t ? 'primary' : 'default'}
-                  variant={tag === t ? 'filled' : 'outlined'}
+                  onClick={() => setTags((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t])}
+                  color={tags.includes(t) ? 'primary' : 'default'}
+                  variant={tags.includes(t) ? 'filled' : 'outlined'}
                 />
               ))}
             </Stack>
@@ -338,7 +341,7 @@ export default function EventCreatePage() {
                 </Stack>
               ) : (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  {tag && taskPresets[tag] ? '切换 Tag 后自动预设' : '暂无分工，可手动添加'}
+                  {tags.some((t) => taskPresets[t]) ? '选择 Tag 后自动预设' : '暂无分工，可手动添加'}
                 </Typography>
               )}
               <Button
