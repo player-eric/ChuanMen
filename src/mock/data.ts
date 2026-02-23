@@ -338,6 +338,12 @@ export const endedEvents: EventData[] = [
       { role: '拍照', name: 'Tiffy' },
     ],
     photoCount: 8, commentCount: 3,
+    photos: [
+      { id: 'p-8-1', url: photos.potluck, uploadedBy: 'Tiffy', caption: '食材准备中', createdAt: '02.22' },
+      { id: 'p-8-2', url: photos.cozy, uploadedBy: 'Yuan', caption: '手卷寿司成品', createdAt: '02.22' },
+      { id: 'p-8-3', url: photos.coffee, uploadedBy: '白开水', caption: '大家一起动手', createdAt: '02.22' },
+      { id: 'p-8-4', url: photos.nature, uploadedBy: '小樱', caption: '抹茶冰淇淋收尾', createdAt: '02.22' },
+    ],
   },
   {
     id: 100, title: '打羽毛球', host: 'Derek', date: '2.15 周六 10am',

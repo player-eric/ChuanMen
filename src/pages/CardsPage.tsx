@@ -50,12 +50,13 @@ function FullCards() {
   const data = useLoaderData() as CardsPageData;
   const [step, setStep] = useState(0);
   const [who, setWho] = useState<string | null>(null);
-  const [stamp, setStamp] = useState('✉');
+  const [stamp, setStamp] = useState('');
   const [msg, setMsg] = useState('');
   const [hasPhoto, setHasPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [showCardInfo, setShowCardInfo] = useState(false);
   const [showAll, setShowAll] = useState(true);
   const [showAllSent, setShowAllSent] = useState(true);
 
@@ -64,7 +65,7 @@ function FullCards() {
   const reset = () => {
     setStep(0);
     setWho(null);
-    setStamp('✉');
+    setStamp('');
     setMsg('');
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoPreview(null);
@@ -75,16 +76,23 @@ function FullCards() {
 
   return (
     <Stack spacing={2}>
-      {/* How to earn cards */}
-      <Card>
-        <CardContent>
-          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>✉ 如何获得感谢卡</Typography>
-          <Stack spacing={0.5}>
-            <Typography variant="body2" color="text.secondary">· 每参加一次活动，+2 张感谢卡</Typography>
-            <Typography variant="body2" color="text.secondary">· 每次做 Host，额外 +4 张</Typography>
-            <Typography variant="body2" color="text.secondary">· 购买感谢卡 · $5/张（不限量）</Typography>
-            <Typography variant="body2" color="text.secondary">· 感谢卡不限期，累计不清零</Typography>
-          </Stack>
+      {/* How to earn cards — collapsed by default */}
+      <Card
+        sx={{ cursor: 'pointer' }}
+        onClick={() => setShowCardInfo((v) => !v)}
+      >
+        <CardContent sx={{ '&:last-child': { pb: showCardInfo ? undefined : 2 } }}>
+          <Typography variant="subtitle2" fontWeight={700}>
+            ✉ 如何获得感谢卡 {showCardInfo ? '▾' : '▸'}
+          </Typography>
+          {showCardInfo && (
+            <Stack spacing={0.5} sx={{ mt: 1 }}>
+              <Typography variant="body2" color="text.secondary">· 每参加一次活动，+2 张感谢卡</Typography>
+              <Typography variant="body2" color="text.secondary">· 每次做 Host，额外 +4 张</Typography>
+              <Typography variant="body2" color="text.secondary">· 购买感谢卡 · $5/张（不限量）</Typography>
+              <Typography variant="body2" color="text.secondary">· 感谢卡不限期，累计不清零</Typography>
+            </Stack>
+          )}
         </CardContent>
       </Card>
 
@@ -114,9 +122,12 @@ function FullCards() {
       {user && !sent ? (
         <Card>
           <CardContent>
-            <Typography variant="h6" sx={{ mb: 2 }}>寄一张感谢卡</Typography>
+            <Typography variant="h6" sx={{ mb: 0.5 }}>寄一张感谢卡</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              对你想感谢的人说一句话吧
+            </Typography>
             <Stepper activeStep={step} alternativeLabel sx={{ mb: 2 }}>
-              {['选人', '写话+拍照', '寄出'].map((label) => (
+              {['选人', '写话+封面', '寄出'].map((label) => (
                 <Step key={label}><StepLabel>{label}</StepLabel></Step>
               ))}
             </Stepper>
@@ -143,17 +154,45 @@ function FullCards() {
             )}
 
             {step === 1 && who && (
-              <Stack spacing={1.5}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Avatar>{who[0]}</Avatar>
+              <Stack spacing={2.5}>
+                {/* Recipient header */}
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Avatar sx={{ width: 44, height: 44 }}>{who[0]}</Avatar>
                   <Box>
-                    <Typography fontWeight={700}>给 {who}</Typography>
+                    <Typography fontWeight={700} variant="subtitle1">给 {who}</Typography>
                     <Typography variant="caption" color="text.secondary">02.15 电影夜</Typography>
                   </Box>
                 </Stack>
 
+                {/* Message section */}
                 <Box>
-                  <Typography variant="body2" fontWeight={600} sx={{ mb: 0.75 }}>选一个称号</Typography>
+                  <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>写一句话</Typography>
+                  <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
+                    {quickMessages.map((quick, index) => (
+                      <Chip
+                        key={index}
+                        label={quick}
+                        size="small"
+                        onClick={() => setMsg(quick)}
+                        color={msg === quick ? 'primary' : 'default'}
+                        variant={msg === quick ? 'filled' : 'outlined'}
+                      />
+                    ))}
+                  </Stack>
+                  <TextField
+                    multiline
+                    minRows={3}
+                    value={msg}
+                    onChange={(event) => setMsg(event.target.value.slice(0, 80))}
+                    placeholder="或者自己写..."
+                    helperText={`${msg.length}/80`}
+                    fullWidth
+                  />
+                </Box>
+
+                {/* Title section */}
+                <Box>
+                  <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>送一个称号（可选）</Typography>
                   <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
                     {titleDefinitions.map((t) => (
                       <Chip
@@ -168,7 +207,9 @@ function FullCards() {
                   </Stack>
                 </Box>
 
+                {/* Cover photo section */}
                 <Box>
+                  <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>添加封面（可选）</Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Button
                       variant="outlined"
@@ -176,7 +217,7 @@ function FullCards() {
                       size="small"
                       color={hasPhoto ? 'success' : 'primary'}
                     >
-                      {hasPhoto ? '📷 更换照片' : '📷 添加照片（可选）'}
+                      {hasPhoto ? '更换封面' : '选择图片'}
                       <input
                         type="file"
                         accept="image/*"
@@ -214,27 +255,6 @@ function FullCards() {
                   )}
                 </Box>
 
-                <Stack direction="row" spacing={1} flexWrap="wrap">
-                  {quickMessages.map((quick, index) => (
-                    <Chip
-                      key={index}
-                      label={quick}
-                      onClick={() => setMsg(quick)}
-                      color={msg === quick ? 'primary' : 'default'}
-                      variant={msg === quick ? 'filled' : 'outlined'}
-                    />
-                  ))}
-                </Stack>
-
-                <TextField
-                  multiline
-                  minRows={3}
-                  value={msg}
-                  onChange={(event) => setMsg(event.target.value.slice(0, 80))}
-                  placeholder="或者自己写..."
-                  helperText={`${msg.length}/80`}
-                />
-
                 <RadioGroup row value={isPrivate ? 'private' : 'public'} onChange={(event) => setIsPrivate(event.target.value === 'private')}>
                   <FormControlLabel value="private" control={<Radio size="small" />} label="🔒 仅彼此可见" />
                   <FormControlLabel value="public" control={<Radio size="small" />} label="🌐 公开到动态流" />
@@ -245,7 +265,7 @@ function FullCards() {
                     onClick={() => {
                       setStep(0);
                       setWho(null);
-                      setStamp('✉');
+                      setStamp('');
                       setMsg('');
                       if (photoPreview) URL.revokeObjectURL(photoPreview);
                       setPhotoPreview(null);

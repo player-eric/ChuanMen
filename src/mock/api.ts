@@ -5,6 +5,7 @@
 import type {
   EventsPageData, DiscoverPageData, CardsPageData,
   ProfilePageData, MemberDetailData, AboutPageData, FeedPageData,
+  ProfilePhoto,
 } from '@/types';
 import {
   membersData, upcomingEvents, endedEvents, cancelledEvents,
@@ -151,6 +152,30 @@ export async function fetchProfileData(): Promise<ProfilePageData> {
     return toNum(b.date) - toNum(a.date);
   });
 
+  // Gallery photos — aggregate photos from ended events the user participated in
+  const galleryPhotos: ProfilePhoto[] = [];
+  for (const e of allEvents.filter((ev) => ev.phase === 'ended' && (ev.people.includes(userName) || ev.host === userName))) {
+    if (e.photos) {
+      for (const p of e.photos) {
+        galleryPhotos.push({
+          id: p.id,
+          url: p.url,
+          uploadedBy: p.uploadedBy,
+          caption: p.caption,
+          createdAt: p.createdAt,
+          eventId: e.id,
+          eventTitle: e.title,
+        });
+      }
+    }
+  }
+
+  // Voted movies — movies the user voted for (from movieDetailMap)
+  const votedMovies = moviePool.filter((m) => {
+    const detail = movieDetailMap[m.id];
+    return detail && detail.voters.includes(userName) && m.by !== userName;
+  });
+
   // Most shared experiences — member with highest evtCount (excluding self)
   const others = membersData.filter((m) => m.name !== userName);
   const sortedByEvents = [...others].sort((a, b) => b.mutual.evtCount - a.mutual.evtCount);
@@ -159,6 +184,17 @@ export async function fetchProfileData(): Promise<ProfilePageData> {
   // Closest taste — member with most mutual movies (excluding self)
   const sortedByMovies = [...others].sort((a, b) => b.mutual.movies.length - a.mutual.movies.length);
   const closestTaste = sortedByMovies[0] ?? null;
+
+  // Recent closest — from people who attended events in last 3 months AND share movie taste
+  const recentEventPeople = new Set<string>();
+  for (const e of allEvents.filter((ev) => ev.phase === 'ended' && (ev.people.includes(userName) || ev.host === userName))) {
+    for (const p of e.people) {
+      if (p !== userName) recentEventPeople.add(p);
+    }
+  }
+  const recentOthers = others.filter((m) => recentEventPeople.has(m.name));
+  const sortedRecentByMovies = [...recentOthers].sort((a, b) => b.mutual.movies.length - a.mutual.movies.length);
+  const recentClosest = sortedRecentByMovies[0] ?? null;
 
   return {
     titles: member?.titles ?? [],
@@ -179,15 +215,21 @@ export async function fetchProfileData(): Promise<ProfilePageData> {
       cardsReceived: myCards.length,
     },
     myMovies,
+    votedMovies,
     upcomingEvents: myUpcoming,
     myEvents,
     recentCards: myCards.slice(0, 5),
+    sentCards: cardsSent,
+    galleryPhotos,
     timeline: timeline.slice(0, 15),
     mostSharedWith: mostShared
       ? { name: mostShared.name, evtCount: mostShared.mutual.evtCount, cards: mostShared.mutual.cards }
       : null,
     closestTaste: closestTaste
       ? { name: closestTaste.name, movies: closestTaste.mutual.movies }
+      : null,
+    recentClosest: recentClosest
+      ? { name: recentClosest.name, movies: recentClosest.mutual.movies }
       : null,
   };
 }

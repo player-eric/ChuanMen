@@ -302,6 +302,16 @@ export interface CardsPageData {
   credits: number;
 }
 
+export interface ProfilePhoto {
+  id: string;
+  url: string;
+  uploadedBy: string;
+  caption?: string;
+  createdAt: string;
+  eventId: number;
+  eventTitle: string;
+}
+
 export interface ProfilePageData {
   titles: string[];
   role: string;
@@ -321,12 +331,16 @@ export interface ProfilePageData {
     cardsReceived: number;
   };
   myMovies: MoviePool[];
+  votedMovies: MoviePool[];
   upcomingEvents: { id: number; title: string; date: string; scene: string; role?: string }[];
   myEvents: { id: number; title: string; date: string; scene: string; role?: string }[];
   recentCards: CardReceived[];
+  sentCards: CardReceived[];
+  galleryPhotos: ProfilePhoto[];
   timeline: { date: string; type: string; text: string; link?: string }[];
   mostSharedWith: { name: string; evtCount: number; cards: number } | null;
   closestTaste: { name: string; movies: string[] } | null;
+  recentClosest: { name: string; movies: string[] } | null;
 }
 
 export interface MemberDetailData {
