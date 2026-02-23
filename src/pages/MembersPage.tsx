@@ -60,7 +60,7 @@ export default function MembersPage() {
                       </Typography>
                     )}
                     <Typography variant="caption" color="text.secondary">{member.role}</Typography>
-                    <Stack direction="row" spacing={0.6} flexWrap="wrap" justifyContent="center">
+                    <Stack direction="row" spacing={0.6} flexWrap="wrap" useFlexGap justifyContent="center">
                       {member.titles.map((title) => (
                         <Chip key={title} size="small" color="warning" label={title} />
                       ))}
