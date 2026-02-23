@@ -38,6 +38,18 @@ export const titleDefinitions: TitleDefinition[] = [
 ];
 
 /* ═══════════════════════════════════════════════════════════
+ * Task Presets — 按活动类型预设分工模板
+ * ═══════════════════════════════════════════════════════════ */
+export const taskPresets: Record<string, string[]> = {
+  '电影夜': ['选片', '场地 & 设备', '零食 / 饮料', '拍照', '修图上传'],
+  'Potluck': ['主食', '饮料', '甜点', '拍照', '修图上传'],
+  '徒步':   ['路线规划', '开车', '拍照', '修图上传'],
+  '咖啡':   ['选咖啡馆', '拍照', '修图上传'],
+  '运动':   ['场地预约', '拍照', '修图上传'],
+  '小局':   ['场地', '食物 / 饮料', '拍照', '修图上传'],
+};
+
+/* ═══════════════════════════════════════════════════════════
  * Members — 12 members
  * ═══════════════════════════════════════════════════════════ */
 export const membersData: MemberData[] = [
@@ -169,18 +181,15 @@ export const upcomingEvents: EventData[] = [
     nominations: [1, 6, 3, 10],
     desc: '王家卫经典。灯光调暗，坐在地下室沙发上，一起感受六十年代的香港。看完聊到十点，喝茶看星星。',
     houseRules: '请换鞋入内 · 10pm 前结束 · 可以带零食',
-    contributors: [
+    tasks: [
       { role: '选片', name: 'Yuan' },
       { role: '场地 & 设备', name: '白开水' },
       { role: '零食', name: '星星' },
+      { role: '带投影幕布' },
     ],
     comments: [
       { name: '星星', text: '好期待！花样年华是我最喜欢的电影之一', date: '02.20' },
       { name: '大橙子', text: '我带相机来拍几张现场照', date: '02.21' },
-    ],
-    helpRequests: [
-      { text: '需要人帮忙带投影幕布' },
-      { text: '谁可以带零食？' },
     ],
     photos: [
       { id: 'p-1-1', url: photos.movieNight, uploadedBy: '大橙子', caption: '布置现场中', createdAt: '02.22' },
@@ -195,10 +204,11 @@ export const upcomingEvents: EventData[] = [
     people: ['Tiffy', '大橙子', '星星', 'Yuan', '小鱼', '奶茶'], phase: 'open',
     desc: '铜锅涮肉！食材 AA，Tiffy 准备锅底和蘸料。请自带一道菜或甜点。',
     houseRules: '请自带一道菜 · 有猫，注意过敏 · 车可以停车库前面',
-    contributors: [
+    tasks: [
       { role: '锅底 & 蘸料', name: 'Tiffy' },
       { role: '羊肉卷', name: 'Yuan' },
       { role: '蔬菜拼盘', name: '大橙子' },
+      { role: '饮料' },
     ],
     comments: [
       { name: 'Yuan', text: '我带两盒羊肉卷！', date: '02.25' },
@@ -212,6 +222,11 @@ export const upcomingEvents: EventData[] = [
     location: 'Delaware Water Gap', scene: 'hike', spots: 6, total: 10,
     people: ['大橙子', 'Yuan', 'Derek', '阿德'], phase: 'invite', invitedBy: '大橙子',
     desc: '春季徒步，中等难度，来回大约 3 小时。拼车从 Jersey City 出发，也可以自驾。',
+    tasks: [
+      { role: '路线规划', name: 'Derek' },
+      { role: '开车', name: '大橙子' },
+      { role: '拍照' },
+    ],
   },
   {
     id: 5, title: '周末电影夜 · 重庆森林', host: 'Leo', date: '3.15 周六 7pm',
@@ -221,6 +236,12 @@ export const upcomingEvents: EventData[] = [
     nominations: [6, 1, 7],
     desc: 'Leo 的第一次 Host！在 Hoboken 的公寓看王家卫的《重庆森林》。',
     houseRules: '有猫 · 楼下有街趴',
+    tasks: [
+      { role: '选片', name: 'Leo' },
+      { role: '场地 & 设备', name: 'Leo' },
+      { role: '零食 / 饮料' },
+      { role: '拍照' },
+    ],
   },
   {
     id: 6, title: '咖啡闲聊 · Montclair 小聚', host: '阿德', date: '3.01 周六 2pm',
@@ -228,6 +249,10 @@ export const upcomingEvents: EventData[] = [
     location: 'Montclair, NJ', scene: 'coffee', spots: 3, total: 4,
     people: ['阿德'], phase: 'open',
     desc: '不用主题、不用准备，就是坐下来喝杯咖啡聊聊天。',
+    tasks: [
+      { role: '选咖啡馆', name: '阿德' },
+      { role: '拍照' },
+    ],
   },
   {
     id: 7, title: '烘焙下午茶', host: 'Tiffy', date: '3.22 周六 2pm',
@@ -237,6 +262,12 @@ export const upcomingEvents: EventData[] = [
     people: ['Tiffy', 'Mia'], phase: 'open',
     desc: 'Tiffy 教大家做司康和提拉米苏！食材全包，带着肚子来就好。',
     houseRules: '请自带围裙（如果有的话）· 有猫',
+    tasks: [
+      { role: '食材', name: 'Tiffy' },
+      { role: '甜点教学', name: 'Tiffy' },
+      { role: '饮料' },
+      { role: '拍照' },
+    ],
   },
   {
     id: 9, title: '周末电影夜 · 惊魂记', host: '白开水', date: '2.28 周五 7pm',
@@ -248,6 +279,12 @@ export const upcomingEvents: EventData[] = [
     nominations: [2, 5, 12, 8],
     desc: '希区柯克经典惊悚片。报名已满，当天见！',
     houseRules: '请换鞋入内 · 10pm 前结束',
+    tasks: [
+      { role: '选片', name: 'Yuan' },
+      { role: '场地 & 设备', name: '白开水' },
+      { role: '零食 / 饮料', name: 'Tiffy' },
+      { role: '拍照', name: '大橙子' },
+    ],
   },
 ];
 
@@ -264,6 +301,13 @@ export const endedEvents: EventData[] = [
     nominations: [13, 7, 10],
     desc: '一起看奉俊昊的《寄生虫》，看完聊到十点多。',
     houseRules: '请换鞋入内 · 有零食和饮料',
+    tasks: [
+      { role: '选片', name: 'Yuan' },
+      { role: '场地 & 设备', name: '白开水' },
+      { role: '零食 / 饮料', name: '星星' },
+      { role: '拍照', name: '大橙子' },
+      { role: '修图上传', name: '大橙子' },
+    ],
     photoCount: 12, commentCount: 5,
     photos: [
       { id: 'p-4-1', url: photos.movieNight, uploadedBy: '大橙子', caption: '投影效果超棒', createdAt: '02.21' },
@@ -285,6 +329,12 @@ export const endedEvents: EventData[] = [
     phase: 'ended',
     desc: '大家一起动手做手卷寿司！Yuan 准备食材，小樱指导技术。吃完还有抹茶冰淇淋。',
     houseRules: '请换鞋入内 · 有猫 · 10pm 前收拾完',
+    tasks: [
+      { role: '食材', name: 'Yuan' },
+      { role: '技术指导', name: '小樱' },
+      { role: '饮料', name: '奶茶' },
+      { role: '拍照', name: 'Tiffy' },
+    ],
     photoCount: 8, commentCount: 3,
   },
   {
@@ -292,6 +342,10 @@ export const endedEvents: EventData[] = [
     location: 'Life Time Fitness, Bridgewater', scene: 'sports', spots: 0, total: 8,
     people: ['Derek', 'Leo', '大橙子', '白开水', '阿德', '小鱼'], phase: 'ended',
     desc: '在 Life Time 包了两个小时场地，单打双打都有。',
+    tasks: [
+      { role: '场地预约', name: 'Derek' },
+      { role: '拍照', name: '大橙子' },
+    ],
     photoCount: 5, commentCount: 2,
     photos: [
       { id: 'p-100-1', url: photos.sports, uploadedBy: 'Derek', caption: '热身中', createdAt: '02.15' },
@@ -568,6 +622,19 @@ export const feedItems: FeedItem[] = [
   },
 
   {
+    type: 'actionNotice', action: 'photo_upload', name: '大橙子',
+    targetTitle: '周六电影夜 · 花样年华', detail: '3 张照片', time: '30 分钟前',
+    photoUrls: [photos.movieNight, photos.coffee, photos.hike],
+    navTarget: '/events/1',
+    likes: 3, likedBy: ['Yuan', '星星', '白开水'], comments: [],
+  },
+  {
+    type: 'actionNotice', action: 'event_join', name: 'Mia',
+    targetTitle: '本周小局 · 散步聊天', time: '2 小时前',
+    navTarget: '/events/7',
+    likes: 2, likedBy: ['星星', 'Yuan'], comments: [],
+  },
+  {
     type: 'commentNotice', name: 'Leo', text: '每次看完都想去兰桂坊',
     targetTitle: '重庆森林', targetType: 'movie', time: '1 小时前',
     navTarget: '/discover/movies/5',
@@ -591,6 +658,12 @@ export const feedItems: FeedItem[] = [
     type: 'card', from: 'Tiffy', to: 'Leo',
     msg: '你做的那道红烧肉太好吃了，下次教教我！', navTarget: '/cards',
     likes: 4, likedBy: ['Leo', '大橙子', '奶茶', '小鱼'], comments: [],
+  },
+  {
+    type: 'actionNotice', action: 'movie_nominate', name: 'Leo',
+    targetTitle: '周六电影夜 · 花样年华', detail: '重庆森林', time: '昨天',
+    navTarget: '/discover/movies/5',
+    likes: 2, likedBy: ['大橙子', 'Yuan'], comments: [],
   },
 
   /* ── 本周 ── */
@@ -638,6 +711,12 @@ export const feedItems: FeedItem[] = [
     type: 'commentNotice', name: '奶茶', text: '打算买十几种回来盲测打分',
     targetTitle: '奶茶 tasting 大会！', targetType: 'proposal', time: '3 天前',
     likes: 2, likedBy: ['Tiffy', '小鱼'], comments: [],
+  },
+  {
+    type: 'actionNotice', action: 'task_claim', name: '大橙子',
+    targetTitle: '周六电影夜 · 花样年华', detail: '需要人帮忙带投影幕布', time: '4 天前',
+    navTarget: '/events/1',
+    likes: 3, likedBy: ['白开水', 'Yuan', '星星'], comments: [],
   },
   {
     type: 'activity', name: 'Derek', title: '周末 hiking · Watchung Reservation',
@@ -689,6 +768,12 @@ export const feedItems: FeedItem[] = [
     votes: 6, interested: ['Yuan', '星星', 'Tiffy', '奶茶'],
     likes: 4, likedBy: ['Yuan', '星星', 'Tiffy', '奶茶'],
     comments: [{ name: 'Yuan', text: '可以团购票便宜很多', date: '02.14' }],
+  },
+  {
+    type: 'actionNotice', action: 'event_join', name: '小鱼',
+    targetTitle: '周末咖啡品鉴 · 手冲入门', time: '1 周前',
+    navTarget: '/events/4',
+    likes: 2, likedBy: ['星星', '奶茶'], comments: [],
   },
   {
     type: 'card', from: '大橙子', to: '星星',
@@ -783,6 +868,13 @@ export const feedItems: FeedItem[] = [
     type: 'compactMovie', name: 'Leo', title: '寄生虫',
     year: '2019', dir: '奉俊昊', votes: 9, time: '3 周前', navTarget: '/discover/movies/7',
     likes: 6, likedBy: ['Yuan', '白开水', '大橙子', '星星', 'Tiffy', '小鱼'], comments: [],
+  },
+  {
+    type: 'actionNotice', action: 'photo_upload', name: 'Derek',
+    targetTitle: 'Delaware Water Gap 一日徒步', detail: '5 张照片', time: '2 周前',
+    photoUrls: [photos.hike, photos.nature, photos.sports],
+    navTarget: '/events/5',
+    likes: 4, likedBy: ['阿德', '大橙子', '白开水', 'Leo'], comments: [],
   },
   {
     type: 'card', from: 'Yuan', to: '阿德',

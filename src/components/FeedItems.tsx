@@ -698,6 +698,72 @@ interface FeedCommentNoticeProps extends InteractionProps {
   targetType: string; time: string; navTarget?: string;
 }
 
+/* ═══ FeedActionNotice ═══ */
+type ActionNoticeAction = 'event_join' | 'photo_upload' | 'movie_nominate' | 'movie_vote'
+  | 'book_vote' | 'task_claim' | 'host_help' | 'interest_express' | 'film_select';
+
+interface FeedActionNoticeProps extends InteractionProps {
+  action: ActionNoticeAction;
+  name: string;
+  targetTitle: string;
+  time: string;
+  detail?: string;
+  photoUrls?: string[];
+  navTarget?: string;
+}
+
+const actionConfig: Record<ActionNoticeAction, { emoji: string; text: (p: FeedActionNoticeProps) => string }> = {
+  event_join:       { emoji: '🙋', text: p => `${p.name} 加入了「${p.targetTitle}」` },
+  photo_upload:     { emoji: '📷', text: p => `${p.name} 上传了 ${p.detail} 到「${p.targetTitle}」` },
+  movie_nominate:   { emoji: '🎬', text: p => `${p.name} 提名了「${p.detail}」到「${p.targetTitle}」` },
+  movie_vote:       { emoji: '▲',  text: p => `${p.name} 投票了「${p.targetTitle}」` },
+  book_vote:        { emoji: '▲',  text: p => `${p.name} 投票了「${p.targetTitle}」` },
+  task_claim:       { emoji: '✋', text: p => `${p.name} 认领了「${p.targetTitle}」的分工：${p.detail}` },
+  host_help:        { emoji: '🙋', text: p => `${p.name} 添加了分工：${p.detail}` },
+  interest_express: { emoji: '💡', text: p => `${p.name} 对「${p.targetTitle}」感兴趣` },
+  film_select:      { emoji: '🎬', text: p => `${p.name} 选定了「${p.detail}」为「${p.targetTitle}」的放映` },
+};
+
+export function FeedActionNotice(props: FeedActionNoticeProps) {
+  const { action, name, time, photoUrls, navTarget, likes, likedBy, comments, newComments } = props;
+  const c = useColors();
+  const navigate = useNavigate();
+  const goNav = navTarget ? () => navigate(navTarget) : undefined;
+  const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+  const cfg = actionConfig[action];
+
+  return (
+    <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
+      <div onClick={goNav} style={{ display: 'flex', gap: 8, padding: '10px 12px', cursor: goNav ? 'pointer' : 'default', alignItems: 'flex-start' }}>
+        <Ava name={name} size={24} onTap={() => goMember(name)} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13 }}>
+            {cfg.emoji}{' '}{cfg.text(props)}
+            <span style={{ color: c.text3, marginLeft: 6 }}>{time}</span>
+          </div>
+          {action === 'photo_upload' && photoUrls && photoUrls.length > 0 && (
+            <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+              {photoUrls.slice(0, 3).map((url, i) => (
+                <div key={i} style={{ width: 36, height: 36, borderRadius: 4, background: url, overflow: 'hidden' }} />
+              ))}
+              {photoUrls.length > 3 && (
+                <div style={{
+                  width: 36, height: 36, borderRadius: 4, background: c.s2,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, color: c.text3, fontWeight: 600,
+                }}>
+                  +{photoUrls.length - 3}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact />
+    </div>
+  );
+}
+
 export function FeedCommentNotice({ name, text, targetTitle, time, navTarget, likes, likedBy, comments, newComments }: FeedCommentNoticeProps) {
   const c = useColors();
   const navigate = useNavigate();

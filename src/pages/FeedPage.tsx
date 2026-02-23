@@ -25,6 +25,7 @@ import {
   FeedSmallGroup,
   FeedCompactSmallGroup,
   FeedCommentNotice,
+  FeedActionNotice,
 } from '@/components/FeedItems';
 
 /* ═══ Empty Feed ═══ */
@@ -137,6 +138,7 @@ function renderFeedItem(item: FeedItem) {
     case 'smallGroup':     return <FeedSmallGroup {...props as React.ComponentProps<typeof FeedSmallGroup>} />;
     case 'compactSmallGroup': return <FeedCompactSmallGroup {...props as React.ComponentProps<typeof FeedCompactSmallGroup>} />;
     case 'commentNotice':  return <FeedCommentNotice {...props as React.ComponentProps<typeof FeedCommentNotice>} />;
+    case 'actionNotice':   return <FeedActionNotice {...props as React.ComponentProps<typeof FeedActionNotice>} />;
   }
 }
 

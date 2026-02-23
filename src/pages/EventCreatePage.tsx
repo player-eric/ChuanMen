@@ -14,14 +14,20 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
+  IconButton,
+  MenuItem,
+  Select,
   Snackbar,
   Stack,
   Switch,
   TextField,
   Typography,
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import AddIcon from '@mui/icons-material/Add';
 import { useAuth } from '@/auth/AuthContext';
-import { moviePool, membersData } from '@/mock/data';
+import { moviePool, membersData, taskPresets } from '@/mock/data';
+import type { TaskRole } from '@/types';
 import { Poster } from '@/components/Poster';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 
@@ -74,11 +80,22 @@ export default function EventCreatePage() {
   const [moviePickerTarget, setMoviePickerTarget] = useState<'film' | 'nomination'>('film');
   const [movieSearch, setMovieSearch] = useState('');
 
+  // Task (分工) state
+  const [tasks, setTasks] = useState<TaskRole[]>([]);
+
   useEffect(() => {
     if (!user) {
       navigate('/login', { replace: true });
     }
   }, [navigate, user]);
+
+  // Auto-fill task presets when tag changes (only when tasks are empty)
+  useEffect(() => {
+    if (tag && taskPresets[tag] && tasks.length === 0) {
+      setTasks(taskPresets[tag].map((role) => ({ role })));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tag]);
 
   // Auto-fill end = same day + 3h when start is set
   useEffect(() => {
@@ -272,6 +289,68 @@ export default function EventCreatePage() {
               <RichTextEditorLazy content={description} onChange={setDescription} placeholder="活动说明..." />
             </Suspense>
           </Box>
+
+          {/* 分工 — task assignment */}
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
+                分工
+              </Typography>
+              {tasks.length > 0 ? (
+                <Stack spacing={1.5}>
+                  {tasks.map((task, idx) => (
+                    <Stack key={idx} direction="row" spacing={1} alignItems="center">
+                      <TextField
+                        size="small"
+                        placeholder="任务名称"
+                        value={task.role}
+                        onChange={(e) => {
+                          const next = [...tasks];
+                          next[idx] = { ...next[idx], role: e.target.value };
+                          setTasks(next);
+                        }}
+                        sx={{ flex: 1 }}
+                      />
+                      <Select
+                        size="small"
+                        displayEmpty
+                        value={task.name ?? ''}
+                        onChange={(e) => {
+                          const next = [...tasks];
+                          next[idx] = { ...next[idx], name: e.target.value || undefined };
+                          setTasks(next);
+                        }}
+                        sx={{ minWidth: 110 }}
+                      >
+                        <MenuItem value="">待认领</MenuItem>
+                        {membersData.map((m) => (
+                          <MenuItem key={m.name} value={m.name}>{m.name}</MenuItem>
+                        ))}
+                      </Select>
+                      <IconButton
+                        size="small"
+                        onClick={() => setTasks((prev) => prev.filter((_, i) => i !== idx))}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  ))}
+                </Stack>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  {tag && taskPresets[tag] ? '切换 Tag 后自动预设' : '暂无分工，可手动添加'}
+                </Typography>
+              )}
+              <Button
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={() => setTasks((prev) => [...prev, { role: '' }])}
+                sx={{ mt: 1.5 }}
+              >
+                添加分工
+              </Button>
+            </CardContent>
+          </Card>
 
           {/* Movie night — film selection */}
           {isMovieNight && (

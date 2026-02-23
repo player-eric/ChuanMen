@@ -32,6 +32,7 @@ import AdminEventsPage from '@/pages/admin/AdminEventsPage';
 import AdminNewslettersPage from '@/pages/admin/AdminNewslettersPage';
 import AdminTitlesPage from '@/pages/admin/AdminTitlesPage';
 import AdminSettingsPage from '@/pages/admin/AdminSettingsPage';
+import AdminTaskPresetsPage from '@/pages/admin/AdminTaskPresetsPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import {
   fetchFeedData,
@@ -116,6 +117,7 @@ export const appRoutes: RouteObject[] = [
       { path: 'members', element: <AdminMembersPage /> },
       { path: 'events', element: <AdminEventsPage /> },
       { path: 'titles', element: <AdminTitlesPage /> },
+      { path: 'task-presets', element: <AdminTaskPresetsPage /> },
       { path: 'newsletters', element: <AdminNewslettersPage /> },
       { path: 'settings', element: <AdminSettingsPage /> },
     ],

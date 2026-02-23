@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import {
   Avatar,
   Box,
@@ -24,6 +24,8 @@ import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import { RichTextViewer } from '@/components/RichTextEditor';
+const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 
 /* ── Mock newsletters ── */
 const sentNewsletters = [
@@ -34,7 +36,7 @@ const sentNewsletters = [
     recipients: 28,
     openRate: 72,
     clickRate: 34,
-    body: '亲爱的串门成员：\n\n🎉 春季招新正式开始！欢迎推荐你身边有趣的朋友。\n\n📅 本周活动：\n- 2/22 周六 7pm 电影夜 · 花样年华（白开水家）\n- 2/28 周五 8pm 重庆森林 · 私人邀请（Yuan 家）\n\n📋 社区公约 v2.0 已更新，请查看。\n\n— Yuan',
+    body: '<p>亲爱的串门成员：</p><p>🎉 春季招新正式开始！欢迎推荐你身边有趣的朋友。</p><p>📅 本周活动：</p><ul><li>2/22 周六 7pm 电影夜 · 花样年华（白开水家）</li><li>2/28 周五 8pm 重庆森林 · 私人邀请（Yuan 家）</li></ul><p>📋 社区公约 v2.0 已更新，请查看。</p><p>— Yuan</p>',
   },
   {
     id: 'nl-11',
@@ -43,7 +45,7 @@ const sentNewsletters = [
     recipients: 26,
     openRate: 68,
     clickRate: 28,
-    body: '亲爱的串门成员：\n\n回顾 1 月：6 场活动、3 位新 Host、45 张感谢卡！\n\n🏠 Host 培训会将在 3 月 8 日举办，感兴趣请报名。\n\n📸 感谢大橙子为我们拍了超多好照片。\n\n— Yuan',
+    body: '<p>亲爱的串门成员：</p><p>回顾 1 月：6 场活动、3 位新 Host、45 张感谢卡！</p><p>🏠 Host 培训会将在 3 月 8 日举办，感兴趣请报名。</p><p>📸 感谢大橙子为我们拍了超多好照片。</p><p>— Yuan</p>',
   },
   {
     id: 'nl-10',
@@ -52,7 +54,7 @@ const sentNewsletters = [
     recipients: 24,
     openRate: 75,
     clickRate: 40,
-    body: '亲爱的串门成员：\n\n圣诞 Party 超成功！12 人、32 张照片、12 张感谢卡。\n\n📅 1 月活动预告：\n- 电影夜 x2\n- 新年 Potluck\n- High Point 徒步\n\n新年快乐！🎆\n\n— Yuan',
+    body: '<p>亲爱的串门成员：</p><p>圣诞 Party 超成功！12 人、32 张照片、12 张感谢卡。</p><p>📅 1 月活动预告：</p><ul><li>电影夜 x2</li><li>新年 Potluck</li><li>High Point 徒步</li></ul><p>新年快乐！🎆</p><p>— Yuan</p>',
   },
   {
     id: 'nl-9',
@@ -61,7 +63,7 @@ const sentNewsletters = [
     recipients: 22,
     openRate: 70,
     clickRate: 32,
-    body: '感恩节 Potluck 有 14 个人参加，是我们人数最多的一次活动！\n\n感谢每一位带菜来的朋友。特别感谢白开水准备了 5 道菜。\n\n— Yuan',
+    body: '<p>感恩节 Potluck 有 14 个人参加，是我们人数最多的一次活动！</p><p>感谢每一位带菜来的朋友。特别感谢白开水准备了 5 道菜。</p><p>— Yuan</p>',
   },
 ];
 
@@ -70,7 +72,7 @@ const draftNewsletters = [
     id: 'draft-1',
     subject: '串门周报 #13 — 花样年华观影后记',
     lastEdited: '2025-02-20',
-    body: '亲爱的串门成员：\n\n本周六的花样年华电影夜...\n\n（草稿未完成）',
+    body: '<p>亲爱的串门成员：</p><p>本周六的花样年华电影夜...</p><p>（草稿未完成）</p>',
   },
 ];
 
@@ -233,15 +235,12 @@ export default function AdminNewslettersPage() {
                 <option key={g.label} value={g.label}>{g.label}（{g.count} 人）</option>
               ))}
             </TextField>
-            <TextField
-              label="正文"
-              multiline
-              rows={12}
-              fullWidth
-              value={draftBody}
-              onChange={(e) => setDraftBody(e.target.value)}
-              placeholder={'亲爱的串门成员：\n\n...'}
-            />
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>正文</Typography>
+              <Suspense fallback={<div style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>加载编辑器...</div>}>
+                <RichTextEditorLazy content={draftBody} onChange={setDraftBody} placeholder="亲爱的串门成员：..." />
+              </Suspense>
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -264,9 +263,7 @@ export default function AdminNewslettersPage() {
               <Chip label={`点击 ${previewNl?.clickRate}%`} size="small" color="primary" variant="outlined" />
             </Stack>
             <Divider />
-            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }} color="text.secondary">
-              {previewNl?.body}
-            </Typography>
+            {previewNl?.body && <RichTextViewer html={previewNl.body} />}
           </Stack>
         </DialogContent>
         <DialogActions>

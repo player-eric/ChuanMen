@@ -15,6 +15,8 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  MenuItem,
+  Select,
   Snackbar,
   Stack,
   TextField,
@@ -24,13 +26,24 @@ import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import DeleteIcon from '@mui/icons-material/Delete';
-import type { EventComment, EventData, EventPhoto } from '@/types';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import type { EventComment, EventData, EventPhoto, TaskRole } from '@/types';
 import { getEventById, signupEvent } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
 import { RichTextViewer } from '@/components/RichTextEditor';
-import { moviePool, movieDetailMap } from '@/mock/data';
+import { moviePool, movieDetailMap, membersData, taskPresets } from '@/mock/data';
+
+const sceneToTag: Record<string, string> = {
+  movieNight: '电影夜',
+  potluck: 'Potluck',
+  hike: '徒步',
+  coffee: '咖啡',
+  sports: '运动',
+  'small-group': '小局',
+};
 
 const phaseLabel: Record<string, { label: string; color: 'warning' | 'success' | 'primary' | 'default' }> = {
   invite: { label: '邀请阶段', color: 'warning' },
@@ -51,7 +64,8 @@ export default function EventDetailPage() {
   const [commentText, setCommentText] = useState('');
   const [inviteDeclined, setInviteDeclined] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [helpClaimed, setHelpClaimed] = useState<Record<number, boolean>>({});
+  const [tasks, setTasks] = useState<TaskRole[]>(loadedEvent?.tasks ?? []);
+  const [taskEditing, setTaskEditing] = useState(false);
   const [nominateOpen, setNominateOpen] = useState(false);
   const [nominateSearch, setNominateSearch] = useState('');
   const [photos, setPhotos] = useState<EventPhoto[]>(loadedEvent?.photos ?? []);
@@ -476,53 +490,143 @@ export default function EventDetailPage() {
           </CardContent>
         </Card>
 
-        {/* 8. Contribution roles */}
-        {event.contributors && event.contributors.length > 0 && (
+        {/* 8. Unified tasks (分工) */}
+        {(tasks.length > 0 || user?.name === event.host) && (
           <Card>
             <CardContent>
-              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>分工</Typography>
-              <Stack spacing={0.75}>
-                {event.contributors.map((c, i) => (
-                  <Stack key={i} direction="row" spacing={1} alignItems="center">
-                    <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>{c.name[0]}</Avatar>
-                    <Typography variant="body2">{c.name}</Typography>
-                    <Chip size="small" variant="outlined" label={c.role} />
-                  </Stack>
-                ))}
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                <Typography variant="subtitle1" fontWeight={700}>分工</Typography>
+                {user?.name === event.host && !taskEditing && (
+                  <Button size="small" startIcon={<EditIcon />} onClick={() => setTaskEditing(true)}>
+                    编辑
+                  </Button>
+                )}
+                {taskEditing && (
+                  <Button size="small" variant="contained" onClick={() => setTaskEditing(false)}>
+                    完成
+                  </Button>
+                )}
               </Stack>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* Host 求助 */}
-        {event.helpRequests && event.helpRequests.length > 0 && (
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>🙋 Host 求助</Typography>
-              <Stack spacing={1}>
-                {event.helpRequests.map((req, i) => (
-                  <Stack key={i} direction="row" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body2">
-                      {req.text}
-                      {(helpClaimed[i] || req.claimedBy) && (
-                        <Chip
-                          size="small"
-                          color="success"
-                          label={req.claimedBy ? `${req.claimedBy} 认领` : '已认领'}
-                          sx={{ ml: 1 }}
-                        />
-                      )}
-                    </Typography>
+              {taskEditing ? (
+                /* Host edit mode */
+                <Stack spacing={1.5}>
+                  {tasks.map((task, idx) => (
+                    <Stack key={idx} direction="row" spacing={1} alignItems="center">
+                      <TextField
+                        size="small"
+                        placeholder="任务名称"
+                        value={task.role}
+                        onChange={(e) => {
+                          const next = [...tasks];
+                          next[idx] = { ...next[idx], role: e.target.value };
+                          setTasks(next);
+                        }}
+                        sx={{ flex: 1 }}
+                      />
+                      <Select
+                        size="small"
+                        displayEmpty
+                        value={task.name ?? ''}
+                        onChange={(e) => {
+                          const next = [...tasks];
+                          next[idx] = { ...next[idx], name: e.target.value || undefined };
+                          setTasks(next);
+                        }}
+                        sx={{ minWidth: 110 }}
+                      >
+                        <MenuItem value="">待认领</MenuItem>
+                        {membersData.map((m) => (
+                          <MenuItem key={m.name} value={m.name}>{m.name}</MenuItem>
+                        ))}
+                      </Select>
+                      <IconButton
+                        size="small"
+                        onClick={() => setTasks((prev) => prev.filter((_, i) => i !== idx))}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  ))}
+                  <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
                     <Button
                       size="small"
-                      variant={helpClaimed[i] || req.claimedBy ? 'outlined' : 'contained'}
-                      onClick={() => setHelpClaimed((prev) => ({ ...prev, [i]: !prev[i] }))}
+                      startIcon={<AddIcon />}
+                      onClick={() => setTasks((prev) => [...prev, { role: '' }])}
                     >
-                      {helpClaimed[i] || req.claimedBy ? '取消认领' : '我可以！'}
+                      添加分工
                     </Button>
+                    {taskPresets[sceneToTag[event.scene]] && tasks.length === 0 && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => {
+                          const tag = sceneToTag[event.scene];
+                          setTasks(taskPresets[tag].map((role) => ({ role })));
+                        }}
+                      >
+                        使用预设
+                      </Button>
+                    )}
                   </Stack>
-                ))}
-              </Stack>
+                </Stack>
+              ) : (
+                /* Display mode */
+                <Stack spacing={1}>
+                  {tasks.map((task, idx) => (
+                    <Stack key={idx} direction="row" justifyContent="space-between" alignItems="center">
+                      <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+                        {task.name ? (
+                          <>
+                            <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>{task.name[0]}</Avatar>
+                            <Typography variant="body2">{task.name}</Typography>
+                          </>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">待认领</Typography>
+                        )}
+                        <Chip size="small" variant="outlined" label={task.role} />
+                      </Stack>
+                      {task.name ? (
+                        task.name === user?.name ? (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => {
+                              const next = [...tasks];
+                              next[idx] = { ...next[idx], name: undefined };
+                              setTasks(next);
+                            }}
+                          >
+                            取消认领
+                          </Button>
+                        ) : (
+                          <Chip size="small" color="success" label="已分配" />
+                        )
+                      ) : (
+                        user && (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={() => {
+                              const next = [...tasks];
+                              next[idx] = { ...next[idx], name: user.name };
+                              setTasks(next);
+                              setFlash({ open: true, severity: 'success', message: `已认领「${task.role}」` });
+                            }}
+                          >
+                            我可以！
+                          </Button>
+                        )
+                      )}
+                    </Stack>
+                  ))}
+                  {tasks.length === 0 && user?.name === event.host && (
+                    <Typography variant="body2" color="text.secondary">
+                      暂无分工，点击"编辑"添加
+                    </Typography>
+                  )}
+                </Stack>
+              )}
             </CardContent>
           </Card>
         )}

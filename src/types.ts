@@ -57,8 +57,7 @@ export interface EventData {
   photoCount?: number;
   commentCount?: number;
   comments?: EventComment[];
-  contributors?: ContributionRole[];
-  helpRequests?: { text: string; claimedBy?: string }[];
+  tasks?: TaskRole[];
   /** Movie IDs nominated for this event (movie night only) */
   nominations?: number[];
   photos?: EventPhoto[];
@@ -222,6 +221,18 @@ export type FeedItem =
       targetType: string;
       time: string;
       navTarget?: string;
+    } & FeedInteraction
+  | {
+      type: 'actionNotice';
+      action: 'event_join' | 'photo_upload' | 'movie_nominate' | 'movie_vote'
+            | 'book_vote' | 'task_claim' | 'host_help'
+            | 'interest_express' | 'film_select';
+      name: string;
+      targetTitle: string;
+      time: string;
+      detail?: string;
+      photoUrls?: string[];
+      navTarget?: string;
     } & FeedInteraction;
 
 // Extended movie detail for MovieDetailPage
@@ -253,6 +264,12 @@ export interface EventComment {
 export interface ContributionRole {
   role: string;
   name: string;
+}
+
+// Unified task role (replaces contributors + helpRequests)
+export interface TaskRole {
+  role: string;       // 任务描述，如"选片"、"带零食"
+  name?: string;      // 负责人名（空=待认领）
 }
 
 export interface FeedPageData {
