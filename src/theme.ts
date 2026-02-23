@@ -1,6 +1,6 @@
 /** 串门儿 Design Tokens */
 
-export type DesignTokens = typeof cDark;
+export type DesignTokens = { readonly [K in keyof typeof cDark]: string };
 
 const cDark = {
   bg: '#0C0C0E',
