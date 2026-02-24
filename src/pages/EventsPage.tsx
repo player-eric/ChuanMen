@@ -27,7 +27,7 @@ import {
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import type { EventData, EventsPageData } from '@/types';
-import { searchProposals } from '@/lib/domainApi';
+import { searchProposals, toggleProposalVote } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { useColors } from '@/hooks/useColors';
 import { Ava, AvaStack } from '@/components/Atoms';
@@ -281,7 +281,11 @@ export default function EventsPage() {
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button
-                        onClick={() => user && setInterested((prev) => ({ ...prev, [proposal.id]: !prev[proposal.id] }))}
+                        onClick={async () => {
+                          if (!user?.id) return;
+                          setInterested((prev) => ({ ...prev, [proposal.id]: !prev[proposal.id] }));
+                          try { await toggleProposalVote(String(proposal.id), user.id); } catch { /* optimistic */ }
+                        }}
                         style={{
                           padding: '4px 12px', borderRadius: 6,
                           background: v ? c.blue + '15' : c.s2,

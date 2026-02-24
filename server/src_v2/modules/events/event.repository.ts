@@ -83,4 +83,31 @@ export class EventRepository {
       },
     });
   }
+
+  signup(eventId: string, userId: string, status: string = 'accepted') {
+    return this.prisma.eventSignup.upsert({
+      where: { eventId_userId: { eventId, userId } },
+      create: { eventId, userId, status: status as any },
+      update: { status: status as any },
+      include: { user: { select: { id: true, name: true, avatar: true } } },
+    });
+  }
+
+  cancelSignup(eventId: string, userId: string) {
+    return this.prisma.eventSignup.update({
+      where: { eventId_userId: { eventId, userId } },
+      data: { status: 'cancelled' },
+    });
+  }
+
+  listPast() {
+    return this.prisma.event.findMany({
+      where: { status: 'completed' },
+      orderBy: { startsAt: 'desc' },
+      include: {
+        host: { select: { id: true, name: true, avatar: true } },
+        _count: { select: { signups: true } },
+      },
+    });
+  }
 }

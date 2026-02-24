@@ -1,44 +1,10 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router';
 import { Card, CardContent, Stack, Typography } from '@mui/material';
+import { fetchAboutContentApi } from '@/lib/domainApi';
 
-const contentMap: Record<string, { title: string; body: string[] }> = {
-  principle: {
-    title: '串门原则',
-    body: [
-      '关系优先于活动：活动是手段，关系是目的。',
-      '个性化引导降低参与成本：在合适时机轻推一把。',
-      '轻输入，重整理：成员轻表达，系统做结构化。',
-      '让参与可见：每一次投票、Host、报名都被看见。',
-      '每条内容都是参与入口：看到就能行动。',
-      '共创而非分发：内容来自成员贡献。',
-    ],
-  },
-  host_guide: {
-    title: 'Host 手册',
-    body: [
-      '建议活动人数不超过 10 人，优先保障交流质量。',
-      '先邀请核心参与者，再在公开阶段开放剩余名额。',
-      '请提前写清楚 house rules，帮助大家建立预期。',
-      '活动后鼓励参与者留下照片、留言与感谢卡。',
-    ],
-  },
-  letter: {
-    title: '串门来信',
-    body: [
-      '我们希望把陌生人变成邻居，把邻居变成朋友。',
-      '如果你刚加入，不用急着表现，先来一次活动感受气氛。',
-      '欢迎带着好奇心来，也欢迎把温暖留下。',
-    ],
-  },
-  about: {
-    title: '关于我们',
-    body: [
-      '串门儿从几个人在客厅看电影开始。',
-      '后来有人带来朋友、有人开始做 Host、有人记录下大家的故事。',
-      '网页端的目标是把这些关系和贡献，清楚地展示出来。',
-    ],
-  },
+/** Static fallback for content types not in DB */
+const staticContent: Record<string, { title: string; body: string[] }> = {
   legal: {
     title: '免责声明与隐私政策',
     body: [
@@ -62,11 +28,24 @@ const contentMap: Record<string, { title: string; body: string[] }> = {
 
 export default function AboutContentPage() {
   const { contentType } = useParams();
+  const [apiContent, setApiContent] = useState<{ title: string; body: string[] } | null>(null);
+
+  useEffect(() => {
+    if (!contentType || staticContent[contentType]) return;
+    fetchAboutContentApi(contentType)
+      .then((data: any) => {
+        if (data) {
+          const body = (data.contentMd ?? '').split('\n').filter((l: string) => l.trim());
+          setApiContent({ title: data.title ?? contentType, body });
+        }
+      })
+      .catch(() => {});
+  }, [contentType]);
 
   const content = useMemo(() => {
     if (!contentType) return null;
-    return contentMap[contentType] ?? null;
-  }, [contentType]);
+    return staticContent[contentType] ?? apiContent;
+  }, [contentType, apiContent]);
 
   if (!content) {
     return <Typography color="text.secondary">未找到对应内容</Typography>;

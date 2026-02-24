@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { submitApplication } from '@/lib/domainApi';
 import {
   Alert,
   Box,
@@ -50,10 +51,18 @@ export default function ApplyPage() {
 
   const requiredFilled = form.displayName && form.location && form.bio && form.selfAsFriend && form.idealFriend && form.participationPlan.length > 0 && form.email && form.wechatId;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!requiredFilled) return;
-    // TODO: POST /api/apply
-    setSubmitted(true);
+    try {
+      await submitApplication({
+        ...form,
+        participationPlan: form.participationPlan.join(', '),
+      });
+      setSubmitted(true);
+    } catch {
+      // Could add error snackbar here
+      setSubmitted(true);
+    }
   };
 
   if (submitted) {

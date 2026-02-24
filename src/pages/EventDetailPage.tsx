@@ -29,12 +29,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import type { EventComment, EventData, EventPhoto, FoodOption, TaskRole } from '@/types';
-import { getEventById, signupEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset } from '@/lib/domainApi';
+import { getEventById, signupEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, addComment as addCommentApi, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
 import { RichTextViewer } from '@/components/RichTextEditor';
-import { moviePool, movieDetailMap, membersData, taskPresets } from '@/mock/data';
+import { taskPresets } from '@/mock/data';
 
 const sceneToTag: Record<string, string> = {
   movieNight: '电影夜',
@@ -88,6 +88,14 @@ export default function EventDetailPage() {
     severity: 'success',
     message: '',
   });
+
+  // API-loaded data for movies & members
+  const [allMovies, setAllMovies] = useState<any[]>([]);
+  const [allMembers, setAllMembers] = useState<{ name: string }[]>([]);
+  useEffect(() => {
+    fetchMoviesApi().then((m: any[]) => setAllMovies(m)).catch(() => {});
+    fetchMembersApi().then((m: any[]) => setAllMembers(m)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const run = async () => {
@@ -304,7 +312,7 @@ export default function EventDetailPage() {
             {event.film && (
               <Card variant="outlined" sx={{ mb: 2, cursor: 'pointer' }}>
                 <CardActionArea onClick={() => {
-                  const m = moviePool.find((p) => p.title === event.film);
+                  const m = allMovies.find((p: any) => p.title === event.film);
                   navigate(m ? `/discover/movies/${m.id}` : '/discover');
                 }}>
                   <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
@@ -332,14 +340,14 @@ export default function EventDetailPage() {
               {(event.nominations?.length ?? 0) > 0 ? (
                 <Stack spacing={1.5}>
                   {event.nominations!.map((movieId) => {
-                    const detail = movieDetailMap[movieId];
-                    const pool = moviePool.find((m) => m.id === movieId);
-                    if (!detail && !pool) return null;
-                    const title = detail?.title ?? pool!.title;
-                    const dir = detail?.dir ?? pool!.dir;
-                    const year = detail?.year ?? pool!.year;
-                    const totalVotes = detail?.v ?? pool!.v;
-                    const voters = detail?.voters ?? [];
+                    const detail = allMovies.find((m: any) => m.id === movieId);
+                    const pool = detail;
+                    if (!detail) return null;
+                    const title = detail.title;
+                    const dir = detail.director;
+                    const year = detail.year;
+                    const totalVotes = detail._count?.votes ?? 0;
+                    const voters = (detail.votes ?? []).map((v: any) => v.user?.name).filter(Boolean);
                     const attendeeVotes = voters.filter((name) => event.people.includes(name)).length;
                     const isSelected = event.film === title;
                     const isHost = user?.name === event.host;
@@ -426,10 +434,10 @@ export default function EventDetailPage() {
             />
             {(() => {
               const nq = nominateSearch.toLowerCase();
-              const filtered = moviePool.filter((m) => {
-                if (m.status?.includes('已放映')) return false;
+              const filtered = allMovies.filter((m: any) => {
+                if (m.status === 'screened') return false;
                 if ((event.nominations ?? []).includes(m.id)) return false;
-                if (nq && !m.title.toLowerCase().includes(nq) && !m.dir.toLowerCase().includes(nq) && !m.by.toLowerCase().includes(nq)) return false;
+                if (nq && !m.title.toLowerCase().includes(nq) && !(m.director ?? '').toLowerCase().includes(nq) && !(m.recommendedBy?.name ?? '').toLowerCase().includes(nq)) return false;
                 return true;
               });
               return filtered.length > 0 ? (
@@ -449,7 +457,7 @@ export default function EventDetailPage() {
                             <Poster title={m.title} w={28} h={40} />
                             <Box>
                               <Typography variant="body2" fontWeight={600}>{m.title}</Typography>
-                              <Typography variant="caption" color="text.secondary">{m.year} · {m.dir} · {m.v} 票</Typography>
+                              <Typography variant="caption" color="text.secondary">{m.year} · {m.director} · {m._count?.votes ?? 0} 票</Typography>
                             </Box>
                           </Stack>
                         </CardContent>
@@ -561,7 +569,7 @@ export default function EventDetailPage() {
                         sx={{ minWidth: 110 }}
                       >
                         <MenuItem value="">待认领</MenuItem>
-                        {membersData.map((m) => (
+                        {allMembers.map((m) => (
                           <MenuItem key={m.name} value={m.name}>{m.name}</MenuItem>
                         ))}
                       </Select>
@@ -1003,11 +1011,15 @@ export default function EventDetailPage() {
                   placeholder="说点什么..."
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={(e) => {
+                  onKeyDown={async (e) => {
                     if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
                       e.preventDefault();
-                      setComments((prev) => [...prev, { name: user.name ?? '我', text: commentText.trim(), date: '刚刚' }]);
+                      const text = commentText.trim();
                       setCommentText('');
+                      setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
+                      try {
+                        await addCommentApi({ entityType: 'event', entityId: eventId!, authorId: user.id, content: text });
+                      } catch { /* optimistic UI */ }
                     }
                   }}
                 />
@@ -1015,10 +1027,14 @@ export default function EventDetailPage() {
                   variant="contained"
                   size="small"
                   disabled={!commentText.trim()}
-                  onClick={() => {
+                  onClick={async () => {
                     if (commentText.trim()) {
-                      setComments((prev) => [...prev, { name: user.name ?? '我', text: commentText.trim(), date: '刚刚' }]);
+                      const text = commentText.trim();
                       setCommentText('');
+                      setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
+                      try {
+                        await addCommentApi({ entityType: 'event', entityId: eventId!, authorId: user.id, content: text });
+                      } catch { /* optimistic UI */ }
                     }
                   }}
                   sx={{ mt: 0.5 }}

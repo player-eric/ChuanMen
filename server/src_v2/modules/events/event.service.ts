@@ -54,4 +54,21 @@ export class EventService {
   removeRecapPhoto(eventId: string, photoUrl: string) {
     return this.repository.removeRecapPhoto(eventId, photoUrl);
   }
+
+  signup(eventId: string, input: unknown) {
+    const data = z.object({
+      userId: z.string().min(1),
+      status: z.string().optional(),
+    }).parse(input);
+    return this.repository.signup(eventId, data.userId, data.status);
+  }
+
+  cancelSignup(eventId: string, input: unknown) {
+    const data = z.object({ userId: z.string().min(1) }).parse(input);
+    return this.repository.cancelSignup(eventId, data.userId);
+  }
+
+  listPast() {
+    return this.repository.listPast();
+  }
 }

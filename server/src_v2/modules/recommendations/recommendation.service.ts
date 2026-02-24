@@ -25,6 +25,18 @@ export class RecommendationService {
     return this.repository.list(parsed.category as RecommendationCategory | undefined);
   }
 
+  getById(id: string) {
+    return this.repository.getById(id);
+  }
+
+  search(query: unknown) {
+    const parsed = z.object({
+      q: z.string().min(1),
+      category: z.enum(['movie', 'recipe', 'music', 'place']).optional(),
+    }).parse(query);
+    return this.repository.search(parsed.q, parsed.category as RecommendationCategory | undefined);
+  }
+
   createRecommendation(input: unknown) {
     const data = createSchema.parse(input);
     return this.repository.create(data);

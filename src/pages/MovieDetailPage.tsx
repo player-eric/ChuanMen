@@ -19,11 +19,11 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import type { EventComment, MovieDetailData, MoviePool } from '@/types';
+import type { EventComment } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
-import { upcomingEvents, endedEvents, pastEvents } from '@/mock/data';
+import { toggleMovieVote, addComment } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 
 export default function MovieDetailPage() {
@@ -54,52 +54,53 @@ export default function MovieDetailPage() {
     );
   }
 
-  const isDetail = 'voters' in raw;
-  const movie = raw as MovieDetailData;
-  const basic = raw as MoviePool;
-  const title = isDetail ? movie.title : basic.title;
-  const year = isDetail ? movie.year : basic.year;
-  const dir = isDetail ? movie.dir : basic.dir;
-  const by = isDetail ? movie.by : basic.by;
-  const status = isDetail ? movie.status : basic.status;
-  const v = isDetail ? movie.v : basic.v;
+  const isDetail = 'voters' in raw || 'votes' in raw;
+  const movie = raw as any;
+  const title = movie.title;
+  const year = movie.year;
+  const dir = movie.director ?? (movie as any).dir ?? '';
+  const by = movie.recommendedBy?.name ?? (movie as any).by ?? '';
+  const status = movie.status;
+  const v = movie._count?.votes ?? (movie as any).v ?? 0;
 
   // Poster gradient data
   const poster = posters[title] || { bg: `linear-gradient(135deg, ${c.s3}, ${c.s2})`, accent: c.text3, sub: '' };
 
-  // Event connections — match by film title
-  const upcomingFilm = upcomingEvents.filter((e) => e.film === title && (e.phase === 'open' || e.phase === 'invite' || e.phase === 'closed'));
-  const endedFilm = endedEvents.filter((e) => e.film === title);
-  const pastFilm = pastEvents.filter((e) => e.film === title);
+  // Event connections — from API data
+  const upcomingFilm = (movie.selectedInEvents ?? []).filter((e: any) => {
+    const starts = e.startsAt ? new Date(e.startsAt) : null;
+    return starts && starts > new Date() && e.status !== 'cancelled';
+  });
 
-  // Merge ended events + pastEvents + screenings for history section
-  const historyItems: { title: string; date: string; host: string; eventId?: number; people?: number }[] = [];
-
-  // From endedEvents
-  for (const e of endedFilm) {
-    historyItems.push({ title: e.title, date: e.date, host: e.host, eventId: e.id, people: e.people.length });
+  // History from screenedEvents
+  const historyItems: { title: string; date: string; host: string; eventId?: string; people?: number }[] = [];
+  for (const se of (movie.screenedEvents ?? [])) {
+    const evt = se.event ?? se;
+    historyItems.push({
+      title: evt.title ?? '',
+      date: evt.startsAt ? new Date(evt.startsAt).toLocaleDateString('zh-CN') : '',
+      host: evt.host?.name ?? '',
+      eventId: evt.id,
+      people: evt._count?.signups,
+    });
   }
-  // From pastEvents
-  for (const e of pastFilm) {
-    historyItems.push({ title: e.title, date: e.date, host: e.host, people: e.people });
-  }
-  // From screenings (only those not already covered by pastEvents/endedEvents)
-  if (isDetail) {
-    for (const s of movie.screenings) {
-      const alreadyCovered = historyItems.some((h) => h.date === s.date && h.host === s.host);
-      // Also skip if this screening maps to an upcoming/live event
-      const isUpcomingOrLive = upcomingFilm.some((e) => e.id === s.eventId);
-      if (!alreadyCovered && !isUpcomingOrLive) {
-        historyItems.push({ title: s.eventTitle, date: s.date, host: s.host, eventId: s.eventId });
-      }
+  // Also past selectedInEvents
+  for (const e of (movie.selectedInEvents ?? [])) {
+    const starts = e.startsAt ? new Date(e.startsAt) : null;
+    if (starts && starts <= new Date() && !historyItems.some((h) => h.eventId === e.id)) {
+      historyItems.push({
+        title: e.title ?? '',
+        date: starts.toLocaleDateString('zh-CN'),
+        host: e.host?.name ?? '',
+        eventId: e.id,
+        people: e._count?.signups,
+      });
     }
   }
 
-  // Upcoming movieNight events this movie can be nominated to
-  const movieId = isDetail ? movie.id : basic.id;
-  const nominatableEvents = upcomingEvents.filter(
-    (e) => e.scene === 'movieNight' && (e.phase === 'invite' || e.phase === 'open') && !(e.nominations ?? []).includes(movieId),
-  );
+  // Nominatable events — for now, empty array since we'd need all upcoming events
+  const movieId = movie.id;
+  const nominatableEvents: any[] = [];
 
   return (
     <Box sx={{ maxWidth: 680, mx: 'auto' }}>
@@ -167,16 +168,14 @@ export default function MovieDetailPage() {
           {/* Chips bar below hero */}
           <CardContent sx={{ pt: 1.5, pb: 1.5 }}>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {isDetail && movie.genre && <Chip size="small" variant="outlined" label={movie.genre} />}
-              {isDetail && movie.duration && <Chip size="small" variant="outlined" label={movie.duration} />}
-              {isDetail && movie.rating && <Chip size="small" variant="outlined" label={`⭐ ${movie.rating}`} />}
+              {movie.doubanRating && <Chip size="small" variant="outlined" label={`⭐ ${movie.doubanRating}`} />}
               {status && <Chip size="small" color="success" label={`✓ ${status}`} />}
             </Stack>
           </CardContent>
         </Card>
 
         {/* 2. Synopsis */}
-        {isDetail && movie.synopsis && (
+        {movie.synopsis && (
           <Card>
             <CardContent>
               <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>简介</Typography>
@@ -209,22 +208,31 @@ export default function MovieDetailPage() {
               <Button
                 variant={voted ? 'contained' : 'outlined'}
                 size="small"
-                onClick={() => setVoted(!voted)}
+                onClick={async () => {
+                  if (!user?.id) return;
+                  try {
+                    await toggleMovieVote(String(raw.id ?? (raw as any).id), user.id);
+                    setVoted(!voted);
+                  } catch { /* ignore */ }
+                }}
               >
                 ▲ {voted ? '已投票' : '我想看'}
               </Button>
             </Stack>
-            {isDetail && movie.voters.length > 0 && (
+            {(movie.votes ?? []).length > 0 && (
               <AvatarGroup max={10} sx={{ justifyContent: 'flex-start' }}>
-                {movie.voters.map((name) => (
+                {(movie.votes ?? []).map((vote: any) => {
+                  const name = vote.user?.name ?? '?';
+                  return (
                   <Avatar
-                    key={name}
+                    key={vote.id ?? name}
                     sx={{ width: 32, height: 32, cursor: 'pointer' }}
                     onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
                   >
                     {name[0]}
                   </Avatar>
-                ))}
+                  );
+                })}
               </AvatarGroup>
             )}
           </CardContent>
@@ -274,13 +282,13 @@ export default function MovieDetailPage() {
             <CardContent>
               <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>即将放映</Typography>
               <Stack spacing={1}>
-                {upcomingFilm.map((event) => (
+                {upcomingFilm.map((event: any) => (
                   <Card key={event.id} variant="outlined">
                     <CardActionArea onClick={() => navigate(`/events/${event.id}`)}>
                       <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
                         <Typography variant="body2" fontWeight={600}>{event.title}</Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {event.date} · {event.host} Host · 还剩 {event.spots} 位
+                          {event.startsAt ? new Date(event.startsAt).toLocaleDateString('zh-CN') : ''} · {event.host?.name ?? ''} Host
                         </Typography>
                       </CardContent>
                     </CardActionArea>
@@ -357,11 +365,15 @@ export default function MovieDetailPage() {
                   placeholder="说点什么..."
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={(e) => {
+                  onKeyDown={async (e) => {
                     if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
                       e.preventDefault();
-                      setComments((prev) => [...prev, { name: user.name ?? '我', text: commentText.trim(), date: '刚刚' }]);
+                      const text = commentText.trim();
                       setCommentText('');
+                      setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
+                      try {
+                        await addComment({ entityType: 'movie', entityId: String(raw.id ?? (raw as any).id), authorId: user.id, content: text });
+                      } catch { /* optimistic update already done */ }
                     }
                   }}
                 />
@@ -369,10 +381,14 @@ export default function MovieDetailPage() {
                   variant="contained"
                   size="small"
                   disabled={!commentText.trim()}
-                  onClick={() => {
+                  onClick={async () => {
                     if (commentText.trim()) {
-                      setComments((prev) => [...prev, { name: user.name ?? '我', text: commentText.trim(), date: '刚刚' }]);
+                      const text = commentText.trim();
                       setCommentText('');
+                      setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
+                      try {
+                        await addComment({ entityType: 'movie', entityId: String(raw.id ?? (raw as any).id), authorId: user.id, content: text });
+                      } catch { /* optimistic update already done */ }
                     }
                   }}
                   sx={{ mt: 0.5 }}

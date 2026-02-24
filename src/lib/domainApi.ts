@@ -1,5 +1,3 @@
-import { fetchRecommendations, fetchRecommendationById } from '@/mock/api';
-
 type EntityMap = Record<string, unknown>;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
@@ -154,7 +152,7 @@ export async function getUserByEmail(email: string) {
 }
 
 export async function searchEvents(keyword: string) {
-  return requestJson<{ items: EntityMap[] }>(`/api/search/events${toQueryString({ q: keyword })}`);
+  return requestJson<{ items: EntityMap[] }>(`/api/events${toQueryString({ q: keyword })}`);
 }
 
 export async function createSmallGroupEvent(payload: {
@@ -182,15 +180,15 @@ export async function getEventById(id: string) {
 }
 
 export async function signupEvent(eventId: string, userId: string) {
-  return requestJson<EntityMap>('/api/event-signups', {
+  return requestJson<EntityMap>(`/api/events/${eventId}/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ eventId, userId, status: 'accepted' }),
+    body: JSON.stringify({ userId, status: 'accepted' }),
   });
 }
 
 export async function searchProposals(keyword: string) {
-  return requestJson<{ items: EntityMap[] }>(`/api/search/proposals${toQueryString({ q: keyword })}`);
+  return requestJson<{ items: EntityMap[] }>(`/api/proposals/search${toQueryString({ q: keyword })}`);
 }
 
 export async function createProposal(payload: {
@@ -206,14 +204,9 @@ export async function createProposal(payload: {
 }
 
 export async function searchRecommendations(category: RecommendationCategory, keyword: string) {
-  try {
-    return await requestJson<{ items: EntityMap[] }>(
-      `/api/search/recommendations${toQueryString({ category, q: keyword })}`,
-    );
-  } catch {
-    // Fallback to local mock data (CSR / Amplify without backend)
-    return fetchRecommendations(category, keyword);
-  }
+  return requestJson<{ items: EntityMap[] }>(
+    `/api/recommendations/search${toQueryString({ category, q: keyword })}`,
+  );
 }
 
 export async function createRecommendation(payload: {
@@ -233,14 +226,7 @@ export async function createRecommendation(payload: {
 }
 
 export async function getRecommendationById(id: string) {
-  try {
-    return await requestJson<EntityMap>(`/api/recommendations/${id}`);
-  } catch {
-    // Fallback to local mock data (CSR / Amplify without backend)
-    const item = await fetchRecommendationById(id);
-    if (!item) throw new Error('未找到该推荐');
-    return item;
-  }
+  return requestJson<EntityMap>(`/api/recommendations/${id}`);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -305,4 +291,236 @@ export async function removeEventRecapPhoto(eventId: string, photoUrl: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ photoUrl }),
   });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Feed API  (aggregated timeline)
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchFeedApi(userId?: string) {
+  return requestJson<EntityMap>(`/api/feed${toQueryString({ userId: userId ?? '' })}`);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Events API  (loader helpers)
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchEventsApi() {
+  return requestJson<EntityMap[]>('/api/events');
+}
+
+export async function fetchPastEventsApi() {
+  return requestJson<EntityMap[]>('/api/events/past');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Movies API
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchMoviesApi() {
+  return requestJson<EntityMap[]>('/api/movies');
+}
+
+export async function fetchMovieByIdApi(id: string) {
+  return requestJson<EntityMap>(`/api/movies/${id}`);
+}
+
+export async function fetchScreenedMoviesApi() {
+  return requestJson<EntityMap[]>('/api/movies/screened');
+}
+
+export async function toggleMovieVote(movieId: string, userId: string) {
+  return requestJson<EntityMap>(`/api/movies/${movieId}/vote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Proposals API
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchProposalsApi() {
+  return requestJson<EntityMap[]>('/api/proposals');
+}
+
+export async function fetchProposalByIdApi(id: string) {
+  return requestJson<EntityMap>(`/api/proposals/${id}`);
+}
+
+export async function toggleProposalVote(proposalId: string, userId: string) {
+  return requestJson<EntityMap>(`/api/proposals/${proposalId}/vote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function updateProposal(proposalId: string, payload: { description?: string; status?: string }) {
+  return requestJson<EntityMap>(`/api/proposals/${proposalId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Members API
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchMembersApi() {
+  return requestJson<EntityMap[]>('/api/users');
+}
+
+export async function fetchUserByIdApi(id: string) {
+  return requestJson<EntityMap>(`/api/users/${id}`);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Postcard / Cards API
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchPostcardsApi(userId: string) {
+  return requestJson<{ received: EntityMap[]; sent: EntityMap[]; credits: number }>(
+    `/api/postcards${toQueryString({ userId })}`,
+  );
+}
+
+export async function sendPostcard(payload: {
+  fromId: string;
+  toId: string;
+  message: string;
+  eventId?: string;
+  visibility?: 'public' | 'private';
+  photoUrl?: string;
+  tags?: string[];
+}) {
+  return requestJson<EntityMap>('/api/postcards', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   About / Announcements API
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchAboutStatsApi() {
+  return requestJson<{ memberCount: number; hostCount: number; eventCount: number; months: number }>(
+    '/api/about/stats',
+  );
+}
+
+export async function fetchAboutContentApi(type: string) {
+  return requestJson<EntityMap[]>(`/api/about/content/${type}`);
+}
+
+export async function fetchAnnouncementsApi() {
+  return requestJson<EntityMap[]>('/api/about/announcements');
+}
+
+export async function fetchAnnouncementByIdApi(id: string) {
+  return requestJson<EntityMap>(`/api/about/announcements/${id}`);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Profile API  (aggregated)
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchProfileApi(userId: string) {
+  return requestJson<EntityMap>(`/api/profile${toQueryString({ userId })}`);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Comments API
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchCommentsApi(entityType: string, entityId: string) {
+  return requestJson<EntityMap[]>(
+    `/api/comments${toQueryString({ entityType, entityId })}`,
+  );
+}
+
+export async function addComment(payload: {
+  entityType: string;
+  entityId: string;
+  authorId: string;
+  content: string;
+}) {
+  return requestJson<EntityMap>('/api/comments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteComment(id: string) {
+  return requestJson<{ ok: boolean }>(`/api/comments/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Likes API
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchLikesApi(entityType: string, entityId: string) {
+  return requestJson<EntityMap[]>(
+    `/api/likes${toQueryString({ entityType, entityId })}`,
+  );
+}
+
+export async function toggleLike(entityType: string, entityId: string, userId: string) {
+  return requestJson<EntityMap>('/api/likes/toggle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entityType, entityId, userId }),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Application API
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function submitApplication(payload: {
+  displayName: string;
+  location: string;
+  bio: string;
+  selfAsFriend: string;
+  idealFriend: string;
+  participationPlan: string;
+  email: string;
+  wechatId: string;
+  referralSource?: string;
+  coverImageUrl?: string;
+}) {
+  return requestJson<{ ok: boolean; id: string }>('/api/users/apply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Event Cancel Signup
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function cancelSignup(eventId: string, userId: string) {
+  return requestJson<EntityMap>(`/api/events/${eventId}/signup`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   List Recommendations
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchRecommendationsApi(category?: string) {
+  return requestJson<EntityMap[]>(
+    `/api/recommendations${toQueryString({ category: category ?? '' })}`,
+  );
 }

@@ -20,7 +20,8 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import type { DiscoverPageData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { Poster } from '@/components/Poster';
-import { moviePool, bookPool as bookPoolData } from '@/mock/data';
+import { bookPool as bookPoolData } from '@/mock/data';
+import { toggleMovieVote } from '@/lib/domainApi';
 
 /* ═══ DiscoverPage ═══ */
 export default function DiscoverPage() {
@@ -74,7 +75,12 @@ function MoviesSection() {
   const [results, setResults] = useState(false);
   const [added, setAdded] = useState(false);
   const [votes, setVotes] = useState<Record<number, boolean>>({});
-  const toggle = (id: number) => setVotes((v) => ({ ...v, [id]: !v[id] }));
+  const toggle = async (id: number) => {
+    setVotes((v) => ({ ...v, [id]: !v[id] }));
+    if (user?.id) {
+      try { await toggleMovieVote(String(id), user.id); } catch { /* optimistic */ }
+    }
+  };
 
   const { pool, screened } = data;
 
@@ -181,8 +187,8 @@ function MoviesSection() {
 
       {tab === 'screened' && (
         <Grid container spacing={1.5}>
-          {screened.map((m, i) => {
-            const match = moviePool.find((p) => p.title === m.title);
+          {screened.map((m: any, i: number) => {
+            const match = pool.find((p: any) => p.title === m.title);
             return (
               <Grid key={i} size={{ xs: 12, md: 6 }}>
                 <Card>

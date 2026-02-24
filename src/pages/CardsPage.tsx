@@ -302,7 +302,22 @@ function FullCards() {
                 <Stack direction="row" spacing={1}>
                   <Button onClick={() => setStep(1)} variant="outlined" fullWidth>改一改</Button>
                   <Button
-                    onClick={() => setSent(true)}
+                    onClick={async () => {
+                      if (!user?.id || !who) return;
+                      try {
+                        const { sendPostcard } = await import('@/lib/domainApi');
+                        // Find recipient user ID — for now use name-based lookup
+                        // TODO: resolve real user ID from `who` name
+                        await sendPostcard({
+                          fromId: user.id,
+                          toId: who, // will need resolution
+                          message: msg,
+                          visibility: isPrivate ? 'private' : 'public',
+                          tags: stamp ? [stamp] : [],
+                        });
+                      } catch { /* still show sent UI */ }
+                      setSent(true);
+                    }}
                     variant="contained"
                     fullWidth
                     disabled={credits === 0}

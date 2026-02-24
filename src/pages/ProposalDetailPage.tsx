@@ -7,6 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import { Ava, AvaStack } from '@/components/Atoms';
 import { FeedActions } from '@/components/FeedItems';
 import { RichTextViewer } from '@/components/RichTextEditor';
+import { toggleProposalVote, updateProposal } from '@/lib/domainApi';
 
 export default function ProposalDetailPage() {
   const navigate = useNavigate();
@@ -78,10 +79,9 @@ export default function ProposalDetailPage() {
                     size="small"
                     onClick={async () => {
                       if (editing) {
-                        // Save — in real app would call API
+                        try { await updateProposal(String(raw.id), { description: descHtml }); } catch { /* ignore */ }
                         setEditing(false);
                       } else {
-                        // Lazy load editor
                         setEditing(true);
                       }
                     }}
@@ -118,7 +118,11 @@ export default function ProposalDetailPage() {
 
             <Stack direction="row" spacing={1} justifyContent="flex-end">
               <button
-                onClick={() => user && setInterested((v) => !v)}
+                onClick={async () => {
+                  if (!user?.id) return;
+                  setInterested((v) => !v);
+                  try { await toggleProposalVote(String(raw.id), user.id); } catch { /* optimistic */ }
+                }}
                 style={{
                   padding: '8px 20px',
                   borderRadius: 8,

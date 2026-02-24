@@ -14,6 +14,27 @@ export class RecommendationRepository {
     });
   }
 
+  getById(id: string) {
+    return this.prisma.recommendation.findUnique({
+      where: { id },
+      include: { author: true, tags: true },
+    });
+  }
+
+  search(keyword: string, category?: RecommendationCategory) {
+    return this.prisma.recommendation.findMany({
+      where: {
+        ...(category ? { category } : {}),
+        OR: [
+          { title: { contains: keyword, mode: 'insensitive' } },
+          { description: { contains: keyword, mode: 'insensitive' } },
+        ],
+      },
+      orderBy: [{ voteCount: 'desc' }, { createdAt: 'desc' }],
+      include: { author: true, tags: true },
+    });
+  }
+
   create(input: {
     category: RecommendationCategory;
     title: string;

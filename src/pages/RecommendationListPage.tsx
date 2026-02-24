@@ -17,7 +17,6 @@ import type { RecommendationCategory } from '@/lib/domainApi';
 import { searchRecommendations } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { Poster } from '@/components/Poster';
-import { moviePool } from '@/mock/data';
 
 const categoryMap: Record<RecommendationCategory, { title: string; icon: string }> = {
   movie: { title: '电影推荐', icon: '🎬' },
@@ -109,11 +108,10 @@ export default function RecommendationListPage() {
       <Stack spacing={1.5}>
         {items.map((item) => {
           const title = String(item.title ?? '');
-          // For movie items, link to MovieDetailPage if we have a matching movie
-          const movieMatch = currentCategory === 'movie' ? moviePool.find((m) => m.title === title) : null;
-          const href = movieMatch
-            ? `/discover/movies/${movieMatch.id}`
-            : `/discover/${currentCategory}/${String(item._id)}`;
+          const itemId = String(item._id ?? item.id ?? '');
+          const href = currentCategory === 'movie'
+            ? `/discover/movies/${itemId}`
+            : `/discover/${currentCategory}/${itemId}`;
           return (
             <Card key={String(item._id)}>
               <CardActionArea onClick={() => navigate(href)}>

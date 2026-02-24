@@ -26,7 +26,8 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import { useAuth } from '@/auth/AuthContext';
-import { moviePool, membersData, taskPresets } from '@/mock/data';
+import { taskPresets } from '@/mock/data';
+import { createSmallGroupEvent, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
 import type { FoodOption, TaskRole } from '@/types';
 import { Poster } from '@/components/Poster';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -90,6 +91,15 @@ export default function EventCreatePage() {
   // Title image
   const [titleImageUrl, setTitleImageUrl] = useState('');
 
+  // API-loaded data for members & movies
+  const [allMembers, setAllMembers] = useState<{ name: string; avatar?: string }[]>([]);
+  const [allMovies, setAllMovies] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchMembersApi().then((m: any[]) => setAllMembers(m)).catch(() => {});
+    fetchMoviesApi().then((m: any[]) => setAllMovies(m)).catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!user) {
       navigate('/login', { replace: true });
@@ -134,18 +144,30 @@ export default function EventCreatePage() {
 
   const filteredMembers = useMemo(() => {
     const q = inviteSearch.toLowerCase();
-    if (!q) return membersData.slice(0, 6);
-    return membersData.filter((m) => m.name.toLowerCase().includes(q));
+    if (!q) return allMembers.slice(0, 6);
+    return allMembers.filter((m) => m.name.toLowerCase().includes(q));
   }, [inviteSearch]);
-  const availableMovies = moviePool.filter((m) => !m.status?.includes('已放映'));
-  const selectedFilmData = selectedFilm ? moviePool.find((m) => m.id === selectedFilm) : null;
+  const availableMovies = allMovies.filter((m) => m.status !== 'screened');
+  const selectedFilmData = selectedFilm ? allMovies.find((m) => m.id === selectedFilm) : null;
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     if (!name.trim() || !startDate || (!isHome && !location.trim())) {
       setError(isHome ? '请填写名称和日期' : '请填写名称、日期和地点');
       return;
     }
-    setCreated(true);
+    try {
+      await createSmallGroupEvent({
+        title: name.trim(),
+        hostId: user.id,
+        location: isHome ? '(居家)' : location.trim(),
+        startsAt: combineDT(startDate, startTime || '19:00'),
+        capacity,
+        description,
+      });
+      setCreated(true);
+    } catch (err: any) {
+      setError(err?.message ?? '创建失败，请重试');
+    }
   };
 
   const openPicker = (target: 'film' | 'nomination') => {
@@ -167,7 +189,7 @@ export default function EventCreatePage() {
   const q = movieSearch.toLowerCase();
   const pickerMovies = availableMovies.filter((m) => {
     if (moviePickerTarget === 'nomination' && (nominations.includes(m.id) || m.id === selectedFilm)) return false;
-    if (q && !m.title.toLowerCase().includes(q) && !m.dir.toLowerCase().includes(q) && !m.by.toLowerCase().includes(q)) return false;
+    if (q && !m.title.toLowerCase().includes(q) && !(m.director ?? '').toLowerCase().includes(q) && !(m.recommendedBy?.name ?? '').toLowerCase().includes(q)) return false;
     return true;
   });
 
@@ -378,7 +400,7 @@ export default function EventCreatePage() {
                         sx={{ minWidth: 110 }}
                       >
                         <MenuItem value="">待认领</MenuItem>
-                        {membersData.map((m) => (
+                        {allMembers.map((m) => (
                           <MenuItem key={m.name} value={m.name}>{m.name}</MenuItem>
                         ))}
                       </Select>
@@ -440,7 +462,7 @@ export default function EventCreatePage() {
                             <Box sx={{ flex: 1 }}>
                               <Typography variant="body2" fontWeight={700}>{selectedFilmData.title}</Typography>
                               <Typography variant="caption" color="text.secondary">
-                                {selectedFilmData.year} · {selectedFilmData.dir} · {selectedFilmData.v} 票
+                                {selectedFilmData.year} · {selectedFilmData.director} · {selectedFilmData._count?.votes ?? 0} 票
                               </Typography>
                             </Box>
                             <Button
@@ -476,7 +498,7 @@ export default function EventCreatePage() {
                           初始提名 ({nominations.length})
                         </Typography>
                         {nominations.map((id) => {
-                          const m = moviePool.find((p) => p.id === id);
+                          const m = allMovies.find((p: any) => p.id === id);
                           if (!m) return null;
                           return (
                             <Card key={id} variant="outlined">
@@ -486,7 +508,7 @@ export default function EventCreatePage() {
                                   <Box sx={{ flex: 1 }}>
                                     <Typography variant="body2" fontWeight={600}>{m.title}</Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                      {m.year} · {m.dir} · {m.v} 票
+                                      {m.year} · {m.director} · {m._count?.votes ?? 0} 票
                                     </Typography>
                                   </Box>
                                   <Button
@@ -543,7 +565,7 @@ export default function EventCreatePage() {
                             <Box>
                               <Typography variant="body2" fontWeight={600}>{m.title}</Typography>
                               <Typography variant="caption" color="text.secondary">
-                                {m.year} · {m.dir} · {m.v} 票
+                                {m.year} · {m.director} · {m._count?.votes ?? 0} 票
                               </Typography>
                             </Box>
                           </Stack>

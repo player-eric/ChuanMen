@@ -7,6 +7,9 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/', async () => service.listEvents());
 
+  // Past/completed events - must come before /:id
+  app.get('/past', async () => service.listPast());
+
   app.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const event = await service.getEventById(id);
@@ -38,5 +41,17 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     if (!photoUrl) return reply.badRequest('缺少 photoUrl');
     const event = await service.removeRecapPhoto(id, photoUrl);
     return { ok: true, event };
+  });
+
+  // Event signup
+  app.post('/:id/signup', async (request) => {
+    const { id } = request.params as { id: string };
+    return service.signup(id, request.body);
+  });
+
+  // Cancel signup
+  app.delete('/:id/signup', async (request) => {
+    const { id } = request.params as { id: string };
+    return service.cancelSignup(id, request.body);
   });
 };
