@@ -1,0 +1,409 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ChuanMen Server — ECS Fargate (Web + Agent Worker) + EventBridge
+
+# ─────────────────────────── Parameters ───────────────────────────
+Parameters:
+  # ── Networking ──
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC to deploy into
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: First public subnet (for ALB)
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: Second public subnet (for ALB, different AZ)
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: First private subnet (for ECS tasks)
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: Second private subnet (for ECS tasks)
+
+  # ── Container image ──
+  ImageUri:
+    Type: String
+    Description: 'Full ECR image URI, e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com/chuanmen-server:latest'
+
+  # ── App config ──
+  FrontendOrigin:
+    Type: String
+    Default: 'https://www.chuanmen.co'
+  AwsRegion:
+    Type: String
+    Default: us-east-1
+  S3Bucket:
+    Type: String
+    Default: chuanmen-media
+  SesFromEmail:
+    Type: String
+    Default: noreply@chuanmen.co
+
+  # ── Secrets Manager ARNs (each stores a single plain-text value) ──
+  DatabaseUrlSecretArn:
+    Type: String
+    Description: Secrets Manager ARN for DATABASE_URL
+  AwsAccessKeyIdSecretArn:
+    Type: String
+    Description: Secrets Manager ARN for AWS_ACCESS_KEY_ID
+  AwsSecretAccessKeySecretArn:
+    Type: String
+    Description: Secrets Manager ARN for AWS_SECRET_ACCESS_KEY
+
+  # ── Scaling ──
+  DesiredCount:
+    Type: Number
+    Default: 1
+    MinValue: 1
+
+  # ── Agent schedule ──
+  AgentScheduleExpression:
+    Type: String
+    Default: 'rate(10 minutes)'
+    Description: 'EventBridge schedule for agent tick (e.g. rate(10 minutes))'
+
+  # ── Optional: HTTPS ──
+  CertificateArn:
+    Type: String
+    Default: ''
+    Description: ACM certificate ARN for HTTPS (leave blank for HTTP-only)
+
+Conditions:
+  HasCertificate: !Not [!Equals [!Ref CertificateArn, '']]
+
+# ─────────────────────────── Resources ────────────────────────────
+Resources:
+  # ==================== CloudWatch Logs ====================
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/chuanmen-server'
+      RetentionInDays: 30
+
+  # ==================== IAM Roles ====================
+  EcsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'chuanmen-ecs-execution-${AWS::StackName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: ReadSecrets
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Ref DatabaseUrlSecretArn
+                  - !Ref AwsAccessKeyIdSecretArn
+                  - !Ref AwsSecretAccessKeySecretArn
+
+  EcsTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'chuanmen-ecs-task-${AWS::StackName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AppPermissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub 'arn:aws:s3:::${S3Bucket}/*'
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Sub 'arn:aws:s3:::${S3Bucket}'
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: '*'
+
+  # ==================== Security Groups ====================
+  AlbSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ChuanMen ALB
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  EcsSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ChuanMen ECS tasks
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 4000
+          ToPort: 4000
+          SourceSecurityGroupId: !Ref AlbSg
+
+  # ==================== ALB ====================
+  Alb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: chuanmen-alb
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref AlbSg
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: chuanmen-tg
+      VpcId: !Ref VpcId
+      Protocol: HTTP
+      Port: 4000
+      TargetType: ip
+      HealthCheckPath: /api/health
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: '200'
+
+  # HTTP listener — always created
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref Alb
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - !If
+          - HasCertificate
+          - Type: redirect
+            RedirectConfig:
+              Protocol: HTTPS
+              Port: '443'
+              StatusCode: HTTP_301
+          - Type: forward
+            TargetGroupArn: !Ref TargetGroup
+
+  # HTTPS listener — only when certificate is provided
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: HasCertificate
+    Properties:
+      LoadBalancerArn: !Ref Alb
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # ==================== ECS Cluster ====================
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: chuanmen
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+
+  # ==================== Task Definitions ====================
+  # ---- Web Server (long-running) ----
+  WebTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: chuanmen-server
+      Cpu: '512'
+      Memory: '1024'
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt EcsExecutionRole.Arn
+      TaskRoleArn: !GetAtt EcsTaskRole.Arn
+      ContainerDefinitions:
+        - Name: chuanmen-server
+          Image: !Ref ImageUri
+          Essential: true
+          PortMappings:
+            - ContainerPort: 4000
+              Protocol: tcp
+          HealthCheck:
+            Command: ['CMD-SHELL', 'wget -qO- http://localhost:4000/api/health || exit 1']
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 15
+          Environment:
+            - { Name: APP_ENV, Value: prod }
+            - { Name: NODE_ENV, Value: production }
+            - { Name: PORT, Value: '4000' }
+            - { Name: TRUST_PROXY, Value: 'true' }
+            - { Name: FRONTEND_ORIGIN, Value: !Ref FrontendOrigin }
+            - { Name: AWS_REGION, Value: !Ref AwsRegion }
+            - { Name: AWS_S3_BUCKET, Value: !Ref S3Bucket }
+            - { Name: AWS_SES_FROM_EMAIL, Value: !Ref SesFromEmail }
+          Secrets:
+            - { Name: DATABASE_URL, ValueFrom: !Ref DatabaseUrlSecretArn }
+            - { Name: AWS_ACCESS_KEY_ID, ValueFrom: !Ref AwsAccessKeyIdSecretArn }
+            - { Name: AWS_SECRET_ACCESS_KEY, ValueFrom: !Ref AwsSecretAccessKeySecretArn }
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AwsRegion
+              awslogs-stream-prefix: ecs
+
+  # ---- Agent Worker (one-shot) ----
+  AgentTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: chuanmen-agent
+      Cpu: '256'
+      Memory: '512'
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt EcsExecutionRole.Arn
+      TaskRoleArn: !GetAtt EcsTaskRole.Arn
+      ContainerDefinitions:
+        - Name: chuanmen-agent
+          Image: !Ref ImageUri
+          Essential: true
+          Command: ['node', 'dist/workers/agentTick.js']
+          Environment:
+            - { Name: APP_ENV, Value: prod }
+            - { Name: NODE_ENV, Value: production }
+            - { Name: PORT, Value: '4000' }
+            - { Name: FRONTEND_ORIGIN, Value: !Ref FrontendOrigin }
+            - { Name: AWS_REGION, Value: !Ref AwsRegion }
+            - { Name: AWS_S3_BUCKET, Value: !Ref S3Bucket }
+            - { Name: AWS_SES_FROM_EMAIL, Value: !Ref SesFromEmail }
+          Secrets:
+            - { Name: DATABASE_URL, ValueFrom: !Ref DatabaseUrlSecretArn }
+            - { Name: AWS_ACCESS_KEY_ID, ValueFrom: !Ref AwsAccessKeyIdSecretArn }
+            - { Name: AWS_SECRET_ACCESS_KEY, ValueFrom: !Ref AwsSecretAccessKeySecretArn }
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AwsRegion
+              awslogs-stream-prefix: agent
+
+  # ==================== ECS Service (Web) ====================
+  WebService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - HttpListener
+    Properties:
+      ServiceName: chuanmen-web
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref WebTaskDef
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      HealthCheckGracePeriodSeconds: 60
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets:
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
+          SecurityGroups:
+            - !Ref EcsSg
+      LoadBalancers:
+        - ContainerName: chuanmen-server
+          ContainerPort: 4000
+          TargetGroupArn: !Ref TargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+
+  # ==================== EventBridge → Agent ====================
+  EventBridgeAgentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'chuanmen-eventbridge-agent-${AWS::StackName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: RunEcsTask
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ecs:RunTask
+                Resource: !Ref AgentTaskDef
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource:
+                  - !GetAtt EcsExecutionRole.Arn
+                  - !GetAtt EcsTaskRole.Arn
+
+  AgentScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: chuanmen-agent-tick
+      Description: Trigger AI agent cycle on schedule
+      ScheduleExpression: !Ref AgentScheduleExpression
+      State: ENABLED
+      Targets:
+        - Id: RunAgentTask
+          Arn: !GetAtt Cluster.Arn
+          RoleArn: !GetAtt EventBridgeAgentRole.Arn
+          EcsParameters:
+            TaskDefinitionArn: !Ref AgentTaskDef
+            LaunchType: FARGATE
+            TaskCount: 1
+            NetworkConfiguration:
+              AwsVpcConfiguration:
+                AssignPublicIp: DISABLED
+                Subnets:
+                  - !Ref PrivateSubnet1
+                SecurityGroups:
+                  - !Ref EcsSg
+
+# ─────────────────────────── Outputs ──────────────────────────────
+Outputs:
+  ClusterName:
+    Value: !Ref Cluster
+  WebServiceName:
+    Value: !GetAtt WebService.Name
+  AlbDnsName:
+    Description: ALB public DNS — point your API domain here with a CNAME / alias
+    Value: !GetAtt Alb.DNSName
+  AlbHostedZoneId:
+    Description: ALB hosted zone ID (for Route53 alias records)
+    Value: !GetAtt Alb.CanonicalHostedZoneID
+  LogGroupName:
+    Value: !Ref LogGroup

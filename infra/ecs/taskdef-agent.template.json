@@ -1,0 +1,48 @@
+{
+  "family": "chuanmen-agent",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "${ECS_EXECUTION_ROLE_ARN}",
+  "taskRoleArn": "${ECS_TASK_ROLE_ARN}",
+  "containerDefinitions": [
+    {
+      "name": "chuanmen-agent",
+      "image": "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}",
+      "essential": true,
+      "command": ["node", "dist/workers/agentTick.js"],
+      "environment": [
+        { "name": "APP_ENV", "value": "prod" },
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "PORT", "value": "4000" },
+        { "name": "FRONTEND_ORIGIN", "value": "${FRONTEND_ORIGIN}" },
+        { "name": "AWS_REGION", "value": "${AWS_REGION}" },
+        { "name": "AWS_S3_BUCKET", "value": "${AWS_S3_BUCKET}" },
+        { "name": "AWS_SES_FROM_EMAIL", "value": "${AWS_SES_FROM_EMAIL}" }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "${DATABASE_URL_SECRET_ARN}"
+        },
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "valueFrom": "${AWS_ACCESS_KEY_ID_SECRET_ARN}"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "valueFrom": "${AWS_SECRET_ACCESS_KEY_SECRET_ARN}"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "${CLOUDWATCH_LOG_GROUP}",
+          "awslogs-region": "${AWS_REGION}",
+          "awslogs-stream-prefix": "agent"
+        }
+      }
+    }
+  ]
+}
