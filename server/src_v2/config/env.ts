@@ -2,14 +2,21 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-const nodeEnv = process.env.NODE_ENV ?? 'development';
-const envFile = nodeEnv === 'production' ? '.env.production' : '.env.development';
+// APP_ENV drives which .env file to load: local | dev | prod
+const appEnv = process.env.APP_ENV ?? 'local';
+const envFileMap: Record<string, string> = {
+  local: '.env.development',
+  dev: '.env.dev',
+  prod: '.env.production',
+};
+const envFile = envFileMap[appEnv] ?? '.env.development';
 
+// Load the targeted .env first, then the symlinked .env as fallback
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 dotenv.config();
 
 const envSchema = z.object({
-  APP_ENV: z.enum(['local', 'prod']).default('local'),
+  APP_ENV: z.enum(['local', 'dev', 'prod']).default('local'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
   FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),

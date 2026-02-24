@@ -1,0 +1,50 @@
+# Local development: Postgres + MinIO (no server container — run with `npm run dev`)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: chuanmen-pg-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chuanmen
+      POSTGRES_PASSWORD: chuanmen
+      POSTGRES_DB: chuanmen_dev
+    ports:
+      - '5432:5432'
+    volumes:
+      - pg_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U chuanmen -d chuanmen_dev']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: chuanmen-minio-dev
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ':9001'
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio_dev_data:/data
+
+  minio-setup:
+    image: minio/mc:latest
+    container_name: chuanmen-minio-setup-dev
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 2; done;
+      mc mb -p local/chuanmen-media-dev || true;
+      echo 'MinIO bucket ready';
+      "
+
+volumes:
+  pg_dev_data:
+  minio_dev_data:
