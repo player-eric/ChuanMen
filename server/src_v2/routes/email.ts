@@ -11,6 +11,9 @@ const schema = z.object({
 
 export const emailRoutes: FastifyPluginAsync = async (app) => {
   app.post('/send', async (request, reply) => {
+    const userId = request.headers['x-user-id'] as string;
+    if (!userId) return reply.code(401).send({ error: '需要登录' });
+
     const payload = schema.parse(request.body);
     const result = await sendEmail(payload);
     return reply.send({ ok: true, messageId: result.MessageId });

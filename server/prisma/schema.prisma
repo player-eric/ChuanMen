@@ -25,7 +25,7 @@ enum EventTag {
 enum EventPhase {
   invite
   open
-  live
+  closed
   ended
   cancelled
 }
@@ -116,10 +116,11 @@ enum WeeklyLotteryStatus {
 // enum AgentPushGoal { A B C D E F G }
 // enum AgentPushChannel { email web feed }
 
-enum PushFrequency {
-  low
-  normal
-  high
+enum EmailState {
+  active
+  weekly
+  stopped
+  unsubscribed
 }
 
 enum MediaAssetStatus {
@@ -200,6 +201,7 @@ model User {
   recommendations      Recommendation[]
   postcardPurchases    PostcardPurchase[]
   announcements        Announcement[]       @relation("AnnouncementAuthor")
+  emailLogs            EmailLog[]
 }
 
 model UserOperatorRole {
@@ -225,15 +227,20 @@ model UserSocialTitle {
 }
 
 model UserPreference {
-  id            String           @id @default(cuid())
-  userId        String           @unique
-  pushEmail     Boolean          @default(true)
-  pushFrequency PushFrequency    @default(normal)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id              String     @id @default(cuid())
+  userId          String     @unique
+  emailState      EmailState @default(active)
+  unopenedStreak  Int        @default(0)
+  lastDailySentAt DateTime?
+  notifyEvents    Boolean    @default(true)
+  notifyCards     Boolean    @default(true)
+  notifyOps       Boolean    @default(true)
+  notifyAnnounce  Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
-  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mutedGoals    UserMutedGoal[]
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mutedGoals      UserMutedGoal[]
 }
 
 model UserMutedGoal {
@@ -258,7 +265,7 @@ model Event {
   startsAt               DateTime
   endsAt                 DateTime?
   capacity               Int                       @default(10)
-  tag                    EventTag                  @default(other)
+  tags                   EventTag[]                @default([other])
   phase                  EventPhase                @default(invite)
   status                 EventStatus               @default(scheduled)
   selectedMovieId        String?
@@ -312,25 +319,27 @@ model EventVisibilityExclusion {
 }
 
 model EventSignup {
-  id          String            @id @default(cuid())
-  eventId     String
-  userId      String
-  invitedById String?
-  status      EventSignupStatus @default(invited)
-  invitedAt   DateTime?
-  offeredAt   DateTime?
-  respondedAt DateTime?
-  participated Boolean          @default(false)
-  checkedInAt DateTime?
-  note        String            @default("")
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id                   String            @id @default(cuid())
+  eventId              String
+  userId               String
+  invitedById          String?
+  status               EventSignupStatus @default(invited)
+  invitedAt            DateTime?
+  offeredAt            DateTime?
+  respondedAt          DateTime?
+  participated         Boolean           @default(false)
+  checkedInAt          DateTime?
+  note                 String            @default("")
+  lastReminderSentAt   DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
-  event       Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event                Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
   @@index([eventId, status, createdAt])
+  @@index([userId, invitedAt])
 }
 
 model Recommendation {
@@ -656,4 +665,41 @@ model MediaAsset {
   updatedAt   DateTime         @updatedAt
 
   owner       User?            @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+}
+
+model EmailRule {
+  id           String   @id
+  enabled      Boolean  @default(true)
+  displayOrder Int      @default(0)
+  cooldownDays Int      @default(0)
+  config       Json     @default("{}")
+  updatedAt    DateTime @updatedAt
+}
+
+model EmailTemplate {
+  id         String   @id @default(cuid())
+  ruleId     String
+  variantKey String   @default("default")
+  subject    String
+  body       String
+  isActive   Boolean  @default(true)
+  updatedAt  DateTime @updatedAt
+
+  @@unique([ruleId, variantKey])
+}
+
+model EmailLog {
+  id        String    @id @default(cuid())
+  userId    String
+  ruleId    String
+  refId     String?
+  messageId String?
+  sentAt    DateTime  @default(now())
+  openedAt  DateTime?
+  clickedAt DateTime?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, ruleId, sentAt(sort: Desc)])
+  @@index([userId, sentAt(sort: Desc)])
 }

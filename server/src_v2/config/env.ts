@@ -25,7 +25,7 @@ const envSchema = z.object({
     .optional()
     .transform((value) => value === 'true'),
   DATABASE_URL: z.string().min(1, '必须配置 DATABASE_URL'),
-  // AWS vars are optional — S3/SES features degrade gracefully when absent
+  // AWS vars are optional — S3 features degrade gracefully when absent
   AWS_REGION: z.string().default(''),
   AWS_ACCESS_KEY_ID: z.string().default(''),
   AWS_SECRET_ACCESS_KEY: z.string().default(''),
@@ -37,7 +37,10 @@ const envSchema = z.object({
     .transform((value) => value === 'true'),
   AWS_S3_PUBLIC_BASE_URL: z.string().optional().default(''),
   S3_PRESIGN_EXPIRES_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
-  AWS_SES_FROM_EMAIL: z.string().email().default('noreply@chuanmen.local'),
+  // Resend (email) — optional, email features degrade gracefully when absent
+  RESEND_API_KEY: z.string().default(''),
+  RESEND_FROM_EMAIL: z.string().default('noreply@chuanmen.co'),
+  RESEND_REPLY_TO: z.string().default('hi@chuanmen.co'),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -126,18 +126,18 @@ async function main() {
      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
   const eventSeeds = [
     // Upcoming
-    { title: '电影夜 · 花样年华', host: '白开水', tag: 'movie'     as const, phase: 'open'   as const, status: 'scheduled' as const, startsAt: days(3),  capacity: 10, location: '白开水家 · Edison, NJ', isHome: true, houseRules: '请换鞋入内 · 10pm 前结束', movieTitle: '花样年华' },
-    { title: '重庆森林 · 私人邀请', host: 'Yuan', tag: 'movie'    as const, phase: 'invite' as const, status: 'scheduled' as const, startsAt: days(8),  capacity: 6,  location: 'Yuan 家 · Edison, NJ',   isHome: true, houseRules: '请提前 10 分钟到', movieTitle: '重庆森林' },
-    { title: '周末 Potluck',       host: 'Tiffy', tag: 'chuanmen' as const, phase: 'open'   as const, status: 'scheduled' as const, startsAt: days(10), capacity: 8,  location: 'Tiffy 家 · Edison, NJ',  isHome: true, houseRules: '每人带一道菜' },
-    { title: '春天 Kayaking',      host: 'Derek', tag: 'outdoor'  as const, phase: 'invite' as const, status: 'scheduled' as const, startsAt: days(17), capacity: 8,  location: 'Raritan River, NJ',      isHome: false },
-    { title: '烘焙下午茶',         host: 'Tiffy', tag: 'chuanmen' as const, phase: 'open'   as const, status: 'scheduled' as const, startsAt: days(24), capacity: 6,  location: 'Tiffy 家 · Edison, NJ',  isHome: true },
+    { title: '电影夜 · 花样年华', host: '白开水', tags: ['movie']    as const, phase: 'open'   as const, status: 'scheduled' as const, startsAt: days(3),  capacity: 10, location: '白开水家 · Edison, NJ', isHome: true, houseRules: '请换鞋入内 · 10pm 前结束', movieTitle: '花样年华' },
+    { title: '重庆森林 · 私人邀请', host: 'Yuan', tags: ['movie']   as const, phase: 'invite' as const, status: 'scheduled' as const, startsAt: days(8),  capacity: 6,  location: 'Yuan 家 · Edison, NJ',   isHome: true, houseRules: '请提前 10 分钟到', movieTitle: '重庆森林' },
+    { title: '周末 Potluck',       host: 'Tiffy', tags: ['chuanmen'] as const, phase: 'open'   as const, status: 'scheduled' as const, startsAt: days(10), capacity: 8,  location: 'Tiffy 家 · Edison, NJ',  isHome: true, houseRules: '每人带一道菜' },
+    { title: '春天 Kayaking',      host: 'Derek', tags: ['outdoor']  as const, phase: 'invite' as const, status: 'scheduled' as const, startsAt: days(17), capacity: 8,  location: 'Raritan River, NJ',      isHome: false },
+    { title: '烘焙下午茶',         host: 'Tiffy', tags: ['chuanmen'] as const, phase: 'open'   as const, status: 'scheduled' as const, startsAt: days(24), capacity: 6,  location: 'Tiffy 家 · Edison, NJ',  isHome: true },
     // Past
-    { title: '电影夜 · 寄生虫',    host: '白开水', tag: 'movie'    as const, phase: 'ended'  as const, status: 'completed' as const, startsAt: days(-14), capacity: 10, location: '白开水家', isHome: true, movieTitle: '寄生虫' },
-    { title: '新年饭局 Potluck',   host: 'Yuan',   tag: 'chuanmen' as const, phase: 'ended'  as const, status: 'completed' as const, startsAt: days(-28), capacity: 12, location: 'Yuan 家', isHome: true },
-    { title: '电影夜 · 千与千寻',  host: 'Yuan',   tag: 'movie'    as const, phase: 'ended'  as const, status: 'completed' as const, startsAt: days(-35), capacity: 8,  location: 'Yuan 家', isHome: true, movieTitle: '千与千寻' },
-    { title: 'High Point 徒步',   host: '大橙子', tag: 'hiking'   as const, phase: 'ended'  as const, status: 'completed' as const, startsAt: days(-42), capacity: 8,  location: 'High Point State Park, NJ', isHome: false },
+    { title: '电影夜 · 寄生虫',    host: '白开水', tags: ['movie']   as const, phase: 'ended'  as const, status: 'completed' as const, startsAt: days(-14), capacity: 10, location: '白开水家', isHome: true, movieTitle: '寄生虫' },
+    { title: '新年饭局 Potluck',   host: 'Yuan',   tags: ['chuanmen'] as const, phase: 'ended'  as const, status: 'completed' as const, startsAt: days(-28), capacity: 12, location: 'Yuan 家', isHome: true },
+    { title: '电影夜 · 千与千寻',  host: 'Yuan',   tags: ['movie']   as const, phase: 'ended'  as const, status: 'completed' as const, startsAt: days(-35), capacity: 8,  location: 'Yuan 家', isHome: true, movieTitle: '千与千寻' },
+    { title: 'High Point 徒步',   host: '大橙子', tags: ['hiking']   as const, phase: 'ended'  as const, status: 'completed' as const, startsAt: days(-42), capacity: 8,  location: 'High Point State Park, NJ', isHome: false },
     // Cancelled
-    { title: '滑雪 · Mountain Creek', host: 'Derek', tag: 'outdoor' as const, phase: 'cancelled' as const, status: 'cancelled' as const, startsAt: days(-5), capacity: 8, location: 'Mountain Creek, NJ', isHome: false },
+    { title: '滑雪 · Mountain Creek', host: 'Derek', tags: ['outdoor'] as const, phase: 'cancelled' as const, status: 'cancelled' as const, startsAt: days(-5), capacity: 8, location: 'Mountain Creek, NJ', isHome: false },
   ];
 
   const events: Record<string, string> = {}; // title → id
@@ -152,7 +152,7 @@ async function main() {
       data: {
         title: e.title,
         hostId: users[e.host]!,
-        tag: e.tag,
+        tags: e.tags as any,
         phase: e.phase,
         status: e.status,
         startsAt: e.startsAt,

@@ -27,13 +27,22 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import { useAuth } from '@/auth/AuthContext';
 import { taskPresets } from '@/mock/data';
-import { createSmallGroupEvent, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
+import { createEvent, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
 import type { FoodOption, TaskRole } from '@/types';
 import { Poster } from '@/components/Poster';
 import { ImageUpload } from '@/components/ImageUpload';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 
 const tagOptions = ['电影夜', '茶话会/分享会', '户外', '运动', '其他'];
+
+/** Map UI Chinese tag labels → backend EventTag enum values */
+const tagToEventTag: Record<string, string> = {
+  '电影夜': 'movie',
+  '茶话会/分享会': 'chuanmen',
+  '户外': 'outdoor',
+  '运动': 'hiking',
+  '其他': 'other',
+};
 
 /** Combine date + time strings into datetime-local value */
 function combineDT(date: string, time: string) {
@@ -156,13 +165,15 @@ export default function EventCreatePage() {
       return;
     }
     try {
-      await createSmallGroupEvent({
+      const mappedTags = tags.map((t) => tagToEventTag[t]).filter(Boolean);
+      await createEvent({
         title: name.trim(),
         hostId: user.id,
         location: isHome ? '(居家)' : location.trim(),
         startsAt: combineDT(startDate, startTime || '19:00'),
         capacity,
         description,
+        tags: mappedTags.length > 0 ? mappedTags : undefined,
       });
       setCreated(true);
     } catch (err: any) {

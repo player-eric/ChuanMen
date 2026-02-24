@@ -155,23 +155,20 @@ export async function searchEvents(keyword: string) {
   return requestJson<{ items: EntityMap[] }>(`/api/events${toQueryString({ q: keyword })}`);
 }
 
-export async function createSmallGroupEvent(payload: {
+export async function createEvent(payload: {
   title: string;
   hostId: string;
   location: string;
   startsAt: string;
   capacity: number;
   description?: string;
+  tags?: string[];
+  isWeeklyLotteryEvent?: boolean;
 }) {
   return requestJson<EntityMap>('/api/events', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      ...payload,
-      tag: 'small-group',
-      phase: 'open',
-      isWeeklyLotteryEvent: true,
-    }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -246,6 +243,11 @@ export interface UserSettingsPayload {
   defaultHouseRules?: string;
   homeAddress?: string;
   hideEmail?: boolean;
+  emailState?: 'active' | 'weekly' | 'stopped' | 'unsubscribed';
+  notifyEvents?: boolean;
+  notifyCards?: boolean;
+  notifyOps?: boolean;
+  notifyAnnounce?: boolean;
 }
 
 export async function updateUserSettings(userId: string, payload: UserSettingsPayload) {

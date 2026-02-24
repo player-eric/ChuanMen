@@ -7,7 +7,7 @@ const createEventSchema = z.object({
   startsAt: z.coerce.date(),
   location: z.string().optional(),
   description: z.string().optional(),
-  tag: z.enum(['movie', 'chuanmen', 'holiday', 'hiking', 'outdoor', 'small_group', 'other']).optional(),
+  tags: z.array(z.enum(['movie', 'chuanmen', 'holiday', 'hiking', 'outdoor', 'small_group', 'other'])).optional(),
   titleImageUrl: z.string().optional(),
   capacity: z.number().int().positive().optional(),
 });

@@ -30,23 +30,23 @@
     "system:test:logs": "./system-test/logs.sh"
   },
   "dependencies": {
-    "@aws-sdk/client-ses": "^3.883.0",
     "@aws-sdk/client-s3": "^3.883.0",
     "@aws-sdk/s3-request-presigner": "^3.883.0",
-    "dotenv": "^16.6.1",
-    "fastify": "^5.6.0",
     "@fastify/cors": "^10.1.0",
     "@fastify/helmet": "^13.0.2",
     "@fastify/sensible": "^6.0.3",
     "@fastify/static": "^8.2.0",
     "@prisma/client": "^6.16.2",
+    "dotenv": "^16.6.1",
+    "fastify": "^5.6.0",
     "fastify-plugin": "^5.1.0",
     "pg": "^8.16.3",
+    "resend": "^6.9.2",
     "zod": "^4.1.5"
   },
   "devDependencies": {
-    "prisma": "^6.16.2",
     "@types/node": "^24.5.2",
+    "prisma": "^6.16.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   },

@@ -37,6 +37,12 @@ const updateSettingsSchema = z.object({
   defaultHouseRules: z.string().optional(),
   homeAddress: z.string().optional(),
   hideEmail: z.boolean().optional(),
+  // Notification preferences (persisted to UserPreference)
+  emailState: z.enum(['active', 'weekly', 'stopped', 'unsubscribed']).optional(),
+  notifyEvents: z.boolean().optional(),
+  notifyCards: z.boolean().optional(),
+  notifyOps: z.boolean().optional(),
+  notifyAnnounce: z.boolean().optional(),
 });
 
 export class UserService {
@@ -68,6 +74,20 @@ export class UserService {
   // v2.1: Update user settings
   async updateSettings(userId: string, input: unknown) {
     const data = updateSettingsSchema.parse(input);
-    return this.repository.updateSettings(userId, data);
+
+    // Split preference fields from user fields
+    const { emailState, notifyEvents, notifyCards, notifyOps, notifyAnnounce, ...userFields } = data;
+    const prefFields = { emailState, notifyEvents, notifyCards, notifyOps, notifyAnnounce };
+    const hasPrefUpdate = Object.values(prefFields).some((v) => v !== undefined);
+
+    if (hasPrefUpdate) {
+      // Remove undefined keys before upserting
+      const prefData = Object.fromEntries(
+        Object.entries(prefFields).filter(([, v]) => v !== undefined),
+      );
+      await this.repository.updatePreferences(userId, prefData);
+    }
+
+    return this.repository.updateSettings(userId, userFields);
   }
 }

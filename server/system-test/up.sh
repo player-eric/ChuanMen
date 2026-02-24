@@ -76,7 +76,8 @@ docker run -d \
   -e AWS_S3_FORCE_PATH_STYLE=true \
   -e AWS_S3_PUBLIC_BASE_URL=http://localhost:9000/chuanmen-media-dev \
   -e S3_PRESIGN_EXPIRES_SECONDS=900 \
-  -e AWS_SES_FROM_EMAIL=noreply@chuanmen.local \
+  -e RESEND_API_KEY='' \
+  -e RESEND_FROM_EMAIL=noreply@chuanmen.local \
   "$SERVER_IMAGE" >/dev/null
 
 echo "[8/8] Apply Prisma migrations"

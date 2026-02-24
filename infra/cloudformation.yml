@@ -35,9 +35,15 @@ Parameters:
   S3Bucket:
     Type: String
     Default: chuanmen-media
-  SesFromEmail:
+  ResendFromEmail:
     Type: String
     Default: noreply@chuanmen.co
+  ResendReplyTo:
+    Type: String
+    Default: hi@chuanmen.co
+  ResendApiKeySecretArn:
+    Type: String
+    Description: Secrets Manager ARN for RESEND_API_KEY
 
   # ── Secrets Manager ARNs (each stores a single plain-text value) ──
   DatabaseUrlSecretArn:
@@ -106,6 +112,7 @@ Resources:
                   - !Ref DatabaseUrlSecretArn
                   - !Ref AwsAccessKeyIdSecretArn
                   - !Ref AwsSecretAccessKeySecretArn
+                  - !Ref ResendApiKeySecretArn
 
   EcsTaskRole:
     Type: AWS::IAM::Role
@@ -133,11 +140,6 @@ Resources:
                 Action:
                   - s3:ListBucket
                 Resource: !Sub 'arn:aws:s3:::${S3Bucket}'
-              - Effect: Allow
-                Action:
-                  - ses:SendEmail
-                  - ses:SendRawEmail
-                Resource: '*'
 
   # ==================== Security Groups ====================
   AlbSg:
@@ -269,11 +271,13 @@ Resources:
             - { Name: FRONTEND_ORIGIN, Value: !Ref FrontendOrigin }
             - { Name: AWS_REGION, Value: !Ref AwsRegion }
             - { Name: AWS_S3_BUCKET, Value: !Ref S3Bucket }
-            - { Name: AWS_SES_FROM_EMAIL, Value: !Ref SesFromEmail }
+            - { Name: RESEND_FROM_EMAIL, Value: !Ref ResendFromEmail }
+            - { Name: RESEND_REPLY_TO, Value: !Ref ResendReplyTo }
           Secrets:
             - { Name: DATABASE_URL, ValueFrom: !Ref DatabaseUrlSecretArn }
             - { Name: AWS_ACCESS_KEY_ID, ValueFrom: !Ref AwsAccessKeyIdSecretArn }
             - { Name: AWS_SECRET_ACCESS_KEY, ValueFrom: !Ref AwsSecretAccessKeySecretArn }
+            - { Name: RESEND_API_KEY, ValueFrom: !Ref ResendApiKeySecretArn }
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -304,11 +308,13 @@ Resources:
             - { Name: FRONTEND_ORIGIN, Value: !Ref FrontendOrigin }
             - { Name: AWS_REGION, Value: !Ref AwsRegion }
             - { Name: AWS_S3_BUCKET, Value: !Ref S3Bucket }
-            - { Name: AWS_SES_FROM_EMAIL, Value: !Ref SesFromEmail }
+            - { Name: RESEND_FROM_EMAIL, Value: !Ref ResendFromEmail }
+            - { Name: RESEND_REPLY_TO, Value: !Ref ResendReplyTo }
           Secrets:
             - { Name: DATABASE_URL, ValueFrom: !Ref DatabaseUrlSecretArn }
             - { Name: AWS_ACCESS_KEY_ID, ValueFrom: !Ref AwsAccessKeyIdSecretArn }
             - { Name: AWS_SECRET_ACCESS_KEY, ValueFrom: !Ref AwsSecretAccessKeySecretArn }
+            - { Name: RESEND_API_KEY, ValueFrom: !Ref ResendApiKeySecretArn }
           LogConfiguration:
             LogDriver: awslogs
             Options:

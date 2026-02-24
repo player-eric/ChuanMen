@@ -64,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: dbUser.name ?? current.name,
           avatar: dbUser.avatar || current.avatar,
           role: (dbUser.role as string) || current.role,
+          preferences: (dbUser as any).preferences ?? current.preferences,
         };
         setUserState(resolved);
         localStorage.setItem(storageKey, JSON.stringify(resolved));

@@ -34,7 +34,7 @@ export class EventRepository {
     startsAt: Date;
     location?: string;
     description?: string;
-    tag?: 'movie' | 'chuanmen' | 'holiday' | 'hiking' | 'outdoor' | 'small_group' | 'other';
+    tags?: ('movie' | 'chuanmen' | 'holiday' | 'hiking' | 'outdoor' | 'small_group' | 'other')[];
     titleImageUrl?: string;
     capacity?: number;
   }) {
@@ -45,7 +45,7 @@ export class EventRepository {
         startsAt: input.startsAt,
         location: input.location ?? '',
         description: input.description ?? '',
-        tag: input.tag ?? 'other',
+        tags: input.tags ?? ['other'],
         titleImageUrl: input.titleImageUrl ?? '',
         capacity: input.capacity ?? 10,
       },

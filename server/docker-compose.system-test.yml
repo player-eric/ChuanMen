@@ -72,7 +72,8 @@ services:
       AWS_S3_FORCE_PATH_STYLE: 'true'
       AWS_S3_PUBLIC_BASE_URL: http://localhost:9000/chuanmen-media-dev
       S3_PRESIGN_EXPIRES_SECONDS: 900
-      AWS_SES_FROM_EMAIL: noreply@chuanmen.local
+      RESEND_API_KEY: ''
+      RESEND_FROM_EMAIL: noreply@chuanmen.local
     ports:
       - '4000:4000'
 

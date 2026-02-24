@@ -32,7 +32,8 @@
         { "name": "FRONTEND_ORIGIN", "value": "${FRONTEND_ORIGIN}" },
         { "name": "AWS_REGION", "value": "${AWS_REGION}" },
         { "name": "AWS_S3_BUCKET", "value": "${AWS_S3_BUCKET}" },
-        { "name": "AWS_SES_FROM_EMAIL", "value": "${AWS_SES_FROM_EMAIL}" }
+        { "name": "RESEND_FROM_EMAIL", "value": "${RESEND_FROM_EMAIL}" },
+        { "name": "RESEND_REPLY_TO", "value": "${RESEND_REPLY_TO}" }
       ],
       "secrets": [
         {
@@ -46,6 +47,10 @@
         {
           "name": "AWS_SECRET_ACCESS_KEY",
           "valueFrom": "${AWS_SECRET_ACCESS_KEY_SECRET_ARN}"
+        },
+        {
+          "name": "RESEND_API_KEY",
+          "valueFrom": "${RESEND_API_KEY_SECRET_ARN}"
         }
       ],
       "logConfiguration": {

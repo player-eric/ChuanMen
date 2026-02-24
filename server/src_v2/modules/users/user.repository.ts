@@ -99,6 +99,16 @@ export class UserRepository {
     return this.prisma.user.update({
       where: { id: userId },
       data,
+      include: { preferences: true },
+    });
+  }
+
+  // Upsert notification preferences
+  updatePreferences(userId: string, data: Record<string, unknown>) {
+    return this.prisma.userPreference.upsert({
+      where: { userId },
+      create: { userId, ...data } as any,
+      update: data as any,
     });
   }
 }

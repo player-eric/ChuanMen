@@ -1,6 +1,6 @@
 # Deploying ChuanMen on Render
 
-Architecture: **Render Web Service** (Docker) + **Render PostgreSQL** + **AWS S3** (media) + **AWS SES** (email)
+Architecture: **Render Web Service** (Docker) + **Render PostgreSQL** + **AWS S3** (media) + **Resend** (email)
 
 ```
 ┌─────────────┐    ┌───────────────────┐    ┌────────────────┐
@@ -11,7 +11,7 @@ Architecture: **Render Web Service** (Docker) + **Render PostgreSQL** + **AWS S3
                    ┌────────┴──────────┐
                    │                   │
               ┌────▼────┐       ┌──────▼──────┐
-              │ AWS S3  │       │  AWS SES    │
+              │ AWS S3  │       │  Resend     │
               │ (media) │       │  (email)    │
               └─────────┘       └─────────────┘
 
@@ -27,7 +27,7 @@ Architecture: **Render Web Service** (Docker) + **Render PostgreSQL** + **AWS S3
 
 - A [Render](https://render.com) account
 - AWS account with S3 bucket + IAM credentials
-- (Optional) AWS SES verified domain for transactional email
+- (Optional) [Resend](https://resend.com) account with verified domain for transactional email
 
 ---
 
@@ -45,7 +45,8 @@ Architecture: **Render Web Service** (Docker) + **Render PostgreSQL** + **AWS S3
    - `AWS_ACCESS_KEY_ID` — IAM access key
    - `AWS_SECRET_ACCESS_KEY` — IAM secret key
    - `AWS_S3_BUCKET` — e.g. `chuanmen-media-prod`
-   - `AWS_SES_FROM_EMAIL` — e.g. `noreply@chuanmen.co`
+   - `RESEND_API_KEY` — Resend API key
+   - `RESEND_FROM_EMAIL` — e.g. `noreply@chuanmen.co`
 6. Click **Apply** — Render builds the Docker image, provisions Postgres, and deploys
 
 ---
@@ -89,9 +90,10 @@ Architecture: **Render Web Service** (Docker) + **Render PostgreSQL** + **AWS S3
 | `AWS_ACCESS_KEY_ID` | *(your IAM access key)* |
 | `AWS_SECRET_ACCESS_KEY` | *(your IAM secret key)* |
 | `AWS_S3_BUCKET` | `chuanmen-media-prod` |
-| `AWS_SES_FROM_EMAIL` | `noreply@chuanmen.co` |
+| `RESEND_API_KEY` | *(your Resend API key)* |
+| `RESEND_FROM_EMAIL` | `noreply@chuanmen.co` |
 
-> **Tip**: Mark `AWS_SECRET_ACCESS_KEY` and `DATABASE_URL` as **Secret** in Render UI.
+> **Tip**: Mark `AWS_SECRET_ACCESS_KEY`, `RESEND_API_KEY`, and `DATABASE_URL` as **Secret** in Render UI.
 
 ### 3. Create Cron Job (Agent Worker)
 

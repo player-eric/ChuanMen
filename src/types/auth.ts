@@ -1,3 +1,11 @@
+export interface UserPreferences {
+  emailState?: 'active' | 'weekly' | 'stopped' | 'unsubscribed';
+  notifyEvents?: boolean;
+  notifyCards?: boolean;
+  notifyOps?: boolean;
+  notifyAnnounce?: boolean;
+}
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -14,6 +22,7 @@ export interface AuthUser {
   homeAddress?: string;
   hideEmail?: boolean;
   googleId?: string;
+  preferences?: UserPreferences;
 }
 
 export interface RegisterPayload {

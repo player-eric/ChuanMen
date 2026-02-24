@@ -42,8 +42,12 @@ services:
         sync: false
       - key: AWS_S3_BUCKET
         sync: false
-      # ── AWS SES (email) — optional, add when ready ──
-      - key: AWS_SES_FROM_EMAIL
+      # ── Resend (email) — optional, add when ready ──
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      - key: RESEND_REPLY_TO
         sync: false
 
   # ── Agent cron job (runs every 10 minutes) ─────────
@@ -73,5 +77,9 @@ services:
         sync: false
       - key: AWS_S3_BUCKET
         sync: false
-      - key: AWS_SES_FROM_EMAIL
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      - key: RESEND_REPLY_TO
         sync: false

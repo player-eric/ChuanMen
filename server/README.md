@@ -28,7 +28,7 @@ npm run dev
 核心变量：
 - `DATABASE_URL`（PostgreSQL）
 - `AWS_S3_*`（媒体）
-- `AWS_SES_FROM_EMAIL`（邮件）
+- `RESEND_API_KEY` / `RESEND_FROM_EMAIL`（邮件）
 
 详见：
 - `.env.development.example`
@@ -50,7 +50,7 @@ npm run dev
 
 ## EventBridge + Email System
 
-v2.1 replaces AgentPush with email-based notifications (SES).
+v2.1 replaces AgentPush with email-based notifications (Resend).
 - Worker：`src_v2/workers/agentTick.ts`（legacy, replaced by email rules）
 - 线上通过 EventBridge 定时触发 ECS Task
 
@@ -75,7 +75,7 @@ system-test 会启动：
 - 运行：ECS Service (Fargate)
 - 数据库：RDS PostgreSQL
 - 文件：S3
-- 邮件：SES
+- 邮件：Resend
 - 定时任务：EventBridge
 
 仓库已提供 GitHub Actions 模板用于：build -> push ECR -> deploy ECS。

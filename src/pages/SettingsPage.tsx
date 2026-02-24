@@ -19,6 +19,7 @@ import {
 import { useAuth } from '@/auth/AuthContext';
 import { ImageUpload } from '@/components/ImageUpload';
 import { updateUserSettings } from '@/lib/domainApi';
+import type { AuthUser } from '@/types/auth';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -44,12 +45,18 @@ export default function SettingsPage() {
   const [hideActivity, setHideActivity] = useState(false);
   const [hideStats, setHideStats] = useState(false);
 
-  // Notification
-  const [emailFreq, setEmailFreq] = useState('daily');
-  const [notifyEvents, setNotifyEvents] = useState(true);
-  const [notifyCards, setNotifyCards] = useState(true);
-  const [notifyOps, setNotifyOps] = useState(true);
-  const [notifyAnnounce, setNotifyAnnounce] = useState(true);
+  // Notification (read from persisted preferences)
+  const prefs = user?.preferences;
+  const emailStateToFreq = (s?: string) => {
+    if (s === 'weekly') return 'weekly';
+    if (s === 'stopped' || s === 'unsubscribed') return 'off';
+    return 'daily'; // active or default
+  };
+  const [emailFreq, setEmailFreq] = useState(emailStateToFreq(prefs?.emailState));
+  const [notifyEvents, setNotifyEvents] = useState(prefs?.notifyEvents ?? true);
+  const [notifyCards, setNotifyCards] = useState(prefs?.notifyCards ?? true);
+  const [notifyOps, setNotifyOps] = useState(prefs?.notifyOps ?? true);
+  const [notifyAnnounce, setNotifyAnnounce] = useState(prefs?.notifyAnnounce ?? true);
 
   // Save state
   const [saving, setSaving] = useState(false);
@@ -70,6 +77,11 @@ export default function SettingsPage() {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
+      const freqToEmailState = (f: string) => {
+        if (f === 'weekly') return 'weekly' as const;
+        if (f === 'off') return 'stopped' as const;
+        return 'active' as const;
+      };
       const payload = {
         name: displayName || undefined,
         avatar: avatarUrl || undefined,
@@ -83,10 +95,25 @@ export default function SettingsPage() {
         defaultHouseRules: defaultHouseRules || undefined,
         homeAddress: homeAddress || undefined,
         hideEmail,
+        // Notification preferences
+        emailState: freqToEmailState(emailFreq),
+        notifyEvents,
+        notifyCards,
+        notifyOps,
+        notifyAnnounce,
       };
-      await updateUserSettings(user.id, payload);
+      const res = await updateUserSettings(user.id, payload);
       // Update local auth context so avatar/cover show immediately
-      setUser({ ...user, ...payload, name: displayName || user.name, email: email || user.email });
+      setUser({
+        ...user,
+        ...payload,
+        name: displayName || user.name,
+        email: email || user.email,
+        preferences: res.user?.preferences as AuthUser['preferences'] ?? {
+          emailState: freqToEmailState(emailFreq),
+          notifyEvents, notifyCards, notifyOps, notifyAnnounce,
+        },
+      });
       setSnack('设置已保存');
     } catch (err) {
       console.error('保存失败', err);
