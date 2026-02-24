@@ -10,7 +10,7 @@
     "build:client": "tsc -b && vite build --outDir dist/client",
     "build:server": "vite build --ssr src/entry-server.tsx --outDir dist/server",
     "build:api": "cd server && npm ci && npx prisma generate && npm run build",
-    "start": "cd server && npx prisma migrate deploy && cd .. && NODE_ENV=production node ssr-server.mjs",
+    "start": "cd server && npx prisma migrate resolve --rolled-back 0001_init 2>/dev/null; npx prisma migrate deploy && cd .. && NODE_ENV=production node ssr-server.mjs",
     "preview": "PORT=4173 NODE_ENV=production node ssr-server.mjs",
     "system:test:up": "npm --prefix server run system:test:up",
     "system:test:down": "npm --prefix server run system:test:down",
