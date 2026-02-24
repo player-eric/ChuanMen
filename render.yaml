@@ -9,12 +9,12 @@ databases:
     postgresMajorVersion: "16"
 
 services:
-  # ── Web server ──────────────────────────────────────
+  # ── Combined SSR + API web server ──────────────────────────
   - type: web
     name: chuanmen-server
     runtime: docker
-    dockerfilePath: ./server/Dockerfile
-    dockerContext: ./server
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     plan: starter          # starter = 512 MB RAM, 0.5 CPU; upgrade as needed
     region: oregon         # or ohio, virginia, frankfurt, singapore
     healthCheckPath: /api/health
