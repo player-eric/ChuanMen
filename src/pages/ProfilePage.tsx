@@ -38,10 +38,20 @@ const sceneEmoji: Record<string, string> = {
 };
 
 export default function ProfilePage() {
-  const data = useLoaderData() as ProfilePageData;
+  const data = useLoaderData() as ProfilePageData | null;
   const { user } = useAuth();
   const navigate = useNavigate();
   const c = useColors();
+
+  if (!data) {
+    return (
+      <Stack spacing={2} alignItems="center" sx={{ py: 8, textAlign: 'center' }}>
+        <Typography variant="h6" fontWeight={700}>无法加载个人页面</Typography>
+        <Typography variant="body2" color="text.secondary">请稍后再试</Typography>
+        <Button variant="outlined" onClick={() => navigate('/')}>返回首页</Button>
+      </Stack>
+    );
+  }
 
   const [tab, setTab] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
@@ -52,7 +62,8 @@ export default function ProfilePage() {
   const isGradient = rawCover.startsWith('linear-gradient') || rawCover.startsWith('radial-gradient');
   const coverBg = isGradient ? rawCover : `url(${rawCover}) center/cover no-repeat`;
 
-  const galleryPhotos = showAllPhotos ? data.galleryPhotos : data.galleryPhotos.slice(0, 9);
+  const allGalleryPhotos = data.galleryPhotos ?? [];
+  const galleryPhotos = showAllPhotos ? allGalleryPhotos : allGalleryPhotos.slice(0, 9);
 
   return (
     <Stack spacing={0}>
@@ -283,12 +294,12 @@ export default function ProfilePage() {
           )}
 
           {/* Photo Gallery */}
-          {data.galleryPhotos.length > 0 && (
+          {allGalleryPhotos.length > 0 && (
             <Card>
               <CardContent>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
                   <Typography variant="subtitle1" fontWeight={700}>
-                    活动记忆 ({data.galleryPhotos.length})
+                    活动记忆 ({allGalleryPhotos.length})
                   </Typography>
                   <Button
                     size="small"
@@ -345,7 +356,7 @@ export default function ProfilePage() {
                   ))}
                 </Box>
 
-                {!showAllPhotos && data.galleryPhotos.length > 9 && (
+                {!showAllPhotos && allGalleryPhotos.length > 9 && (
                   <Button size="small" sx={{ mt: 1 }} onClick={() => setShowAllPhotos(true)}>
                     查看全部 →
                   </Button>
@@ -660,8 +671,8 @@ export default function ProfilePage() {
         fullScreen
         PaperProps={{ sx: { bgcolor: 'rgba(0,0,0,0.95)' } }}
       >
-        {lightboxIndex >= 0 && lightboxIndex < data.galleryPhotos.length && (() => {
-          const photo = data.galleryPhotos[lightboxIndex];
+        {lightboxIndex >= 0 && lightboxIndex < allGalleryPhotos.length && (() => {
+          const photo = allGalleryPhotos[lightboxIndex];
           return (
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
@@ -686,7 +697,7 @@ export default function ProfilePage() {
                   background: photo.url,
                   filter: 'saturate(0.85) contrast(1.05)',
                 }} />
-                {lightboxIndex < data.galleryPhotos.length - 1 && (
+                {lightboxIndex < allGalleryPhotos.length - 1 && (
                   <IconButton
                     onClick={() => setLightboxIndex((i) => i + 1)}
                     sx={{ position: 'absolute', right: 8, color: '#fff' }}
