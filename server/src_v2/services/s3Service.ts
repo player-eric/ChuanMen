@@ -2,15 +2,26 @@ import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } fro
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../config/env.js';
 
-const s3 = new S3Client({
-  region: env.AWS_REGION,
-  credentials: {
-    accessKeyId: env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-  },
-  endpoint: env.AWS_S3_ENDPOINT || undefined,
-  forcePathStyle: env.AWS_S3_FORCE_PATH_STYLE,
-});
+function getS3Client(): S3Client {
+  if (!env.AWS_REGION || !env.AWS_ACCESS_KEY_ID || !env.AWS_SECRET_ACCESS_KEY) {
+    throw new Error('S3 is not configured — set AWS_REGION, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY');
+  }
+  return new S3Client({
+    region: env.AWS_REGION,
+    credentials: {
+      accessKeyId: env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+    },
+    endpoint: env.AWS_S3_ENDPOINT || undefined,
+    forcePathStyle: env.AWS_S3_FORCE_PATH_STYLE,
+  });
+}
+
+let _s3: S3Client | null = null;
+function s3() {
+  if (!_s3) _s3 = getS3Client();
+  return _s3;
+}
 
 export async function createUploadUrl(key: string, contentType: string) {
   const command = new PutObjectCommand({
@@ -19,7 +30,7 @@ export async function createUploadUrl(key: string, contentType: string) {
     ContentType: contentType,
   });
 
-  const uploadUrl = await getSignedUrl(s3, command, {
+  const uploadUrl = await getSignedUrl(s3(), command, {
     expiresIn: env.S3_PRESIGN_EXPIRES_SECONDS,
   });
 
@@ -36,7 +47,7 @@ export async function createDownloadUrl(key: string) {
     Key: key,
   });
 
-  return getSignedUrl(s3, command, {
+  return getSignedUrl(s3(), command, {
     expiresIn: env.S3_PRESIGN_EXPIRES_SECONDS,
   });
 }
@@ -47,5 +58,5 @@ export async function deleteObject(key: string) {
     Key: key,
   });
 
-  return s3.send(command);
+  return s3().send(command);
 }

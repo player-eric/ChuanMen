@@ -50,6 +50,10 @@ export class UserService {
     return this.repository.getById(id);
   }
 
+  getUserByEmail(email: string) {
+    return this.repository.getByEmail(email);
+  }
+
   createUser(input: unknown) {
     const data = createUserSchema.parse(input);
     return this.repository.create(data);

@@ -25,10 +25,11 @@ const envSchema = z.object({
     .optional()
     .transform((value) => value === 'true'),
   DATABASE_URL: z.string().min(1, '必须配置 DATABASE_URL'),
-  AWS_REGION: z.string().min(1, '必须配置 AWS_REGION'),
-  AWS_ACCESS_KEY_ID: z.string().min(1, '必须配置 AWS_ACCESS_KEY_ID'),
-  AWS_SECRET_ACCESS_KEY: z.string().min(1, '必须配置 AWS_SECRET_ACCESS_KEY'),
-  AWS_S3_BUCKET: z.string().min(1, '必须配置 AWS_S3_BUCKET'),
+  // AWS vars are optional — S3/SES features degrade gracefully when absent
+  AWS_REGION: z.string().default(''),
+  AWS_ACCESS_KEY_ID: z.string().default(''),
+  AWS_SECRET_ACCESS_KEY: z.string().default(''),
+  AWS_S3_BUCKET: z.string().default(''),
   AWS_S3_ENDPOINT: z.string().optional().default(''),
   AWS_S3_FORCE_PATH_STYLE: z
     .string()

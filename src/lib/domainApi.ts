@@ -143,6 +143,16 @@ export async function uploadMedia(
 
 export type RecommendationCategory = 'movie' | 'recipe' | 'music' | 'place';
 
+/* ═══════════════════════════════════════════════════════════════
+   User lookup API
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function getUserByEmail(email: string) {
+  return requestJson<{ id: string; name: string; email: string; avatar?: string; bio?: string; role?: string; location?: string; [k: string]: unknown }>(
+    `/api/users/by-email/${encodeURIComponent(email)}`,
+  );
+}
+
 export async function searchEvents(keyword: string) {
   return requestJson<{ items: EntityMap[] }>(`/api/search/events${toQueryString({ q: keyword })}`);
 }

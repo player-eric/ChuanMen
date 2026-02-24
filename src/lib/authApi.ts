@@ -1,5 +1,6 @@
 import type { AuthUser, RegisterPayload } from '@/types/auth';
 import { WALKTHROUGH_USER } from '@/auth/AuthContext';
+import { getUserByEmail } from '@/lib/domainApi';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -39,9 +40,25 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthUser> 
 }
 
 export async function loginUser(email: string): Promise<AuthUser> {
-  // Hard-coded walkthrough account — no server needed
-  if (email.trim().toLowerCase() === 'cm@gmail.com') {
-    return WALKTHROUGH_USER;
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // Accept both the old test email and the real seeded email
+  const walkthroughEmails = ['cm@gmail.com', 'yuan@chuanmen.app'];
+  if (walkthroughEmails.includes(normalizedEmail)) {
+    // Try to resolve from real DB first
+    try {
+      const dbUser = await getUserByEmail(WALKTHROUGH_USER.email);
+      return {
+        ...WALKTHROUGH_USER,
+        id: dbUser.id,
+        name: dbUser.name ?? WALKTHROUGH_USER.name,
+        avatar: (dbUser.avatar as string) || WALKTHROUGH_USER.avatar,
+        role: (dbUser.role as string) || WALKTHROUGH_USER.role,
+      };
+    } catch {
+      // API unavailable — fall back to hardcoded user
+      return WALKTHROUGH_USER;
+    }
   }
 
   // Only the walkthrough account is allowed in demo mode

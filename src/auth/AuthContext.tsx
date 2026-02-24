@@ -1,6 +1,7 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthUser } from '@/types/auth';
+import { getUserByEmail } from '@/lib/domainApi';
 
 const storageKey = 'chuanmen.auth.user';
 
@@ -11,7 +12,7 @@ const storageKey = 'chuanmen.auth.user';
 export const WALKTHROUGH_USER: AuthUser = {
   id: 'walkthrough-yuan-001',
   name: 'Yuan',
-  email: 'cm@gmail.com',
+  email: 'yuan@chuanmen.app',
   avatar: undefined,
   bio: '串门儿的运营之一，平时喜欢看电影、做饭、在家招呼朋友。住在 Edison 快两年了，最近迷上了安哲罗普洛斯。',
   role: 'admin',
@@ -46,6 +47,30 @@ function readStoredUser(): AuthUser | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(() => readStoredUser());
+
+  // Resolve walkthrough / stored user against real DB to get correct id
+  useEffect(() => {
+    const current = user;
+    if (!current?.email) return;
+    // If the id looks like a real cuid, skip resolution
+    if (current.id && !current.id.startsWith('walkthrough-') && current.id.length > 20) return;
+    let cancelled = false;
+    getUserByEmail(current.email)
+      .then((dbUser) => {
+        if (cancelled) return;
+        const resolved: AuthUser = {
+          ...current,
+          id: dbUser.id,
+          name: dbUser.name ?? current.name,
+          avatar: dbUser.avatar || current.avatar,
+          role: (dbUser.role as string) || current.role,
+        };
+        setUserState(resolved);
+        localStorage.setItem(storageKey, JSON.stringify(resolved));
+      })
+      .catch(() => { /* API not available — keep local user */ });
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setUser = (nextUser: AuthUser | null, options?: { remember?: boolean }) => {
     setUserState(nextUser);

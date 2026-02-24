@@ -7,6 +7,13 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/', async () => service.listUsers());
 
+  app.get('/by-email/:email', async (request, reply) => {
+    const { email } = request.params as { email: string };
+    const user = await service.getUserByEmail(email);
+    if (!user) return reply.notFound('用户不存在');
+    return user;
+  });
+
   app.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const user = await service.getUserById(id);

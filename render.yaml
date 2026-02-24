@@ -33,7 +33,7 @@ services:
         fromDatabase:
           name: chuanmen-db
           property: connectionString
-      # ── AWS S3 (media storage) ──
+      # ── AWS S3 (media storage) — optional, add when ready ──
       - key: AWS_REGION
         sync: false        # set manually in Render dashboard
       - key: AWS_ACCESS_KEY_ID
@@ -42,7 +42,7 @@ services:
         sync: false
       - key: AWS_S3_BUCKET
         sync: false
-      # ── AWS SES (email) ──
+      # ── AWS SES (email) — optional, add when ready ──
       - key: AWS_SES_FROM_EMAIL
         sync: false
 

@@ -21,6 +21,15 @@ export class UserRepository {
     });
   }
 
+  getByEmail(email: string) {
+    return this.prisma.user.findUnique({
+      where: { email },
+      include: {
+        preferences: true,
+      },
+    });
+  }
+
   create(input: {
     name: string;
     email: string;
