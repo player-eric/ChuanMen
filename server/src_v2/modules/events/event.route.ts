@@ -7,8 +7,36 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/', async () => service.listEvents());
 
+  app.get('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const event = await service.getEventById(id);
+    if (!event) return reply.notFound('活动不存在');
+    return event;
+  });
+
   app.post('/', async (request, reply) => {
     const created = await service.createEvent(request.body);
     return reply.code(201).send(created);
+  });
+
+  app.patch('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const updated = await service.updateEvent(id, request.body);
+    return { ok: true, event: updated };
+  });
+
+  // Recap photo management
+  app.post('/:id/photos', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const event = await service.addRecapPhoto(id, request.body);
+    return reply.code(201).send({ ok: true, event });
+  });
+
+  app.delete('/:id/photos', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { photoUrl } = request.body as { photoUrl: string };
+    if (!photoUrl) return reply.badRequest('缺少 photoUrl');
+    const event = await service.removeRecapPhoto(id, photoUrl);
+    return { ok: true, event };
   });
 };

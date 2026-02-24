@@ -34,16 +34,23 @@ services:
       - minio_dev_data:/data
 
   minio-setup:
-    image: minio/mc:latest
+    image: amazon/aws-cli:latest
     container_name: chuanmen-minio-setup-dev
     depends_on:
       - minio
+    environment:
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_DEFAULT_REGION: us-east-1
     entrypoint: >
       /bin/sh -c "
-      until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 2; done;
-      mc mb -p local/chuanmen-media-dev || true;
-      echo 'MinIO bucket ready';
+      until curl -sf http://minio:9000/minio/health/ready; do sleep 2; done;
+      aws --endpoint-url http://minio:9000 s3 mb s3://chuanmen-media-dev 2>/dev/null || true;
+      aws --endpoint-url http://minio:9000 s3api put-bucket-policy --bucket chuanmen-media-dev --policy file:///tmp/policy.json;
+      echo 'MinIO bucket ready (public-read policy applied)';
       "
+    volumes:
+      - ./system-test/minio-bucket-policy.json:/tmp/policy.json:ro
 
 volumes:
   pg_dev_data:

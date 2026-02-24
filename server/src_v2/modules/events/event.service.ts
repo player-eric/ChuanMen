@@ -8,6 +8,21 @@ const createEventSchema = z.object({
   location: z.string().optional(),
   description: z.string().optional(),
   tag: z.enum(['movie', 'chuanmen', 'holiday', 'hiking', 'outdoor', 'small_group', 'other']).optional(),
+  titleImageUrl: z.string().optional(),
+  capacity: z.number().int().positive().optional(),
+});
+
+const updateEventSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  titleImageUrl: z.string().optional(),
+  location: z.string().optional(),
+  capacity: z.number().int().positive().optional(),
+});
+
+const addRecapPhotoSchema = z.object({
+  photoUrl: z.string().url(),
+  caption: z.string().max(100).optional(),
 });
 
 export class EventService {
@@ -17,8 +32,26 @@ export class EventService {
     return this.repository.list();
   }
 
+  getEventById(id: string) {
+    return this.repository.getById(id);
+  }
+
   createEvent(input: unknown) {
     const data = createEventSchema.parse(input);
     return this.repository.create(data);
+  }
+
+  updateEvent(id: string, input: unknown) {
+    const data = updateEventSchema.parse(input);
+    return this.repository.update(id, data);
+  }
+
+  addRecapPhoto(eventId: string, input: unknown) {
+    const data = addRecapPhotoSchema.parse(input);
+    return this.repository.addRecapPhoto(eventId, data.photoUrl);
+  }
+
+  removeRecapPhoto(eventId: string, photoUrl: string) {
+    return this.repository.removeRecapPhoto(eventId, photoUrl);
   }
 }

@@ -6,30 +6,38 @@ import {
   Button,
   Card,
   CardContent,
+  CircularProgress,
   Divider,
   FormControlLabel,
   MenuItem,
+  Snackbar,
   Stack,
   Switch,
   TextField,
   Typography,
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
+import { ImageUpload } from '@/components/ImageUpload';
+import { updateUserSettings } from '@/lib/domainApi';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
 
   // Profile fields
   const [displayName, setDisplayName] = useState(user?.name ?? '');
   const [location, setLocation] = useState(user?.location ?? '');
-  const [bio, setBio] = useState('');
+  const [bio, setBio] = useState(user?.bio ?? '');
   const [selfAsFriend, setSelfAsFriend] = useState(user?.selfAsFriend ?? '');
   const [idealFriend, setIdealFriend] = useState(user?.idealFriend ?? '');
   const [participationPlan, setParticipationPlan] = useState(user?.participationPlan ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [defaultHouseRules, setDefaultHouseRules] = useState(user?.defaultHouseRules ?? '');
   const [homeAddress, setHomeAddress] = useState(user?.homeAddress ?? '');
+
+  // Media
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar ?? '');
+  const [coverUrl, setCoverUrl] = useState(user?.coverImageUrl ?? '');
 
   // Privacy
   const [hideEmail, setHideEmail] = useState(user?.hideEmail ?? false);
@@ -43,6 +51,10 @@ export default function SettingsPage() {
   const [notifyOps, setNotifyOps] = useState(true);
   const [notifyAnnounce, setNotifyAnnounce] = useState(true);
 
+  // Save state
+  const [saving, setSaving] = useState(false);
+  const [snack, setSnack] = useState('');
+
   // Google binding
   const hasGoogle = !!user?.googleId;
 
@@ -55,9 +67,33 @@ export default function SettingsPage() {
     );
   }
 
-  const handleSaveProfile = () => {
-    // TODO: PATCH /api/users/me/settings
-    alert('已保存');
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        name: displayName || undefined,
+        avatar: avatarUrl || undefined,
+        coverImageUrl: coverUrl || undefined,
+        location: location || undefined,
+        bio: bio || undefined,
+        selfAsFriend: selfAsFriend || undefined,
+        idealFriend: idealFriend || undefined,
+        participationPlan: participationPlan || undefined,
+        email: email || undefined,
+        defaultHouseRules: defaultHouseRules || undefined,
+        homeAddress: homeAddress || undefined,
+        hideEmail,
+      };
+      await updateUserSettings(user.id, payload);
+      // Update local auth context so avatar/cover show immediately
+      setUser({ ...user, ...payload, name: displayName || user.name, email: email || user.email });
+      setSnack('设置已保存');
+    } catch (err) {
+      console.error('保存失败', err);
+      setSnack('保存失败，请重试');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -67,6 +103,31 @@ export default function SettingsPage() {
       <Card>
         <CardContent>
           <Stack spacing={2}>
+            {/* Avatar & Cover Image Upload */}
+            <Typography variant="subtitle2" fontWeight={600}>头像</Typography>
+            <ImageUpload
+              value={avatarUrl}
+              onChange={setAvatarUrl}
+              category="avatar"
+              ownerId={user.id}
+              width={96}
+              height={96}
+              shape="circle"
+              maxSize={5 * 1024 * 1024}
+            />
+
+            <Typography variant="subtitle2" fontWeight={600}>封面图</Typography>
+            <ImageUpload
+              value={coverUrl}
+              onChange={setCoverUrl}
+              category="cover"
+              ownerId={user.id}
+              width="100%"
+              height={160}
+              shape="rect"
+              maxSize={10 * 1024 * 1024}
+            />
+
             <TextField label="显示名" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             <TextField label="城市/地区" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="如 Edison, NJ" />
             <TextField label="自我介绍" multiline minRows={2} value={bio} onChange={(e) => setBio(e.target.value)} />
@@ -74,8 +135,6 @@ export default function SettingsPage() {
             <TextField label="你最好的朋友是什么样子的？" multiline minRows={2} value={idealFriend} onChange={(e) => setIdealFriend(e.target.value)} />
             <TextField label="你可能会怎样参与串门儿？" multiline minRows={2} value={participationPlan} onChange={(e) => setParticipationPlan(e.target.value)} />
             <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            {/* TODO: Avatar & cover image upload */}
-            <Alert severity="info" variant="outlined">头像和封面图上传功能即将上线</Alert>
           </Stack>
         </CardContent>
       </Card>
@@ -184,7 +243,22 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Button variant="contained" size="large" onClick={handleSaveProfile}>保存设置</Button>
+      <Button
+        variant="contained"
+        size="large"
+        onClick={handleSaveProfile}
+        disabled={saving}
+        startIcon={saving ? <CircularProgress size={18} color="inherit" /> : undefined}
+      >
+        {saving ? '保存中…' : '保存设置'}
+      </Button>
+
+      <Snackbar
+        open={!!snack}
+        autoHideDuration={3000}
+        onClose={() => setSnack('')}
+        message={snack}
+      />
     </Stack>
   );
 }

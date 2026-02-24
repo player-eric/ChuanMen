@@ -27,7 +27,7 @@ export default function MemberDetailPage() {
       <Card>
         <CardContent>
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <Avatar sx={{ width: 58, height: 58 }}>{member.name[0]}</Avatar>
+            <Avatar src={member.avatar} sx={{ width: 58, height: 58 }}>{member.name[0]}</Avatar>
             <Box>
               <Typography variant="h6">{member.name}</Typography>
               {member.location && (

@@ -211,6 +211,7 @@ export async function createRecommendation(payload: {
   title: string;
   description: string;
   sourceUrl?: string;
+  coverUrl?: string;
   tags?: string[];
   authorId: string;
 }) {
@@ -230,4 +231,68 @@ export async function getRecommendationById(id: string) {
     if (!item) throw new Error('未找到该推荐');
     return item;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   User Settings API
+   ═══════════════════════════════════════════════════════════════ */
+
+export interface UserSettingsPayload {
+  name?: string;
+  avatar?: string;
+  location?: string;
+  bio?: string;
+  selfAsFriend?: string;
+  idealFriend?: string;
+  participationPlan?: string;
+  email?: string;
+  coverImageUrl?: string;
+  defaultHouseRules?: string;
+  homeAddress?: string;
+  hideEmail?: boolean;
+}
+
+export async function updateUserSettings(userId: string, payload: UserSettingsPayload) {
+  return requestJson<{ ok: boolean; user: EntityMap }>('/api/users/me/settings', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-id': userId,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Event API — PATCH + photo management
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function updateEvent(eventId: string, payload: {
+  title?: string;
+  description?: string;
+  titleImageUrl?: string;
+  location?: string;
+  capacity?: number;
+}) {
+  return requestJson<{ ok: boolean; event: EntityMap }>(`/api/events/${eventId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function addEventRecapPhoto(eventId: string, photoUrl: string) {
+  return requestJson<{ ok: boolean; event: EntityMap }>(`/api/events/${eventId}/photos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ photoUrl }),
+  });
+}
+
+export async function removeEventRecapPhoto(eventId: string, photoUrl: string) {
+  return requestJson<{ ok: boolean; event: EntityMap }>(`/api/events/${eventId}/photos`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ photoUrl }),
+  });
 }

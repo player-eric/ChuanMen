@@ -74,6 +74,7 @@ export class UserRepository {
     userId: string,
     data: {
       name?: string;
+      avatar?: string;
       location?: string;
       bio?: string;
       selfAsFriend?: string;

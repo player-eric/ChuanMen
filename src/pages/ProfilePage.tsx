@@ -100,7 +100,10 @@ export default function ProfilePage() {
             alignItems="flex-end"
             sx={{ position: 'absolute', bottom: 12, left: 16, right: 16 }}
           >
-            <Avatar sx={{ width: 64, height: 64, border: '3px solid rgba(255,255,255,0.8)', fontSize: 24 }}>
+            <Avatar
+              src={user?.avatar}
+              sx={{ width: 64, height: 64, border: '3px solid rgba(255,255,255,0.8)', fontSize: 24 }}
+            >
               {user?.name?.[0] ?? 'Y'}
             </Avatar>
             <Box sx={{ flex: 1, pb: 0.5 }}>

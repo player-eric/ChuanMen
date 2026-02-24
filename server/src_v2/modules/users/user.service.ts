@@ -26,6 +26,7 @@ const applySchema = z.object({
 // v2.1: Settings update schema
 const updateSettingsSchema = z.object({
   name: z.string().min(1).optional(),
+  avatar: z.string().optional(),
   location: z.string().optional(),
   bio: z.string().optional(),
   selfAsFriend: z.string().optional(),

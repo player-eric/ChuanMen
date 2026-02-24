@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { createRecommendation, type RecommendationCategory } from '@/lib/domainApi';
+import { ImageUpload } from '@/components/ImageUpload';
 
 const categoryMap: Record<RecommendationCategory, string> = {
   movie: '电影',
@@ -61,6 +62,7 @@ export default function RecommendationCreatePage() {
   const [description, setDescription] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [tagsText, setTagsText] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -147,6 +149,7 @@ export default function RecommendationCreatePage() {
         title: title.trim(),
         description: description.trim(),
         sourceUrl: sourceUrl.trim(),
+        coverUrl: coverUrl || undefined,
         tags,
         authorId: user.id,
       });
@@ -208,6 +211,21 @@ export default function RecommendationCreatePage() {
           )}
 
           <TextField label="标签（逗号分隔）" value={tagsText} onChange={(e) => setTagsText(e.target.value)} fullWidth />
+
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>封面图（可选）</Typography>
+            <ImageUpload
+              value={coverUrl}
+              onChange={setCoverUrl}
+              category="recommendation"
+              ownerId={user.id}
+              width="100%"
+              height={160}
+              shape="rect"
+              maxSize={10 * 1024 * 1024}
+            />
+          </Box>
+
           <Button variant="contained" onClick={onSubmit} disabled={submitting}>
             {submitting ? '提交中...' : '发布推荐'}
           </Button>

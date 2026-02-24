@@ -29,7 +29,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import type { EventComment, EventData, EventPhoto, FoodOption, TaskRole } from '@/types';
-import { getEventById, signupEvent } from '@/lib/domainApi';
+import { getEventById, signupEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
@@ -77,6 +77,7 @@ export default function EventDetailPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadPreviews, setUploadPreviews] = useState<{ file: File; preview: string; caption: string }[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [flash, setFlash] = useState<{
     open: boolean;
@@ -157,6 +158,12 @@ export default function EventDetailPage() {
   };
 
   const phase = phaseLabel[event.phase] ?? phaseLabel.open;
+
+  /** Convert a photo URL to a CSS background value — handles both gradient strings and real URLs */
+  const photoBg = (url: string) =>
+    url.startsWith('linear-gradient') || url.startsWith('radial-gradient')
+      ? url
+      : `url(${url}) center/cover no-repeat`;
 
   return (
     <Box sx={{ maxWidth: 680, mx: 'auto' }}>
@@ -680,7 +687,7 @@ export default function EventDetailPage() {
                       borderRadius: 1,
                       overflow: 'hidden',
                       cursor: 'pointer',
-                      background: photo.url,
+                      background: photoBg(photo.url),
                       filter: 'saturate(0.85) contrast(1.05)',
                       transition: 'transform 0.15s',
                       '&:hover': { transform: 'scale(1.03)' },
@@ -748,7 +755,7 @@ export default function EventDetailPage() {
                       maxWidth: 600,
                       aspectRatio: '4/3',
                       borderRadius: 2,
-                      background: photo.url,
+                      background: photoBg(photo.url),
                       filter: 'saturate(0.85) contrast(1.05)',
                     }}
                   />
@@ -884,22 +891,42 @@ export default function EventDetailPage() {
             <Button onClick={() => { setUploadOpen(false); setUploadPreviews([]); }}>取消</Button>
             <Button
               variant="contained"
-              disabled={uploadPreviews.length === 0}
-              onClick={() => {
-                const newPhotos: EventPhoto[] = uploadPreviews.map((item, idx) => ({
-                  id: `upload-${Date.now()}-${idx}`,
-                  url: item.preview,
-                  uploadedBy: user?.name ?? '我',
-                  caption: item.caption || undefined,
-                  createdAt: '刚刚',
-                }));
-                setPhotos((prev) => [...prev, ...newPhotos]);
-                setUploadPreviews([]);
-                setUploadOpen(false);
-                setFlash({ open: true, severity: 'success', message: `上传成功，已添加 ${newPhotos.length} 张照片` });
+              disabled={uploadPreviews.length === 0 || isUploading}
+              onClick={async () => {
+                if (!user || !eventId) return;
+                setIsUploading(true);
+                const uploaded: EventPhoto[] = [];
+                try {
+                  for (const item of uploadPreviews) {
+                    try {
+                      const { publicUrl } = await uploadMedia(item.file, 'event-recap', user.id);
+                      await addEventRecapPhoto(eventId, publicUrl);
+                      uploaded.push({
+                        id: `upload-${Date.now()}-${uploaded.length}`,
+                        url: publicUrl,
+                        uploadedBy: user.name ?? '我',
+                        caption: item.caption || undefined,
+                        createdAt: '刚刚',
+                      });
+                    } catch (err) {
+                      console.error('Photo upload failed:', err);
+                    }
+                  }
+                  if (uploaded.length > 0) {
+                    setPhotos((prev) => [...prev, ...uploaded]);
+                    setFlash({ open: true, severity: 'success', message: `上传成功，已添加 ${uploaded.length} 张照片` });
+                  } else {
+                    setFlash({ open: true, severity: 'error', message: '上传失败，请重试' });
+                  }
+                } finally {
+                  uploadPreviews.forEach((item) => URL.revokeObjectURL(item.preview));
+                  setUploadPreviews([]);
+                  setUploadOpen(false);
+                  setIsUploading(false);
+                }
               }}
             >
-              上传
+              {isUploading ? '上传中…' : '上传'}
             </Button>
           </DialogActions>
         </Dialog>
@@ -916,7 +943,16 @@ export default function EventDetailPage() {
             <Button onClick={() => setDeleteConfirm(null)}>取消</Button>
             <Button
               color="error"
-              onClick={() => {
+              onClick={async () => {
+                const photo = photos.find((p) => p.id === deleteConfirm);
+                if (photo && eventId) {
+                  try {
+                    await removeEventRecapPhoto(eventId, photo.url);
+                    try { await deleteMediaAsset(photo.url); } catch { /* best effort */ }
+                  } catch (err) {
+                    console.error('Failed to remove photo from server:', err);
+                  }
+                }
                 setPhotos((prev) => prev.filter((p) => p.id !== deleteConfirm));
                 setDeleteConfirm(null);
                 setFlash({ open: true, severity: 'success', message: '照片已删除' });

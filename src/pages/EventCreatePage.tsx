@@ -29,6 +29,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { moviePool, membersData, taskPresets } from '@/mock/data';
 import type { FoodOption, TaskRole } from '@/types';
 import { Poster } from '@/components/Poster';
+import { ImageUpload } from '@/components/ImageUpload';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 
 const tagOptions = ['电影夜', '茶话会/分享会', '户外', '运动', '其他'];
@@ -86,6 +87,8 @@ export default function EventCreatePage() {
 
   // Task (分工) state
   const [tasks, setTasks] = useState<TaskRole[]>([]);
+  // Title image
+  const [titleImageUrl, setTitleImageUrl] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -200,6 +203,21 @@ export default function EventCreatePage() {
                 />
               ))}
             </Stack>
+          </Box>
+
+          {/* Title Image */}
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>封面图（可选）</Typography>
+            <ImageUpload
+              value={titleImageUrl}
+              onChange={setTitleImageUrl}
+              category="event-image"
+              ownerId={user.id}
+              width="100%"
+              height={160}
+              shape="rect"
+              maxSize={10 * 1024 * 1024}
+            />
           </Box>
 
           {/* Date + Time — split for cleaner UI */}

@@ -11,6 +11,7 @@ export interface MemberData {
   name: string;
   email?: string;
   hideEmail?: boolean;
+  avatar?: string;
   role: string;
   host: number;
   badge?: string;
