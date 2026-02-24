@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  CircularProgress,
   Alert,
   Autocomplete,
   Box,
@@ -36,8 +37,15 @@ import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
-import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import {
+  fetchEmailTemplates,
+  createEmailTemplate,
+  updateEmailTemplate,
+  deleteEmailTemplate,
+  previewEmailTemplate,
+  type EmailTemplateRow,
+} from '@/lib/domainApi';
 
 /* ═══════════════════════════════════════════════
    Mock Data
@@ -344,7 +352,11 @@ export default function AdminEmailPage() {
   const [mainTab, setMainTab] = useState(0);
   const [globalConfig, setGlobalConfig] = useState<GlobalEmailConfig>(defaultGlobalConfig);
   const [rules, setRules] = useState<EmailRuleMock[]>(mockRules);
-  const [templates, setTemplates] = useState<EmailTemplateMock[]>(mockTemplates);
+  const [templates, setTemplates] = useState<EmailTemplateRow[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<EmailTemplateRow | null>(null);
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [digestConfig, setDigestConfig] = useState<DigestConfig>(defaultDigestConfig);
   const [queuedEmails, setQueuedEmails] = useState<QueuedEmailMock[]>(initialQueuedEmails);
   const [suppressedEmails, setSuppressedEmails] = useState<SuppressedEmailMock[]>(initialSuppressed);
@@ -355,11 +367,11 @@ export default function AdminEmailPage() {
   const [editRuleOpen, setEditRuleOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<EmailRuleMock | null>(null);
   const [editTemplateOpen, setEditTemplateOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<EmailTemplateMock | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<EmailTemplateRow | null>(null);
   const [previewTemplateOpen, setPreviewTemplateOpen] = useState(false);
-  const [previewingTemplate, setPreviewingTemplate] = useState<EmailTemplateMock | null>(null);
+  const [previewingTemplate, setPreviewingTemplate] = useState<EmailTemplateRow | null>(null);
   const [userPreviewOpen, setUserPreviewOpen] = useState(false);
-  const [userPreviewTemplate, setUserPreviewTemplate] = useState<EmailTemplateMock | null>(null);
+  const [userPreviewTemplate, setUserPreviewTemplate] = useState<EmailTemplateRow | null>(null);
   const [userPreviewUser, setUserPreviewUser] = useState<UserEmailStatusMock | null>(null);
   const [addSuppressedOpen, setAddSuppressedOpen] = useState(false);
   const [addSuppressedEmail, setAddSuppressedEmail] = useState('');
@@ -404,6 +416,21 @@ export default function AdminEmailPage() {
   const [editRuleEnabled, setEditRuleEnabled] = useState(true);
   const [editRuleThreshold, setEditRuleThreshold] = useState(0);
   const [editRuleMaxRec, setEditRuleMaxRec] = useState(3);
+
+  // Load templates from DB
+  const loadTemplates = async () => {
+    setTemplatesLoading(true);
+    try {
+      const data = await fetchEmailTemplates();
+      setTemplates(data);
+    } catch (e) {
+      console.error('Failed to load templates:', e);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  useEffect(() => { loadTemplates(); }, []);
 
   // Computed values
   const activeCount = mockUserStatuses.filter(u => u.emailState === 'active').length;
@@ -469,7 +496,7 @@ export default function AdminEmailPage() {
     setEditRuleOpen(false);
   };
 
-  const handleOpenEditTemplate = (tpl: EmailTemplateMock) => {
+  const handleOpenEditTemplate = (tpl: EmailTemplateRow) => {
     setEditingTemplate(tpl);
     setEditTplRuleId(tpl.ruleId);
     setEditTplVariant(tpl.variantKey);
@@ -479,29 +506,40 @@ export default function AdminEmailPage() {
     setEditTemplateOpen(true);
   };
 
-  const handleSaveTemplate = () => {
-    if (!editingTemplate) {
-      // New template
-      const newTpl: EmailTemplateMock = {
-        id: `t${templates.length + 1}`,
-        ruleId: editTplRuleId,
-        variantKey: editTplVariant,
-        subject: editTplSubject,
-        body: editTplBody,
-        isActive: editTplActive,
-      };
-      setTemplates(prev => [...prev, newTpl]);
-    } else {
-      setTemplates(prev => prev.map(t => t.id !== editingTemplate.id ? t : {
-        ...t,
-        ruleId: editTplRuleId,
-        variantKey: editTplVariant,
-        subject: editTplSubject,
-        body: editTplBody,
-        isActive: editTplActive,
-      }));
+  const handleSaveTemplate = async () => {
+    try {
+      if (!editingTemplate) {
+        await createEmailTemplate({
+          ruleId: editTplRuleId,
+          variantKey: editTplVariant,
+          subject: editTplSubject,
+          body: editTplBody,
+          isActive: editTplActive,
+        });
+      } else {
+        await updateEmailTemplate(editingTemplate.id, {
+          ruleId: editTplRuleId,
+          variantKey: editTplVariant,
+          subject: editTplSubject,
+          body: editTplBody,
+          isActive: editTplActive,
+        });
+      }
+      setEditTemplateOpen(false);
+      loadTemplates();
+    } catch (e) {
+      console.error('Failed to save template:', e);
     }
-    setEditTemplateOpen(false);
+  };
+
+  const handleDeleteTemplate = async (tpl: EmailTemplateRow) => {
+    try {
+      await deleteEmailTemplate(tpl.id);
+      setDeleteConfirm(null);
+      loadTemplates();
+    } catch (e) {
+      console.error('Failed to delete template:', e);
+    }
   };
 
   const handleQueueAction = (id: string, action: 'pause' | 'resume' | 'cancel') => {
@@ -1012,6 +1050,16 @@ export default function AdminEmailPage() {
             </Button>
           </Stack>
 
+          {templatesLoading && (
+            <Stack alignItems="center" sx={{ py: 4 }}>
+              <CircularProgress size={28} />
+            </Stack>
+          )}
+
+          {!templatesLoading && filteredTemplates.length === 0 && (
+            <Typography color="text.secondary" textAlign="center" sx={{ py: 4 }}>暂无模板</Typography>
+          )}
+
           {filteredTemplates.map(tpl => (
             <Card key={tpl.id} variant="outlined">
               <CardContent>
@@ -1043,8 +1091,33 @@ export default function AdminEmailPage() {
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="预览">
-                      <IconButton size="small" onClick={() => { setPreviewingTemplate(tpl); setPreviewTemplateOpen(true); }}>
+                      <IconButton size="small" onClick={async () => {
+                        setPreviewingTemplate(tpl);
+                        setPreviewHtml('');
+                        setPreviewLoading(true);
+                        setPreviewTemplateOpen(true);
+                        try {
+                          const sampleVars: Record<string, string> = {
+                            userName: '小明', eventTitle: '电影夜·花样年华',
+                            eventDate: '2026-02-22 19:00', eventLocation: '白开水家',
+                            hostName: 'Yuan', postcardFrom: '星星',
+                            postcardMessage: '谢谢你的招待！', titleName: '社交达人',
+                            date: '2/24',
+                          };
+                          const res = await previewEmailTemplate(tpl.subject, tpl.body, sampleVars);
+                          setPreviewHtml(res.html);
+                        } catch (e) {
+                          console.error('Preview failed:', e);
+                        } finally {
+                          setPreviewLoading(false);
+                        }
+                      }}>
                         <VisibilityRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="删除">
+                      <IconButton size="small" color="error" onClick={() => setDeleteConfirm(tpl)}>
+                        <DeleteRoundedIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                   </Stack>
@@ -1424,37 +1497,35 @@ export default function AdminEmailPage() {
          ═══════════════════════════════════════════════ */}
       {mainTab === 5 && (
         <Stack spacing={3}>
-          {/* Resend Style Management */}
+          {/* Template Management */}
           <Card variant="outlined">
             <CardContent>
-              <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>邮件样式设置</Typography>
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>邮件模板管理</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                邮件的外观样式在 Resend 模板编辑器中修改。点击下方按钮，登录后即可用可视化编辑器调整。
+                所有邮件内容通过「模板编辑」Tab 管理。模板正文使用纯文本编写，系统会自动通过 MJML 渲染为品牌化的响应式 HTML 邮件。
               </Typography>
               <Button
                 variant="contained"
                 size="large"
-                endIcon={<OpenInNewRoundedIcon />}
-                href="https://resend.com/templates"
-                target="_blank"
+                onClick={() => setMainTab(2)}
                 sx={{ mb: 2 }}
               >
-                打开模板编辑器
+                前往模板编辑
               </Button>
               <Divider sx={{ my: 2 }} />
-              <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>怎么改邮件样式？</Typography>
+              <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>怎么改邮件内容？</Typography>
               <Stack spacing={0.5} sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary">1. 点击上方按钮，用 Google 账号登录 Resend</Typography>
-                <Typography variant="body2" color="text.secondary">2. 在模板列表中选择要修改的模板</Typography>
-                <Typography variant="body2" color="text.secondary">3. 在编辑器中直接修改 logo、颜色、文字排版等</Typography>
-                <Typography variant="body2" color="text.secondary">4. 修改完点「Publish」发布（未发布的修改不会影响已在发的邮件）</Typography>
+                <Typography variant="body2" color="text.secondary">1. 切换到「模板编辑」Tab</Typography>
+                <Typography variant="body2" color="text.secondary">2. 选择要修改的模板，点击编辑按钮</Typography>
+                <Typography variant="body2" color="text.secondary">3. 修改主题和正文，使用 {'{变量名}'} 插入动态内容</Typography>
+                <Typography variant="body2" color="text.secondary">4. 保存后点击预览按钮，查看 MJML 渲染后的实际邮件效果</Typography>
               </Stack>
               <Divider sx={{ my: 2 }} />
-              <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>账号信息</Typography>
-              <Typography variant="body2" color="text.secondary">登录邮箱: hi@chuanmen.co</Typography>
-              <Typography variant="body2" color="text.secondary">发件地址: noreply@chuanmen.co</Typography>
+              <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>发件信息</Typography>
+              <Typography variant="body2" color="text.secondary">发件地址: {globalConfig.fromEmail}</Typography>
+              <Typography variant="body2" color="text.secondary">回复地址: {globalConfig.replyTo}</Typography>
               <Alert severity="info" sx={{ mt: 2 }}>
-                如果需要创建全新的邮件模板或做大的布局调整，请联系开发同学协助。
+                邮件的外观布局（logo、颜色、间距等）由 MJML 模板统一控制。如需调整整体样式，请联系开发同学修改 MJML 模板代码。
               </Alert>
             </CardContent>
           </Card>
@@ -1844,8 +1915,8 @@ export default function AdminEmailPage() {
       </Dialog>
 
       {/* Preview Template Dialog */}
-      <Dialog open={previewTemplateOpen} onClose={() => setPreviewTemplateOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>模板预览</DialogTitle>
+      <Dialog open={previewTemplateOpen} onClose={() => setPreviewTemplateOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>模板预览（MJML 渲染）</DialogTitle>
         <DialogContent>
           {previewingTemplate && (
             <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1858,12 +1929,22 @@ export default function AdminEmailPage() {
                 <Typography fontWeight={600}>{replaceVars(previewingTemplate.subject)}</Typography>
               </Box>
               <Divider />
-              <Box>
-                <Typography variant="caption" color="text.secondary">正文</Typography>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mt: 0.5 }}>
-                  {replaceVars(previewingTemplate.body)}
-                </Typography>
-              </Box>
+              {previewLoading && (
+                <Stack alignItems="center" sx={{ py: 4 }}>
+                  <CircularProgress size={24} />
+                </Stack>
+              )}
+              {!previewLoading && previewHtml && (
+                <Box
+                  component="iframe"
+                  srcDoc={previewHtml}
+                  sandbox="allow-same-origin"
+                  sx={{ width: '100%', height: 500, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+                />
+              )}
+              {!previewLoading && !previewHtml && (
+                <Typography variant="body2" color="text.secondary">预览加载失败</Typography>
+              )}
             </Stack>
           )}
         </DialogContent>
@@ -1873,7 +1954,7 @@ export default function AdminEmailPage() {
       </Dialog>
 
       {/* User Preview Dialog */}
-      <Dialog open={userPreviewOpen} onClose={() => setUserPreviewOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={userPreviewOpen} onClose={() => setUserPreviewOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>以用户身份预览</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1882,7 +1963,28 @@ export default function AdminEmailPage() {
               options={mockUserStatuses}
               getOptionLabel={o => `${o.name} (${o.email})`}
               value={userPreviewUser}
-              onChange={(_, v) => setUserPreviewUser(v)}
+              onChange={async (_, v) => {
+                setUserPreviewUser(v);
+                if (v && userPreviewTemplate) {
+                  setPreviewHtml('');
+                  setPreviewLoading(true);
+                  try {
+                    const vars: Record<string, string> = {
+                      userName: v.name, eventTitle: '电影夜·花样年华',
+                      eventDate: '2026-02-22 19:00', eventLocation: '白开水家',
+                      hostName: 'Yuan', postcardFrom: '星星',
+                      postcardMessage: '谢谢你的招待！', titleName: '社交达人',
+                      date: '2/24',
+                    };
+                    const res = await previewEmailTemplate(userPreviewTemplate.subject, userPreviewTemplate.body, vars);
+                    setPreviewHtml(res.html);
+                  } catch (e) {
+                    console.error('User preview failed:', e);
+                  } finally {
+                    setPreviewLoading(false);
+                  }
+                }
+              }}
               renderInput={p => <TextField {...p} label="选择用户" />}
             />
             {userPreviewTemplate && userPreviewUser && (
@@ -1892,12 +1994,19 @@ export default function AdminEmailPage() {
                   <Typography variant="caption" color="text.secondary">主题</Typography>
                   <Typography fontWeight={600}>{replaceVars(userPreviewTemplate.subject, userPreviewUser)}</Typography>
                 </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">正文</Typography>
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mt: 0.5 }}>
-                    {replaceVars(userPreviewTemplate.body, userPreviewUser)}
-                  </Typography>
-                </Box>
+                {previewLoading && (
+                  <Stack alignItems="center" sx={{ py: 4 }}>
+                    <CircularProgress size={24} />
+                  </Stack>
+                )}
+                {!previewLoading && previewHtml && (
+                  <Box
+                    component="iframe"
+                    srcDoc={previewHtml}
+                    sandbox="allow-same-origin"
+                    sx={{ width: '100%', height: 500, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+                  />
+                )}
                 <Button variant="outlined" size="small" startIcon={<SendRoundedIcon />}>
                   发送此预览到测试邮箱
                 </Button>
@@ -1909,6 +2018,17 @@ export default function AdminEmailPage() {
           <Button onClick={() => setUserPreviewOpen(false)}>关闭</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Delete Template Confirm */}
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        title="删除模板"
+        message={deleteConfirm ? `确认删除模板「${deleteConfirm.ruleId} · ${deleteConfirm.variantKey}」？此操作不可撤销。` : ''}
+        confirmLabel="删除"
+        confirmColor="error"
+        onConfirm={() => deleteConfirm && handleDeleteTemplate(deleteConfirm)}
+        onCancel={() => setDeleteConfirm(null)}
+      />
 
       {/* Manual Send Dialog */}
       <Dialog open={manualSendOpen} onClose={() => setManualSendOpen(false)} maxWidth="sm" fullWidth>

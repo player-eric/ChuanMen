@@ -400,7 +400,137 @@ async function main() {
     console.log('  ✅ Weekly lottery (W08)');
   }
 
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     13. Email rules & templates
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  await seedEmailRulesAndTemplates();
+
   console.log('\n🌱 Seed complete!');
+}
+
+// ── Email rules & templates ─────────────────────────────────
+
+async function seedEmailRulesAndTemplates() {
+  // ── 23 EmailRule rows ──
+  const rules: { id: string; displayOrder: number; cooldownDays: number; config: object }[] = [
+    { id: 'TXN-1', displayOrder: 1,   cooldownDays: 0,  config: {} },
+    { id: 'TXN-2', displayOrder: 2,   cooldownDays: 0,  config: {} },
+    { id: 'TXN-3', displayOrder: 3,   cooldownDays: 0,  config: {} },
+    { id: 'TXN-4', displayOrder: 4,   cooldownDays: 0,  config: {} },
+    { id: 'TXN-5', displayOrder: 5,   cooldownDays: 0,  config: {} },
+    { id: 'TXN-6', displayOrder: 6,   cooldownDays: 0,  config: {} },
+    { id: 'P0-A',  displayOrder: 10,  cooldownDays: 0,  config: {} },
+    { id: 'P0-B',  displayOrder: 11,  cooldownDays: 0,  config: {} },
+    { id: 'P0-C',  displayOrder: 12,  cooldownDays: 0,  config: {} },
+    { id: 'P0-D',  displayOrder: 13,  cooldownDays: 0,  config: {} },
+    { id: 'P1',    displayOrder: 20,  cooldownDays: 3,  config: {} },
+    { id: 'P2-A',  displayOrder: 30,  cooldownDays: 0,  config: {} },
+    { id: 'P2-B',  displayOrder: 31,  cooldownDays: 0,  config: {} },
+    { id: 'P3-A',  displayOrder: 40,  cooldownDays: 7,  config: {} },
+    { id: 'P3-B',  displayOrder: 41,  cooldownDays: 0,  config: {} },
+    { id: 'P3-C',  displayOrder: 42,  cooldownDays: 3,  config: { maxDaysSinceJoin: 14 } },
+    { id: 'P3-D',  displayOrder: 43,  cooldownDays: 14, config: {} },
+    { id: 'P3-E',  displayOrder: 44,  cooldownDays: 30, config: { inactiveDays: 60 } },
+    { id: 'P3-F',  displayOrder: 45,  cooldownDays: 30, config: { inactiveDays: 45 } },
+    { id: 'P4-A',  displayOrder: 50,  cooldownDays: 0,  config: {} },
+    { id: 'P4-B',  displayOrder: 51,  cooldownDays: 7,  config: { minNewMovies: 2 } },
+    { id: 'P4-C',  displayOrder: 52,  cooldownDays: 0,  config: {} },
+    { id: 'DIGEST', displayOrder: 100, cooldownDays: 0, config: {} },
+  ];
+
+  for (const r of rules) {
+    await prisma.emailRule.upsert({
+      where: { id: r.id },
+      update: {},
+      create: {
+        id: r.id,
+        enabled: true,
+        displayOrder: r.displayOrder,
+        cooldownDays: r.cooldownDays,
+        config: r.config,
+      },
+    });
+  }
+  console.log(`  ✅ EmailRules (${rules.length})`);
+
+  // ── 10 EmailTemplate starter rows ──
+  const templates: { ruleId: string; variantKey: string; subject: string; body: string }[] = [
+    {
+      ruleId: 'TXN-1',
+      variantKey: 'default',
+      subject: '【串门儿】活动「{eventTitle}」已取消',
+      body: '你好 {userName}，\n\n很抱歉通知你，「{eventTitle}」（原定 {eventDate}）已被取消。\n\n如有疑问，请联系活动 Host {hostName}。\n\n— 串门儿团队',
+    },
+    {
+      ruleId: 'TXN-2',
+      variantKey: 'default',
+      subject: '【串门儿】活动「{eventTitle}」信息变更',
+      body: '你好 {userName}，\n\n「{eventTitle}」的信息有更新：\n\n时间：{eventDate}\n地点：{eventLocation}\n\n请留意最新安排。\n\n— 串门儿团队',
+    },
+    {
+      ruleId: 'TXN-3',
+      variantKey: 'default',
+      subject: '【串门儿】恭喜！你已被「{eventTitle}」录取',
+      body: '你好 {userName}，\n\n好消息！你在「{eventTitle}」的候补已转正。\n\n活动时间：{eventDate}\n地点：{eventLocation}\n\n期待见到你！\n\n— 串门儿团队',
+    },
+    {
+      ruleId: 'TXN-4',
+      variantKey: 'default',
+      subject: '欢迎加入串门儿，{userName}！',
+      body: '你好 {userName}，\n\n恭喜你通过了串门儿的申请！🎉\n\n你现在可以：\n• 浏览和报名活动\n• 推荐电影和书籍\n• 给朋友发送感谢卡\n\n快来看看最近有什么活动吧！\n\n— 串门儿团队',
+    },
+    {
+      ruleId: 'TXN-5',
+      variantKey: 'default',
+      subject: '【串门儿】申请结果通知',
+      body: '你好，\n\n感谢你对串门儿的兴趣。经过审核，我们暂时未能通过你的申请。\n\n这并不代表永久拒绝，欢迎你在未来再次申请。\n\n— 串门儿团队',
+    },
+    {
+      ruleId: 'TXN-6',
+      variantKey: 'default',
+      subject: '【串门儿】恭喜中签！',
+      body: '你好 {userName}，\n\n本周抽签结果出炉，你已中签！🎊\n\n请尽快确认你的参加意愿。\n\n— 串门儿团队',
+    },
+    {
+      ruleId: 'P0-A',
+      variantKey: 'default',
+      subject: '【串门儿】你被邀请参加「{eventTitle}」',
+      body: '你好 {userName}，\n\n{hostName} 邀请你参加「{eventTitle}」！\n\n时间：{eventDate}\n地点：{eventLocation}\n\n快来报名吧！\n\n— 串门儿团队',
+    },
+    {
+      ruleId: 'P0-B',
+      variantKey: 'default',
+      subject: '【串门儿】明天见！「{eventTitle}」即将开始',
+      body: '你好 {userName}，\n\n你报名的活动「{eventTitle}」将在明天开始！\n\n时间：{eventDate}\n地点：{eventLocation}\n\n期待见到你！\n\n— 串门儿团队',
+    },
+    {
+      ruleId: 'P3-F',
+      variantKey: 'default',
+      subject: '【串门儿】好久不见，{userName}！',
+      body: '你好 {userName}，\n\n我们发现你已经有一段时间没参加串门儿的活动了。\n\n最近有不少新活动，不如来看看？\n\n想你了，期待再次见到你！\n\n— 串门儿团队',
+    },
+    {
+      ruleId: 'DIGEST',
+      variantKey: 'default',
+      subject: '{date} · 串门儿社区动态',
+      body: '{digestContent}',
+    },
+  ];
+
+  for (const t of templates) {
+    await prisma.emailTemplate.upsert({
+      where: { ruleId_variantKey: { ruleId: t.ruleId, variantKey: t.variantKey } },
+      update: {},
+      create: {
+        ruleId: t.ruleId,
+        variantKey: t.variantKey,
+        subject: t.subject,
+        body: t.body,
+        isActive: true,
+      },
+    });
+  }
+  console.log(`  ✅ EmailTemplates (${templates.length})`);
 }
 
 main()

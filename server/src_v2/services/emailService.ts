@@ -1,5 +1,7 @@
+import type { PrismaClient } from '@prisma/client';
 import { Resend } from 'resend';
 import { env } from '../config/env.js';
+import { renderEmail } from '../emails/template.js';
 
 let _resend: Resend | null = null;
 function resend(): Resend {
@@ -23,4 +25,48 @@ export async function sendEmail(input: SendEmailInput) {
   });
   if (error) throw new Error(`Resend error: ${error.message}`);
   return { MessageId: data!.id };
+}
+
+// ── Templated email ────────────────────────────────────────
+
+export interface SendTemplatedEmailOptions {
+  to: string;
+  ruleId: string;
+  variantKey?: string;
+  variables: Record<string, string>;
+  previewText?: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+}
+
+export async function sendTemplatedEmail(
+  prisma: PrismaClient,
+  options: SendTemplatedEmailOptions,
+): Promise<{ MessageId: string }> {
+  const { to, ruleId, variantKey = 'default', variables, previewText, ctaLabel, ctaUrl } = options;
+
+  const template = await prisma.emailTemplate.findUnique({
+    where: { ruleId_variantKey: { ruleId, variantKey } },
+  });
+
+  if (!template) {
+    // Fallback: send a plain-text email with ruleId as subject
+    return sendEmail({ to, subject: ruleId, text: JSON.stringify(variables) });
+  }
+
+  const rendered = renderEmail({
+    subject: template.subject,
+    body: template.body,
+    variables,
+    previewText,
+    ctaLabel,
+    ctaUrl,
+  });
+
+  return sendEmail({
+    to,
+    subject: rendered.subject,
+    text: rendered.text,
+    html: rendered.html,
+  });
 }

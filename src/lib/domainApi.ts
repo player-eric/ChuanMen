@@ -526,3 +526,78 @@ export async function fetchRecommendationsApi(category?: string) {
     `/api/recommendations${toQueryString({ category: category ?? '' })}`,
   );
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Email Template API
+   ═══════════════════════════════════════════════════════════════ */
+
+export interface EmailTemplateRow {
+  id: string;
+  ruleId: string;
+  variantKey: string;
+  subject: string;
+  body: string;
+  isActive: boolean;
+  updatedAt: string;
+}
+
+export interface EmailRuleRow {
+  id: string;
+  enabled: boolean;
+  displayOrder: number;
+  cooldownDays: number;
+  config: Record<string, unknown>;
+  updatedAt: string;
+}
+
+export async function fetchEmailRules() {
+  return requestJson<EmailRuleRow[]>('/api/email/rules');
+}
+
+export async function fetchEmailTemplates(ruleId?: string) {
+  return requestJson<EmailTemplateRow[]>(
+    `/api/email/templates${toQueryString({ ruleId: ruleId ?? '' })}`,
+  );
+}
+
+export async function createEmailTemplate(payload: {
+  ruleId: string;
+  variantKey: string;
+  subject: string;
+  body: string;
+  isActive: boolean;
+}) {
+  return requestJson<EmailTemplateRow>('/api/email/templates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateEmailTemplate(id: string, payload: {
+  ruleId?: string;
+  variantKey?: string;
+  subject?: string;
+  body?: string;
+  isActive?: boolean;
+}) {
+  return requestJson<EmailTemplateRow>(`/api/email/templates/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteEmailTemplate(id: string) {
+  return requestJson<{ ok: boolean }>(`/api/email/templates/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function previewEmailTemplate(subject: string, body: string, variables: Record<string, string>) {
+  return requestJson<{ subject: string; html: string; text: string }>('/api/email/templates/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, body, variables }),
+  });
+}

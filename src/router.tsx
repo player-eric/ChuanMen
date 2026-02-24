@@ -246,12 +246,12 @@ function getStoredUserId(): string {
 
 async function cardsLoader() {
   const userId = getStoredUserId();
-  if (!userId) return { received: [], sent: [], credits: 0, people: [], quickMessages: [] };
+  if (!userId) return { myCards: [], sentCards: [], credits: 0, people: [], quickMessages: [] };
   try {
     const data = await fetchPostcardsApi(userId);
-    return { ...data, people: [], quickMessages: [] };
+    return { myCards: data.received ?? [], sentCards: data.sent ?? [], credits: data.credits ?? 0, people: [], quickMessages: [] };
   } catch {
-    return { received: [], sent: [], credits: 0, people: [], quickMessages: [] };
+    return { myCards: [], sentCards: [], credits: 0, people: [], quickMessages: [] };
   }
 }
 
