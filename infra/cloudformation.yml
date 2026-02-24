@@ -65,8 +65,8 @@ Parameters:
   # ── Agent schedule ──
   AgentScheduleExpression:
     Type: String
-    Default: 'rate(10 minutes)'
-    Description: 'EventBridge schedule for agent tick (e.g. rate(10 minutes))'
+    Default: 'cron(0 14 * * ? *)'
+    Description: 'EventBridge schedule for agent tick — 14:00 UTC = 09:00 EST daily'
 
   # ── Optional: HTTPS ──
   CertificateArn:

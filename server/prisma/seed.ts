@@ -510,6 +510,30 @@ async function seedEmailRulesAndTemplates() {
       body: '你好 {userName}，\n\n我们发现你已经有一段时间没参加串门儿的活动了。\n\n最近有不少新活动，不如来看看？\n\n想你了，期待再次见到你！\n\n— 串门儿团队',
     },
     {
+      ruleId: 'P3-D',
+      variantKey: 'default',
+      subject: '【串门儿】{userName}，考虑当一次 Host 吗？',
+      body: '你好 {userName}，\n\n你已经参加了好几次串门儿的活动，大家都很喜欢你！\n\n有没有想过自己组织一次？不需要很复杂，在家看个电影、做个饭局都可以。\n\n我们会全程支持你，快来试试吧！\n\n— 串门儿团队',
+    },
+    {
+      ruleId: 'P3-E',
+      variantKey: 'default',
+      subject: '【串门儿】{userName}，想念你组织的活动！',
+      body: '你好 {userName}，\n\n好久没看到你组织活动了，大家都很想念你当 Host 的时光！\n\n如果最近有时间，考虑再组织一次吧，我们都很期待。\n\n— 串门儿团队',
+    },
+    {
+      ruleId: 'P4-A',
+      variantKey: 'default',
+      subject: '【串门儿】{milestoneTitle}',
+      body: '你好 {userName}，\n\n{milestoneTitle}\n\n这是属于我们每一个人的成就，感谢你的参与和支持！\n\n— 串门儿团队',
+    },
+    {
+      ruleId: 'P4-C',
+      variantKey: 'default',
+      subject: '【串门儿】感谢 Host {userName}！',
+      body: '你好 {userName}，\n\n感谢你上个月为大家组织的活动！你的付出让串门儿变得更好。\n\n期待你下次的精彩活动！\n\n— 串门儿团队',
+    },
+    {
       ruleId: 'DIGEST',
       variantKey: 'default',
       subject: '{date} · 串门儿社区动态',

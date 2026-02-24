@@ -1,19 +1,66 @@
 import type { FastifyInstance } from 'fastify';
+import { detectMilestones, generateHostTribute } from '../agent/contentAutomation.js';
+import {
+  sendChurnRecall,
+  sendSilentHostRecall,
+  sendEncourageHosting,
+  sendMilestoneNotif,
+  sendHostTributeNotif,
+} from '../agent/emailAutomation.js';
 
-// v2.1: AgentPush removed. This service now creates Announcements instead.
 export async function runAgentCycle(app: FastifyInstance) {
-  const candidates = await app.prisma.recommendation.findMany({
-    where: { status: 'candidate' },
-    orderBy: [{ voteCount: 'desc' }, { createdAt: 'asc' }],
-    take: 5,
-  });
+  const prisma = app.prisma;
+  const log = app.log;
 
-  if (candidates.length === 0) {
-    return { generated: 0 };
+  // Phase 1: Content automation (each try/catch)
+  let milestones: string[] = [];
+  try {
+    milestones = await detectMilestones(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: detectMilestones failed');
   }
 
-  // v2.1: Replaced agentPush with announcement (requires an admin authorId)
-  // For now this is a no-op placeholder until admin user seeding is implemented
-  app.log.info(`Agent cycle found ${candidates.length} candidates (announcement creation pending admin setup)`);
-  return { generated: 0 };
+  let tribute: { title: string; hostIds: string[] } | null = null;
+  try {
+    tribute = await generateHostTribute(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: generateHostTribute failed');
+  }
+
+  // Phase 2: Email automation (each try/catch, independent)
+  try {
+    await sendChurnRecall(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendChurnRecall failed');
+  }
+
+  try {
+    await sendSilentHostRecall(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendSilentHostRecall failed');
+  }
+
+  try {
+    await sendEncourageHosting(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendEncourageHosting failed');
+  }
+
+  if (milestones.length > 0) {
+    try {
+      await sendMilestoneNotif(prisma, log, milestones);
+    } catch (err) {
+      log.error({ err }, 'Agent: sendMilestoneNotif failed');
+    }
+  }
+
+  if (tribute) {
+    try {
+      await sendHostTributeNotif(prisma, log, tribute);
+    } catch (err) {
+      log.error({ err }, 'Agent: sendHostTributeNotif failed');
+    }
+  }
+
+  return { milestones, tribute };
 }
