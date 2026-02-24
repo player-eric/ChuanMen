@@ -29,6 +29,7 @@ import AdminLayout from '@/layouts/AdminLayout';
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
 import AdminMembersPage from '@/pages/admin/AdminMembersPage';
 import AdminEventsPage from '@/pages/admin/AdminEventsPage';
+import AdminEmailPage from '@/pages/admin/AdminEmailPage';
 import AdminNewslettersPage from '@/pages/admin/AdminNewslettersPage';
 import AdminTitlesPage from '@/pages/admin/AdminTitlesPage';
 import AdminSettingsPage from '@/pages/admin/AdminSettingsPage';
@@ -366,6 +367,7 @@ export const appRoutes: RouteObject[] = [
       { path: 'titles', element: <AdminTitlesPage /> },
       { path: 'task-presets', element: <AdminTaskPresetsPage /> },
       { path: 'announcements', element: <AdminAnnouncementsPage /> },
+      { path: 'email', element: <AdminEmailPage /> },
       { path: 'newsletters', element: <AdminNewslettersPage /> },
       { path: 'community-info', element: <AdminCommunityInfoPage /> },
       { path: 'settings', element: <AdminSettingsPage /> },
