@@ -1,0 +1,77 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Deploy: Connect this repo in Render Dashboard → "New Blueprint Instance"
+
+databases:
+  - name: chuanmen-db
+    plan: starter          # starter = 1 GB, free for 90 days; upgrade to "standard" for prod
+    databaseName: chuanmen
+    user: chuanmen
+    postgresMajorVersion: "16"
+
+services:
+  # ── Web server ──────────────────────────────────────
+  - type: web
+    name: chuanmen-server
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    plan: starter          # starter = 512 MB RAM, 0.5 CPU; upgrade as needed
+    region: oregon         # or ohio, virginia, frankfurt, singapore
+    healthCheckPath: /api/health
+    envVars:
+      # ── App ──
+      - key: APP_ENV
+        value: prod
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "true"
+      - key: FRONTEND_ORIGIN
+        value: https://www.chuanmen.co
+      # ── Database (auto-linked from Render Postgres) ──
+      - key: DATABASE_URL
+        fromDatabase:
+          name: chuanmen-db
+          property: connectionString
+      # ── AWS S3 (media storage) ──
+      - key: AWS_REGION
+        sync: false        # set manually in Render dashboard
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_BUCKET
+        sync: false
+      # ── AWS SES (email) ──
+      - key: AWS_SES_FROM_EMAIL
+        sync: false
+
+  # ── Agent cron job (runs every 10 minutes) ─────────
+  - type: cron
+    name: chuanmen-agent
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    schedule: "*/10 * * * *"
+    plan: starter
+    region: oregon
+    dockerCommand: node dist/workers/agentTick.js
+    envVars:
+      - key: APP_ENV
+        value: prod
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: chuanmen-db
+          property: connectionString
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_BUCKET
+        sync: false
+      - key: AWS_SES_FROM_EMAIL
+        sync: false

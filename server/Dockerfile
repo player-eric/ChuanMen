@@ -23,10 +23,13 @@ COPY --from=build /app/public ./public
 
 RUN npx prisma generate
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:4000/api/health || exit 1
+# Render sets PORT dynamically; ECS/Docker Compose may use 4000
+EXPOSE ${PORT:-4000}
 
-EXPOSE 4000
+# Health check — works locally & on ECS; Render uses healthCheckPath instead
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:${PORT:-4000}/api/health || exit 1
 
-# Production: use migrate deploy (applies pending migrations safely)
+# Default: run migrations then start web server
+# Override with dockerCommand in render.yaml for cron/worker jobs
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
