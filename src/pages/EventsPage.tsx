@@ -11,12 +11,10 @@ import {
   CardActions,
   CardContent,
   Chip,
-  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   Grid,
   InputAdornment,
   Snackbar,
@@ -26,8 +24,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import type { EventData, EventsPageData } from '@/types';
@@ -38,33 +34,6 @@ import { Ava, AvaStack } from '@/components/Atoms';
 import { FeedActions } from '@/components/FeedItems';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
-
-/* ═══ Mock: 小聚接力 data ═══ */
-const activeRelay = {
-  id: 1,
-  streak: 12,
-  currentWeek: { week: 12, person: '星星', status: 'pending' as const },
-  history: [
-    { week: 11, person: 'Tiffy', title: '在家做饭吃', date: '2.20', location: 'Edison, NJ', people: 4, eventId: 211 },
-    { week: 10, person: '阿德', title: '录音棚参观', date: '2.14', location: 'Montclair, NJ', people: 3, eventId: 210 },
-    { week: 9, person: 'Derek', title: '周末晨跑', date: '2.1', location: 'Ridgewood, NJ', people: 4, eventId: 209 },
-    { week: 8, person: '白开水', title: '电影散步', date: '1.25', location: 'Edison, NJ', people: 3, eventId: 208 },
-    { week: 7, person: 'Yuan', title: '咖啡闲聊', date: '1.18', location: 'Edison, NJ', people: 3, eventId: 207 },
-    { week: 6, person: '大橙子', title: '拍照散步', date: '1.11', location: 'Jersey City, NJ', people: 2, eventId: 206 },
-  ],
-};
-
-const endedRelay = {
-  id: 0,
-  streak: 5,
-  history: [
-    { week: 5, person: '小鱼', title: '公园野餐', date: '12.20', location: 'New Brunswick, NJ', people: 3, eventId: 205 },
-    { week: 4, person: 'Mia', title: '逛 Mitsuwa', date: '12.13', location: 'Edgewater, NJ', people: 4, eventId: 204 },
-    { week: 3, person: 'Leo', title: '看日落', date: '12.06', location: 'Hoboken, NJ', people: 2, eventId: 203 },
-    { week: 2, person: '奶茶', title: '奶茶品鉴', date: '11.29', location: 'Edison, NJ', people: 3, eventId: 202 },
-    { week: 1, person: 'Yuan', title: '周末早餐', date: '11.22', location: 'Edison, NJ', people: 4, eventId: 201 },
-  ],
-};
 
 const phaseChip: Record<string, { label: string; color: 'warning' | 'success' | 'primary' | 'default' | 'error' }> = {
   invite: { label: '🔒 邀请', color: 'warning' },
@@ -188,7 +157,7 @@ export default function EventsPage() {
   const { user } = useAuth();
   const c = useColors();
   const data = useLoaderData() as EventsPageData;
-  const [tab, setTab] = useState<'upcoming' | 'ideas' | 'relay' | 'past'>('upcoming');
+  const [tab, setTab] = useState<'upcoming' | 'ideas' | 'past'>('upcoming');
   const [selected, setSelected] = useState<EventData | null>(null);
   const [snackMsg, setSnackMsg] = useState('');
   const canInteract = Boolean(user);
@@ -198,8 +167,6 @@ export default function EventsPage() {
   const [searchedItems, setSearchedItems] = useState<Record<string, unknown>[]>([]);
   const [searchError, setSearchError] = useState('');
   const [interested, setInterested] = useState<Record<number, boolean>>({});
-  const [rulesOpen, setRulesOpen] = useState(false);
-  const [relayConfirmOpen, setRelayConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (tab !== 'ideas') return;
@@ -231,7 +198,6 @@ export default function EventsPage() {
       <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ mb: 2 }}>
         <Tab value="upcoming" label={`即将到来 (${upcomingEvents.length})`} />
         <Tab value="ideas" label={`创意孵化中 (${data.proposals.length})`} />
-        <Tab value="relay" label="小聚接力" />
         <Tab value="past" label={`过往活动 (${pastEvents.length + data.past.length})`} />
       </Tabs>
 
@@ -356,105 +322,6 @@ export default function EventsPage() {
         </Stack>
       )}
 
-      {tab === 'relay' && (
-        <Stack spacing={2}>
-          {/* Active relay header */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 0.5 }}>🎲 小聚接力</Typography>
-              <Typography variant="h4" fontWeight={800}>
-                已连续 {activeRelay.streak} 周有人 Host！🔥
-              </Typography>
-              <Button
-                variant="contained"
-                size="small"
-                sx={{ mt: 1.5, textTransform: 'none' }}
-                onClick={() => setRelayConfirmOpen(true)}
-                disabled={!canInteract}
-              >
-                + 发起新的接力
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Collapsible rules */}
-          <Card variant="outlined">
-            <CardActionArea onClick={() => setRulesOpen(!rulesOpen)}>
-              <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body2" fontWeight={600}>小聚接力是什么？</Typography>
-                  {rulesOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-                </Stack>
-              </CardContent>
-            </CardActionArea>
-            <Collapse in={rulesOpen}>
-              <CardContent sx={{ pt: 0 }}>
-                <Stack spacing={0.5}>
-                  <Typography variant="body2" color="text.secondary">• <b>任何人</b>都可以点"发起新的接力"开始一条新的接力线</Typography>
-                  <Typography variant="body2" color="text.secondary">• 每周系统从活跃成员中随机抽一人 Host，同一人 4 周内不重复</Typography>
-                  <Typography variant="body2" color="text.secondary">• 被抽中的人可以"跳过"，系统立刻换人</Typography>
-                  <Typography variant="body2" color="text.secondary">• 一条接力线连续 <b>3 周没有人 Host</b>（skip 不算 Host）后自动结束</Typography>
-                  <Typography variant="body2" color="text.secondary">• 同时可以有多条活跃的接力线</Typography>
-                </Stack>
-              </CardContent>
-            </Collapse>
-          </Card>
-
-          {/* Current week */}
-          <Card variant="outlined">
-            <CardContent>
-              <Typography variant="caption" color="text.secondary">本周 · 第 {activeRelay.currentWeek.week} 期</Typography>
-              <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
-                👤 {activeRelay.currentWeek.person} · {activeRelay.currentWeek.status === 'pending' ? '待发起' : '已发起'}
-              </Typography>
-            </CardContent>
-          </Card>
-
-          {/* Active relay history */}
-          <Typography variant="subtitle2" color="text.secondary">往期记录</Typography>
-          {activeRelay.history.map((h) => (
-            <Card key={h.week} variant="outlined">
-              <CardActionArea onClick={() => navigate(`/events/${h.eventId}`)}>
-                <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                  <Typography variant="body2" fontWeight={600}>
-                    第 {h.week} 期 · {h.person} · {h.title}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {h.date} · {h.location} · {h.people}人参加
-                  </Typography>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          ))}
-
-          {/* Ended relay */}
-          <Divider sx={{ my: 1 }}>
-            <Typography variant="caption" color="text.secondary">接力 #{endedRelay.id + 1}（已结束）</Typography>
-          </Divider>
-          <Card variant="outlined" sx={{ opacity: 0.6 }}>
-            <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-              <Typography variant="body2" color="text.secondary" fontWeight={600}>
-                连续 {endedRelay.streak} 周 · 已结束
-              </Typography>
-            </CardContent>
-          </Card>
-          {endedRelay.history.map((h) => (
-            <Card key={h.week} variant="outlined" sx={{ opacity: 0.6 }}>
-              <CardActionArea onClick={() => navigate(`/events/${h.eventId}`)}>
-                <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                  <Typography variant="body2" fontWeight={600}>
-                    第 {h.week} 期 · {h.person} · {h.title}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {h.date} · {h.location} · {h.people}人参加
-                  </Typography>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          ))}
-        </Stack>
-      )}
-
       {tab === 'past' && (
         <Stack spacing={2}>
           <Grid container spacing={2}>
@@ -519,27 +386,6 @@ export default function EventsPage() {
       />
 
       <EventDetailDialog evt={selected} open={Boolean(selected)} onClose={() => setSelected(null)} />
-
-      <Dialog open={relayConfirmOpen} onClose={() => setRelayConfirmOpen(false)}>
-        <DialogTitle>发起新的接力</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2">
-            发起接力需要你直接完成一次小聚，要现在发起吗？
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRelayConfirmOpen(false)}>取消</Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              setRelayConfirmOpen(false);
-              navigate('/events/new', { state: { preTag: '小聚' } });
-            }}
-          >
-            现在发起
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

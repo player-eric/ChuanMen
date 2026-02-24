@@ -25,22 +25,34 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import BlockRoundedIcon from '@mui/icons-material/BlockRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
+import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
-/* ── Mock data ── */
+/* ── PRD 11.1.1 ── Mock data ── */
+
+/** Operational identities per PRD */
+const OP_IDENTITIES = [
+  { key: 'design', label: '🎨 设计总管' },
+  { key: 'social', label: '📱 社媒小助手' },
+  { key: 'photo', label: '📷 活动摄影师' },
+  { key: 'writer', label: '✍️ 内容主笔' },
+  { key: 'tech', label: '🔧 技术支持' },
+] as const;
+
 const allMembers = [
-  { name: 'Yuan', email: 'cm@gmail.com', role: 'admin', status: 'active', joinDate: '2024-03', host: 6, events: 24, location: 'Edison, NJ' },
-  { name: '白开水', email: 'bks@example.com', role: 'host', status: 'active', joinDate: '2024-03', host: 8, events: 18, location: 'Edison, NJ' },
-  { name: '大橙子', email: 'dachengzi@example.com', role: 'admin', status: 'active', joinDate: '2024-04', host: 5, events: 14, location: 'Jersey City, NJ' },
-  { name: '星星', email: 'star@example.com', role: 'member', status: 'active', joinDate: '2024-06', host: 0, events: 8, location: 'Princeton, NJ' },
-  { name: 'Tiffy', email: 'tiffy@example.com', role: 'host', status: 'active', joinDate: '2024-05', host: 3, events: 10, location: 'Edison, NJ' },
-  { name: '小鱼', email: 'xiaoyu@example.com', role: 'member', status: 'active', joinDate: '2024-09', host: 0, events: 5, location: 'New Brunswick, NJ' },
-  { name: 'Leo', email: 'leo@example.com', role: 'member', status: 'active', joinDate: '2024-08', host: 1, events: 6, location: 'Hoboken, NJ' },
-  { name: 'Mia', email: 'mia@example.com', role: 'member', status: 'active', joinDate: '2025-01', host: 0, events: 1, location: 'Edison, NJ' },
-  { name: '阿德', email: 'ade@example.com', role: 'member', status: 'active', joinDate: '2024-10', host: 2, events: 5, location: 'Montclair, NJ' },
-  { name: '奶茶', email: 'naicha@example.com', role: 'member', status: 'active', joinDate: '2024-11', host: 0, events: 3, location: 'Edison, NJ' },
-  { name: 'Derek', email: 'derek@example.com', role: 'member', status: 'active', joinDate: '2024-12', host: 2, events: 7, location: 'Bridgewater, NJ' },
-  { name: '小樱', email: 'xiaoying@example.com', role: 'member', status: 'dormant', joinDate: '2024-07', host: 0, events: 2, location: 'Princeton, NJ' },
+  { name: 'Yuan', email: 'cm@gmail.com', role: 'admin', status: 'active', joinDate: '2024-03', host: 6, events: 24, location: 'Edison, NJ', opId: 'tech' as string | null, warning: null as string | null },
+  { name: '白开水', email: 'bks@example.com', role: 'host', status: 'active', joinDate: '2024-03', host: 8, events: 18, location: 'Edison, NJ', opId: null, warning: null },
+  { name: '大橙子', email: 'dachengzi@example.com', role: 'admin', status: 'active', joinDate: '2024-04', host: 5, events: 14, location: 'Jersey City, NJ', opId: 'design', warning: null },
+  { name: '星星', email: 'star@example.com', role: 'member', status: 'active', joinDate: '2024-06', host: 0, events: 8, location: 'Princeton, NJ', opId: null, warning: '被 2 位 Host 隐藏' },
+  { name: 'Tiffy', email: 'tiffy@example.com', role: 'host', status: 'active', joinDate: '2024-05', host: 3, events: 10, location: 'Edison, NJ', opId: 'photo', warning: null },
+  { name: '小鱼', email: 'xiaoyu@example.com', role: 'member', status: 'active', joinDate: '2024-09', host: 0, events: 5, location: 'New Brunswick, NJ', opId: null, warning: null },
+  { name: 'Leo', email: 'leo@example.com', role: 'member', status: 'active', joinDate: '2024-08', host: 1, events: 6, location: 'Hoboken, NJ', opId: null, warning: null },
+  { name: 'Mia', email: 'mia@example.com', role: 'member', status: 'active', joinDate: '2025-01', host: 0, events: 1, location: 'Edison, NJ', opId: null, warning: '被 3 位 Host 隐藏' },
+  { name: '阿德', email: 'ade@example.com', role: 'member', status: 'active', joinDate: '2024-10', host: 2, events: 5, location: 'Montclair, NJ', opId: null, warning: null },
+  { name: '奶茶', email: 'naicha@example.com', role: 'member', status: 'active', joinDate: '2024-11', host: 0, events: 3, location: 'Edison, NJ', opId: 'social', warning: null },
+  { name: 'Derek', email: 'derek@example.com', role: 'member', status: 'active', joinDate: '2024-12', host: 2, events: 7, location: 'Bridgewater, NJ', opId: 'writer', warning: null },
+  { name: '小樱', email: 'xiaoying@example.com', role: 'member', status: 'dormant', joinDate: '2024-07', host: 0, events: 2, location: 'Princeton, NJ', opId: null, warning: null },
 ];
 
 const pendingApplicants = [
@@ -74,6 +86,7 @@ export default function AdminMembersPage() {
   const [confirmToggle, setConfirmToggle] = useState<(typeof allMembers)[0] | null>(null);
   const [confirmApprove, setConfirmApprove] = useState<(typeof pendingApplicants)[0] | null>(null);
   const [confirmSaveEdit, setConfirmSaveEdit] = useState(false);
+  const [confirmAdmin, setConfirmAdmin] = useState<(typeof allMembers)[0] | null>(null);
 
   const filtered = allMembers.filter((m) => {
     if (search && !m.name.toLowerCase().includes(search.toLowerCase()) && !m.email.toLowerCase().includes(search.toLowerCase())) return false;
@@ -111,30 +124,43 @@ export default function AdminMembersPage() {
           <Card>
             <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
               {/* Header */}
-              <Box sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr 80px', gap: 1, px: 2, py: 1.5, bgcolor: 'action.hover' }}>
+              <Box sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr 1fr 100px', gap: 1, px: 2, py: 1.5, bgcolor: 'action.hover' }}>
                 <Typography variant="caption" fontWeight={700}>成员</Typography>
                 <Typography variant="caption" fontWeight={700}>邮箱</Typography>
                 <Typography variant="caption" fontWeight={700}>角色</Typography>
+                <Typography variant="caption" fontWeight={700}>运营身份</Typography>
                 <Typography variant="caption" fontWeight={700}>状态</Typography>
-                <Typography variant="caption" fontWeight={700}>Host 次数</Typography>
-                <Typography variant="caption" fontWeight={700}>参加活动</Typography>
+                <Typography variant="caption" fontWeight={700}>Host</Typography>
+                <Typography variant="caption" fontWeight={700}>活动</Typography>
                 <Typography variant="caption" fontWeight={700}>操作</Typography>
               </Box>
               <Divider />
 
               {filtered.map((m, i) => (
                 <Box key={m.email}>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr auto', md: '2fr 2fr 1fr 1fr 1fr 1fr 80px' }, gap: 1, px: 2, py: 1.5, alignItems: 'center' }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr auto', md: '2fr 2fr 1fr 1fr 1fr 1fr 1fr 100px' }, gap: 1, px: 2, py: 1.5, alignItems: 'center' }}>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <Avatar sx={{ width: 32, height: 32 }}>{m.name[0]}</Avatar>
                       <Box>
-                        <Typography variant="body2" fontWeight={600}>{m.name}</Typography>
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Typography variant="body2" fontWeight={600}>{m.name}</Typography>
+                          {m.warning && (
+                            <WarningAmberRoundedIcon sx={{ fontSize: 14, color: 'warning.main' }} titleAccess={m.warning} />
+                          )}
+                        </Stack>
                         <Typography variant="caption" color="text.secondary" sx={{ display: { md: 'none' } }}>{m.email}</Typography>
                       </Box>
                     </Stack>
                     <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>{m.email}</Typography>
                     <Box sx={{ display: { xs: 'none', md: 'block' } }}>
                       <Chip label={roleName[m.role]} size="small" color={roleColors[m.role]} variant="outlined" />
+                    </Box>
+                    <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                      {m.opId ? (
+                        <Chip label={OP_IDENTITIES.find((o) => o.key === m.opId)?.label ?? m.opId} size="small" variant="outlined" />
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">—</Typography>
+                      )}
                     </Box>
                     <Box sx={{ display: { xs: 'none', md: 'block' } }}>
                       <Chip label={m.status === 'active' ? '活跃' : '休眠'} size="small" color={m.status === 'active' ? 'success' : 'default'} variant="outlined" />
@@ -147,6 +173,11 @@ export default function AdminMembersPage() {
                       </IconButton>
                       <IconButton size="small" color={m.status === 'active' ? 'warning' : 'success'} onClick={() => setConfirmToggle(m)}>
                         {m.status === 'active' ? <BlockRoundedIcon fontSize="small" /> : <CheckCircleRoundedIcon fontSize="small" />}
+                      </IconButton>
+                      <IconButton size="small" color={m.role === 'admin' ? 'error' : 'primary'}
+                        title={m.role === 'admin' ? '撤销管理员' : '授权管理员'}
+                        onClick={() => setConfirmAdmin(m)}>
+                        <AdminPanelSettingsRoundedIcon fontSize="small" />
                       </IconButton>
                     </Stack>
                   </Box>
@@ -212,7 +243,23 @@ export default function AdminMembersPage() {
               <MenuItem value="host">Host</MenuItem>
               <MenuItem value="member">成员</MenuItem>
             </TextField>
+            <TextField label="运营身份" defaultValue={selectedMember?.opId ?? ''} select fullWidth size="small">
+              <MenuItem value="">无</MenuItem>
+              {OP_IDENTITIES.map((o) => (
+                <MenuItem key={o.key} value={o.key}>{o.label}</MenuItem>
+              ))}
+            </TextField>
             <TextField label="位置" defaultValue={selectedMember?.location} fullWidth size="small" />
+            {selectedMember?.warning && (
+              <Box sx={{ p: 1.5, bgcolor: 'warning.main', borderRadius: 1, opacity: 0.15 }}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <WarningAmberRoundedIcon color="warning" fontSize="small" />
+                  <Typography variant="body2" color="warning.dark" fontWeight={600}>
+                    ⚠ 问题标记：{selectedMember.warning}
+                  </Typography>
+                </Stack>
+              </Box>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -285,6 +332,19 @@ export default function AdminMembersPage() {
         confirmColor="primary"
         onConfirm={() => { setConfirmSaveEdit(false); setEditOpen(false); }}
         onCancel={() => setConfirmSaveEdit(false)}
+      />
+
+      {/* ── Confirm: grant/revoke admin ── */}
+      <ConfirmDialog
+        open={!!confirmAdmin}
+        title={confirmAdmin?.role === 'admin' ? '撤销管理员权限' : '授权管理员'}
+        message={confirmAdmin?.role === 'admin'
+          ? `确定要撤销「${confirmAdmin?.name ?? ''}」的管理员权限吗？`
+          : `确定要将「${confirmAdmin?.name ?? ''}」设为管理员吗？该成员将获得后台所有管理权限。`}
+        confirmLabel={confirmAdmin?.role === 'admin' ? '撤销' : '授权'}
+        confirmColor={confirmAdmin?.role === 'admin' ? 'error' : 'primary'}
+        onConfirm={() => setConfirmAdmin(null)}
+        onCancel={() => setConfirmAdmin(null)}
       />
     </Stack>
   );

@@ -24,15 +24,17 @@ import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import PushPinRoundedIcon from '@mui/icons-material/PushPinRounded';
+import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
-/* ── Mock events for admin ── */
+/* ── Mock events for admin (PRD 11.1.2) ── */
 const upcomingEvents = [
-  { id: 1, title: '电影夜 · 花样年华', host: '白开水', date: '02.22 周六 7pm', location: '白开水家', spots: '6/10', phase: 'open' as const, scene: 'movieNight' },
-  { id: 2, title: '重庆森林 · 私人邀请', host: 'Yuan', date: '02.28 周五 8pm', location: 'Yuan 家', spots: '2/6', phase: 'invite' as const, scene: 'movieNight' },
-  { id: 3, title: '周末 Potluck', host: 'Tiffy', date: '03.01 周六 12pm', location: 'Tiffy 家', spots: '4/8', phase: 'open' as const, scene: 'potluck' },
-  { id: 4, title: '春天 Kayaking', host: 'Derek', date: '03.08 周六 10am', location: 'Raritan River', spots: '3/8', phase: 'invite' as const, scene: 'outdoor' },
-  { id: 5, title: '烘焙下午茶', host: 'Tiffy', date: '03.15 周六 2pm', location: 'Tiffy 家', spots: '0/6', phase: 'open' as const, scene: 'potluck' },
+  { id: 1, title: '电影夜 · 花样年华', host: '白开水', date: '02.22 周六 7pm', location: '白开水家', spots: '6/10', phase: 'open' as const, scene: 'movieNight', pinned: true, hiddenMembers: [] as string[] },
+  { id: 2, title: '重庆森林 · 私人邀请', host: 'Yuan', date: '02.28 周五 8pm', location: 'Yuan 家', spots: '2/6', phase: 'invite' as const, scene: 'movieNight', pinned: false, hiddenMembers: ['星星'] },
+  { id: 3, title: '周末 Potluck', host: 'Tiffy', date: '03.01 周六 12pm', location: 'Tiffy 家', spots: '4/8', phase: 'open' as const, scene: 'potluck', pinned: false, hiddenMembers: [] as string[] },
+  { id: 4, title: '春天 Kayaking', host: 'Derek', date: '03.08 周六 10am', location: 'Raritan River', spots: '3/8', phase: 'invite' as const, scene: 'outdoor', pinned: false, hiddenMembers: ['Mia', '星星'] },
+  { id: 5, title: '烘焙下午茶', host: 'Tiffy', date: '03.15 周六 2pm', location: 'Tiffy 家', spots: '0/6', phase: 'open' as const, scene: 'potluck', pinned: false, hiddenMembers: [] as string[] },
 ];
 
 const pastEvents = [
@@ -60,6 +62,8 @@ export default function AdminEventsPage() {
   const [detailEvent, setDetailEvent] = useState<(typeof upcomingEvents)[0] | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<(typeof upcomingEvents)[0] | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<(typeof upcomingEvents)[0] | null>(null);
+  const [confirmPin, setConfirmPin] = useState<(typeof upcomingEvents)[0] | null>(null);
+  const [hiddenListEvent, setHiddenListEvent] = useState<(typeof upcomingEvents)[0] | null>(null);
 
   return (
     <Stack spacing={2}>
@@ -78,19 +82,23 @@ export default function AdminEventsPage() {
       {tab === 0 && (
         <Card>
           <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
-            <Box sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: '3fr 1.5fr 2fr 1fr 1fr 100px', gap: 1, px: 2, py: 1.5, bgcolor: 'action.hover' }}>
+            <Box sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: '3fr 1.5fr 2fr 1fr 1fr 1fr 120px', gap: 1, px: 2, py: 1.5, bgcolor: 'action.hover' }}>
               <Typography variant="caption" fontWeight={700}>活动名称</Typography>
               <Typography variant="caption" fontWeight={700}>Host</Typography>
               <Typography variant="caption" fontWeight={700}>时间 / 地点</Typography>
               <Typography variant="caption" fontWeight={700}>人数</Typography>
               <Typography variant="caption" fontWeight={700}>阶段</Typography>
+              <Typography variant="caption" fontWeight={700}>隐藏</Typography>
               <Typography variant="caption" fontWeight={700}>操作</Typography>
             </Box>
             <Divider />
             {upcomingEvents.map((evt, i) => (
               <Box key={evt.id}>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr auto', md: '3fr 1.5fr 2fr 1fr 1fr 100px' }, gap: 1, px: 2, py: 1.5, alignItems: 'center' }}>
-                  <Typography variant="body2" fontWeight={600}>{evt.title}</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr auto', md: '3fr 1.5fr 2fr 1fr 1fr 1fr 120px' }, gap: 1, px: 2, py: 1.5, alignItems: 'center' }}>
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    {evt.pinned && <PushPinRoundedIcon sx={{ fontSize: 14, color: 'primary.main' }} />}
+                    <Typography variant="body2" fontWeight={600}>{evt.title}</Typography>
+                  </Stack>
                   <Stack direction="row" spacing={0.5} alignItems="center" sx={{ display: { xs: 'none', md: 'flex' } }}>
                     <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>{evt.host[0]}</Avatar>
                     <Typography variant="body2">{evt.host}</Typography>
@@ -103,7 +111,25 @@ export default function AdminEventsPage() {
                   <Box sx={{ display: { xs: 'none', md: 'block' } }}>
                     <Chip label={evt.phase === 'invite' ? '邀请中' : '公开'} size="small" color={phaseColors[evt.phase]} variant="outlined" />
                   </Box>
+                  <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                    {evt.hiddenMembers.length > 0 ? (
+                      <Chip
+                        label={`${evt.hiddenMembers.length} 人`}
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                        icon={<VisibilityOffRoundedIcon sx={{ fontSize: 14 }} />}
+                        onClick={() => setHiddenListEvent(evt)}
+                        sx={{ cursor: 'pointer' }}
+                      />
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">—</Typography>
+                    )}
+                  </Box>
                   <Stack direction="row" spacing={0.5}>
+                    <IconButton size="small" title={evt.pinned ? '取消置顶' : '置顶'} onClick={() => setConfirmPin(evt)}>
+                      <PushPinRoundedIcon fontSize="small" sx={{ color: evt.pinned ? 'primary.main' : 'action.disabled' }} />
+                    </IconButton>
                     <IconButton size="small" onClick={() => setDetailEvent(evt)}><VisibilityRoundedIcon fontSize="small" /></IconButton>
                     <IconButton size="small"><EditRoundedIcon fontSize="small" /></IconButton>
                     <IconButton size="small" color="error" onClick={() => setConfirmDelete(evt)}><DeleteRoundedIcon fontSize="small" /></IconButton>
@@ -230,6 +256,41 @@ export default function AdminEventsPage() {
         onConfirm={() => { setConfirmCancel(null); setDetailEvent(null); }}
         onCancel={() => setConfirmCancel(null)}
       />
+
+      {/* ── Confirm: pin/unpin event ── */}
+      <ConfirmDialog
+        open={!!confirmPin}
+        title={confirmPin?.pinned ? '取消置顶' : '置顶活动'}
+        message={confirmPin?.pinned
+          ? `确定要取消「${confirmPin?.title ?? ''}」的置顶吗？`
+          : `确定要将「${confirmPin?.title ?? ''}」置顶到活动列表顶部吗？`}
+        confirmLabel={confirmPin?.pinned ? '取消置顶' : '置顶'}
+        confirmColor="primary"
+        onConfirm={() => setConfirmPin(null)}
+        onCancel={() => setConfirmPin(null)}
+      />
+
+      {/* ── Hidden members list dialog ── */}
+      <Dialog open={!!hiddenListEvent} onClose={() => setHiddenListEvent(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>被 Host 隐藏的成员 — {hiddenListEvent?.title}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1} sx={{ mt: 1 }}>
+            {hiddenListEvent?.hiddenMembers.map((name) => (
+              <Stack key={name} direction="row" spacing={1} alignItems="center" sx={{ py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
+                <Avatar sx={{ width: 28, height: 28 }}>{name[0]}</Avatar>
+                <Typography variant="body2">{name}</Typography>
+                <Chip label="Host 隐藏" size="small" color="warning" variant="outlined" sx={{ ml: 'auto' }} />
+              </Stack>
+            ))}
+            {hiddenListEvent?.hiddenMembers.length === 0 && (
+              <Typography variant="body2" color="text.secondary">无隐藏成员</Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHiddenListEvent(null)}>关闭</Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

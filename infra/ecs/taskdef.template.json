@@ -17,10 +17,18 @@
         }
       ],
       "essential": true,
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 15
+      },
       "environment": [
         { "name": "APP_ENV", "value": "prod" },
         { "name": "NODE_ENV", "value": "production" },
         { "name": "PORT", "value": "4000" },
+        { "name": "TRUST_PROXY", "value": "true" },
         { "name": "FRONTEND_ORIGIN", "value": "${FRONTEND_ORIGIN}" },
         { "name": "AWS_REGION", "value": "${AWS_REGION}" },
         { "name": "AWS_S3_BUCKET", "value": "${AWS_S3_BUCKET}" },

@@ -11,6 +11,7 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
+    "prisma:seed": "tsx prisma/seed.ts",
     "agent:tick": "tsx src_v2/workers/agentTick.ts",
     "check": "tsc --noEmit -p tsconfig.json",
     "system:test:up": "./system-test/up.sh",
@@ -37,5 +38,8 @@
     "@types/node": "^24.5.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

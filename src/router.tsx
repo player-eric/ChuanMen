@@ -33,6 +33,10 @@ import AdminNewslettersPage from '@/pages/admin/AdminNewslettersPage';
 import AdminTitlesPage from '@/pages/admin/AdminTitlesPage';
 import AdminSettingsPage from '@/pages/admin/AdminSettingsPage';
 import AdminTaskPresetsPage from '@/pages/admin/AdminTaskPresetsPage';
+import AdminContentPage from '@/pages/admin/AdminContentPage';
+import AdminCardsPage from '@/pages/admin/AdminCardsPage';
+import AdminAnnouncementsPage from '@/pages/admin/AdminAnnouncementsPage';
+import AdminCommunityInfoPage from '@/pages/admin/AdminCommunityInfoPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import {
   fetchFeedData,
@@ -116,9 +120,13 @@ export const appRoutes: RouteObject[] = [
       { index: true, element: <AdminDashboardPage /> },
       { path: 'members', element: <AdminMembersPage /> },
       { path: 'events', element: <AdminEventsPage /> },
+      { path: 'content', element: <AdminContentPage /> },
+      { path: 'cards', element: <AdminCardsPage /> },
       { path: 'titles', element: <AdminTitlesPage /> },
       { path: 'task-presets', element: <AdminTaskPresetsPage /> },
+      { path: 'announcements', element: <AdminAnnouncementsPage /> },
       { path: 'newsletters', element: <AdminNewslettersPage /> },
+      { path: 'community-info', element: <AdminCommunityInfoPage /> },
       { path: 'settings', element: <AdminSettingsPage /> },
     ],
   },

@@ -27,17 +27,25 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
+import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
+import MailRoundedIcon from '@mui/icons-material/MailRounded';
+import CampaignRoundedIcon from '@mui/icons-material/CampaignRounded';
+import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
 import { useAuth } from '@/auth/AuthContext';
 
 const drawerWidth = 240;
 
 const adminNav = [
-  { id: '', icon: <DashboardRoundedIcon />, label: '仪表盘' },
+  { id: '', icon: <DashboardRoundedIcon />, label: '数据看板' },
   { id: 'members', icon: <PeopleRoundedIcon />, label: '成员管理' },
   { id: 'events', icon: <EventRoundedIcon />, label: '活动管理' },
+  { id: 'content', icon: <ArticleRoundedIcon />, label: '内容管理' },
+  { id: 'cards', icon: <MailRoundedIcon />, label: '感谢卡管理' },
   { id: 'titles', icon: <MilitaryTechRoundedIcon />, label: '称号管理' },
   { id: 'task-presets', icon: <AssignmentRoundedIcon />, label: '分工预设' },
+  { id: 'announcements', icon: <CampaignRoundedIcon />, label: '公告与里程碑' },
   { id: 'newsletters', icon: <EmailRoundedIcon />, label: '社区通讯' },
+  { id: 'community-info', icon: <EditNoteRoundedIcon />, label: '社群信息编辑' },
   { id: 'settings', icon: <SettingsRoundedIcon />, label: '系统设置' },
 ];
 

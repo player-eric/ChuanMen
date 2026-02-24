@@ -12,6 +12,6 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["src_v2/**/*.ts"],
+  "include": ["src_v2/**/*.ts", "prisma/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
