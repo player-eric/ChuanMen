@@ -348,7 +348,7 @@ export default function EventDetailPage() {
                     const year = detail.year;
                     const totalVotes = detail._count?.votes ?? 0;
                     const voters = (detail.votes ?? []).map((v: any) => v.user?.name).filter(Boolean);
-                    const attendeeVotes = voters.filter((name) => event.people.includes(name)).length;
+                    const attendeeVotes = voters.filter((name: string) => event.people.includes(name)).length;
                     const isSelected = event.film === title;
                     const isHost = user?.name === event.host;
                     const canSelect = isHost && (event.phase === 'invite' || event.phase === 'open') && !isSelected;

@@ -30,7 +30,7 @@ export default function MovieDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const c = useColors();
-  const raw = useLoaderData() as MovieDetailData | MoviePool | null;
+  const raw = useLoaderData() as any;
   const [voted, setVoted] = useState(false);
   const [comments, setComments] = useState<EventComment[]>([]);
   const [commentText, setCommentText] = useState('');
