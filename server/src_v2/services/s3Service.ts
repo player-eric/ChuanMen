@@ -1,4 +1,4 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../config/env.js';
 
@@ -39,4 +39,13 @@ export async function createDownloadUrl(key: string) {
   return getSignedUrl(s3, command, {
     expiresIn: env.S3_PRESIGN_EXPIRES_SECONDS,
   });
+}
+
+export async function deleteObject(key: string) {
+  const command = new DeleteObjectCommand({
+    Bucket: env.AWS_S3_BUCKET,
+    Key: key,
+  });
+
+  return s3.send(command);
 }

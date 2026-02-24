@@ -5,27 +5,40 @@ import { hf } from '@/theme';
 /* ═══ Avatar ═══ */
 interface AvaProps {
   name: string;
+  src?: string;
   size?: number;
   border?: boolean;
   badge?: string;
   onTap?: () => void;
 }
 
-export function Ava({ name, size = 28, border, badge, onTap }: AvaProps) {
+export function Ava({ name, src, size = 28, border, badge, onTap }: AvaProps) {
   const c = useColors();
   return (
     <div style={{ position: 'relative', flexShrink: 0, cursor: onTap ? 'pointer' : undefined }} onClick={onTap}>
-      <div
-        style={{
-          width: size, height: size, borderRadius: '50%',
-          background: `hsl(${name.charCodeAt(0) * 37 % 360}, 25%, 22%)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: size * 0.38, color: c.text2, fontWeight: 600,
-          border: border ? `2px solid ${c.s1}` : 'none',
-        }}
-      >
-        {name[0]}
-      </div>
+      {src ? (
+        <img
+          src={src}
+          alt={name}
+          style={{
+            width: size, height: size, borderRadius: '50%',
+            objectFit: 'cover',
+            border: border ? `2px solid ${c.s1}` : 'none',
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            width: size, height: size, borderRadius: '50%',
+            background: `hsl(${name.charCodeAt(0) * 37 % 360}, 25%, 22%)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: size * 0.38, color: c.text2, fontWeight: 600,
+            border: border ? `2px solid ${c.s1}` : 'none',
+          }}
+        >
+          {name[0]}
+        </div>
+      )}
       {badge && (
         <div style={{ position: 'absolute', bottom: -1, right: -1, fontSize: size * 0.35 }}>{badge}</div>
       )}

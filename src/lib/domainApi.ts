@@ -35,6 +35,112 @@ function toQueryString(query: Record<string, string | number | undefined>): stri
   return raw ? `?${raw}` : '';
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   Media / S3 upload API
+   ═══════════════════════════════════════════════════════════════ */
+
+export type MediaCategory =
+  | 'avatar'
+  | 'cover'
+  | 'event-image'
+  | 'event-recap'
+  | 'poster'
+  | 'postcard'
+  | 'recommendation'
+  | 'general';
+
+export interface MediaAsset {
+  id: string;
+  key: string;
+  ownerId: string | null;
+  contentType: string;
+  fileSize: number;
+  status: 'pending' | 'uploaded';
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PresignResponse {
+  uploadUrl: string;
+  publicUrl: string;
+  asset: MediaAsset;
+}
+
+/**
+ * Step 1 — Request a presigned S3 upload URL from the server.
+ */
+export async function requestPresignedUrl(opts: {
+  category: MediaCategory;
+  contentType: string;
+  fileSize: number;
+  ownerId?: string;
+  fileName?: string;
+}): Promise<PresignResponse> {
+  return requestJson<PresignResponse>('/api/media/presign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(opts),
+  });
+}
+
+/**
+ * Step 2 — Upload the file directly to S3 using the presigned URL.
+ */
+export async function uploadFileToS3(uploadUrl: string, file: File): Promise<void> {
+  const res = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  });
+  if (!res.ok) {
+    throw new Error(`S3 upload failed: ${res.status} ${res.statusText}`);
+  }
+}
+
+/**
+ * Step 3 — Confirm the upload so the server marks the asset as "uploaded".
+ */
+export async function confirmMediaUpload(assetId: string): Promise<{ asset: MediaAsset }> {
+  return requestJson<{ asset: MediaAsset }>('/api/media/confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ assetId }),
+  });
+}
+
+/**
+ * Delete a media asset (and its S3 object).
+ */
+export async function deleteMediaAsset(assetId: string): Promise<void> {
+  await requestJson<{ success: boolean }>(`/api/media/${assetId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Convenience: presign → upload → confirm in one call.
+ * Returns the public URL of the uploaded file.
+ */
+export async function uploadMedia(
+  file: File,
+  category: MediaCategory,
+  ownerId?: string,
+): Promise<{ publicUrl: string; asset: MediaAsset }> {
+  const { uploadUrl, publicUrl, asset } = await requestPresignedUrl({
+    category,
+    contentType: file.type,
+    fileSize: file.size,
+    ownerId,
+    fileName: file.name,
+  });
+
+  await uploadFileToS3(uploadUrl, file);
+  const { asset: confirmed } = await confirmMediaUpload(asset.id);
+
+  return { publicUrl, asset: confirmed };
+}
+
 export type RecommendationCategory = 'movie' | 'recipe' | 'music' | 'place';
 
 export async function searchEvents(keyword: string) {
