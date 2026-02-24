@@ -58,11 +58,114 @@ import { fetchBookDetail } from '@/mock/api';
 
 /* ── Loader helpers (call real backend) ── */
 
+/** Transform raw feed API data into FeedItem[] for the timeline */
+function buildFeedItems(data: any): any[] {
+  const items: any[] = [];
+
+  // Group by date
+  const dateGroups = new Map<string, any[]>();
+  const addToDate = (dateStr: string, item: any) => {
+    const key = dateStr || 'unknown';
+    if (!dateGroups.has(key)) dateGroups.set(key, []);
+    dateGroups.get(key)!.push(item);
+  };
+
+  // Events → activity items
+  for (const e of (data.events ?? [])) {
+    const d = e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    addToDate(d, {
+      type: 'activity',
+      name: e.host?.name ?? '',
+      title: e.title,
+      date: d,
+      location: e.location ?? '',
+      spots: (e.capacity ?? 8) - (e.signups?.length ?? 0),
+      people: (e.signups ?? []).map((s: any) => s.user?.name).filter(Boolean),
+      film: e.selectedMovie?.title,
+      scene: e.tags?.[0] ?? '',
+      navTarget: `/events/${e.id}`,
+    });
+  }
+
+  // Postcards → card items
+  for (const p of (data.postcards ?? [])) {
+    const d = p.createdAt ? new Date(p.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    addToDate(d, {
+      type: 'card',
+      from: p.from?.name ?? '',
+      to: p.to?.name ?? '',
+      msg: p.message ?? '',
+    });
+  }
+
+  // Movies → compactMovie items
+  for (const m of (data.recentMovies ?? [])) {
+    const d = m.createdAt ? new Date(m.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    const time = m.createdAt ? timeAgo(m.createdAt) : '';
+    addToDate(d, {
+      type: 'compactMovie',
+      name: m.recommendedBy?.name ?? '',
+      title: m.title,
+      year: String(m.year ?? ''),
+      dir: m.director ?? '',
+      votes: m._count?.votes ?? 0,
+      time,
+      navTarget: `/discover/movies/${m.id}`,
+    });
+  }
+
+  // Proposals → compactProposal items
+  for (const p of (data.recentProposals ?? [])) {
+    const d = p.createdAt ? new Date(p.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    const time = p.createdAt ? timeAgo(p.createdAt) : '';
+    addToDate(d, {
+      type: 'compactProposal',
+      name: p.author?.name ?? '',
+      title: p.title,
+      votes: p._count?.votes ?? 0,
+      interested: [],
+      time,
+      navTarget: `/events/proposals/${p.id}`,
+    });
+  }
+
+  // Sort dates descending and build timeline with time separators
+  const sortedDates = [...dateGroups.keys()].sort((a, b) => {
+    // Parse MM/DD format for sorting
+    return b.localeCompare(a);
+  });
+
+  for (const dateKey of sortedDates) {
+    items.push({ type: 'time', label: dateKey });
+    items.push(...dateGroups.get(dateKey)!);
+  }
+
+  // If no items, add a milestone
+  if (items.length === 0) {
+    items.push({ type: 'milestone', text: '欢迎来到串门儿！', emoji: '🎉' });
+  }
+
+  return items;
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}分钟前`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}小时前`;
+  const days = Math.floor(hours / 24);
+  return `${days}天前`;
+}
+
 async function feedLoader() {
   try {
-    return await fetchFeedApi();
+    const data = await fetchFeedApi();
+    const items = buildFeedItems(data);
+    const members = (data as any).members ?? [];
+    return { items, members };
   } catch {
-    return { events: [], announcements: [], recommendations: [], members: [], postcards: [], recentMovies: [], recentProposals: [] };
+    return { items: [], members: [] };
   }
 }
 
