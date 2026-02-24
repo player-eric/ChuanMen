@@ -37,7 +37,7 @@ export async function fetchEventsData(): Promise<EventsPageData> {
   };
 }
 
-export async function fetchEventDetail(eventId: number) {
+export async function fetchEventDetail(eventId: string) {
   await delay();
   const all = [...upcomingEvents, ...endedEvents, ...cancelledEvents];
   return all.find((event) => event.id === eventId) ?? null;
@@ -48,7 +48,7 @@ export async function fetchEventProposalsData() {
   return proposals;
 }
 
-export async function fetchProposalDetail(proposalId: number) {
+export async function fetchProposalDetail(proposalId: string) {
   await delay();
   return proposals.find((p) => p.id === proposalId) ?? null;
 }
@@ -63,12 +63,12 @@ export async function fetchDiscoverData(): Promise<DiscoverPageData> {
   return { pool: moviePool, screened: movieScreened, bookPool, bookRead };
 }
 
-export async function fetchMovieDetail(movieId: number) {
+export async function fetchMovieDetail(movieId: string) {
   await delay();
   return movieDetailMap[movieId] ?? moviePool.find((movie) => movie.id === movieId) ?? null;
 }
 
-export async function fetchBookDetail(bookId: number) {
+export async function fetchBookDetail(bookId: string) {
   await delay();
   return bookDetailMap[bookId] ?? bookPool.find((book) => book.id === bookId) ?? null;
 }

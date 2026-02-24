@@ -74,11 +74,11 @@ function MoviesSection() {
   const [tab, setTab] = useState<'pool' | 'screened'>('pool');
   const [results, setResults] = useState(false);
   const [added, setAdded] = useState(false);
-  const [votes, setVotes] = useState<Record<number, boolean>>({});
-  const toggle = async (id: number) => {
+  const [votes, setVotes] = useState<Record<string, boolean>>({});
+  const toggle = async (id: string) => {
     setVotes((v) => ({ ...v, [id]: !v[id] }));
     if (user?.id) {
-      try { await toggleMovieVote(String(id), user.id); } catch { /* optimistic */ }
+      try { await toggleMovieVote(id, user.id); } catch { /* optimistic */ }
     }
   };
 
@@ -223,8 +223,8 @@ function BooksSection() {
   const data = useLoaderData() as DiscoverPageData;
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'pool' | 'read'>('pool');
-  const [votes, setVotes] = useState<Record<number, boolean>>({});
-  const toggle = (id: number) => setVotes((v) => ({ ...v, [id]: !v[id] }));
+  const [votes, setVotes] = useState<Record<string, boolean>>({});
+  const toggle = (id: string) => setVotes((v) => ({ ...v, [id]: !v[id] }));
 
   const q = search.toLowerCase();
   const filteredPool = q

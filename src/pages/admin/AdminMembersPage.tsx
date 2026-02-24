@@ -40,19 +40,20 @@ const OP_IDENTITIES = [
   { key: 'tech', label: '🔧 技术支持' },
 ] as const;
 
+// NOTE: `status` in mock data is static. When connected to API, compute from userStatus + lastActiveAt.
 const allMembers = [
-  { name: 'Yuan', email: 'cm@gmail.com', role: 'admin', status: 'active', joinDate: '2024-03', host: 6, events: 24, location: 'Edison, NJ', opId: 'tech' as string | null, warning: null as string | null },
-  { name: '白开水', email: 'bks@example.com', role: 'host', status: 'active', joinDate: '2024-03', host: 8, events: 18, location: 'Edison, NJ', opId: null, warning: null },
-  { name: '大橙子', email: 'dachengzi@example.com', role: 'admin', status: 'active', joinDate: '2024-04', host: 5, events: 14, location: 'Jersey City, NJ', opId: 'design', warning: null },
-  { name: '星星', email: 'star@example.com', role: 'member', status: 'active', joinDate: '2024-06', host: 0, events: 8, location: 'Princeton, NJ', opId: null, warning: '被 2 位 Host 隐藏' },
-  { name: 'Tiffy', email: 'tiffy@example.com', role: 'host', status: 'active', joinDate: '2024-05', host: 3, events: 10, location: 'Edison, NJ', opId: 'photo', warning: null },
-  { name: '小鱼', email: 'xiaoyu@example.com', role: 'member', status: 'active', joinDate: '2024-09', host: 0, events: 5, location: 'New Brunswick, NJ', opId: null, warning: null },
-  { name: 'Leo', email: 'leo@example.com', role: 'member', status: 'active', joinDate: '2024-08', host: 1, events: 6, location: 'Hoboken, NJ', opId: null, warning: null },
-  { name: 'Mia', email: 'mia@example.com', role: 'member', status: 'active', joinDate: '2025-01', host: 0, events: 1, location: 'Edison, NJ', opId: null, warning: '被 3 位 Host 隐藏' },
-  { name: '阿德', email: 'ade@example.com', role: 'member', status: 'active', joinDate: '2024-10', host: 2, events: 5, location: 'Montclair, NJ', opId: null, warning: null },
-  { name: '奶茶', email: 'naicha@example.com', role: 'member', status: 'active', joinDate: '2024-11', host: 0, events: 3, location: 'Edison, NJ', opId: 'social', warning: null },
-  { name: 'Derek', email: 'derek@example.com', role: 'member', status: 'active', joinDate: '2024-12', host: 2, events: 7, location: 'Bridgewater, NJ', opId: 'writer', warning: null },
-  { name: '小樱', email: 'xiaoying@example.com', role: 'member', status: 'dormant', joinDate: '2024-07', host: 0, events: 2, location: 'Princeton, NJ', opId: null, warning: null },
+  { name: 'Yuan', email: 'cm@gmail.com', role: 'admin', status: 'active', joinDate: '2024-03', host: 6, events: 24, location: 'Edison, NJ', opRoles: ['tech'] as string[], warning: null as string | null },
+  { name: '白开水', email: 'bks@example.com', role: 'host', status: 'active', joinDate: '2024-03', host: 8, events: 18, location: 'Edison, NJ', opRoles: [], warning: null },
+  { name: '大橙子', email: 'dachengzi@example.com', role: 'admin', status: 'active', joinDate: '2024-04', host: 5, events: 14, location: 'Jersey City, NJ', opRoles: ['design'], warning: null },
+  { name: '星星', email: 'star@example.com', role: 'member', status: 'active', joinDate: '2024-06', host: 0, events: 8, location: 'Princeton, NJ', opRoles: [], warning: '被 2 位 Host 隐藏' },
+  { name: 'Tiffy', email: 'tiffy@example.com', role: 'host', status: 'active', joinDate: '2024-05', host: 3, events: 10, location: 'Edison, NJ', opRoles: ['photo'], warning: null },
+  { name: '小鱼', email: 'xiaoyu@example.com', role: 'member', status: 'active', joinDate: '2024-09', host: 0, events: 5, location: 'New Brunswick, NJ', opRoles: [], warning: null },
+  { name: 'Leo', email: 'leo@example.com', role: 'member', status: 'active', joinDate: '2024-08', host: 1, events: 6, location: 'Hoboken, NJ', opRoles: [], warning: null },
+  { name: 'Mia', email: 'mia@example.com', role: 'member', status: 'active', joinDate: '2025-01', host: 0, events: 1, location: 'Edison, NJ', opRoles: [], warning: '被 3 位 Host 隐藏' },
+  { name: '阿德', email: 'ade@example.com', role: 'member', status: 'active', joinDate: '2024-10', host: 2, events: 5, location: 'Montclair, NJ', opRoles: [], warning: null },
+  { name: '奶茶', email: 'naicha@example.com', role: 'member', status: 'active', joinDate: '2024-11', host: 0, events: 3, location: 'Edison, NJ', opRoles: ['social'], warning: null },
+  { name: 'Derek', email: 'derek@example.com', role: 'member', status: 'active', joinDate: '2024-12', host: 2, events: 7, location: 'Bridgewater, NJ', opRoles: ['writer'], warning: null },
+  { name: '小樱', email: 'xiaoying@example.com', role: 'member', status: 'dormant', joinDate: '2024-07', host: 0, events: 2, location: 'Princeton, NJ', opRoles: [], warning: null },
 ];
 
 const pendingApplicants = [
@@ -156,8 +157,12 @@ export default function AdminMembersPage() {
                       <Chip label={roleName[m.role]} size="small" color={roleColors[m.role]} variant="outlined" />
                     </Box>
                     <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-                      {m.opId ? (
-                        <Chip label={OP_IDENTITIES.find((o) => o.key === m.opId)?.label ?? m.opId} size="small" variant="outlined" />
+                      {m.opRoles.length > 0 ? (
+                        <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                          {m.opRoles.map((r) => (
+                            <Chip key={r} label={OP_IDENTITIES.find((o) => o.key === r)?.label ?? r} size="small" variant="outlined" />
+                          ))}
+                        </Stack>
                       ) : (
                         <Typography variant="caption" color="text.secondary">—</Typography>
                       )}
@@ -243,7 +248,14 @@ export default function AdminMembersPage() {
               <MenuItem value="host">Host</MenuItem>
               <MenuItem value="member">成员</MenuItem>
             </TextField>
-            <TextField label="运营身份" defaultValue={selectedMember?.opId ?? ''} select fullWidth size="small">
+            <TextField
+              label="运营身份"
+              defaultValue={selectedMember?.opRoles?.[0] ?? ''}
+              select
+              fullWidth
+              size="small"
+              helperText="接 API 后支持多选（DB 为多对多关系）"
+            >
               <MenuItem value="">无</MenuItem>
               {OP_IDENTITIES.map((o) => (
                 <MenuItem key={o.key} value={o.key}>{o.label}</MenuItem>

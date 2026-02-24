@@ -56,6 +56,7 @@ import {
   fetchProposalsApi,
 } from '@/lib/domainApi';
 import { fetchBookDetail } from '@/mock/api';
+import { eventTagToScene } from '@/lib/mappings';
 
 /* ── Loader helpers (call real backend) ── */
 
@@ -83,7 +84,7 @@ function buildFeedItems(data: any): any[] {
       spots: (e.capacity ?? 8) - (e.signups?.length ?? 0),
       people: (e.signups ?? []).map((s: any) => s.user?.name).filter(Boolean),
       film: e.selectedMovie?.title,
-      scene: e.tags?.[0] ?? '',
+      scene: eventTagToScene[e.tags?.[0]] ?? e.tags?.[0] ?? '',
       navTarget: `/events/${e.id}`,
     });
   }
@@ -95,7 +96,7 @@ function buildFeedItems(data: any): any[] {
       type: 'card',
       from: p.from?.name ?? '',
       to: p.to?.name ?? '',
-      msg: p.message ?? '',
+      message: p.message ?? '',
     });
   }
 
@@ -335,7 +336,7 @@ export const appRoutes: RouteObject[] = [
       {
         path: 'discover/books/:bookId',
         element: <BookDetailPage />,
-        loader: ({ params }) => fetchBookDetail(Number(params.bookId)),
+        loader: ({ params }) => fetchBookDetail(params.bookId!),
       },
       { path: 'discover/:category', element: <RecommendationListPage /> },
       { path: 'discover/:category/add', element: <RecommendationCreatePage /> },

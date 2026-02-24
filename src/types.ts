@@ -38,7 +38,7 @@ export type EventPhase = 'invite' | 'open' | 'closed' | 'ended' | 'cancelled';
 export type FoodOption = 'potluck' | 'host_cook' | 'eat_out' | 'none';
 
 export interface EventData {
-  id: number;
+  id: string;
   title: string;
   host: string;
   date: string;
@@ -64,11 +64,12 @@ export interface EventData {
   comments?: EventComment[];
   tasks?: TaskRole[];
   /** Movie IDs nominated for this event (movie night only) */
-  nominations?: number[];
+  nominations?: string[];
   photos?: EventPhoto[];
 }
 
 export interface PastEvent {
+  id?: string;
   title: string;
   host: string;
   date: string;
@@ -80,7 +81,7 @@ export interface PastEvent {
 }
 
 export interface Proposal {
-  id: number;
+  id: string;
   name: string;
   title: string;
   description?: string;
@@ -94,7 +95,7 @@ export interface Proposal {
 }
 
 export interface MoviePool {
-  id: number;
+  id: string;
   title: string;
   year: string;
   dir: string;
@@ -112,7 +113,7 @@ export interface MovieScreened {
 }
 
 export interface BookPool {
-  id: number;
+  id: string;
   title: string;
   year: string;
   author: string;
@@ -130,7 +131,7 @@ export interface BookRead {
 }
 
 export interface BookDetailData {
-  id: number;
+  id: string;
   title: string;
   year: string;
   author: string;
@@ -142,20 +143,22 @@ export interface BookDetailData {
   rating?: string;
   synopsis?: string;
   voters: string[];
-  discussions: { date: string; host: string; eventTitle: string; eventId?: number }[];
+  discussions: { date: string; host: string; eventTitle: string; eventId?: string }[];
   comments: { name: string; text: string; date: string }[];
 }
 
 export type PostcardSourceType = 'free' | 'purchased';
 
 export interface CardReceived {
+  id?: string;
   from: string;
-  msg: string;
+  message: string;
   stamp: string;
   date: string;
   photo?: string;
-  priv: boolean;
+  visibility: 'public' | 'private';
   sourceType?: PostcardSourceType;
+  tags?: string[];
 }
 
 export interface Collaborator {
@@ -183,7 +186,7 @@ export interface FeedInteraction {
 export type FeedItem =
   | { type: 'time'; label: string }
   | { type: 'activity'; name: string; title: string; date: string; location: string; spots: number; people: string[]; film?: string; scene?: string; navTarget?: string } & FeedInteraction
-  | { type: 'card'; from: string; to: string; msg: string; photo?: string; navTarget?: string } & FeedInteraction
+  | { type: 'card'; from: string; to: string; message: string; photo?: string; navTarget?: string } & FeedInteraction
   | { type: 'movie'; name: string; title: string; year: string; dir: string; votes: number } & FeedInteraction
   | { type: 'milestone'; text: string; emoji: string } & FeedInteraction
   | { type: 'proposal'; name: string; title: string; votes: number; interested: string[] } & FeedInteraction
@@ -242,7 +245,7 @@ export type FeedItem =
 
 // Extended movie detail for MovieDetailPage
 export interface MovieDetailData {
-  id: number;
+  id: string;
   title: string;
   year: string;
   dir: string;
@@ -254,7 +257,7 @@ export interface MovieDetailData {
   rating?: string;
   synopsis?: string;
   voters: string[];
-  screenings: { date: string; host: string; eventTitle: string; eventId?: number }[];
+  screenings: { date: string; host: string; eventTitle: string; eventId?: string }[];
   comments: { name: string; text: string; date: string }[];
 }
 
@@ -309,7 +312,7 @@ export interface ProfilePhoto {
   uploadedBy: string;
   caption?: string;
   createdAt: string;
-  eventId: number;
+  eventId: string;
   eventTitle: string;
 }
 
@@ -333,8 +336,8 @@ export interface ProfilePageData {
   };
   myMovies: MoviePool[];
   votedMovies: MoviePool[];
-  upcomingEvents: { id: number; title: string; date: string; scene: string; role?: string }[];
-  myEvents: { id: number; title: string; date: string; scene: string; role?: string }[];
+  upcomingEvents: { id: string; title: string; date: string; scene: string; role?: string }[];
+  myEvents: { id: string; title: string; date: string; scene: string; role?: string }[];
   recentCards: CardReceived[];
   sentCards: CardReceived[];
   galleryPhotos: ProfilePhoto[];

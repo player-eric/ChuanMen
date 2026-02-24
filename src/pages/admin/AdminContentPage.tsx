@@ -42,7 +42,7 @@ const statusLabel: Record<string, string> = {
 
 /* ---------- mock comments ---------- */
 interface CommentRow {
-  id: number;
+  id: string;
   author: string;
   entity: string;
   entityType: 'movie' | 'event' | 'proposal' | 'discussion';
@@ -50,14 +50,14 @@ interface CommentRow {
   date: string;
 }
 const mockComments: CommentRow[] = [
-  { id: 1, author: '星星', entity: '花样年华', entityType: 'movie', content: '这部电影的色调太美了', date: '2/20' },
-  { id: 2, author: 'Nicole', entity: '寄生虫之夜', entityType: 'event', content: '结尾的讨论比电影还精彩', date: '2/19' },
-  { id: 3, author: '白开水', entity: '要不要搞一次读书会？', entityType: 'proposal', content: '我推荐《小王子》', date: '2/18' },
-  { id: 4, author: 'Tiffy', entity: '花样年华', entityType: 'movie', content: '梁朝伟演技封神', date: '2/17' },
-  { id: 5, author: '大橙子', entity: 'Central Park 徒步', entityType: 'event', content: '当天天气超好！', date: '2/16' },
-  { id: 6, author: 'Sean', entity: '惊魂记', entityType: 'movie', content: '希区柯克真的很厉害', date: '2/15' },
-  { id: 7, author: '小鹿', entity: 'Potluck 主题怎么选？', entityType: 'discussion', content: '韩国料理主题如何？', date: '2/14' },
-  { id: 8, author: 'Annie', entity: '新年 Potluck', entityType: 'event', content: '大家做的菜都太好吃了', date: '2/13' },
+  { id: 'cmt-1', author: '星星', entity: '花样年华', entityType: 'movie', content: '这部电影的色调太美了', date: '2/20' },
+  { id: 'cmt-2', author: 'Nicole', entity: '寄生虫之夜', entityType: 'event', content: '结尾的讨论比电影还精彩', date: '2/19' },
+  { id: 'cmt-3', author: '白开水', entity: '要不要搞一次读书会？', entityType: 'proposal', content: '我推荐《小王子》', date: '2/18' },
+  { id: 'cmt-4', author: 'Tiffy', entity: '花样年华', entityType: 'movie', content: '梁朝伟演技封神', date: '2/17' },
+  { id: 'cmt-5', author: '大橙子', entity: 'Central Park 徒步', entityType: 'event', content: '当天天气超好！', date: '2/16' },
+  { id: 'cmt-6', author: 'Sean', entity: '惊魂记', entityType: 'movie', content: '希区柯克真的很厉害', date: '2/15' },
+  { id: 'cmt-7', author: '小鹿', entity: 'Potluck 主题怎么选？', entityType: 'discussion', content: '韩国料理主题如何？', date: '2/14' },
+  { id: 'cmt-8', author: 'Annie', entity: '新年 Potluck', entityType: 'event', content: '大家做的菜都太好吃了', date: '2/13' },
 ];
 
 export default function AdminContentPage() {
@@ -87,7 +87,7 @@ export default function AdminContentPage() {
     );
     setEditMovie(null);
   };
-  const deleteMovie = (id: number) => setMovies(prev => prev.filter(m => m.id !== id));
+  const deleteMovie = (id: string) => setMovies(prev => prev.filter(m => m.id !== id));
 
   /* proposal edit */
   const [editProposal, setEditProposal] = useState<Proposal | null>(null);
@@ -104,10 +104,10 @@ export default function AdminContentPage() {
     );
     setEditProposal(null);
   };
-  const deleteProposal = (id: number) => setProposalList(prev => prev.filter(p => p.id !== id));
+  const deleteProposal = (id: string) => setProposalList(prev => prev.filter(p => p.id !== id));
 
   /* comment delete */
-  const deleteComment = (id: number) => setComments(prev => prev.filter(c => c.id !== id));
+  const deleteComment = (id: string) => setComments(prev => prev.filter(c => c.id !== id));
 
   /* ── filtered data ── */
   const filteredMovies = movies.filter(

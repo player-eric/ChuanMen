@@ -35,12 +35,7 @@ import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { taskPresets } from '@/mock/data';
-
-const sceneToTag: Record<string, string> = {
-  movieNight: '电影夜',
-  hike: '户外',
-  sports: '运动',
-};
+import { eventTagToChinese } from '@/lib/mappings';
 
 const foodLabel: Record<FoodOption, string> = {
   potluck: 'Potluck · 每人带一道菜',
@@ -105,7 +100,7 @@ export default function EventDetailPage() {
       try {
         const item = await getEventById(eventId);
         setEvent({
-          id: 0,
+          id: '',
           title: String(item.title ?? ''),
           host: 'Host',
           date: new Date(String(item.startsAt ?? new Date().toISOString())).toLocaleString('zh-CN'),
@@ -589,12 +584,12 @@ export default function EventDetailPage() {
                     >
                       添加分工
                     </Button>
-                    {taskPresets[sceneToTag[event.scene]] && tasks.length === 0 && (
+                    {taskPresets[eventTagToChinese[event.scene]] && tasks.length === 0 && (
                       <Button
                         size="small"
                         variant="outlined"
                         onClick={() => {
-                          const tag = sceneToTag[event.scene];
+                          const tag = eventTagToChinese[event.scene];
                           setTasks(taskPresets[tag].map((role) => ({ role })));
                         }}
                       >

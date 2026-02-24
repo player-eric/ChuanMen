@@ -43,7 +43,7 @@ const typeIcon: Record<AnnouncementType, React.ReactNode> = {
 };
 
 interface Announcement {
-  id: number;
+  id: string;
   type: AnnouncementType;
   title: string;
   body: string;
@@ -54,7 +54,7 @@ interface Announcement {
 
 const mockAnnouncements: Announcement[] = [
   {
-    id: 1,
+    id: 'ann-1',
     type: 'milestone',
     title: '串门第 50 场活动 🎉',
     body: '从去年 10 月到现在，我们一起看了 12 部电影、吃了 8 顿饭、走了 6 次路。一切才刚刚开始！',
@@ -63,7 +63,7 @@ const mockAnnouncements: Announcement[] = [
     createdAt: '2026-02-15',
   },
   {
-    id: 2,
+    id: 'ann-2',
     type: 'host_tribute',
     title: '1 月 Host 致敬',
     body: '本月 8 位 Host 开放了自己的客厅，感谢 白开水、大橙子、Star、Nicole、Tiffy、Sean、Annie、Michael！',
@@ -72,7 +72,7 @@ const mockAnnouncements: Announcement[] = [
     createdAt: '2026-02-01',
   },
   {
-    id: 3,
+    id: 'ann-3',
     type: 'announcement',
     title: '串门原则 v2.0 发布',
     body: '我们重新梳理了社群原则，新增了取消政策和隐私保护条款。请大家花 3 分钟看看。',
@@ -81,7 +81,7 @@ const mockAnnouncements: Announcement[] = [
     createdAt: '2026-01-20',
   },
   {
-    id: 4,
+    id: 'ann-4',
     type: 'milestone',
     title: '电影池突破 100 部',
     body: '最受欢迎的 3 部：花样年华 (18票)、寄生虫 (15票)、永恒和一日 (12票)。继续推荐！',
@@ -90,7 +90,7 @@ const mockAnnouncements: Announcement[] = [
     createdAt: '2026-01-10',
   },
   {
-    id: 5,
+    id: 'ann-5',
     type: 'host_tribute',
     title: '12 月 Host 致敬',
     body: '感谢 6 位 Host 在寒冬中温暖了大家：Yuan、白开水、大橙子、Star、Tiffy、Andy。',
@@ -129,7 +129,7 @@ export default function AdminAnnouncementsPage() {
 
   const saveCreate = () => {
     const newItem: Announcement = {
-      id: Date.now(),
+      id: `ann-${Date.now()}`,
       type: formType,
       title: formTitle,
       body: formBody,
@@ -151,8 +151,8 @@ export default function AdminAnnouncementsPage() {
     setEditItem(null);
     resetForm();
   };
-  const deleteItem = (id: number) => setItems(prev => prev.filter(i => i.id !== id));
-  const togglePin = (id: number) => setItems(prev => prev.map(i => i.id === id ? { ...i, pinned: !i.pinned } : i));
+  const deleteItem = (id: string) => setItems(prev => prev.filter(i => i.id !== id));
+  const togglePin = (id: string) => setItems(prev => prev.map(i => i.id === id ? { ...i, pinned: !i.pinned } : i));
 
   const filtered = tab === 0 ? items : items.filter(i =>
     tab === 1 ? i.type === 'announcement' : tab === 2 ? i.type === 'milestone' : i.type === 'host_tribute',

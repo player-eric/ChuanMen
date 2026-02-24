@@ -30,24 +30,24 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 
 /* ── Mock events for admin (PRD 11.1.2) ── */
 const upcomingEvents = [
-  { id: 1, title: '电影夜 · 花样年华', host: '白开水', date: '02.22 周六 7pm', location: '白开水家', spots: '6/10', phase: 'open' as const, scene: 'movieNight', pinned: true, hiddenMembers: [] as string[] },
-  { id: 2, title: '重庆森林 · 私人邀请', host: 'Yuan', date: '02.28 周五 8pm', location: 'Yuan 家', spots: '2/6', phase: 'invite' as const, scene: 'movieNight', pinned: false, hiddenMembers: ['星星'] },
-  { id: 3, title: '周末 Potluck', host: 'Tiffy', date: '03.01 周六 12pm', location: 'Tiffy 家', spots: '4/8', phase: 'open' as const, scene: 'potluck', pinned: false, hiddenMembers: [] as string[] },
-  { id: 4, title: '春天 Kayaking', host: 'Derek', date: '03.08 周六 10am', location: 'Raritan River', spots: '3/8', phase: 'invite' as const, scene: 'outdoor', pinned: false, hiddenMembers: ['Mia', '星星'] },
-  { id: 5, title: '烘焙下午茶', host: 'Tiffy', date: '03.15 周六 2pm', location: 'Tiffy 家', spots: '0/6', phase: 'open' as const, scene: 'potluck', pinned: false, hiddenMembers: [] as string[] },
+  { id: 'adm-evt-1', title: '电影夜 · 花样年华', host: '白开水', date: '02.22 周六 7pm', location: '白开水家', spots: 6, total: 10, phase: 'open' as const, scene: 'movie', pinned: true, hiddenMembers: [] as string[] },
+  { id: 'adm-evt-2', title: '重庆森林 · 私人邀请', host: 'Yuan', date: '02.28 周五 8pm', location: 'Yuan 家', spots: 2, total: 6, phase: 'invite' as const, scene: 'movie', pinned: false, hiddenMembers: ['星星'] },
+  { id: 'adm-evt-3', title: '周末 Potluck', host: 'Tiffy', date: '03.01 周六 12pm', location: 'Tiffy 家', spots: 4, total: 8, phase: 'open' as const, scene: 'chuanmen', pinned: false, hiddenMembers: [] as string[] },
+  { id: 'adm-evt-4', title: '春天 Kayaking', host: 'Derek', date: '03.08 周六 10am', location: 'Raritan River', spots: 3, total: 8, phase: 'invite' as const, scene: 'outdoor', pinned: false, hiddenMembers: ['Mia', '星星'] },
+  { id: 'adm-evt-5', title: '烘焙下午茶', host: 'Tiffy', date: '03.15 周六 2pm', location: 'Tiffy 家', spots: 0, total: 6, phase: 'open' as const, scene: 'chuanmen', pinned: false, hiddenMembers: [] as string[] },
 ];
 
 const pastEvents = [
-  { id: 101, title: '电影夜 · 寄生虫', host: '白开水', date: '02.08', attendees: 8, photos: 12, cards: 5 },
-  { id: 102, title: '新年饭局 Potluck', host: 'Yuan', date: '01.25', attendees: 10, photos: 18, cards: 8 },
-  { id: 103, title: '电影夜 · 千与千寻', host: 'Yuan', date: '01.18', attendees: 7, photos: 6, cards: 3 },
-  { id: 104, title: 'High Point 徒步', host: '大橙子', date: '01.12', attendees: 6, photos: 24, cards: 4 },
-  { id: 105, title: 'Potluck · 上海小笼', host: 'Tiffy', date: '01.05', attendees: 8, photos: 15, cards: 7 },
-  { id: 106, title: '圣诞 Party', host: 'Yuan', date: '12.24', attendees: 12, photos: 32, cards: 12 },
+  { id: 'adm-evt-101', title: '电影夜 · 寄生虫', host: '白开水', date: '02.08', attendees: 8, photos: 12, cards: 5 },
+  { id: 'adm-evt-102', title: '新年饭局 Potluck', host: 'Yuan', date: '01.25', attendees: 10, photos: 18, cards: 8 },
+  { id: 'adm-evt-103', title: '电影夜 · 千与千寻', host: 'Yuan', date: '01.18', attendees: 7, photos: 6, cards: 3 },
+  { id: 'adm-evt-104', title: 'High Point 徒步', host: '大橙子', date: '01.12', attendees: 6, photos: 24, cards: 4 },
+  { id: 'adm-evt-105', title: 'Potluck · 上海小笼', host: 'Tiffy', date: '01.05', attendees: 8, photos: 15, cards: 7 },
+  { id: 'adm-evt-106', title: '圣诞 Party', host: 'Yuan', date: '12.24', attendees: 12, photos: 32, cards: 12 },
 ];
 
 const cancelledEvents = [
-  { id: 201, title: '滑雪 · Mountain Creek', host: 'Derek', date: '02.18', reason: '暴风雪预警，安全起见取消', refundStatus: '无需退款' },
+  { id: 'adm-evt-201', title: '滑雪 · Mountain Creek', host: 'Derek', date: '02.18', reason: '暴风雪预警，安全起见取消', refundStatus: '无需退款' },
 ];
 
 const phaseColors: Record<string, 'primary' | 'success' | 'warning' | 'default'> = {
@@ -107,7 +107,7 @@ export default function AdminEventsPage() {
                     <Typography variant="body2">{evt.date}</Typography>
                     <Typography variant="caption" color="text.secondary">{evt.location}</Typography>
                   </Box>
-                  <Typography variant="body2" sx={{ display: { xs: 'none', md: 'block' } }}>{evt.spots}</Typography>
+                  <Typography variant="body2" sx={{ display: { xs: 'none', md: 'block' } }}>{`${evt.spots}/${evt.total}`}</Typography>
                   <Box sx={{ display: { xs: 'none', md: 'block' } }}>
                     <Chip label={evt.phase === 'invite' ? '邀请中' : '公开'} size="small" color={phaseColors[evt.phase]} variant="outlined" />
                   </Box>
@@ -198,11 +198,11 @@ export default function AdminEventsPage() {
             <TextField label="活动名称" fullWidth size="small" placeholder="例：电影夜 · 花样年华" />
             <TextField label="日期时间" fullWidth size="small" placeholder="03.15 周六 7pm" />
             <TextField label="地点" fullWidth size="small" placeholder="白开水家" />
-            <TextField label="活动类型" select fullWidth size="small" defaultValue="movieNight">
-              <MenuItem value="movieNight">电影夜</MenuItem>
-              <MenuItem value="potluck">Potluck</MenuItem>
-              <MenuItem value="hike">徒步</MenuItem>
-              <MenuItem value="sports">运动</MenuItem>
+            <TextField label="活动类型" select fullWidth size="small" defaultValue="movie">
+              <MenuItem value="movie">电影夜</MenuItem>
+              <MenuItem value="chuanmen">茶话会/分享会</MenuItem>
+              <MenuItem value="outdoor">户外</MenuItem>
+              <MenuItem value="hiking">徒步</MenuItem>
               <MenuItem value="other">其他</MenuItem>
             </TextField>
             <TextField label="最大人数" type="number" fullWidth size="small" defaultValue={8} />
@@ -224,7 +224,7 @@ export default function AdminEventsPage() {
             <Typography variant="body2"><strong>Host：</strong>{detailEvent?.host}</Typography>
             <Typography variant="body2"><strong>时间：</strong>{detailEvent?.date}</Typography>
             <Typography variant="body2"><strong>地点：</strong>{detailEvent?.location}</Typography>
-            <Typography variant="body2"><strong>人数：</strong>{detailEvent?.spots}</Typography>
+            <Typography variant="body2"><strong>人数：</strong>{detailEvent ? `${detailEvent.spots}/${detailEvent.total}` : ''}</Typography>
             <Typography variant="body2"><strong>阶段：</strong>{detailEvent?.phase === 'invite' ? '私人邀请中' : '公开报名中'}</Typography>
           </Stack>
         </DialogContent>

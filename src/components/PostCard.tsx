@@ -5,7 +5,7 @@ import { Ava, Stamp } from './Atoms';
 interface PostCardProps {
   from: string;
   to: string;
-  msg: string;
+  message: string;
   stamp?: string;
   date?: string;
   photo?: string;
@@ -15,7 +15,7 @@ interface PostCardProps {
 
 const defaultBg = 'linear-gradient(145deg, #1c1814 0%, #2a2018 25%, #3a2a20 50%, #2a2218 75%, #1c1814 100%)';
 
-export function PostCard({ from, to, msg, stamp = '✉', date, photo, isPrivate = false, showVisibility = false }: PostCardProps) {
+export function PostCard({ from, to, message, stamp = '✉', date, photo, isPrivate = false, showVisibility = false }: PostCardProps) {
   const c = useColors();
   return (
     <Box sx={{ borderRadius: 2, overflow: 'hidden', background: `linear-gradient(165deg, ${c.paper}, ${c.paperDark})`, boxShadow: `0 2px 8px ${c.bg}30` }}>
@@ -44,7 +44,7 @@ export function PostCard({ from, to, msg, stamp = '✉', date, photo, isPrivate 
       <Box sx={{ p: '12px 14px 14px', position: 'relative' }}>
         <Box sx={{ position: 'absolute', top: 8, right: 10 }}><Stamp emoji={stamp} size={22} /></Box>
         <Typography variant="overline" sx={{ color: c.inkLight }}>TO: {to}</Typography>
-        <Typography variant="body2" sx={{ color: c.ink, fontStyle: 'italic', lineHeight: 1.7, maxWidth: '80%', mt: 0.5 }}>{msg}</Typography>
+        <Typography variant="body2" sx={{ color: c.ink, fontStyle: 'italic', lineHeight: 1.7, maxWidth: '80%', mt: 0.5 }}>{message}</Typography>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
           <Stack direction="row" spacing={0.5} alignItems="center">
             <Ava name={from} size={18} />

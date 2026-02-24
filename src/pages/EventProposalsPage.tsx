@@ -17,7 +17,7 @@ export default function EventProposalsPage() {
   const [keyword, setKeyword] = useState('');
   const [searchedItems, setSearchedItems] = useState<Record<string, unknown>[]>([]);
   const [searchError, setSearchError] = useState('');
-  const [interested, setInterested] = useState<Record<number, boolean>>({});
+  const [interested, setInterested] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const run = async () => {

@@ -35,7 +35,7 @@ export default function AboutContentPage() {
     fetchAboutContentApi(contentType)
       .then((data: any) => {
         if (data) {
-          const body = (data.contentMd ?? '').split('\n').filter((l: string) => l.trim());
+          const body = (data.content ?? data.contentMd ?? '').split('\n').filter((l: string) => l.trim());
           setApiContent({ title: data.title ?? contentType, body });
         }
       })

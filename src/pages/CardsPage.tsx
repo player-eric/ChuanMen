@@ -352,11 +352,11 @@ function FullCards() {
                 <PostCard
                   from={card.from}
                   to={user?.name ?? '我'}
-                  msg={card.msg}
+                  message={card.message}
                   stamp={card.stamp}
                   date={card.date}
                   photo={card.photo}
-                  isPrivate={card.priv}
+                  isPrivate={card.visibility === 'private'}
                   showVisibility
                 />
               </Grid>
@@ -379,11 +379,11 @@ function FullCards() {
                 <PostCard
                   from={card.from}
                   to="..."
-                  msg={card.msg}
+                  message={card.message}
                   stamp={card.stamp}
                   date={card.date}
                   photo={card.photo}
-                  isPrivate={card.priv}
+                  isPrivate={card.visibility === 'private'}
                   showVisibility
                 />
               </Grid>

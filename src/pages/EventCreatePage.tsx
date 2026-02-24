@@ -31,18 +31,10 @@ import { createEvent, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
 import type { FoodOption, TaskRole } from '@/types';
 import { Poster } from '@/components/Poster';
 import { ImageUpload } from '@/components/ImageUpload';
+import { chineseTagToEventTag } from '@/lib/mappings';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 
 const tagOptions = ['电影夜', '茶话会/分享会', '户外', '运动', '其他'];
-
-/** Map UI Chinese tag labels → backend EventTag enum values */
-const tagToEventTag: Record<string, string> = {
-  '电影夜': 'movie',
-  '茶话会/分享会': 'chuanmen',
-  '户外': 'outdoor',
-  '运动': 'hiking',
-  '其他': 'other',
-};
 
 /** Combine date + time strings into datetime-local value */
 function combineDT(date: string, time: string) {
@@ -85,8 +77,8 @@ export default function EventCreatePage() {
 
   // Movie night state
   const [filmMode, setFilmMode] = useState<'nominate' | 'pick'>('nominate');
-  const [selectedFilm, setSelectedFilm] = useState<number | null>(null);
-  const [nominations, setNominations] = useState<number[]>([]);
+  const [selectedFilm, setSelectedFilm] = useState<string | null>(null);
+  const [nominations, setNominations] = useState<string[]>([]);
   const [moviePickerOpen, setMoviePickerOpen] = useState(false);
   const [moviePickerTarget, setMoviePickerTarget] = useState<'film' | 'nomination'>('film');
   const [movieSearch, setMovieSearch] = useState('');
@@ -165,7 +157,7 @@ export default function EventCreatePage() {
       return;
     }
     try {
-      const mappedTags = tags.map((t) => tagToEventTag[t]).filter(Boolean);
+      const mappedTags = tags.map((t) => chineseTagToEventTag[t]).filter(Boolean);
       await createEvent({
         title: name.trim(),
         hostId: user.id,
@@ -187,7 +179,7 @@ export default function EventCreatePage() {
     setMoviePickerOpen(true);
   };
 
-  const handlePickMovie = (movieId: number) => {
+  const handlePickMovie = (movieId: string) => {
     if (moviePickerTarget === 'film') {
       setSelectedFilm(movieId);
     } else {

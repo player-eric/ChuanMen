@@ -295,26 +295,26 @@ async function main() {
   /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
      9. About content
      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-  const aboutEntries: { type: 'principle' | 'host_guide' | 'about' | 'letter'; title: string; contentMd: string }[] = [
+  const aboutEntries: { type: 'principle' | 'host_guide' | 'about' | 'letter'; title: string; content: string }[] = [
     {
       type: 'principle',
       title: '串门原则',
-      contentMd: `## 串门原则\n\n我们相信：\n\n- **对的人 > 更多人** — 宁缺毋滥\n- **相互支持 > 社交隔绝** — 真正在乎彼此\n- **客厅 > 写字楼** — 最好的交流发生在放松的环境里\n- **真诚 > 客气** — 礼貌但不虚伪\n\n### 关于活动\n\n- 准时到达，尊重 Host 的时间\n- 遵守 House Rules\n- 帮忙收拾是基本礼貌\n- 不推销、不越界`,
+      content: `## 串门原则\n\n我们相信：\n\n- **对的人 > 更多人** — 宁缺毋滥\n- **相互支持 > 社交隔绝** — 真正在乎彼此\n- **客厅 > 写字楼** — 最好的交流发生在放松的环境里\n- **真诚 > 客气** — 礼貌但不虚伪\n\n### 关于活动\n\n- 准时到达，尊重 Host 的时间\n- 遵守 House Rules\n- 帮忙收拾是基本礼貌\n- 不推销、不越界`,
     },
     {
       type: 'host_guide',
       title: 'Host 手册',
-      contentMd: `## Host 手册\n\n感谢你愿意打开家门！\n\n### 准备\n\n1. 确定时间、地点、人数上限\n2. 写好 House Rules\n3. 选好电影（如果是电影夜）\n\n### 当天\n\n- 提前 30 分钟准备好场地\n- 准备一些简单的饮品/零食\n- 帮助大家互相认识\n\n### 之后\n\n- 上传照片到活动记录\n- 给特别感谢的人寄张卡`,
+      content: `## Host 手册\n\n感谢你愿意打开家门！\n\n### 准备\n\n1. 确定时间、地点、人数上限\n2. 写好 House Rules\n3. 选好电影（如果是电影夜）\n\n### 当天\n\n- 提前 30 分钟准备好场地\n- 准备一些简单的饮品/零食\n- 帮助大家互相认识\n\n### 之后\n\n- 上传照片到活动记录\n- 给特别感谢的人寄张卡`,
     },
     {
       type: 'about',
       title: '关于串门儿',
-      contentMd: `## 关于串门儿\n\n串门儿是一群住在新泽西的朋友，通过小型聚会认识彼此、相互支持。\n\n我们相信最好的友谊来自真实的相处，而不是线上的点赞。\n\n串门儿是一个申请制的共创社区——每一个人都是被认真邀请的。`,
+      content: `## 关于串门儿\n\n串门儿是一群住在新泽西的朋友，通过小型聚会认识彼此、相互支持。\n\n我们相信最好的友谊来自真实的相处，而不是线上的点赞。\n\n串门儿是一个申请制的共创社区——每一个人都是被认真邀请的。`,
     },
     {
       type: 'letter',
       title: '串门来信',
-      contentMd: `## 串门来信 #12\n\n大家好！\n\n上周我们连续举办了三场活动，这在串门儿的历史上还是第一次。\n\n电影夜看了「寄生虫」，讨论非常热烈；周末 Potluck 大家带的菜越来越有创意；High Point 徒步虽然冷但风景绝美。\n\n感谢每一位 Host 和参与者！`,
+      content: `## 串门来信 #12\n\n大家好！\n\n上周我们连续举办了三场活动，这在串门儿的历史上还是第一次。\n\n电影夜看了「寄生虫」，讨论非常热烈；周末 Potluck 大家带的菜越来越有创意；High Point 徒步虽然冷但风景绝美。\n\n感谢每一位 Host 和参与者！`,
     },
   ];
 
@@ -324,7 +324,7 @@ async function main() {
     });
     if (!existing) {
       await prisma.aboutContent.create({
-        data: { type: entry.type, title: entry.title, contentMd: entry.contentMd, published: true },
+        data: { type: entry.type, title: entry.title, content: entry.content, published: true },
       });
       console.log(`  ✅ AboutContent: ${entry.title}`);
     } else {

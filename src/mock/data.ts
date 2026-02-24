@@ -52,7 +52,7 @@ export const taskPresets: Record<string, string[]> = {
  * ═══════════════════════════════════════════════════════════ */
 export const membersData: MemberData[] = [
   {
-    name: 'Yuan', role: '运营', host: 6, badge: '🏠',
+    name: 'Yuan', role: 'admin', host: 6, badge: '🏠',
     titles: ['🎬 选片人', '🔥 氛围担当', '🏠 最佳 Host'],
     email: 'cm@gmail.com', location: 'Edison, NJ',
     bio: '串门儿的运营之一，平时喜欢看电影、做饭、在家招呼朋友。住在 Edison 快两年了，最近迷上了安哲罗普洛斯。',
@@ -63,7 +63,7 @@ export const membersData: MemberData[] = [
     mutual: { movies: ['花样年华', '春光乍泄', '惊魂记', '千与千寻'], events: ['02.22 电影夜', '02.08 电影夜', '01.25 新年饭局', '01.18 电影夜', '01.12 徒步', '01.05 Potluck'], evtCount: 18, cards: 8 },
   },
   {
-    name: '白开水', role: '核心 Host', host: 8, badge: '🏠',
+    name: '白开水', role: 'host', host: 8, badge: '🏠',
     titles: ['🍳 厨神', '🔥 氛围担当', '🏠 最佳 Host', '🧹 收拾之神'],
     email: 'bks@example.com', location: 'Edison, NJ',
     bio: '喜欢在家里布置一个温暖的小影院，每次有朋友来都很开心。做饭是减压方式，擅长川菜和日料。',
@@ -74,7 +74,7 @@ export const membersData: MemberData[] = [
     mutual: { movies: ['花样年华', '春光乍泄', '惊魂记'], events: ['02.22 电影夜', '02.08 电影夜', '01.25 新年饭局', '01.18 电影夜', '01.05 Potluck'], evtCount: 12, cards: 5 },
   },
   {
-    name: '大橙子', role: '运营', host: 5, badge: '🏠',
+    name: '大橙子', role: 'admin', host: 5, badge: '🏠',
     titles: ['📸 首席摄影', '⚡ 满满能量'],
     email: 'dachengzi@example.com', location: 'Jersey City, NJ',
     bio: '摄影爱好者，喜欢记录生活中的小确幸。在 JC 住了三年，周末常去 Hudson River 边拍照。',
@@ -85,7 +85,7 @@ export const membersData: MemberData[] = [
     mutual: { movies: ['寄生虫', '燃烧女子的肖像', '重庆森林'], events: ['02.22 电影夜', '02.08 电影夜', '01.12 徒步'], evtCount: 8, cards: 3 },
   },
   {
-    name: '星星', role: '', host: 0, titles: ['🧊 破冰王', '💬 话题王'],
+    name: '星星', role: 'member', host: 0, titles: ['🧊 破冰王', '💬 话题王'],
     email: 'star@example.com', location: 'Princeton, NJ',
     bio: '社恐但是很想交朋友的矛盾体。在 Princeton 读研，研究方向是计算语言学。养了两只猫。',
     selfAsFriend: '慢热但一旦熟了话超多。记忆力很好，你说过的事我都记得。',
@@ -94,7 +94,7 @@ export const membersData: MemberData[] = [
     mutual: { movies: ['东京物语', '千与千寻'], events: ['02.22 电影夜', '02.08 电影夜'], evtCount: 5, cards: 3 },
   },
   {
-    name: 'Tiffy', role: '', host: 3, badge: '🏠', titles: ['🍳 厨神', '🧁 甜品大师'],
+    name: 'Tiffy', role: 'host', host: 3, badge: '🏠', titles: ['🍳 厨神', '🧁 甜品大师'],
     email: 'tiffy@example.com', location: 'Edison, NJ',
     bio: '做饭使我快乐，分享使我更快乐。上海人在新泽西，擅长本帮菜，也在学习意大利菜。梦想开一家小小的私房菜馆。',
     selfAsFriend: '爱做饭、爱分享、爱热闹。你来我家永远有饭吃。',
@@ -104,7 +104,7 @@ export const membersData: MemberData[] = [
     mutual: { movies: ['花样年华', '千与千寻', '惊魂记'], events: ['02.22 电影夜', '02.08 电影夜', '01.25 新年饭局'], evtCount: 7, cards: 4 },
   },
   {
-    name: '小鱼', role: '', host: 0, titles: [],
+    name: '小鱼', role: 'member', host: 0, titles: [],
     email: 'xiaoyu@example.com', location: 'New Brunswick, NJ',
     bio: '刚来新泽西半年，在 Rutgers 读 MBA。还在适应美国生活，想认识更多朋友。',
     selfAsFriend: '安静、好相处、爱观察。带的零食永远比别人多。',
@@ -113,7 +113,7 @@ export const membersData: MemberData[] = [
     mutual: { movies: [], events: ['02.08 电影夜', '01.12 徒步'], evtCount: 3, cards: 1 },
   },
   {
-    name: 'Leo', role: '', host: 1, titles: ['🎬 选片人', '🏸 运动达人'],
+    name: 'Leo', role: 'member', host: 1, titles: ['🎬 选片人', '🏸 运动达人'],
     email: 'leo@example.com', location: 'Hoboken, NJ',
     bio: '电影发烧友，王家卫铁粉。在 Hoboken 一家投资公司工作。周末常去 Metrograph 看老片。',
     selfAsFriend: '话多、热情、喜欢安利电影。可以聊一整晚。',
@@ -122,7 +122,7 @@ export const membersData: MemberData[] = [
     mutual: { movies: ['重庆森林', '花样年华'], events: ['02.08 电影夜', '01.25 新年饭局'], evtCount: 4, cards: 1 },
   },
   {
-    name: 'Mia', role: '新成员', host: 0, titles: [],
+    name: 'Mia', role: 'member', host: 0, titles: [],
     email: 'mia@example.com', location: 'Edison, NJ', hideEmail: true,
     bio: '第一次参加这种社群活动，有点紧张但很期待。在一家科技公司做产品经理。喜欢瑜伽和烘焙。',
     selfAsFriend: '温柔、细心、有点完美主义。',
@@ -131,7 +131,7 @@ export const membersData: MemberData[] = [
     mutual: { movies: [], events: [], evtCount: 1, cards: 0 },
   },
   {
-    name: '阿德', role: '', host: 2, badge: '🏠', titles: ['🎸 音乐达人', '🎉 气氛组长'],
+    name: '阿德', role: 'member', host: 2, badge: '🏠', titles: ['🎸 音乐达人', '🎉 气氛组长'],
     email: 'ade@example.com', location: 'Montclair, NJ',
     bio: '独立音乐人，在 Montclair 有一间小录音棚。吉他弹了十二年，最近在学习萨克斯。',
     selfAsFriend: '有点文艺、有点话痨、有点不着调。但朋友有事一定到。',
@@ -140,7 +140,7 @@ export const membersData: MemberData[] = [
     mutual: { movies: ['春光乍泄'], events: ['01.25 新年饭局', '01.05 Potluck'], evtCount: 3, cards: 2 },
   },
   {
-    name: '奶茶', role: '', host: 0, titles: ['☕ 暖心担当', '❤️ 社区之心'],
+    name: '奶茶', role: 'member', host: 0, titles: ['☕ 暖心担当', '❤️ 社区之心'],
     email: 'milktea@example.com', location: 'Fort Lee, NJ',
     bio: '在 Fort Lee 开了一家小奶茶店，每天被奶茶包围但还是喝不腻。大家来了请喝奶茶！',
     selfAsFriend: '开朗、大方、请客狂魔。',
@@ -149,7 +149,7 @@ export const membersData: MemberData[] = [
     mutual: { movies: ['寄生虫'], events: ['02.08 电影夜'], evtCount: 2, cards: 1 },
   },
   {
-    name: 'Derek', role: '', host: 1, titles: ['🥾 户外达人', '🏸 运动达人'],
+    name: 'Derek', role: 'member', host: 1, titles: ['🥾 户外达人', '🏸 运动达人'],
     email: 'derek@example.com', location: 'Ridgewood, NJ',
     bio: '户外运动爱好者，跑过三次马拉松。在 Ridgewood 住了五年，熟悉新泽西所有的 hiking trails。',
     selfAsFriend: '精力旺盛、组织力强、永远在路上。',
@@ -158,7 +158,7 @@ export const membersData: MemberData[] = [
     mutual: { movies: [], events: ['01.12 徒步'], evtCount: 2, cards: 0 },
   },
   {
-    name: '小樱', role: '新成员', host: 0, titles: [],
+    name: '小樱', role: 'member', host: 0, titles: [],
     email: 'sakura@example.com', location: 'Princeton, NJ', hideEmail: true,
     bio: '日本文化爱好者，在 Princeton 做博后。喜欢动漫、日料和园艺。周末常去 Mitsuwa 买菜。',
     selfAsFriend: '安静、有耐心、喜欢倾听。',
@@ -171,12 +171,12 @@ export const membersData: MemberData[] = [
 /* ═══ Events — all 5 phases ═══ */
 export const upcomingEvents: EventData[] = [
   {
-    id: 1, title: '周六电影夜 · 花样年华', host: '白开水', date: '2.22 周六 7pm',
+    id: 'evt-1', title: '周六电影夜 · 花样年华', host: '白开水', date: '2.22 周六 7pm',
     endDate: '2.22 10pm', inviteDeadline: '2.21 6pm',
     location: 'Edison, NJ', locationPrivate: '123 Maple St, Edison, NJ 08820',
     isHomeEvent: true, scene: 'movieNight', film: '花样年华', spots: 4, total: 8,
     people: ['白开水', 'Yuan', '大橙子', '星星'], phase: 'open',
-    nominations: [1, 6, 3, 10],
+    nominations: ['mov-1', 'mov-6', 'mov-3', 'mov-10'],
     desc: '王家卫经典。灯光调暗，坐在地下室沙发上，一起感受六十年代的香港。看完聊到十点，喝茶看星星。',
     houseRules: '请换鞋入内 · 10pm 前结束 · 可以带零食',
     tasks: [
@@ -195,7 +195,7 @@ export const upcomingEvents: EventData[] = [
     ],
   },
   {
-    id: 2, title: 'Potluck · 来我家吃火锅', host: 'Tiffy', date: '2.28 周五 6pm',
+    id: 'evt-2', title: 'Potluck · 来我家吃火锅', host: 'Tiffy', date: '2.28 周五 6pm',
     endDate: '2.28 10pm',
     location: 'Edison, NJ', locationPrivate: '456 Oak Ave, Edison, NJ 08820',
     isHomeEvent: true, scene: 'potluck', spots: 2, total: 8,
@@ -216,7 +216,7 @@ export const upcomingEvents: EventData[] = [
     ],
   },
   {
-    id: 3, title: 'Spring Hike · Delaware Water Gap', host: '大橙子', date: '3.08 周六 9am',
+    id: 'evt-3', title: 'Spring Hike · Delaware Water Gap', host: '大橙子', date: '3.08 周六 9am',
     endDate: '3.08 4pm',
     location: 'Delaware Water Gap', scene: 'hike', spots: 6, total: 10,
     people: ['大橙子', 'Yuan', 'Derek', '阿德'], phase: 'invite', invitedBy: '大橙子',
@@ -228,11 +228,11 @@ export const upcomingEvents: EventData[] = [
     ],
   },
   {
-    id: 5, title: '周末电影夜 · 重庆森林', host: 'Leo', date: '3.15 周六 7pm',
+    id: 'evt-5', title: '周末电影夜 · 重庆森林', host: 'Leo', date: '3.15 周六 7pm',
     location: 'Hoboken, NJ', locationPrivate: '25 River St, Hoboken, NJ 07030',
     isHomeEvent: true, scene: 'movieNight', film: '重庆森林', spots: 5, total: 6,
     people: ['Leo'], phase: 'invite', invitedBy: 'Leo',
-    nominations: [6, 1, 7],
+    nominations: ['mov-6', 'mov-1', 'mov-7'],
     desc: 'Leo 的第一次 Host！在 Hoboken 的公寓看王家卫的《重庆森林》。',
     houseRules: '有猫 · 楼下有街趴',
     tasks: [
@@ -243,7 +243,7 @@ export const upcomingEvents: EventData[] = [
     ],
   },
   {
-    id: 6, title: '咖啡闲聊 · Montclair 小聚', host: '阿德', date: '3.01 周六 2pm',
+    id: 'evt-6', title: '咖啡闲聊 · Montclair 小聚', host: '阿德', date: '3.01 周六 2pm',
     endDate: '3.01 5pm',
     location: 'Montclair, NJ', scene: 'coffee', spots: 3, total: 4,
     people: ['阿德'], phase: 'open',
@@ -255,7 +255,7 @@ export const upcomingEvents: EventData[] = [
     ],
   },
   {
-    id: 7, title: '烘焙下午茶', host: 'Tiffy', date: '3.22 周六 2pm',
+    id: 'evt-7', title: '烘焙下午茶', host: 'Tiffy', date: '3.22 周六 2pm',
     endDate: '3.22 5pm',
     location: 'Edison, NJ', locationPrivate: '456 Oak Ave, Edison, NJ 08820',
     isHomeEvent: true, scene: 'potluck', spots: 4, total: 6,
@@ -271,13 +271,13 @@ export const upcomingEvents: EventData[] = [
     ],
   },
   {
-    id: 9, title: '周末电影夜 · 惊魂记', host: '白开水', date: '2.28 周五 7pm',
+    id: 'evt-9', title: '周末电影夜 · 惊魂记', host: '白开水', date: '2.28 周五 7pm',
     endDate: '2.28 10pm',
     location: 'Edison, NJ', locationPrivate: '123 Maple St, Edison, NJ 08820',
     isHomeEvent: true, scene: 'movieNight', film: '惊魂记', spots: 0, total: 8,
     people: ['白开水', 'Yuan', '大橙子', '星星', 'Tiffy', '小鱼', 'Leo', '阿德'],
     phase: 'closed',
-    nominations: [2, 5, 12, 8],
+    nominations: ['mov-2', 'mov-5', 'mov-12', 'mov-8'],
     desc: '希区柯克经典惊悚片。报名已满，当天见！',
     houseRules: '请换鞋入内 · 10pm 前结束',
     tasks: [
@@ -293,13 +293,13 @@ export const liveEvents: EventData[] = [];
 
 export const endedEvents: EventData[] = [
   {
-    id: 4, title: '周五电影夜 · 寄生虫', host: '白开水', date: '2.21 周五 7pm',
+    id: 'evt-4', title: '周五电影夜 · 寄生虫', host: '白开水', date: '2.21 周五 7pm',
     endDate: '2.21 10pm',
     location: 'Edison, NJ', isHomeEvent: true, scene: 'movieNight', film: '寄生虫',
     spots: 0, total: 8,
     people: ['白开水', 'Yuan', '大橙子', '星星', 'Tiffy', '小鱼', 'Leo', 'Mia'],
     phase: 'ended',
-    nominations: [13, 7, 10],
+    nominations: ['mov-13', 'mov-7', 'mov-10'],
     desc: '一起看奉俊昊的《寄生虫》，看完聊到十点多。',
     houseRules: '请换鞋入内 · 有零食和饮料',
     tasks: [
@@ -322,7 +322,7 @@ export const endedEvents: EventData[] = [
     ],
   },
   {
-    id: 8, title: '日料之夜 · 手卷寿司', host: 'Yuan', date: '2.22 周六 6pm',
+    id: 'evt-8', title: '日料之夜 · 手卷寿司', host: 'Yuan', date: '2.22 周六 6pm',
     endDate: '2.22 9pm',
     location: 'Edison, NJ', locationPrivate: '789 Elm St, Edison, NJ 08820',
     isHomeEvent: true, scene: 'potluck', spots: 0, total: 6,
@@ -346,7 +346,7 @@ export const endedEvents: EventData[] = [
     ],
   },
   {
-    id: 100, title: '打羽毛球', host: 'Derek', date: '2.15 周六 10am',
+    id: 'evt-100', title: '打羽毛球', host: 'Derek', date: '2.15 周六 10am',
     location: 'Life Time Fitness, Bridgewater', scene: 'sports', spots: 0, total: 8,
     people: ['Derek', 'Leo', '大橙子', '白开水', '阿德', '小鱼'], phase: 'ended',
     desc: '在 Life Time 包了两个小时场地，单打双打都有。',
@@ -367,7 +367,7 @@ export const endedEvents: EventData[] = [
 
 export const cancelledEvents: EventData[] = [
   {
-    id: 101, title: '滑雪 · Mountain Creek', host: 'Derek', date: '2.09 周日 8am',
+    id: 'evt-101', title: '滑雪 · Mountain Creek', host: 'Derek', date: '2.09 周日 8am',
     location: 'Mountain Creek, Vernon', scene: 'hike', spots: 0, total: 6,
     people: ['Derek', 'Yuan', '大橙子'], phase: 'cancelled',
     desc: '下雨了，路面结冰不安全，取消。下次天气好再约！',
@@ -376,7 +376,7 @@ export const cancelledEvents: EventData[] = [
 
 export const proposals: Proposal[] = [
   {
-    id: 1,
+    id: 'prop-1',
     name: 'Tiffy', title: '周末一起去爬 High Point？', votes: 5, interested: ['星星', '大橙子', '白开水', 'Derek'], time: '3 天前',
     descriptionHtml: '<p>新泽西最高点 <strong>High Point State Park</strong>，秋天去景色超美。</p><h3>计划</h3><ul><li>周六早上 9 点出发</li><li>大概 3 小时往返</li><li>难度不大，适合新手</li></ul><blockquote><p>山顶能同时看到三个州！纽约、宾州、新泽西尽收眼底。</p></blockquote><p>需要自备：登山鞋、水、零食。我可以准备一些三明治带上去。</p>',
     likes: 6, likedBy: ['星星', '大橙子', '白开水', 'Derek', 'Yuan', '小鱼'],
@@ -387,7 +387,7 @@ export const proposals: Proposal[] = [
     ],
   },
   {
-    id: 2,
+    id: 'prop-2',
     name: '星星', title: '找个周末一起去 MOMA？', votes: 3, interested: ['Yuan', 'Tiffy', 'Mia'], time: '5 天前',
     descriptionHtml: '<p>最近 MOMA 有个 <strong>安迪·沃霍尔</strong> 的特展，听说很值得看。</p><h3>行程安排</h3><ol><li>上午 11 点在 MOMA 门口集合</li><li>看展大概 2-3 小时</li><li>之后附近吃个 brunch</li></ol><p>门票大概 $25，学生有折扣。</p>',
     likes: 4, likedBy: ['Yuan', 'Tiffy', 'Mia', 'Leo'],
@@ -397,7 +397,7 @@ export const proposals: Proposal[] = [
     ],
   },
   {
-    id: 3,
+    id: 'prop-3',
     name: '小鱼', title: '有人想打羽毛球吗', votes: 8, interested: ['Leo', '大橙子', '白开水', 'Yuan', 'Derek', '阿德'], time: '1 周前',
     descriptionHtml: '<p>想组织一个 <strong>羽毛球</strong> 活动！不限水平，新手友好。</p><h3>场地</h3><ul><li><strong>Life Time Fitness</strong> — 上次去过，场地不错</li><li>也可以考虑 Rutgers 的室内场馆</li></ul><p>白开水说有多余球拍可以借，所以没装备也没关系～</p>',
     likes: 7, likedBy: ['Leo', '大橙子', '白开水', 'Yuan', 'Derek', '阿德', '星星'],
@@ -409,7 +409,7 @@ export const proposals: Proposal[] = [
     ],
   },
   {
-    id: 4,
+    id: 'prop-4',
     name: 'Leo', title: '想搞一个外语电影马拉松，一晚看三部', votes: 6, interested: ['Yuan', '白开水', '星星', 'Leo'], time: '2 天前',
     descriptionHtml: '<h3>外语电影马拉松之夜</h3><p>一晚连续看 <strong>三部</strong> 外语片，中间吃点东西休息一下。</p><h3>主题备选</h3><ul><li>王家卫三连：花样年华 → 重庆森林 → 春光乍泄</li><li>法国新浪潮：四百击 → 筋疲力尽 → 祖与占</li><li>亚洲经典：东京物语 → 花样年华 → 寄生虫</li></ul><blockquote><p>白开水说可以提供场地和投影！</p></blockquote>',
     likes: 5, likedBy: ['Yuan', '白开水', '星星', '大橙子', 'Tiffy'],
@@ -419,7 +419,7 @@ export const proposals: Proposal[] = [
     ],
   },
   {
-    id: 5,
+    id: 'prop-5',
     name: '阿德', title: '来我录音棚体验录歌？', votes: 4, interested: ['奶茶', 'Tiffy', '星星'], time: '4 天前',
     descriptionHtml: '<p>我的小录音棚终于搭好了！想请大家来 <strong>体验录歌</strong>。</p><h3>可以做什么</h3><ul><li>唱任何歌（中文/英文/日文都行）</li><li>我可以现场 <strong>吉他伴奏</strong></li><li>录完可以带走音频文件</li></ul><p>不用唱得好，重在体验和开心！录音棚在 Edison，停车方便。</p>',
     likes: 5, likedBy: ['奶茶', 'Tiffy', '星星', 'Yuan', 'Leo'],
@@ -430,7 +430,7 @@ export const proposals: Proposal[] = [
     ],
   },
   {
-    id: 6,
+    id: 'prop-6',
     name: '奶茶', title: '奶茶 tasting 大会！带大家试喝新品', votes: 7, interested: ['Tiffy', '小鱼', 'Mia', 'Yuan', '星星'], time: '1 天前',
     descriptionHtml: '<p>新品到了一批，想请大家来 <strong>盲测评分</strong>！</p><h3>活动流程</h3><ol><li>每人会拿到 5 杯不同的新品奶茶</li><li>盲测打分（1-10 分）</li><li>揭晓品牌和口味</li><li>票选最佳新品</li></ol><p>全程免费！地点在我家，空间够大。</p><blockquote><p>杨枝甘露是保留曲目，一定会有～</p></blockquote>',
     likes: 8, likedBy: ['Tiffy', '小鱼', 'Mia', 'Yuan', '星星', '白开水', 'Leo', '大橙子'],
@@ -440,7 +440,7 @@ export const proposals: Proposal[] = [
     ],
   },
   {
-    id: 7,
+    id: 'prop-7',
     name: 'Derek', title: '春天 kayaking，Raritan River', votes: 9, interested: ['大橙子', '阿德', '白开水', 'Yuan', 'Leo', 'Derek'], time: '6 天前',
     descriptionHtml: '<p>春天到了，一起去 <strong>Raritan River</strong> 划皮划艇吧！</p><h3>基本信息</h3><ul><li>地点：Raritan River，有 kayak rental</li><li>费用：大概 <strong>$40/人</strong>（租船 + 救生衣）</li><li>时长：全程大约 2-3 小时</li></ul><h3>注意事项</h3><ul><li>不会游泳也 OK，穿救生衣，河水很平缓</li><li>建议穿可以湿的衣服和鞋子</li><li>带防晒霜！</li></ul><blockquote><p>春天河两边的樱花应该很好看</p></blockquote>',
     likes: 9, likedBy: ['大橙子', '阿德', '白开水', 'Yuan', 'Leo', '小鱼', '星星', 'Tiffy', '奶茶'],
@@ -455,39 +455,39 @@ export const proposals: Proposal[] = [
 ];
 
 export const pastEvents: PastEvent[] = [
-  { title: '电影夜 · 寄生虫', host: '白开水', date: '02.08', people: 8, scene: 'movieNight', film: '寄生虫', photoCount: 12, commentCount: 5 },
-  { title: '新年饭局 Potluck', host: 'Yuan', date: '01.25', people: 10, scene: 'potluck', photoCount: 18, commentCount: 8 },
-  { title: '电影夜 · 千与千寻', host: 'Yuan', date: '01.18', people: 7, scene: 'movieNight', film: '千与千寻', photoCount: 6, commentCount: 3 },
-  { title: 'High Point 徒步', host: '大橙子', date: '01.12', people: 6, scene: 'hike', photoCount: 24, commentCount: 4 },
-  { title: 'Potluck · 上海小笼', host: 'Tiffy', date: '01.05', people: 8, scene: 'potluck', photoCount: 15, commentCount: 7 },
-  { title: '电影夜 · 春光乍泄', host: '白开水', date: '12.28', people: 6, scene: 'movieNight', film: '春光乍泄', photoCount: 8, commentCount: 4 },
-  { title: '圣诞 Party', host: 'Yuan', date: '12.24', people: 12, scene: 'potluck', photoCount: 32, commentCount: 12 },
-  { title: '电影夜 · 东京物语', host: 'Yuan', date: '12.15', people: 5, scene: 'movieNight', film: '东京物语', photoCount: 4, commentCount: 2 },
-  { title: '感恩节 Potluck', host: '白开水', date: '11.28', people: 14, scene: 'potluck', photoCount: 28, commentCount: 10 },
-  { title: 'Fall Hike · Watchung', host: 'Derek', date: '11.16', people: 8, scene: 'hike', photoCount: 20, commentCount: 6 },
-  { title: '打羽毛球', host: 'Derek', date: '02.15', people: 6, scene: 'sports', photoCount: 5, commentCount: 2 },
-  { title: '咖啡闲聊', host: '阿德', date: '02.01', people: 4, scene: 'coffee', photoCount: 3, commentCount: 1 },
+  { id: 'past-1', title: '电影夜 · 寄生虫', host: '白开水', date: '02.08', people: 8, scene: 'movieNight', film: '寄生虫', photoCount: 12, commentCount: 5 },
+  { id: 'past-2', title: '新年饭局 Potluck', host: 'Yuan', date: '01.25', people: 10, scene: 'potluck', photoCount: 18, commentCount: 8 },
+  { id: 'past-3', title: '电影夜 · 千与千寻', host: 'Yuan', date: '01.18', people: 7, scene: 'movieNight', film: '千与千寻', photoCount: 6, commentCount: 3 },
+  { id: 'past-4', title: 'High Point 徒步', host: '大橙子', date: '01.12', people: 6, scene: 'hike', photoCount: 24, commentCount: 4 },
+  { id: 'past-5', title: 'Potluck · 上海小笼', host: 'Tiffy', date: '01.05', people: 8, scene: 'potluck', photoCount: 15, commentCount: 7 },
+  { id: 'past-6', title: '电影夜 · 春光乍泄', host: '白开水', date: '12.28', people: 6, scene: 'movieNight', film: '春光乍泄', photoCount: 8, commentCount: 4 },
+  { id: 'past-7', title: '圣诞 Party', host: 'Yuan', date: '12.24', people: 12, scene: 'potluck', photoCount: 32, commentCount: 12 },
+  { id: 'past-8', title: '电影夜 · 东京物语', host: 'Yuan', date: '12.15', people: 5, scene: 'movieNight', film: '东京物语', photoCount: 4, commentCount: 2 },
+  { id: 'past-9', title: '感恩节 Potluck', host: '白开水', date: '11.28', people: 14, scene: 'potluck', photoCount: 28, commentCount: 10 },
+  { id: 'past-10', title: 'Fall Hike · Watchung', host: 'Derek', date: '11.16', people: 8, scene: 'hike', photoCount: 20, commentCount: 6 },
+  { id: 'past-11', title: '打羽毛球', host: 'Derek', date: '02.15', people: 6, scene: 'sports', photoCount: 5, commentCount: 2 },
+  { id: 'past-12', title: '咖啡闲聊', host: '阿德', date: '02.01', people: 4, scene: 'coffee', photoCount: 3, commentCount: 1 },
 ];
 
 /** ===== Movies ===== */
 export const moviePool: MoviePool[] = [
-  { id: 1, title: '花样年华', year: '2000', dir: '王家卫', v: 12, status: '本周放映', by: 'Yuan' },
-  { id: 2, title: '惊魂记', year: '1960', dir: '希区柯克', v: 9, by: '白开水' },
-  { id: 3, title: '永恒和一日', year: '1998', dir: '安哲罗普洛斯', v: 7, by: 'Yuan' },
-  { id: 4, title: '东京物语', year: '1953', dir: '小津安二郎', v: 6, by: '星星' },
-  { id: 5, title: '燃烧女子的肖像', year: '2019', dir: '瑟琳·席安玛', v: 5, by: 'Tiffy' },
-  { id: 6, title: '重庆森林', year: '1994', dir: '王家卫', v: 11, by: '大橙子' },
-  { id: 7, title: '小偷家族', year: '2018', dir: '是枝裕和', v: 8, by: '奶茶' },
-  { id: 8, title: '四百击', year: '1959', dir: '特吕弗', v: 4, by: 'Yuan' },
-  { id: 9, title: '红色沙漠', year: '1964', dir: '安东尼奥尼', v: 3, by: '白开水' },
-  { id: 10, title: '请以你的名字呼唤我', year: '2017', dir: '瓜达尼诺', v: 10, by: 'Derek' },
-  { id: 11, title: '秋刀鱼之味', year: '1962', dir: '小津安二郎', v: 6, by: '星星' },
-  { id: 12, title: '大佛普拉斯', year: '2017', dir: '黄信尧', v: 5, by: '阿德' },
-  { id: 13, title: '寄生虫', year: '2019', dir: '奉俊昊', v: 13, status: '已放映', by: '白开水' },
-  { id: 14, title: '千与千寻', year: '2001', dir: '宫崎骏', v: 10, status: '已放映', by: '星星' },
-  { id: 15, title: '春光乍泄', year: '1997', dir: '王家卫', v: 9, status: '已放映', by: 'Yuan' },
-  { id: 16, title: '坠落的审判', year: '2023', dir: '茹斯汀·特里耶', v: 8, status: '已放映', by: 'Leo' },
-  { id: 17, title: '完美的日子', year: '2023', dir: '维姆·文德斯', v: 6, status: '已放映', by: 'Yuan' },
+  { id: 'mov-1', title: '花样年华', year: '2000', dir: '王家卫', v: 12, status: '本周放映', by: 'Yuan' },
+  { id: 'mov-2', title: '惊魂记', year: '1960', dir: '希区柯克', v: 9, by: '白开水' },
+  { id: 'mov-3', title: '永恒和一日', year: '1998', dir: '安哲罗普洛斯', v: 7, by: 'Yuan' },
+  { id: 'mov-4', title: '东京物语', year: '1953', dir: '小津安二郎', v: 6, by: '星星' },
+  { id: 'mov-5', title: '燃烧女子的肖像', year: '2019', dir: '瑟琳·席安玛', v: 5, by: 'Tiffy' },
+  { id: 'mov-6', title: '重庆森林', year: '1994', dir: '王家卫', v: 11, by: '大橙子' },
+  { id: 'mov-7', title: '小偷家族', year: '2018', dir: '是枝裕和', v: 8, by: '奶茶' },
+  { id: 'mov-8', title: '四百击', year: '1959', dir: '特吕弗', v: 4, by: 'Yuan' },
+  { id: 'mov-9', title: '红色沙漠', year: '1964', dir: '安东尼奥尼', v: 3, by: '白开水' },
+  { id: 'mov-10', title: '请以你的名字呼唤我', year: '2017', dir: '瓜达尼诺', v: 10, by: 'Derek' },
+  { id: 'mov-11', title: '秋刀鱼之味', year: '1962', dir: '小津安二郎', v: 6, by: '星星' },
+  { id: 'mov-12', title: '大佛普拉斯', year: '2017', dir: '黄信尧', v: 5, by: '阿德' },
+  { id: 'mov-13', title: '寄生虫', year: '2019', dir: '奉俊昊', v: 13, status: '已放映', by: '白开水' },
+  { id: 'mov-14', title: '千与千寻', year: '2001', dir: '宫崎骏', v: 10, status: '已放映', by: '星星' },
+  { id: 'mov-15', title: '春光乍泄', year: '1997', dir: '王家卫', v: 9, status: '已放映', by: 'Yuan' },
+  { id: 'mov-16', title: '坠落的审判', year: '2023', dir: '茹斯汀·特里耶', v: 8, status: '已放映', by: 'Leo' },
+  { id: 'mov-17', title: '完美的日子', year: '2023', dir: '维姆·文德斯', v: 6, status: '已放映', by: 'Yuan' },
 ];
 
 export const movieScreened: MovieScreened[] = [
@@ -521,24 +521,24 @@ export const quickMessages = [
 ];
 
 export const myCards: CardReceived[] = [
-  { from: '白开水', msg: '谢谢你每次都把地下室收拾得像个小影院', stamp: '🎬', date: '02.08', photo: photos.movieNight, priv: false },
-  { from: 'Tiffy', msg: '氛围超棒，下次还来你家！', stamp: '🍳', date: '02.01', priv: true },
-  { from: '大橙子', msg: '你选的片子太好了', stamp: '🎬', date: '01.25', photo: photos.cozy, priv: false },
-  { from: '星星', msg: '第一次来就感觉像老朋友', stamp: '☕', date: '01.18', priv: true },
-  { from: 'Leo', msg: '你推荐的电影都好棒，品味一致', stamp: '🎬', date: '01.10', priv: false },
-  { from: '小鱼', msg: '和你打羽毛球好开心！', stamp: '🏸', date: '01.05', priv: false },
-  { from: '阿德', msg: '谢谢你带我融入这个社区', stamp: '❤️', date: '12.28', priv: true },
-  { from: 'Mia', msg: '你做的甜品太赞了', stamp: '🧁', date: '12.24', photo: photos.potluck, priv: false },
-  { from: '奶茶', msg: '下次一起再来你家看电影', stamp: '🎬', date: '12.15', priv: true },
-  { from: 'Derek', msg: '徒步那天太开心了，风景绝美', stamp: '🥾', date: '11.16', photo: photos.nature, priv: false },
+  { from: '白开水', message: '谢谢你每次都把地下室收拾得像个小影院', stamp: '🎬', date: '02.08', photo: photos.movieNight, visibility: 'public' as const },
+  { from: 'Tiffy', message: '氛围超棒，下次还来你家！', stamp: '🍳', date: '02.01', visibility: 'private' as const },
+  { from: '大橙子', message: '你选的片子太好了', stamp: '🎬', date: '01.25', photo: photos.cozy, visibility: 'public' as const },
+  { from: '星星', message: '第一次来就感觉像老朋友', stamp: '☕', date: '01.18', visibility: 'private' as const },
+  { from: 'Leo', message: '你推荐的电影都好棒，品味一致', stamp: '🎬', date: '01.10', visibility: 'public' as const },
+  { from: '小鱼', message: '和你打羽毛球好开心！', stamp: '🏸', date: '01.05', visibility: 'public' as const },
+  { from: '阿德', message: '谢谢你带我融入这个社区', stamp: '❤️', date: '12.28', visibility: 'private' as const },
+  { from: 'Mia', message: '你做的甜品太赞了', stamp: '🧁', date: '12.24', photo: photos.potluck, visibility: 'public' as const },
+  { from: '奶茶', message: '下次一起再来你家看电影', stamp: '🎬', date: '12.15', visibility: 'private' as const },
+  { from: 'Derek', message: '徒步那天太开心了，风景绝美', stamp: '🥾', date: '11.16', photo: photos.nature, visibility: 'public' as const },
 ];
 
 export const cardsSent: CardReceived[] = [
-  { from: 'Yuan', msg: '谢谢白开水每次精心选片', stamp: '🎬', date: '02.08', priv: false },
-  { from: 'Yuan', msg: 'Tiffy 做的蛋糕太好吃了', stamp: '🧁', date: '02.01', priv: false },
-  { from: 'Yuan', msg: '大橙子你太有活力了', stamp: '⚡', date: '01.25', priv: true },
-  { from: 'Yuan', msg: '星星欢迎加入串门大家庭', stamp: '🎉', date: '01.18', priv: false },
-  { from: 'Yuan', msg: 'Derek 带路的徒步线路真棒', stamp: '🥾', date: '11.16', priv: false },
+  { from: 'Yuan', message: '谢谢白开水每次精心选片', stamp: '🎬', date: '02.08', visibility: 'public' as const },
+  { from: 'Yuan', message: 'Tiffy 做的蛋糕太好吃了', stamp: '🧁', date: '02.01', visibility: 'public' as const },
+  { from: 'Yuan', message: '大橙子你太有活力了', stamp: '⚡', date: '01.25', visibility: 'private' as const },
+  { from: 'Yuan', message: '星星欢迎加入串门大家庭', stamp: '🎉', date: '01.18', visibility: 'public' as const },
+  { from: 'Yuan', message: 'Derek 带路的徒步线路真棒', stamp: '🥾', date: '11.16', visibility: 'public' as const },
 ];
 
 /** ===== Recommendations — 电影 / 菜谱 / 音乐 / 好店 ===== */
@@ -614,7 +614,7 @@ export const feedItems: FeedItem[] = [
   },
   {
     type: 'card', from: '白开水', to: 'Yuan',
-    msg: '谢谢你每次都把地下室收拾得像个小影院',
+    message: '谢谢你每次都把地下室收拾得像个小影院',
     photo: photos.movieNight, navTarget: '/cards',
     likes: 6, likedBy: ['Yuan', '星星', 'Tiffy', 'Leo', '大橙子', '奶茶'],
     comments: [{ name: 'Yuan', text: '哈哈不客气！下次继续', date: '02.22' }],
@@ -664,7 +664,7 @@ export const feedItems: FeedItem[] = [
   },
   {
     type: 'card', from: 'Tiffy', to: 'Leo',
-    msg: '你做的那道红烧肉太好吃了，下次教教我！', navTarget: '/cards',
+    message: '你做的那道红烧肉太好吃了，下次教教我！', navTarget: '/cards',
     likes: 4, likedBy: ['Leo', '大橙子', '奶茶', '小鱼'], comments: [],
   },
   {
@@ -785,7 +785,7 @@ export const feedItems: FeedItem[] = [
   },
   {
     type: 'card', from: '大橙子', to: '星星',
-    msg: '谢谢你带的咖啡豆，回味了一整周', photo: photos.coffee, navTarget: '/cards',
+    message: '谢谢你带的咖啡豆，回味了一整周', photo: photos.coffee, navTarget: '/cards',
     likes: 3, likedBy: ['星星', 'Yuan', '奶茶'], comments: [],
   },
   {
@@ -886,7 +886,7 @@ export const feedItems: FeedItem[] = [
   },
   {
     type: 'card', from: 'Yuan', to: '阿德',
-    msg: '带我们走了那条超美的山路，腿虽然废了但值得', photo: photos.hike, navTarget: '/cards',
+    message: '带我们走了那条超美的山路，腿虽然废了但值得', photo: photos.hike, navTarget: '/cards',
     likes: 5, likedBy: ['阿德', 'Derek', '大橙子', '白开水', 'Leo'],
     comments: [{ name: '阿德', text: '哈哈 下次走平路', date: '02.09' }],
   },
@@ -935,14 +935,14 @@ export const feedItems: FeedItem[] = [
 ];
 
 /** ===== Movie Detail Map ===== */
-export const movieDetailMap: Record<number, MovieDetailData> = {
-  1: {
-    id: 1, title: '花样年华', year: '2000', dir: '王家卫', v: 12, by: 'Yuan',
+export const movieDetailMap: Record<string, MovieDetailData> = {
+  'mov-1': {
+    id: 'mov-1', title: '花样年华', year: '2000', dir: '王家卫', v: 12, by: 'Yuan',
     status: '本周放映', genre: '剧情 / 爱情', duration: '98 分钟', rating: '8.6',
     synopsis: '1962 年的香港，报社编辑周慕云与苏丽珍成为邻居。当他们发现各自的配偶背着他们有了婚外情后，两人开始互相接近，在克制与暧昧之间徘徊。王家卫用旗袍、昏暗走廊和 Nat King Cole 的歌声，编织了一个关于错过的爱情故事。',
     voters: ['Yuan', '白开水', '大橙子', '星星', 'Tiffy', 'Leo', '阿德', '奶茶', 'Derek', '小鱼', '小樱', 'Mia'],
     screenings: [
-      { date: '02.22', host: '白开水', eventTitle: '周六电影夜 · 花样年华', eventId: 1 },
+      { date: '02.22', host: '白开水', eventTitle: '周六电影夜 · 花样年华', eventId: 'evt-1' },
     ],
     comments: [
       { name: 'Yuan', text: '每次看都有新的感受，旗袍和配乐太绝了', date: '02.10' },
@@ -950,8 +950,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: '星星', text: '那种克制的美感，现代电影很少见了', date: '02.15' },
     ],
   },
-  2: {
-    id: 2, title: '惊魂记', year: '1960', dir: '希区柯克', v: 9, by: '白开水',
+  'mov-2': {
+    id: 'mov-2', title: '惊魂记', year: '1960', dir: '希区柯克', v: 9, by: '白开水',
     genre: '悬疑 / 惊悚', duration: '109 分钟', rating: '8.9',
     synopsis: '玛丽恩携款潜逃，途中投宿于一家偏僻的汽车旅馆，旅馆主人诺曼·贝茨看似温和有礼，但在他和母亲的关系中隐藏着惊人的秘密。希区柯克颠覆叙事的杰作。',
     voters: ['白开水', 'Yuan', 'Tiffy', '星星', '大橙子', 'Leo', '阿德', '小鱼', 'Derek'],
@@ -961,8 +961,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: 'Yuan', text: '想在电影夜放，适合冬天的氛围', date: '01.22' },
     ],
   },
-  3: {
-    id: 3, title: '永恒和一日', year: '1998', dir: '安哲罗普洛斯', v: 7, by: 'Yuan',
+  'mov-3': {
+    id: 'mov-3', title: '永恒和一日', year: '1998', dir: '安哲罗普洛斯', v: 7, by: 'Yuan',
     genre: '剧情', duration: '137 分钟', rating: '8.4',
     synopsis: '希腊诗人亚历山大生命的最后一天，他在街上捡到一个阿尔巴尼亚难民男孩，两人一起穿越塞萨洛尼基的冬日街道。关于时间、记忆和语言的沉思。',
     voters: ['Yuan', '白开水', '星星', '大橙子', 'Leo', '小樱', '阿德'],
@@ -971,21 +971,21 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: 'Yuan', text: '安哲的长镜头让人忘记时间的存在', date: '02.01' },
     ],
   },
-  6: {
-    id: 6, title: '重庆森林', year: '1994', dir: '王家卫', v: 11, by: '大橙子',
+  'mov-6': {
+    id: 'mov-6', title: '重庆森林', year: '1994', dir: '王家卫', v: 11, by: '大橙子',
     genre: '剧情 / 爱情', duration: '102 分钟', rating: '8.7',
     synopsis: '两段发生在重庆大厦和兰桂坊附近的都市爱情：失恋警察与神秘女杀手的一夜邂逅，以及另一个警察与快餐店女孩间的错过与重逢。王家卫用手持摄影和跳跃剪辑捕捉九十年代香港的孤独与浪漫。',
     voters: ['大橙子', 'Yuan', 'Leo', '白开水', '星星', 'Tiffy', '阿德', '奶茶', 'Derek', '小鱼', '小樱'],
     screenings: [
-      { date: '03.15', host: 'Leo', eventTitle: '周末电影夜 · 重庆森林', eventId: 5 },
+      { date: '03.15', host: 'Leo', eventTitle: '周末电影夜 · 重庆森林', eventId: 'evt-5' },
     ],
     comments: [
       { name: '大橙子', text: 'California Dreamin 一响就绷不住', date: '01.28' },
       { name: 'Leo', text: '每次看完都想去兰桂坊', date: '02.05' },
     ],
   },
-  4: {
-    id: 4, title: '东京物语', year: '1953', dir: '小津安二郎', v: 6, by: '星星',
+  'mov-4': {
+    id: 'mov-4', title: '东京物语', year: '1953', dir: '小津安二郎', v: 6, by: '星星',
     genre: '剧情 / 家庭', duration: '136 分钟', rating: '9.2',
     synopsis: '年迈的父母从乡下到东京探望已成家的子女，却发现孩子们各忙各的，无暇照顾他们。唯有守寡的儿媳纪子真心相待。小津用固定低角度镜头，温柔地讲述了家庭关系的疏离与无奈。',
     voters: ['星星', 'Yuan', '白开水', '小樱', '大橙子', 'Leo'],
@@ -997,8 +997,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: '小樱', text: '纪子太让人心疼了', date: '12.22' },
     ],
   },
-  5: {
-    id: 5, title: '燃烧女子的肖像', year: '2019', dir: '瑟琳·席安玛', v: 5, by: 'Tiffy',
+  'mov-5': {
+    id: 'mov-5', title: '燃烧女子的肖像', year: '2019', dir: '瑟琳·席安玛', v: 5, by: 'Tiffy',
     genre: '剧情 / 爱情', duration: '122 分钟', rating: '8.6',
     synopsis: '18世纪的法国，年轻女画家玛丽安受委托为富家小姐爱洛伊兹画肖像。在孤岛上相处的日子里，两人之间的目光渐渐化为爱意。席安玛用古典画般的构图和克制的情感，讲述了一段无法言说的爱情。',
     voters: ['Tiffy', '大橙子', 'Yuan', '星星', '小樱'],
@@ -1008,8 +1008,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: '大橙子', text: '每一帧都像油画', date: '01.10' },
     ],
   },
-  7: {
-    id: 7, title: '小偷家族', year: '2018', dir: '是枝裕和', v: 8, by: '奶茶',
+  'mov-7': {
+    id: 'mov-7', title: '小偷家族', year: '2018', dir: '是枝裕和', v: 8, by: '奶茶',
     genre: '剧情 / 家庭', duration: '121 分钟', rating: '8.7',
     synopsis: '东京底层，一家人靠偷窃为生却相互依存。当他们捡回一个被虐待的小女孩后，这个"家族"的秘密开始逐渐浮出水面。是枝裕和用温柔的视角探讨了何为家庭。',
     voters: ['奶茶', 'Yuan', '白开水', '星星', 'Tiffy', '大橙子', '小樱', '小鱼'],
@@ -1018,8 +1018,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: '奶茶', text: '海边那场戏，眼泪止不住', date: '01.15' },
     ],
   },
-  8: {
-    id: 8, title: '四百击', year: '1959', dir: '特吕弗', v: 4, by: 'Yuan',
+  'mov-8': {
+    id: 'mov-8', title: '四百击', year: '1959', dir: '特吕弗', v: 4, by: 'Yuan',
     genre: '剧情', duration: '99 分钟', rating: '8.7',
     synopsis: '巴黎少年安托万在学校和家庭中都得不到理解，一次次逃学和叛逆之后被送进少管所。最后他逃向大海，回头望向镜头的定格画面成为影史经典。法国新浪潮的开山之作。',
     voters: ['Yuan', '白开水', 'Leo', '阿德'],
@@ -1028,8 +1028,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: 'Yuan', text: '结尾那个长镜头追跑到海边，太自由了', date: '02.05' },
     ],
   },
-  9: {
-    id: 9, title: '红色沙漠', year: '1964', dir: '安东尼奥尼', v: 3, by: '白开水',
+  'mov-9': {
+    id: 'mov-9', title: '红色沙漠', year: '1964', dir: '安东尼奥尼', v: 3, by: '白开水',
     genre: '剧情', duration: '117 分钟', rating: '8.1',
     synopsis: '工业城市拉文纳，朱莉安娜在灰色的工厂与污染的环境中挣扎于精神危机。安东尼奥尼第一部彩色电影，用色彩本身叙事——灰绿的工厂、刺目的红墙，表达了现代人的异化与焦虑。',
     voters: ['白开水', 'Yuan', 'Leo'],
@@ -1038,8 +1038,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: '白开水', text: '安东尼奥尼的色彩运用太前卫了', date: '01.25' },
     ],
   },
-  10: {
-    id: 10, title: '请以你的名字呼唤我', year: '2017', dir: '瓜达尼诺', v: 10, by: 'Derek',
+  'mov-10': {
+    id: 'mov-10', title: '请以你的名字呼唤我', year: '2017', dir: '瓜达尼诺', v: 10, by: 'Derek',
     genre: '剧情 / 爱情', duration: '132 分钟', rating: '8.9',
     synopsis: '1983年意大利北部的夏天，17岁的Elio在父亲的别墅中遇到了来访的美国学者Oliver。在阳光、杏树和古典音乐中，两人之间的吸引慢慢升温，成为一段刻骨铭心的初恋。',
     voters: ['Derek', 'Yuan', '大橙子', '星星', 'Tiffy', 'Leo', '奶茶', '小鱼', '小樱', '阿德'],
@@ -1049,8 +1049,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: '星星', text: '意大利的夏天好美', date: '02.02' },
     ],
   },
-  11: {
-    id: 11, title: '秋刀鱼之味', year: '1962', dir: '小津安二郎', v: 6, by: '星星',
+  'mov-11': {
+    id: 'mov-11', title: '秋刀鱼之味', year: '1962', dir: '小津安二郎', v: 6, by: '星星',
     genre: '剧情 / 家庭', duration: '113 分钟', rating: '8.7',
     synopsis: '鳏居老人平山周平意识到该为女儿安排婚事了。在与老同学的聚会中，他看到了独身老师的孤独晚景，开始思考人生的寂寥。小津最后的作品，平静中满是哀愁。',
     voters: ['星星', 'Yuan', '小樱', '白开水', '大橙子', 'Leo'],
@@ -1059,8 +1059,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: '星星', text: '小津的遗作，每个镜头都珍贵', date: '02.08' },
     ],
   },
-  12: {
-    id: 12, title: '大佛普拉斯', year: '2017', dir: '黄信尧', v: 5, by: '阿德',
+  'mov-12': {
+    id: 'mov-12', title: '大佛普拉斯', year: '2017', dir: '黄信尧', v: 5, by: '阿德',
     genre: '剧情 / 喜剧', duration: '104 分钟', rating: '8.4',
     synopsis: '在佛像工厂当夜班保安的菜脯，和拾荒的好友肚财偷看老板的行车记录仪，却意外发现了惊天秘密。黑白影像中的荒诞与心酸，台湾底层小人物的黑色幽默。',
     voters: ['阿德', 'Yuan', '白开水', 'Leo', '大橙子'],
@@ -1069,14 +1069,14 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: '阿德', text: '配乐太绝了，黄信尧的旁白是神来之笔', date: '01.18' },
     ],
   },
-  13: {
-    id: 13, title: '寄生虫', year: '2019', dir: '奉俊昊', v: 13, by: '白开水',
+  'mov-13': {
+    id: 'mov-13', title: '寄生虫', year: '2019', dir: '奉俊昊', v: 13, by: '白开水',
     status: '已放映', genre: '剧情 / 惊悚', duration: '132 分钟', rating: '8.8',
     synopsis: '金家四口全是无业游民，一次偶然的机会让长子基宇进入朴社长的豪宅当家教。随后一家人逐一渗透进这个富裕家庭，直到一场意外揭开地下室的秘密。奉俊昊用黑色幽默与社会批判赢得金棕榈。',
     voters: ['白开水', 'Yuan', '大橙子', '星星', 'Tiffy', '小鱼', 'Leo', 'Mia', '奶茶', '阿德', '小樱', 'Derek', '小鱼'],
     screenings: [
       { date: '02.08', host: '白开水', eventTitle: '电影夜 · 寄生虫' },
-      { date: '02.21', host: '白开水', eventTitle: '周五电影夜 · 寄生虫', eventId: 4 },
+      { date: '02.21', host: '白开水', eventTitle: '周五电影夜 · 寄生虫', eventId: 'evt-4' },
     ],
     comments: [
       { name: '白开水', text: '地下室那段太窒息了', date: '02.09' },
@@ -1084,8 +1084,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: '大橙子', text: '看完沉默了好久', date: '02.10' },
     ],
   },
-  14: {
-    id: 14, title: '千与千寻', year: '2001', dir: '宫崎骏', v: 10, by: '星星',
+  'mov-14': {
+    id: 'mov-14', title: '千与千寻', year: '2001', dir: '宫崎骏', v: 10, by: '星星',
     status: '已放映', genre: '动画 / 奇幻', duration: '125 分钟', rating: '9.4',
     synopsis: '少女千寻随父母误入神灵世界，父母因贪吃被变成猪。千寻在汤婆婆的澡堂中工作，结识了神秘少年白龙，在这个奇异的世界中找到了勇气和成长。宫崎骏最经典的作品。',
     voters: ['星星', 'Yuan', 'Tiffy', '小樱', '大橙子', '白开水', '小鱼', 'Mia', '奶茶', 'Leo'],
@@ -1097,8 +1097,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: 'Tiffy', text: '白龙出现的时候全场都在欢呼', date: '01.20' },
     ],
   },
-  15: {
-    id: 15, title: '春光乍泄', year: '1997', dir: '王家卫', v: 9, by: 'Yuan',
+  'mov-15': {
+    id: 'mov-15', title: '春光乍泄', year: '1997', dir: '王家卫', v: 9, by: 'Yuan',
     status: '已放映', genre: '剧情 / 爱情', duration: '96 分钟', rating: '8.9',
     synopsis: '黎耀辉和何宝荣从香港到布宜诺斯艾利斯，在异国的颠沛流离中反复纠缠、分离、重逢。王家卫用手持摄影和探戈音乐，记录了一段灼热而绝望的爱情。',
     voters: ['Yuan', '白开水', '阿德', 'Leo', '大橙子', '星星', 'Tiffy', '小樱', 'Derek'],
@@ -1110,8 +1110,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: '阿德', text: '布宜诺斯艾利斯拍得太美了', date: '12.30' },
     ],
   },
-  16: {
-    id: 16, title: '坠落的审判', year: '2023', dir: '茹斯汀·特里耶', v: 8, by: 'Leo',
+  'mov-16': {
+    id: 'mov-16', title: '坠落的审判', year: '2023', dir: '茹斯汀·特里耶', v: 8, by: 'Leo',
     status: '已放映', genre: '剧情 / 悬疑', duration: '151 分钟', rating: '8.4',
     synopsis: '丈夫从阁楼坠亡，作家妻子成为嫌疑人。法庭上，婚姻中的每一个裂缝都被放大审视。真相在证词与回忆之间反复横跳，观众也在审判席上。',
     voters: ['Leo', 'Yuan', '白开水', '星星', '大橙子', 'Tiffy', '阿德', '小鱼'],
@@ -1122,8 +1122,8 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
       { name: 'Leo', text: '法庭戏的张力太强了', date: '12.01' },
     ],
   },
-  17: {
-    id: 17, title: '完美的日子', year: '2023', dir: '维姆·文德斯', v: 6, by: 'Yuan',
+  'mov-17': {
+    id: 'mov-17', title: '完美的日子', year: '2023', dir: '维姆·文德斯', v: 6, by: 'Yuan',
     status: '已放映', genre: '剧情', duration: '124 分钟', rating: '8.3',
     synopsis: '东京，平山每天清晨起床，去清扫公共厕所。他听磁带、读文库本、在树荫下吃三明治。每一天都一样，却每一天都不同。维姆·文德斯用诗意的日常，讲述了一种"完美"的生活方式。',
     voters: ['Yuan', '白开水', '星星', '小樱', 'Leo', '阿德'],
@@ -1138,16 +1138,16 @@ export const movieDetailMap: Record<number, MovieDetailData> = {
 
 /** ===== Books ===== */
 export const bookPool: BookPool[] = [
-  { id: 101, title: '活着', year: '1993', author: '余华', v: 11, by: 'Yuan' },
-  { id: 102, title: '百年孤独', year: '1967', author: '马尔克斯', v: 9, by: '星星' },
-  { id: 103, title: '挪威的森林', year: '1987', author: '村上春树', v: 8, by: 'Leo' },
-  { id: 104, title: '小王子', year: '1943', author: '圣埃克苏佩里', v: 10, status: '已读完', by: 'Tiffy' },
-  { id: 105, title: '红楼梦', year: '1791', author: '曹雪芹', v: 7, by: '白开水' },
-  { id: 106, title: '三体', year: '2008', author: '刘慈欣', v: 12, by: '大橙子' },
-  { id: 107, title: '围城', year: '1947', author: '钱钟书', v: 6, status: '已读完', by: 'Yuan' },
-  { id: 108, title: '月亮与六便士', year: '1919', author: '毛姆', v: 8, by: '奶茶' },
-  { id: 109, title: '人间失格', year: '1948', author: '太宰治', v: 5, by: '小樱' },
-  { id: 110, title: '解忧杂货店', year: '2012', author: '东野圭吾', v: 9, status: '已读完', by: '星星' },
+  { id: 'book-101', title: '活着', year: '1993', author: '余华', v: 11, by: 'Yuan' },
+  { id: 'book-102', title: '百年孤独', year: '1967', author: '马尔克斯', v: 9, by: '星星' },
+  { id: 'book-103', title: '挪威的森林', year: '1987', author: '村上春树', v: 8, by: 'Leo' },
+  { id: 'book-104', title: '小王子', year: '1943', author: '圣埃克苏佩里', v: 10, status: '已读完', by: 'Tiffy' },
+  { id: 'book-105', title: '红楼梦', year: '1791', author: '曹雪芹', v: 7, by: '白开水' },
+  { id: 'book-106', title: '三体', year: '2008', author: '刘慈欣', v: 12, by: '大橙子' },
+  { id: 'book-107', title: '围城', year: '1947', author: '钱钟书', v: 6, status: '已读完', by: 'Yuan' },
+  { id: 'book-108', title: '月亮与六便士', year: '1919', author: '毛姆', v: 8, by: '奶茶' },
+  { id: 'book-109', title: '人间失格', year: '1948', author: '太宰治', v: 5, by: '小樱' },
+  { id: 'book-110', title: '解忧杂货店', year: '2012', author: '东野圭吾', v: 9, status: '已读完', by: '星星' },
 ];
 
 export const bookRead: BookRead[] = [
@@ -1157,9 +1157,9 @@ export const bookRead: BookRead[] = [
   { title: '活着', year: '1993', author: '余华', date: '11.15', host: 'Yuan' },
 ];
 
-export const bookDetailMap: Record<number, BookDetailData> = {
-  101: {
-    id: 101, title: '活着', year: '1993', author: '余华', v: 11, by: 'Yuan',
+export const bookDetailMap: Record<string, BookDetailData> = {
+  'book-101': {
+    id: 'book-101', title: '活着', year: '1993', author: '余华', v: 11, by: 'Yuan',
     genre: '小说 / 现实主义', pages: '191 页', rating: '9.4',
     synopsis: '地主少爷福贵嗜赌成性，终于赌光了家业。穷困之中，福贵的亲人一个个离他而去，最终只剩老牛与他相依为命。余华用平淡的笔调写出了人生最大的苦难与坚韧。',
     voters: ['Yuan', '白开水', '星星', '大橙子', 'Tiffy', 'Leo', '阿德', '奶茶', 'Derek', '小鱼', '小樱'],
@@ -1172,8 +1172,8 @@ export const bookDetailMap: Record<number, BookDetailData> = {
       { name: '星星', text: '看到有庆那段哭了好久', date: '02.15' },
     ],
   },
-  102: {
-    id: 102, title: '百年孤独', year: '1967', author: '马尔克斯', v: 9, by: '星星',
+  'book-102': {
+    id: 'book-102', title: '百年孤独', year: '1967', author: '马尔克斯', v: 9, by: '星星',
     genre: '小说 / 魔幻现实主义', pages: '360 页', rating: '9.2',
     synopsis: '布恩迪亚家族七代人的传奇故事，发生在虚构的马孔多镇。吉普赛人的魔法、失眠症瘟疫、漫天的黄蝴蝶……马尔克斯用华丽的想象力构建了一个关于孤独与宿命的世界。',
     voters: ['星星', 'Yuan', '白开水', 'Leo', '大橙子', '阿德', '小樱', '奶茶', 'Tiffy'],
@@ -1183,8 +1183,8 @@ export const bookDetailMap: Record<number, BookDetailData> = {
       { name: 'Leo', text: '开头那句话是文学史上最伟大的开头之一', date: '01.28' },
     ],
   },
-  103: {
-    id: 103, title: '挪威的森林', year: '1987', author: '村上春树', v: 8, by: 'Leo',
+  'book-103': {
+    id: 'book-103', title: '挪威的森林', year: '1987', author: '村上春树', v: 8, by: 'Leo',
     genre: '小说 / 爱情', pages: '384 页', rating: '8.0',
     synopsis: '渡边彻在飞机上听到《挪威的森林》，回忆起大学时代与两个女孩的故事：直子安静而忧郁，绿子活泼而热烈。村上春树用淡淡的笔触写出了青春的迷惘与丧失。',
     voters: ['Leo', 'Yuan', '星星', '小樱', '奶茶', 'Tiffy', '大橙子', '白开水'],
@@ -1194,8 +1194,8 @@ export const bookDetailMap: Record<number, BookDetailData> = {
       { name: '小樱', text: '村上的文字有一种独特的节奏感', date: '02.05' },
     ],
   },
-  104: {
-    id: 104, title: '小王子', year: '1943', author: '圣埃克苏佩里', v: 10, by: 'Tiffy',
+  'book-104': {
+    id: 'book-104', title: '小王子', year: '1943', author: '圣埃克苏佩里', v: 10, by: 'Tiffy',
     status: '已读完', genre: '童话 / 哲学', pages: '96 页', rating: '9.0',
     synopsis: '飞行员在撒哈拉沙漠遇到来自小行星B612的小王子。小王子讲述了他和玫瑰花的故事，以及在各个星球上遇到的奇怪大人。看似儿童故事，实则写给大人的寓言。',
     voters: ['Tiffy', 'Yuan', '星星', '小鱼', 'Mia', '奶茶', '大橙子', '白开水', '小樱', 'Leo'],
@@ -1208,8 +1208,8 @@ export const bookDetailMap: Record<number, BookDetailData> = {
       { name: 'Mia', text: '小时候看不懂，长大了看哭了', date: '02.13' },
     ],
   },
-  105: {
-    id: 105, title: '红楼梦', year: '1791', author: '曹雪芹', v: 7, by: '白开水',
+  'book-105': {
+    id: 'book-105', title: '红楼梦', year: '1791', author: '曹雪芹', v: 7, by: '白开水',
     genre: '古典小说', pages: '1200+ 页', rating: '9.6',
     synopsis: '贾宝玉与林黛玉、薛宝钗之间的爱情纠葛，贾府由盛而衰的命运。曹雪芹用百科全书式的笔触描绘了一个封建大家族的兴亡史，被誉为中国古典小说的巅峰之作。',
     voters: ['白开水', 'Yuan', '星星', '大橙子', 'Leo', '阿德', 'Tiffy'],
@@ -1219,8 +1219,8 @@ export const bookDetailMap: Record<number, BookDetailData> = {
       { name: 'Yuan', text: '读红楼梦需要一整个冬天', date: '01.20' },
     ],
   },
-  106: {
-    id: 106, title: '三体', year: '2008', author: '刘慈欣', v: 12, by: '大橙子',
+  'book-106': {
+    id: 'book-106', title: '三体', year: '2008', author: '刘慈欣', v: 12, by: '大橙子',
     genre: '科幻', pages: '302 页（第一部）', rating: '8.8',
     synopsis: '文革中一次偶然的星际通讯引发了地球文明与三体文明的接触。面对远超人类的外星科技，人类将如何应对？刘慈欣用硬核科幻想象力构建了宏大的宇宙图景。',
     voters: ['大橙子', 'Yuan', '白开水', 'Leo', '星星', '阿德', 'Derek', '小鱼', '奶茶', '小樱', 'Tiffy', 'Mia'],
@@ -1231,8 +1231,8 @@ export const bookDetailMap: Record<number, BookDetailData> = {
       { name: '白开水', text: '中国科幻的骄傲', date: '02.12' },
     ],
   },
-  107: {
-    id: 107, title: '围城', year: '1947', author: '钱钟书', v: 6, by: 'Yuan',
+  'book-107': {
+    id: 'book-107', title: '围城', year: '1947', author: '钱钟书', v: 6, by: 'Yuan',
     status: '已读完', genre: '小说 / 讽刺', pages: '359 页', rating: '8.9',
     synopsis: '方鸿渐留洋归来，带着一张假文凭闯荡社会。从上海到内地，从恋爱到婚姻，处处碰壁。钱钟书用机智幽默的语言，写出了知识分子的困境——城外的人想进去，城里的人想出来。',
     voters: ['Yuan', '白开水', '星星', 'Leo', '阿德', '大橙子'],
@@ -1244,8 +1244,8 @@ export const bookDetailMap: Record<number, BookDetailData> = {
       { name: '白开水', text: '方鸿渐太真实了哈哈', date: '01.22' },
     ],
   },
-  108: {
-    id: 108, title: '月亮与六便士', year: '1919', author: '毛姆', v: 8, by: '奶茶',
+  'book-108': {
+    id: 'book-108', title: '月亮与六便士', year: '1919', author: '毛姆', v: 8, by: '奶茶',
     genre: '小说', pages: '280 页', rating: '9.0',
     synopsis: '伦敦证券经纪人斯特里克兰德突然抛妻弃子，跑到巴黎画画。他不在乎世俗的评价，不在乎贫困和疾病，只追逐心中的月亮。毛姆以高更为原型，写了一个关于理想与现实的故事。',
     voters: ['奶茶', 'Yuan', '星星', 'Tiffy', '大橙子', '白开水', 'Leo', '小鱼'],
@@ -1255,8 +1255,8 @@ export const bookDetailMap: Record<number, BookDetailData> = {
       { name: 'Yuan', text: '但是月亮和六便士都很重要啊', date: '02.06' },
     ],
   },
-  109: {
-    id: 109, title: '人间失格', year: '1948', author: '太宰治', v: 5, by: '小樱',
+  'book-109': {
+    id: 'book-109', title: '人间失格', year: '1948', author: '太宰治', v: 5, by: '小樱',
     genre: '小说 / 自传', pages: '176 页', rating: '8.3',
     synopsis: '大庭叶藏从小就觉得自己不配做人。他用小丑般的行为隐藏真实的自己，在酒精和女人中沉沦。太宰治半自传式的遗作，写尽了一个灵魂对人世的恐惧与绝望。',
     voters: ['小樱', '星星', 'Leo', '阿德', '奶茶'],
@@ -1266,8 +1266,8 @@ export const bookDetailMap: Record<number, BookDetailData> = {
       { name: '星星', text: '读完心情很复杂', date: '02.01' },
     ],
   },
-  110: {
-    id: 110, title: '解忧杂货店', year: '2012', author: '东野圭吾', v: 9, by: '星星',
+  'book-110': {
+    id: 'book-110', title: '解忧杂货店', year: '2012', author: '东野圭吾', v: 9, by: '星星',
     status: '已读完', genre: '小说 / 奇幻', pages: '291 页', rating: '8.5',
     synopsis: '三个小偷躲进一家废弃的杂货店，发现这里有一个神奇的时空邮箱——过去的人写来的烦恼信会出现在牛奶箱里，而他们的回信会传回过去。东野圭吾用温暖的笔触编织了一个关于善意与命运的故事。',
     voters: ['星星', 'Yuan', 'Tiffy', '小樱', '奶茶', '小鱼', 'Mia', '白开水', '大橙子'],

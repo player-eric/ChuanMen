@@ -274,6 +274,7 @@ model Event {
   recorderUserId         String?
   waitlistEnabled        Boolean                   @default(true)
   isWeeklyLotteryEvent   Boolean                   @default(false)
+  pinned                 Boolean                   @default(false)
   // v2.1 new fields
   inviteDeadline         DateTime?
   isHomeEvent            Boolean                   @default(false)
@@ -583,7 +584,7 @@ model AboutContent {
   id         String           @id @default(cuid())
   type       AboutContentType
   title      String
-  contentMd  String
+  content    String
   published  Boolean          @default(true)
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
@@ -631,6 +632,8 @@ model Announcement {
   authorId   String
   title      String
   body       String
+  type       String   @default("announcement")
+  pinned     Boolean  @default(false)
   published  Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -702,4 +705,25 @@ model EmailLog {
 
   @@index([userId, ruleId, sentAt(sort: Desc)])
   @@index([userId, sentAt(sort: Desc)])
+}
+
+model TitleRule {
+  id          String   @id @default(cuid())
+  emoji       String
+  name        String
+  description String   @default("")
+  stampEmoji  String
+  threshold   Int      @default(3)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+}
+
+model TaskPreset {
+  id        String   @id @default(cuid())
+  tag       String   @unique
+  roles     String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

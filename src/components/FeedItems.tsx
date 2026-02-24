@@ -243,10 +243,10 @@ export function FeedActivity({ name, title, date, location, spots, people, film,
 
 /* ═══ FeedCard ═══ */
 interface FeedCardProps extends InteractionProps {
-  from: string; to: string; msg: string; photo?: string; navTarget?: string;
+  from: string; to: string; message: string; photo?: string; navTarget?: string;
 }
 
-export function FeedCard({ from, to, msg, photo, navTarget, likes, likedBy, comments, newComments }: FeedCardProps) {
+export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, comments, newComments }: FeedCardProps) {
   const c = useColors();
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -265,7 +265,7 @@ export function FeedCard({ from, to, msg, photo, navTarget, likes, likedBy, comm
             <div style={{ fontSize: 12, color: c.text3 }}>5 小时前 · 🌐 公开</div>
           </div>
         </div>
-        <PostCard from={from} to={to} msg={msg} stamp="🎬" photo={photo} />
+        <PostCard from={from} to={to} message={message} stamp="🎬" photo={photo} />
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} />
     </Card>

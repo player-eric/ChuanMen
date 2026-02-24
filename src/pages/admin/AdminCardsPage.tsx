@@ -24,7 +24,7 @@ import MailRoundedIcon from '@mui/icons-material/MailRounded';
 /* ── PRD 11.1.4 ── 感谢卡管理：查看/删除/统计/额度配置 ── */
 
 interface CardItem {
-  id: number;
+  id: string;
   from: string;
   to: string;
   message: string;
@@ -37,14 +37,14 @@ interface CardItem {
 }
 
 const mockCards: CardItem[] = [
-  { id: 1, from: '星星', to: 'Yuan', message: '谢谢你总是那么用心准备活动！', stamp: '🌟', date: '2/20', visibility: 'public', sourceType: 'free', eventName: '寄生虫之夜', tags: ['Host 太用心了'] },
-  { id: 2, from: 'Nicole', to: '白开水', message: '你做的菜太好吃了！每次来都有惊喜', stamp: '🍳', date: '2/19', visibility: 'public', sourceType: 'free', eventName: '新年 Potluck', tags: ['好吃！'] },
-  { id: 3, from: 'Tiffy', to: '大橙子', message: '和你聊天总是很开心', stamp: '💬', date: '2/18', visibility: 'private', sourceType: 'free', eventName: '茶话会', tags: ['氛围很棒'] },
-  { id: 4, from: '白开水', to: '星星', message: '照片拍得太好了！每张都像电影', stamp: '📸', date: '2/17', visibility: 'public', sourceType: 'free', eventName: '寄生虫之夜', tags: ['拍照太好了'] },
-  { id: 5, from: 'Sean', to: 'Yuan', message: '第一次来就感觉很放松，谢谢', stamp: '✨', date: '2/16', visibility: 'public', sourceType: 'free', eventName: '电影夜·花样年华', tags: ['第一次来就很放松'] },
-  { id: 6, from: '大橙子', to: 'Nicole', message: '周末开心！生日快乐 🎂', stamp: '🎂', date: '2/15', visibility: 'public', sourceType: 'purchased', tags: [] },
-  { id: 7, from: 'Annie', to: '白开水', message: '每次都帮忙收拾到最后，太感谢了', stamp: '🧹', date: '2/14', visibility: 'public', sourceType: 'free', eventName: '新年 Potluck', tags: ['每次都帮忙收拾'] },
-  { id: 8, from: '小鹿', to: 'Tiffy', message: '你推荐的那本书我看完了，真的很好！', stamp: '📖', date: '2/13', visibility: 'private', sourceType: 'purchased', tags: [] },
+  { id: 'acard-1', from: '星星', to: 'Yuan', message: '谢谢你总是那么用心准备活动！', stamp: '🌟', date: '2/20', visibility: 'public', sourceType: 'free', eventName: '寄生虫之夜', tags: ['Host 太用心了'] },
+  { id: 'acard-2', from: 'Nicole', to: '白开水', message: '你做的菜太好吃了！每次来都有惊喜', stamp: '🍳', date: '2/19', visibility: 'public', sourceType: 'free', eventName: '新年 Potluck', tags: ['好吃！'] },
+  { id: 'acard-3', from: 'Tiffy', to: '大橙子', message: '和你聊天总是很开心', stamp: '💬', date: '2/18', visibility: 'private', sourceType: 'free', eventName: '茶话会', tags: ['氛围很棒'] },
+  { id: 'acard-4', from: '白开水', to: '星星', message: '照片拍得太好了！每张都像电影', stamp: '📸', date: '2/17', visibility: 'public', sourceType: 'free', eventName: '寄生虫之夜', tags: ['拍照太好了'] },
+  { id: 'acard-5', from: 'Sean', to: 'Yuan', message: '第一次来就感觉很放松，谢谢', stamp: '✨', date: '2/16', visibility: 'public', sourceType: 'free', eventName: '电影夜·花样年华', tags: ['第一次来就很放松'] },
+  { id: 'acard-6', from: '大橙子', to: 'Nicole', message: '周末开心！生日快乐 🎂', stamp: '🎂', date: '2/15', visibility: 'public', sourceType: 'purchased', tags: [] },
+  { id: 'acard-7', from: 'Annie', to: '白开水', message: '每次都帮忙收拾到最后，太感谢了', stamp: '🧹', date: '2/14', visibility: 'public', sourceType: 'free', eventName: '新年 Potluck', tags: ['每次都帮忙收拾'] },
+  { id: 'acard-8', from: '小鹿', to: 'Tiffy', message: '你推荐的那本书我看完了，真的很好！', stamp: '📖', date: '2/13', visibility: 'private', sourceType: 'purchased', tags: [] },
 ];
 
 interface CreditConfig {
@@ -69,7 +69,7 @@ export default function AdminCardsPage() {
     purchasePrice: 5,
   });
 
-  const deleteCard = (id: number) => setCards(prev => prev.filter(c => c.id !== id));
+  const deleteCard = (id: string) => setCards(prev => prev.filter(c => c.id !== id));
 
   const filteredCards = cards.filter(
     c => c.from.includes(search) || c.to.includes(search) || c.message.includes(search),
