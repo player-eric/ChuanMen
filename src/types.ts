@@ -100,6 +100,7 @@ export interface MoviePool {
   year: string;
   dir: string;
   v: number;
+  voterIds: string[];
   status?: string;
   by: string;
 }

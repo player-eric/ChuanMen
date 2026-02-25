@@ -55,6 +55,7 @@ enum EventSignupStatus {
 
 enum RecommendationCategory {
   movie
+  book
   recipe
   music
   place

@@ -18,13 +18,14 @@ import { ImageUpload } from '@/components/ImageUpload';
 
 const categoryMap: Record<RecommendationCategory, string> = {
   movie: '电影',
+  book: '图书',
   recipe: '菜谱',
   music: '音乐',
   place: '好店',
 };
 
 function isCategory(value: string | undefined): value is RecommendationCategory {
-  return value === 'movie' || value === 'recipe' || value === 'music' || value === 'place';
+  return value === 'movie' || value === 'book' || value === 'recipe' || value === 'music' || value === 'place';
 }
 
 /* ── Mock Douban data for demo ── */
@@ -82,6 +83,7 @@ export default function RecommendationCreatePage() {
   }
 
   const isMovie = currentCategory === 'movie';
+  const isBook = currentCategory === 'book';
 
   /** Handle sourceUrl changes — detect Douban link and auto-fill */
   const handleUrlChange = (value: string) => {
@@ -202,12 +204,12 @@ export default function RecommendationCreatePage() {
             </Box>
           )}
 
-          <TextField label="标题" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth />
-          <TextField label="描述" value={description} onChange={(e) => setDescription(e.target.value)} multiline minRows={4} fullWidth />
+          <TextField label="标题" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth placeholder={isBook ? '书名' : undefined} />
+          <TextField label="描述" value={description} onChange={(e) => setDescription(e.target.value)} multiline minRows={4} fullWidth placeholder={isBook ? '作者、推荐理由…' : undefined} />
 
           {/* Non-movie categories still have the generic link field */}
           {!isMovie && (
-            <TextField label="链接（可选）" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} fullWidth />
+            <TextField label={isBook ? '豆瓣/商品链接（可选）' : '链接（可选）'} value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} fullWidth />
           )}
 
           <TextField label="标签（逗号分隔）" value={tagsText} onChange={(e) => setTagsText(e.target.value)} fullWidth />

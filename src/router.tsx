@@ -285,6 +285,7 @@ async function discoverLoader() {
       year: String(m.year ?? ''),
       dir: m.director ?? '',
       v: m._count?.votes ?? 0,
+      voterIds: (m.votes ?? []).map((v: any) => v.user?.id ?? v.userId).filter(Boolean),
       status: m.status === 'candidate' ? undefined : m.status,
       by: m.recommendedBy?.name ?? '',
     }));

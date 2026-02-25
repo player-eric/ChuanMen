@@ -20,13 +20,14 @@ import { Poster } from '@/components/Poster';
 
 const categoryMap: Record<RecommendationCategory, { title: string; icon: string }> = {
   movie: { title: '电影推荐', icon: '🎬' },
+  book: { title: '图书推荐', icon: '📚' },
   recipe: { title: '菜谱推荐', icon: '🍜' },
   music: { title: '音乐推荐', icon: '🎵' },
   place: { title: '好店推荐', icon: '📍' },
 };
 
 function isCategory(value: string | undefined): value is RecommendationCategory {
-  return value === 'movie' || value === 'recipe' || value === 'music' || value === 'place';
+  return value === 'movie' || value === 'book' || value === 'recipe' || value === 'music' || value === 'place';
 }
 
 export default function RecommendationListPage() {

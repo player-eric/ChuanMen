@@ -75,11 +75,22 @@ function MoviesSection() {
   const revalidator = useRevalidator();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'pool' | 'screened'>('pool');
-  const [votes, setVotes] = useState<Record<string, boolean>>({});
   const [extResults, setExtResults] = useState<ExternalMovieResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [addedTitle, setAddedTitle] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { pool, screened } = data;
+
+  // Track vote toggles: true = voted, false = un-voted, undefined = unchanged
+  const [votes, setVotes] = useState<Record<string, boolean>>(() => {
+    if (!user?.id) return {};
+    const init: Record<string, boolean> = {};
+    for (const m of pool) {
+      if (m.voterIds.includes(user.id)) init[m.id] = true;
+    }
+    return init;
+  });
 
   const toggle = async (id: string) => {
     setVotes((v) => ({ ...v, [id]: !v[id] }));
@@ -87,8 +98,6 @@ function MoviesSection() {
       try { await toggleMovieVote(id, user.id); } catch { /* optimistic */ }
     }
   };
-
-  const { pool, screened } = data;
 
   // Filter local pool by search keyword
   const q = search.toLowerCase();
@@ -139,6 +148,7 @@ function MoviesSection() {
         value={search}
         onChange={(e) => handleSearch(e.target.value)}
         placeholder="搜电影名、导演..."
+        autoComplete="off"
         sx={{ mb: 2 }}
         InputProps={{
           startAdornment: (
@@ -239,7 +249,7 @@ function MoviesSection() {
                             size="small"
                             disabled={!user}
                           >
-                            ▲ {m.v + (votes[m.id] ? 1 : 0)}
+                            ▲ {m.v + (votes[m.id] && !m.voterIds.includes(user?.id ?? '') ? 1 : !votes[m.id] && m.voterIds.includes(user?.id ?? '') ? -1 : 0)}
                           </Button>
                         </Stack>
                         {m.status && <Chip sx={{ mt: 1 }} size="small" color="success" label={`✓ ${m.status}`} />}
@@ -309,6 +319,7 @@ function BooksSection() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="搜书名、作者..."
+        autoComplete="off"
         sx={{ mb: 2 }}
         InputProps={{
           startAdornment: (

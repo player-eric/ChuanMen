@@ -145,7 +145,7 @@ export async function uploadMedia(
   return { publicUrl, asset: confirmed };
 }
 
-export type RecommendationCategory = 'movie' | 'recipe' | 'music' | 'place';
+export type RecommendationCategory = 'movie' | 'book' | 'recipe' | 'music' | 'place';
 
 /* ═══════════════════════════════════════════════════════════════
    User lookup API
