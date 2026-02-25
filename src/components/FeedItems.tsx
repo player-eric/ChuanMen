@@ -69,7 +69,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
       setLoaded(true);
       fetchCommentsApi(entityType, entityId).then((list) => {
         if (Array.isArray(list) && list.length > 0) {
-          setLocalComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('zh-CN') : '' })));
+          setLocalComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '' })));
         }
       }).catch(() => {});
     }

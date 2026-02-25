@@ -313,7 +313,7 @@ function mapApiCard(c: any): any {
     to: typeof c.to === 'string' ? c.to : c.to?.name ?? '?',
     message: c.message ?? '',
     stamp: c.tags?.[0]?.value ?? c.stamp ?? '',
-    date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('zh-CN') : '',
+    date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '',
     photo: c.photoUrl ?? c.photo ?? undefined,
     visibility: c.visibility ?? 'public',
     tags: (c.tags ?? []).map((t: any) => typeof t === 'string' ? t : t.value ?? ''),

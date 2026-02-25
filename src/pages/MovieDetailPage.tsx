@@ -41,7 +41,7 @@ export default function MovieDetailPage() {
     if (!raw?.id) return;
     fetchCommentsApi('movie', String(raw.id)).then((list) => {
       if (Array.isArray(list)) {
-        setComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('zh-CN') : '' })));
+        setComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '' })));
       }
     }).catch(() => {});
   }, [raw]);

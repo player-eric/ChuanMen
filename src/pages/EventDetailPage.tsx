@@ -75,7 +75,7 @@ export default function EventDetailPage() {
     if (!eventId) return;
     fetchCommentsApi('event', eventId).then((list) => {
       if (Array.isArray(list)) {
-        setComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('zh-CN') : '' })));
+        setComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '' })));
       }
     }).catch(() => {});
   }, [eventId]);
@@ -168,6 +168,8 @@ export default function EventDetailPage() {
       await signupEvent(eventId, user.id);
       setSignedUp(true);
       setFlash({ open: true, severity: 'success', message: '报名参加成功' });
+      // Refresh event data from DB to update people list & spots
+      await refreshEvent();
     } catch (error) {
       setFlash({
         open: true,
@@ -175,6 +177,24 @@ export default function EventDetailPage() {
         message: error instanceof Error ? error.message : '报名失败，请稍后重试',
       });
     }
+  };
+
+  /** Re-fetch event data from the API to update participants / spots */
+  const refreshEvent = async () => {
+    if (!eventId) return;
+    try {
+      const raw = await getEventById(eventId);
+      if (!raw) return;
+      const signups = (raw as any).signups ?? [];
+      const people = signups.map((s: any) => s.user?.name ?? s.userName ?? '?');
+      const hostName = typeof (raw as any).host === 'string' ? (raw as any).host : (raw as any).host?.name ?? '?';
+      setEvent((prev) => prev ? {
+        ...prev,
+        people,
+        host: hostName,
+        spots: Math.max(0, (prev.total ?? 0) - people.length),
+      } : prev);
+    } catch { /* ignore */ }
   };
 
   const phase = phaseLabel[event.phase] ?? phaseLabel.open;
@@ -1119,6 +1139,8 @@ export default function EventDetailPage() {
                     await cancelSignup(eventId, user.id);
                     setSignedUp(false);
                     setFlash({ open: true, severity: 'success', message: '已取消报名' });
+                    // Refresh event data from DB to update people list & spots
+                    await refreshEvent();
                   } catch {
                     setFlash({ open: true, severity: 'error', message: '取消报名失败，请稍后重试' });
                   }

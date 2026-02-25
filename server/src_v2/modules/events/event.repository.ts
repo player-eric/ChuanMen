@@ -29,7 +29,10 @@ export class EventRepository {
       include: {
         host: true,
         coHosts: { include: { user: true } },
-        signups: { include: { user: true } },
+        signups: {
+          where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } },
+          include: { user: true },
+        },
       },
     });
   }
