@@ -212,7 +212,7 @@ async function eventsLoader() {
         description: p.description ?? '',
         votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
         interested: Array.isArray(p.votes) ? p.votes.map((v: any) => v.user?.name ?? '?') : p.interested ?? [],
-        time: p.createdAt ? timeAgo(new Date(p.createdAt)) : p.time ?? '',
+        time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
       })),
       past: (past ?? []).map((e: any) => ({
         id: e.id,
@@ -242,7 +242,7 @@ async function eventDetailLoader({ params }: { params: Record<string, string | u
     base.comments = [];
     base.tasks = [];
     base.nominations = [];
-    base.photos = (raw.recapPhotoUrls ?? []).map((url: string, i: number) => ({
+    base.photos = ((raw.recapPhotoUrls ?? []) as string[]).map((url: string, i: number) => ({
       id: `${raw.id}-${i}`,
       url,
       caption: '',
