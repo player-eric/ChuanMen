@@ -239,7 +239,7 @@ async function eventDetailLoader({ params }: { params: Record<string, string | u
     const base = mapApiEvent(raw);
     // Detail-specific fields
     base.desc = raw.description ?? '';
-    base.signupUserIds = (raw.signups ?? []).map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
+    base.signupUserIds = ((raw.signups ?? []) as any[]).map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
     base.comments = [];
     base.tasks = [];
     base.nominations = [];
