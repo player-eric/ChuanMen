@@ -419,7 +419,7 @@ export async function fetchUserByIdApi(id: string) {
    ═══════════════════════════════════════════════════════════════ */
 
 export async function fetchPostcardsApi(userId: string) {
-  return requestJson<{ received: EntityMap[]; sent: EntityMap[]; credits: number }>(
+  return requestJson<{ received: EntityMap[]; sent: EntityMap[]; credits: number; eligible?: { id: string; name: string; eventCtx: string }[] }>(
     `/api/postcards${toQueryString({ userId })}`,
   );
 }
@@ -429,6 +429,7 @@ export async function sendPostcard(payload: {
   toId: string;
   message: string;
   eventId?: string;
+  eventCtx?: string;
   visibility?: 'public' | 'private';
   photoUrl?: string;
   tags?: string[];
@@ -437,6 +438,14 @@ export async function sendPostcard(payload: {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePostcardVisibility(id: string, userId: string, visibility: 'public' | 'private') {
+  return requestJson<{ ok: boolean }>(`/api/postcards/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, visibility }),
   });
 }
 

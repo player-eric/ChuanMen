@@ -75,14 +75,20 @@ function buildFeedItems(data: any): any[] {
   // Events → activity items
   for (const e of (data.events ?? [])) {
     const d = e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    const hostName = e.host?.name ?? '';
+    const people = (e.signups ?? []).map((s: any) => s.user?.name).filter(Boolean);
+    // Host 默认也是参与者之一
+    if (hostName && !people.includes(hostName)) {
+      people.unshift(hostName);
+    }
     addToDate(d, {
       type: 'activity',
-      name: e.host?.name ?? '',
+      name: hostName,
       title: e.title,
       date: d,
       location: e.location ?? '',
-      spots: (e.capacity ?? 8) - (e.signups?.length ?? 0),
-      people: (e.signups ?? []).map((s: any) => s.user?.name).filter(Boolean),
+      spots: Math.max(0, (e.capacity ?? 8) - people.length),
+      people,
       signupUserIds: (e.signups ?? []).map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
       film: e.selectedMovie?.title,
       scene: eventTagToScene[e.tags?.[0]] ?? e.tags?.[0] ?? '',
@@ -176,6 +182,10 @@ function mapApiEvent(e: any): any {
   const signups = e.signups ?? [];
   const people = signups.map((s: any) => s.user?.name ?? s.userName ?? '?');
   const hostName = typeof e.host === 'string' ? e.host : e.host?.name ?? '?';
+  // Host 默认也是参与者之一
+  if (hostName && hostName !== '?' && !people.includes(hostName)) {
+    people.unshift(hostName);
+  }
   return {
     id: e.id,
     title: e.title ?? '',
@@ -215,16 +225,21 @@ async function eventsLoader() {
         interested: Array.isArray(p.votes) ? p.votes.map((v: any) => v.user?.name ?? '?') : p.interested ?? [],
         time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
       })),
-      past: (past ?? []).map((e: any) => ({
+      past: (past ?? []).map((e: any) => {
+        const signupCount = e._count?.signups ?? e.people ?? 0;
+        // Host 默认也是参与者之一 — count +1 if not already included in signups
+        const peopleCount = signupCount > 0 ? signupCount + 1 : signupCount;
+        return {
         id: e.id,
         title: e.title ?? '',
         host: typeof e.host === 'string' ? e.host : e.host?.name ?? '?',
         date: e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }) : '',
-        people: e._count?.signups ?? e.people ?? 0,
+        people: peopleCount,
         scene: e.titleImageUrl || e.scene || '',
         film: e.selectedMovie?.title ?? e.film ?? undefined,
         photoCount: e.recapPhotoUrls?.length || undefined,
-      })),
+      };
+      }),
     };
   } catch {
     return { upcoming: [], proposals: [], past: [] };
@@ -240,7 +255,13 @@ async function eventDetailLoader({ params }: { params: Record<string, string | u
     const base = mapApiEvent(raw);
     // Detail-specific fields
     base.desc = raw.description ?? '';
-    base.signupUserIds = ((raw.signups ?? []) as any[]).map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
+    const signupUserIds = ((raw.signups ?? []) as any[]).map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
+    // Host 默认也是参与者 — 确保 host ID 在列表中
+    const hostId = typeof raw.host === 'string' ? raw.host : (raw.host as any)?.id;
+    if (hostId && !signupUserIds.includes(hostId)) {
+      signupUserIds.unshift(hostId);
+    }
+    base.signupUserIds = signupUserIds;
     base.comments = [];
     base.tasks = [];
     base.nominations = [];
@@ -334,6 +355,7 @@ function mapApiCard(c: any): any {
     photo: c.photoUrl ?? c.photo ?? undefined,
     visibility: c.visibility ?? 'public',
     tags: (c.tags ?? []).map((t: any) => typeof t === 'string' ? t : t.value ?? ''),
+    eventCtx: c.eventCtx || c.event?.title || undefined,
   };
 }
 
@@ -341,14 +363,11 @@ async function cardsLoader() {
   const userId = getStoredUserId();
   if (!userId) return { myCards: [], sentCards: [], credits: 0, people: [], quickMessages: [] };
   try {
-    const [data, members] = await Promise.all([
-      fetchPostcardsApi(userId),
-      fetchMembersApi().catch(() => []),
-    ]);
-    const people = (members ?? []).map((m: any) => ({
-      id: typeof m === 'string' ? m : m.id ?? '',
-      name: typeof m === 'string' ? m : m.name ?? '?',
-      ctx: '',
+    const data = await fetchPostcardsApi(userId);
+    const people = (data.eligible ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      ctx: p.eventCtx ?? '',
     }));
     return {
       myCards: (data.received ?? []).map(mapApiCard),

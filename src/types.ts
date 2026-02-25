@@ -160,6 +160,7 @@ export interface CardReceived {
   visibility: 'public' | 'private';
   sourceType?: PostcardSourceType;
   tags?: string[];
+  eventCtx?: string;
 }
 
 export interface Collaborator {

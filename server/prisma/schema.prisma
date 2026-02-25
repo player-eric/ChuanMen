@@ -456,6 +456,7 @@ model Postcard {
   fromId     String
   toId       String
   eventId    String?
+  eventCtx   String            @default("")
   message    String
   visibility PostcardVisibility @default(private)
   photoUrl   String            @default("")

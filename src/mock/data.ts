@@ -521,24 +521,24 @@ export const quickMessages = [
 ];
 
 export const myCards: CardReceived[] = [
-  { from: '白开水', message: '谢谢你每次都把地下室收拾得像个小影院', stamp: '🎬', date: '02.08', photo: photos.movieNight, visibility: 'public' as const },
-  { from: 'Tiffy', message: '氛围超棒，下次还来你家！', stamp: '🍳', date: '02.01', visibility: 'private' as const },
-  { from: '大橙子', message: '你选的片子太好了', stamp: '🎬', date: '01.25', photo: photos.cozy, visibility: 'public' as const },
-  { from: '星星', message: '第一次来就感觉像老朋友', stamp: '☕', date: '01.18', visibility: 'private' as const },
-  { from: 'Leo', message: '你推荐的电影都好棒，品味一致', stamp: '🎬', date: '01.10', visibility: 'public' as const },
-  { from: '小鱼', message: '和你打羽毛球好开心！', stamp: '🏸', date: '01.05', visibility: 'public' as const },
-  { from: '阿德', message: '谢谢你带我融入这个社区', stamp: '❤️', date: '12.28', visibility: 'private' as const },
-  { from: 'Mia', message: '你做的甜品太赞了', stamp: '🧁', date: '12.24', photo: photos.potluck, visibility: 'public' as const },
-  { from: '奶茶', message: '下次一起再来你家看电影', stamp: '🎬', date: '12.15', visibility: 'private' as const },
-  { from: 'Derek', message: '徒步那天太开心了，风景绝美', stamp: '🥾', date: '11.16', photo: photos.nature, visibility: 'public' as const },
+  { from: '白开水', message: '谢谢你每次都把地下室收拾得像个小影院', stamp: '🎬', date: '02.08', photo: photos.movieNight, visibility: 'public' as const, eventCtx: '02.08 电影夜' },
+  { from: 'Tiffy', message: '氛围超棒，下次还来你家！', stamp: '🍳', date: '02.01', visibility: 'private' as const, eventCtx: '02.01 Brunch' },
+  { from: '大橙子', message: '你选的片子太好了', stamp: '🎬', date: '01.25', photo: photos.cozy, visibility: 'public' as const, eventCtx: '01.25 电影夜' },
+  { from: '星星', message: '第一次来就感觉像老朋友', stamp: '☕', date: '01.18', visibility: 'private' as const, eventCtx: '01.18 新人欢迎会' },
+  { from: 'Leo', message: '你推荐的电影都好棒，品味一致', stamp: '🎬', date: '01.10', visibility: 'public' as const, eventCtx: '01.10 电影夜' },
+  { from: '小鱼', message: '和你打羽毛球好开心！', stamp: '🏸', date: '01.05', visibility: 'public' as const, eventCtx: '01.05 羽毛球局' },
+  { from: '阿德', message: '谢谢你带我融入这个社区', stamp: '❤️', date: '12.28', visibility: 'private' as const, eventCtx: '12.28 跨年派对' },
+  { from: 'Mia', message: '你做的甜品太赞了', stamp: '🧁', date: '12.24', photo: photos.potluck, visibility: 'public' as const, eventCtx: '12.24 圣诞Potluck' },
+  { from: '奶茶', message: '下次一起再来你家看电影', stamp: '🎬', date: '12.15', visibility: 'private' as const, eventCtx: '12.15 电影夜' },
+  { from: 'Derek', message: '徒步那天太开心了，风景绝美', stamp: '🥾', date: '11.16', photo: photos.nature, visibility: 'public' as const, eventCtx: '11.16 秋日徒步' },
 ];
 
 export const cardsSent: CardReceived[] = [
-  { from: 'Yuan', message: '谢谢白开水每次精心选片', stamp: '🎬', date: '02.08', visibility: 'public' as const },
-  { from: 'Yuan', message: 'Tiffy 做的蛋糕太好吃了', stamp: '🧁', date: '02.01', visibility: 'public' as const },
-  { from: 'Yuan', message: '大橙子你太有活力了', stamp: '⚡', date: '01.25', visibility: 'private' as const },
-  { from: 'Yuan', message: '星星欢迎加入串门大家庭', stamp: '🎉', date: '01.18', visibility: 'public' as const },
-  { from: 'Yuan', message: 'Derek 带路的徒步线路真棒', stamp: '🥾', date: '11.16', visibility: 'public' as const },
+  { from: 'Yuan', message: '谢谢白开水每次精心选片', stamp: '🎬', date: '02.08', visibility: 'public' as const, eventCtx: '02.08 电影夜' },
+  { from: 'Yuan', message: 'Tiffy 做的蛋糕太好吃了', stamp: '🧁', date: '02.01', visibility: 'public' as const, eventCtx: '02.01 Brunch' },
+  { from: 'Yuan', message: '大橙子你太有活力了', stamp: '⚡', date: '01.25', visibility: 'private' as const, eventCtx: '01.25 电影夜' },
+  { from: 'Yuan', message: '星星欢迎加入串门大家庭', stamp: '🎉', date: '01.18', visibility: 'public' as const, eventCtx: '01.18 新人欢迎会' },
+  { from: 'Yuan', message: 'Derek 带路的徒步线路真棒', stamp: '🥾', date: '11.16', visibility: 'public' as const, eventCtx: '11.16 秋日徒步' },
 ];
 
 /** ===== Recommendations — 电影 / 菜谱 / 音乐 / 好店 ===== */

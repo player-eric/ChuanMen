@@ -598,6 +598,8 @@ export default function ProfilePage() {
                         stamp={card.stamp}
                         date={card.date}
                         photo={card.photo}
+                        layout="horizontal"
+                        eventCtx={card.eventCtx}
                       />
                     </Grid>
                   ))}
@@ -623,6 +625,8 @@ export default function ProfilePage() {
                         stamp={card.stamp}
                         date={card.date}
                         photo={card.photo}
+                        layout="horizontal"
+                        eventCtx={card.eventCtx}
                       />
                     </Grid>
                   ))}

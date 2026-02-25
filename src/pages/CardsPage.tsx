@@ -10,7 +10,6 @@ import {
   Chip,
   FormControlLabel,
   Grid,
-  IconButton,
   Radio,
   RadioGroup,
   Stack,
@@ -20,11 +19,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
 import type { CardsPageData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { PostCard } from '@/components/PostCard';
-import ConfirmDialog from '@/components/ConfirmDialog';
 import { titleDefinitions } from '@/mock/data';
 
 function EmptyCards() {
@@ -56,16 +53,17 @@ function FullCards() {
   const [step, setStep] = useState(0);
   const [who, setWho] = useState<string | null>(null);
   const [whoId, setWhoId] = useState<string | null>(null);
+  const [whoCtx, setWhoCtx] = useState<string | null>(null);
   const [stamp, setStamp] = useState('');
   const [msg, setMsg] = useState('');
   const [hasPhoto, setHasPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoPos, setPhotoPos] = useState<'left' | 'center' | 'right'>('center');
   const [sent, setSent] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [showCardInfo, setShowCardInfo] = useState(false);
   const [showAll, setShowAll] = useState(true);
   const [showAllSent, setShowAllSent] = useState(true);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; from: string } | null>(null);
 
   const { people, quickMessages, myCards, sentCards, credits } = data;
 
@@ -75,6 +73,8 @@ function FullCards() {
     if (state?.recipientName) {
       setWho(state.recipientName);
       setWhoId(state.recipientId ?? state.recipientName);
+      const match = people.find((p) => (p.id ?? p.name) === (state.recipientId ?? state.recipientName));
+      if (match) setWhoCtx(match.ctx);
       setStep(1);
       // Clear location state so refreshing doesn't re-trigger
       window.history.replaceState({}, '');
@@ -85,23 +85,25 @@ function FullCards() {
     setStep(0);
     setWho(null);
     setWhoId(null);
+    setWhoCtx(null);
     setStamp('');
     setMsg('');
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoPreview(null);
     setHasPhoto(false);
+    setPhotoPos('center');
     setSent(false);
     setIsPrivate(true);
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget?.id || !user?.id) return;
+  const toggleCardVisibility = async (cardId: string, currentVisibility: string) => {
+    if (!user?.id) return;
+    const newVis = currentVisibility === 'private' ? 'public' : 'private';
     try {
-      const { deletePostcard } = await import('@/lib/domainApi');
-      await deletePostcard(deleteTarget.id, user.id);
+      const { updatePostcardVisibility } = await import('@/lib/domainApi');
+      await updatePostcardVisibility(cardId, user.id, newVis);
       revalidator.revalidate();
     } catch { /* ignore */ }
-    setDeleteTarget(null);
   };
 
   return (
@@ -164,13 +166,14 @@ function FullCards() {
 
             {step === 0 && (
               <Grid container spacing={1.5}>
-                {people.map((person, index) => (
+                {people.filter((p) => (p.id ?? p.name) !== user?.id).map((person, index) => (
                   <Grid key={index} size={{ xs: 6, md: 4 }}>
                     <Card
                       variant="outlined"
                       onClick={() => {
                         setWho(person.name);
                         setWhoId(person.id ?? person.name);
+                        setWhoCtx(person.ctx);
                         setStep(1);
                       }}
                       sx={{ p: 1.5, cursor: 'pointer', textAlign: 'center' }}
@@ -191,7 +194,7 @@ function FullCards() {
                   <Avatar sx={{ width: 44, height: 44 }}>{who[0]}</Avatar>
                   <Box>
                     <Typography fontWeight={700} variant="subtitle1">给 {who}</Typography>
-                    <Typography variant="caption" color="text.secondary">02.15 电影夜</Typography>
+                    <Typography variant="caption" color="text.secondary">{whoCtx ?? ''}</Typography>
                   </Box>
                 </Stack>
 
@@ -274,15 +277,29 @@ function FullCards() {
                     )}
                   </Stack>
                   {photoPreview && (
-                    <Box
-                      component="img"
-                      src={photoPreview}
-                      alt="预览"
-                      sx={{
-                        mt: 1.5, width: '100%', maxHeight: 180,
-                        objectFit: 'cover', borderRadius: 1.5,
-                      }}
-                    />
+                    <Stack direction="row" spacing={1.5} sx={{ mt: 1.5 }} alignItems="flex-start">
+                      <Box
+                        sx={{
+                          width: 140, aspectRatio: '2 / 3', flexShrink: 0, borderRadius: 1.5, overflow: 'hidden',
+                          background: `url(${photoPreview}) ${photoPos}/cover no-repeat`,
+                        }}
+                      />
+                      <Stack spacing={0.5}>
+                        <Typography variant="caption" color="text.secondary">显示区域：</Typography>
+                        <Stack direction="row" spacing={0.5}>
+                          {(['left', 'center', 'right'] as const).map((pos) => (
+                            <Chip
+                              key={pos}
+                              label={pos === 'left' ? '左' : pos === 'center' ? '中' : '右'}
+                              size="small"
+                              variant={photoPos === pos ? 'filled' : 'outlined'}
+                              color={photoPos === pos ? 'primary' : 'default'}
+                              onClick={() => setPhotoPos(pos)}
+                            />
+                          ))}
+                        </Stack>
+                      </Stack>
+                    </Stack>
                   )}
                 </Box>
 
@@ -301,6 +318,7 @@ function FullCards() {
                       if (photoPreview) URL.revokeObjectURL(photoPreview);
                       setPhotoPreview(null);
                       setHasPhoto(false);
+                      setPhotoPos('center');
                     }}
                     variant="outlined"
                     fullWidth
@@ -316,20 +334,18 @@ function FullCards() {
 
             {step === 2 && who && (
               <Stack spacing={2}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="caption" color="text.secondary">TO: {who}</Typography>
-                        <Typography variant="body2" sx={{ mt: 0.25 }}>{msg}</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                          FROM: {user.name ?? '我'} · {isPrivate ? '🔒 仅彼此可见' : '🌐 公开'}
-                        </Typography>
-                      </Box>
-                      <Chip label={stamp} size="small" variant="outlined" sx={{ ml: 1, flexShrink: 0 }} />
-                    </Stack>
-                  </CardContent>
-                </Card>
+                <PostCard
+                  from={user.name ?? '我'}
+                  to={who}
+                  message={msg}
+                  stamp={stamp || '✉'}
+                  photo={photoPreview ? `url(${photoPreview}) ${photoPos}/cover no-repeat` : undefined}
+                  isPrivate={isPrivate}
+                  showVisibility
+                  layout="horizontal"
+                  date={new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}
+                  eventCtx={whoCtx ?? undefined}
+                />
                 <Stack direction="row" spacing={1}>
                   <Button onClick={() => setStep(1)} variant="outlined" fullWidth>改一改</Button>
                   <Button
@@ -341,6 +357,7 @@ function FullCards() {
                           fromId: user.id,
                           toId: whoId ?? who,
                           message: msg,
+                          eventCtx: whoCtx ?? undefined,
                           visibility: isPrivate ? 'private' : 'public',
                           tags: stamp ? [stamp] : [],
                         });
@@ -379,27 +396,19 @@ function FullCards() {
           <Grid container spacing={1.5}>
             {(showAll ? myCards : myCards.slice(0, 2)).map((card, index) => (
               <Grid key={index} size={{ xs: 12, md: 6 }}>
-                <Box sx={{ position: 'relative' }}>
-                  <PostCard
-                    from={card.from}
-                    to={user?.name ?? '我'}
-                    message={card.message}
-                    stamp={card.stamp}
-                    date={card.date}
-                    photo={card.photo}
-                    isPrivate={card.visibility === 'private'}
-                    showVisibility
-                  />
-                  {card.id && (
-                    <IconButton
-                      size="small"
-                      onClick={() => setDeleteTarget({ id: card.id!, from: card.from })}
-                      sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'rgba(0,0,0,0.4)', color: '#fff', '&:hover': { bgcolor: 'rgba(0,0,0,0.6)' }, width: 28, height: 28 }}
-                    >
-                      <DeleteOutlineRounded sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  )}
-                </Box>
+                <PostCard
+                  from={card.from}
+                  to={user?.name ?? '我'}
+                  message={card.message}
+                  stamp={card.stamp}
+                  date={card.date}
+                  photo={card.photo}
+                  isPrivate={card.visibility === 'private'}
+                  showVisibility
+                  layout="horizontal"
+                  eventCtx={card.eventCtx}
+                  onToggleVisibility={card.id ? () => toggleCardVisibility(card.id!, card.visibility) : undefined}
+                />
               </Grid>
             ))}
           </Grid>
@@ -417,43 +426,25 @@ function FullCards() {
           <Grid container spacing={1.5}>
             {(showAllSent ? sentCards : sentCards.slice(0, 2)).map((card, index) => (
               <Grid key={index} size={{ xs: 12, md: 6 }}>
-                <Box sx={{ position: 'relative' }}>
-                  <PostCard
-                    from={card.from}
-                    to={(card as any).to ?? '...'}
-                    message={card.message}
-                    stamp={card.stamp}
-                    date={card.date}
-                    photo={card.photo}
-                    isPrivate={card.visibility === 'private'}
-                    showVisibility
-                  />
-                  {card.id && (
-                    <IconButton
-                      size="small"
-                      onClick={() => setDeleteTarget({ id: card.id!, from: card.from })}
-                      sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'rgba(0,0,0,0.4)', color: '#fff', '&:hover': { bgcolor: 'rgba(0,0,0,0.6)' }, width: 28, height: 28 }}
-                    >
-                      <DeleteOutlineRounded sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  )}
-                </Box>
+                <PostCard
+                  from={card.from}
+                  to={(card as any).to ?? '...'}
+                  message={card.message}
+                  stamp={card.stamp}
+                  date={card.date}
+                  photo={card.photo}
+                  isPrivate={card.visibility === 'private'}
+                  showVisibility
+                  layout="horizontal"
+                  eventCtx={card.eventCtx}
+                  onToggleVisibility={card.id ? () => toggleCardVisibility(card.id!, card.visibility) : undefined}
+                />
               </Grid>
             ))}
           </Grid>
         </CardContent>
       </Card>
 
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="删除感谢卡"
-        message={`确定要删除这张${deleteTarget?.from ? ' ' + deleteTarget.from + ' 的' : ''}感谢卡吗？删除后不可恢复。`}
-        confirmLabel="删除"
-        cancelLabel="取消"
-        confirmColor="error"
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
     </Stack>
   );
 }

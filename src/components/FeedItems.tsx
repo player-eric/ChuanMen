@@ -348,7 +348,7 @@ export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, 
             <div style={{ fontSize: 12, color: c.text3 }}>5 小时前 · 🌐 公开</div>
           </div>
         </div>
-        <PostCard from={from} to={to} message={message} stamp="🎬" photo={photo} />
+        <PostCard from={from} to={to} message={message} stamp="🎬" photo={photo} layout="horizontal" />
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} {...extractEntity(navTarget)} />
     </Card>
