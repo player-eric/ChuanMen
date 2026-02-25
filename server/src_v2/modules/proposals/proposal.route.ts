@@ -36,4 +36,11 @@ export const proposalRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.params as { id: string };
     return service.toggleVote(id, request.body);
   });
+
+  // Admin: delete proposal
+  app.delete('/:id', async (request) => {
+    const { id } = request.params as { id: string };
+    await service.delete(id);
+    return { ok: true };
+  });
 };

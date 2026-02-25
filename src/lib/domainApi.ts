@@ -674,3 +674,218 @@ export async function adminSetOperatorRoles(userId: string, roles: string[]) {
     body: JSON.stringify({ roles }),
   });
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Admin: Event operations
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function deleteEvent(eventId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}`, { method: 'DELETE' });
+}
+
+export async function fetchCancelledEventsApi() {
+  return requestJson<EntityMap[]>('/api/events/cancelled');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Admin: Movie operations
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function updateMovie(movieId: string, payload: { title?: string; status?: string; director?: string; synopsis?: string }) {
+  return requestJson<{ ok: boolean; movie: EntityMap }>(`/api/movies/${movieId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteMovie(movieId: string) {
+  return requestJson<{ ok: boolean }>(`/api/movies/${movieId}`, { method: 'DELETE' });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Admin: Proposal operations
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function deleteProposal(proposalId: string) {
+  return requestJson<{ ok: boolean }>(`/api/proposals/${proposalId}`, { method: 'DELETE' });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Admin: Announcement CRUD
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchAnnouncementsAdminApi() {
+  return requestJson<EntityMap[]>('/api/about/announcements/admin/list');
+}
+
+export async function createAnnouncement(payload: { title: string; body: string; type: string; pinned: boolean; authorId: string }) {
+  return requestJson<EntityMap>('/api/about/announcements', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAnnouncement(id: string, payload: { title?: string; body?: string; type?: string; pinned?: boolean }) {
+  return requestJson<{ ok: boolean; announcement: EntityMap }>(`/api/about/announcements/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAnnouncement(id: string) {
+  return requestJson<{ ok: boolean }>(`/api/about/announcements/${id}`, { method: 'DELETE' });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Admin: About Content CRUD
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchAllAboutContentApi() {
+  return requestJson<EntityMap[]>('/api/about/content/all');
+}
+
+export async function upsertAboutContent(type: string, payload: { title: string; content: string }) {
+  return requestJson<{ ok: boolean; content: EntityMap }>(`/api/about/content/${type}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Admin: Postcard operations
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchPostcardsAdminApi() {
+  return requestJson<EntityMap[]>('/api/postcards/admin/list');
+}
+
+export async function adminDeletePostcard(id: string) {
+  return requestJson<{ ok: boolean }>(`/api/postcards/admin/${id}`, { method: 'DELETE' });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Admin: Comments list
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function fetchCommentsAdminApi() {
+  return requestJson<EntityMap[]>('/api/comments/admin/list');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Admin: Title Rule CRUD
+   ═══════════════════════════════════════════════════════════════ */
+
+export interface TitleRuleRow {
+  id: string;
+  emoji: string;
+  name: string;
+  description: string;
+  stampEmoji: string;
+  threshold: number;
+}
+
+export async function fetchTitleRules() {
+  return requestJson<TitleRuleRow[]>('/api/title-rules');
+}
+
+export async function createTitleRule(payload: { emoji: string; name: string; description: string; stampEmoji: string; threshold: number }) {
+  return requestJson<TitleRuleRow>('/api/title-rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTitleRule(id: string, payload: { emoji?: string; name?: string; description?: string; stampEmoji?: string; threshold?: number }) {
+  return requestJson<{ ok: boolean; titleRule: TitleRuleRow }>(`/api/title-rules/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteTitleRule(id: string) {
+  return requestJson<{ ok: boolean }>(`/api/title-rules/${id}`, { method: 'DELETE' });
+}
+
+export async function fetchTitleHoldersCount() {
+  return requestJson<Record<string, number>>('/api/title-rules/holders-count');
+}
+
+export async function fetchMembersWithTitles() {
+  return requestJson<{ id: string; name: string; avatar: string; socialTitles: { id: string; value: string }[] }[]>('/api/title-rules/members');
+}
+
+export async function grantUserTitle(userId: string, value: string) {
+  return requestJson<EntityMap>('/api/title-rules/grant', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, value }),
+  });
+}
+
+export async function revokeUserTitle(userId: string, value: string) {
+  return requestJson<{ ok: boolean }>('/api/title-rules/revoke', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, value }),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Admin: Task Preset CRUD
+   ═══════════════════════════════════════════════════════════════ */
+
+export interface TaskPresetRow {
+  id: string;
+  tag: string;
+  roles: string[];
+}
+
+export async function fetchTaskPresets() {
+  return requestJson<TaskPresetRow[]>('/api/task-presets');
+}
+
+export async function createTaskPreset(payload: { tag: string; roles: string[] }) {
+  return requestJson<TaskPresetRow>('/api/task-presets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTaskPreset(id: string, payload: { tag?: string; roles?: string[] }) {
+  return requestJson<{ ok: boolean; preset: TaskPresetRow }>(`/api/task-presets/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteTaskPreset(id: string) {
+  return requestJson<{ ok: boolean }>(`/api/task-presets/${id}`, { method: 'DELETE' });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Admin: Dashboard Stats
+   ═══════════════════════════════════════════════════════════════ */
+
+export interface AdminStats {
+  totalMembers: number;
+  pendingApplicants: number;
+  totalEvents: number;
+  monthEvents: number;
+  totalCards: number;
+  monthCards: number;
+  activeHosts: number;
+  totalMovies: number;
+  totalProposals: number;
+}
+
+export async function fetchAdminStats() {
+  return requestJson<AdminStats>('/api/admin/stats');
+}

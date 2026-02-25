@@ -54,4 +54,14 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.params as { id: string };
     return service.cancelSignup(id, request.body);
   });
+
+  // Cancelled events list
+  app.get('/cancelled', async () => service.listCancelled());
+
+  // Admin: delete event
+  app.delete('/:id', async (request) => {
+    const { id } = request.params as { id: string };
+    await service.delete(id);
+    return { ok: true };
+  });
 };

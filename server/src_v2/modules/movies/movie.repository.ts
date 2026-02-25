@@ -91,4 +91,12 @@ export class MovieRepository {
       },
     });
   }
+
+  update(id: string, data: { title?: string; status?: string; director?: string; synopsis?: string }) {
+    return this.prisma.movie.update({ where: { id }, data: data as any });
+  }
+
+  delete(id: string) {
+    return this.prisma.movie.delete({ where: { id } });
+  }
 }

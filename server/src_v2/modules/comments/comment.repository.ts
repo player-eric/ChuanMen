@@ -27,4 +27,12 @@ export class CommentRepository {
   delete(id: string) {
     return this.prisma.comment.delete({ where: { id } });
   }
+
+  adminListAll() {
+    return this.prisma.comment.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: { author: { select: { id: true, name: true, avatar: true } } },
+    });
+  }
 }

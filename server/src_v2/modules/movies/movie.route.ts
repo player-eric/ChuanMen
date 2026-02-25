@@ -37,4 +37,18 @@ export const movieRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.params as { id: string };
     return service.toggleVote(id, request.body);
   });
+
+  // Admin: update movie
+  app.patch('/:id', async (request) => {
+    const { id } = request.params as { id: string };
+    const movie = await service.update(id, request.body);
+    return { ok: true, movie };
+  });
+
+  // Admin: delete movie
+  app.delete('/:id', async (request) => {
+    const { id } = request.params as { id: string };
+    await service.delete(id);
+    return { ok: true };
+  });
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -22,10 +22,19 @@ import PushPinRoundedIcon from '@mui/icons-material/PushPinRounded';
 import CelebrationRoundedIcon from '@mui/icons-material/CelebrationRounded';
 import CampaignRoundedIcon from '@mui/icons-material/CampaignRounded';
 import EmojiEventsRoundedIcon from '@mui/icons-material/EmojiEventsRounded';
+import {
+  fetchAnnouncementsAdminApi,
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+} from '@/lib/domainApi';
+import { useAuth } from '@/auth/AuthContext';
 
 /* ── PRD 11.1.9 ── 公告与里程碑管理 ── */
 
 type AnnouncementType = 'announcement' | 'milestone' | 'host_tribute';
+type Row = Record<string, any>;
+
 const typeLabel: Record<AnnouncementType, string> = {
   announcement: '📢 公告',
   milestone: '🎉 里程碑',
@@ -42,68 +51,12 @@ const typeIcon: Record<AnnouncementType, React.ReactNode> = {
   host_tribute: <EmojiEventsRoundedIcon />,
 };
 
-interface Announcement {
-  id: string;
-  type: AnnouncementType;
-  title: string;
-  body: string;
-  pinned: boolean;
-  author: string;
-  createdAt: string;
-}
-
-const mockAnnouncements: Announcement[] = [
-  {
-    id: 'ann-1',
-    type: 'milestone',
-    title: '串门第 50 场活动 🎉',
-    body: '从去年 10 月到现在，我们一起看了 12 部电影、吃了 8 顿饭、走了 6 次路。一切才刚刚开始！',
-    pinned: true,
-    author: 'Yuan',
-    createdAt: '2026-02-15',
-  },
-  {
-    id: 'ann-2',
-    type: 'host_tribute',
-    title: '1 月 Host 致敬',
-    body: '本月 8 位 Host 开放了自己的客厅，感谢 白开水、大橙子、Star、Nicole、Tiffy、Sean、Annie、Michael！',
-    pinned: false,
-    author: 'Yuan',
-    createdAt: '2026-02-01',
-  },
-  {
-    id: 'ann-3',
-    type: 'announcement',
-    title: '串门原则 v2.0 发布',
-    body: '我们重新梳理了社群原则，新增了取消政策和隐私保护条款。请大家花 3 分钟看看。',
-    pinned: false,
-    author: '白开水',
-    createdAt: '2026-01-20',
-  },
-  {
-    id: 'ann-4',
-    type: 'milestone',
-    title: '电影池突破 100 部',
-    body: '最受欢迎的 3 部：花样年华 (18票)、寄生虫 (15票)、永恒和一日 (12票)。继续推荐！',
-    pinned: false,
-    author: 'Yuan',
-    createdAt: '2026-01-10',
-  },
-  {
-    id: 'ann-5',
-    type: 'host_tribute',
-    title: '12 月 Host 致敬',
-    body: '感谢 6 位 Host 在寒冬中温暖了大家：Yuan、白开水、大橙子、Star、Tiffy、Andy。',
-    pinned: false,
-    author: '大橙子',
-    createdAt: '2026-01-01',
-  },
-];
-
 export default function AdminAnnouncementsPage() {
+  const { user } = useAuth();
   const [tab, setTab] = useState(0);
-  const [items, setItems] = useState<Announcement[]>(mockAnnouncements);
-  const [editItem, setEditItem] = useState<Announcement | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<Row[]>([]);
+  const [editItem, setEditItem] = useState<Row | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   /* form state */
@@ -114,64 +67,68 @@ export default function AdminAnnouncementsPage() {
 
   const resetForm = () => { setFormType('announcement'); setFormTitle(''); setFormBody(''); setFormPinned(false); };
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchAnnouncementsAdminApi();
+      setItems(data);
+    } catch (e) { console.error('Failed to load announcements', e); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { loadData(); }, []);
+
   const openCreate = (type: AnnouncementType) => {
     resetForm();
     setFormType(type);
     setCreateOpen(true);
   };
-  const openEdit = (item: Announcement) => {
+  const openEdit = (item: Row) => {
     setEditItem(item);
-    setFormType(item.type);
-    setFormTitle(item.title);
-    setFormBody(item.body);
-    setFormPinned(item.pinned);
+    setFormType((item.type as AnnouncementType) ?? 'announcement');
+    setFormTitle(item.title ?? '');
+    setFormBody(item.body ?? '');
+    setFormPinned(item.pinned ?? false);
   };
 
-  const saveCreate = () => {
-    const newItem: Announcement = {
-      id: `ann-${Date.now()}`,
-      type: formType,
-      title: formTitle,
-      body: formBody,
-      pinned: formPinned,
-      author: 'Yuan',
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-    setItems(prev => [newItem, ...prev]);
-    setCreateOpen(false);
-    resetForm();
+  const saveCreate = async () => {
+    if (!formTitle || !formBody || !user?.id) return;
+    try {
+      await createAnnouncement({ title: formTitle, body: formBody, type: formType, pinned: formPinned, authorId: user.id });
+      setCreateOpen(false); resetForm(); loadData();
+    } catch (e) { console.error(e); }
   };
-  const saveEdit = () => {
+
+  const saveEdit = async () => {
     if (!editItem) return;
-    setItems(prev =>
-      prev.map(i =>
-        i.id === editItem.id ? { ...i, type: formType, title: formTitle, body: formBody, pinned: formPinned } : i,
-      ),
-    );
-    setEditItem(null);
-    resetForm();
+    try {
+      await updateAnnouncement(editItem.id, { title: formTitle, body: formBody, type: formType, pinned: formPinned });
+      setEditItem(null); resetForm(); loadData();
+    } catch (e) { console.error(e); }
   };
-  const deleteItem = (id: string) => setItems(prev => prev.filter(i => i.id !== id));
-  const togglePin = (id: string) => setItems(prev => prev.map(i => i.id === id ? { ...i, pinned: !i.pinned } : i));
+
+  const handleDelete = async (id: string) => {
+    try { await deleteAnnouncement(id); loadData(); } catch (e) { console.error(e); }
+  };
+
+  const handleTogglePin = async (item: Row) => {
+    try { await updateAnnouncement(item.id, { pinned: !item.pinned }); loadData(); } catch (e) { console.error(e); }
+  };
 
   const filtered = tab === 0 ? items : items.filter(i =>
     tab === 1 ? i.type === 'announcement' : tab === 2 ? i.type === 'milestone' : i.type === 'host_tribute',
   );
+
+  if (loading) return <Typography>加载中…</Typography>;
 
   return (
     <Stack spacing={3}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="h5" fontWeight={700}>公告与里程碑</Typography>
         <Stack direction="row" spacing={1}>
-          <Button size="small" startIcon={<CampaignRoundedIcon />} onClick={() => openCreate('announcement')}>
-            发布公告
-          </Button>
-          <Button size="small" startIcon={<CelebrationRoundedIcon />} onClick={() => openCreate('milestone')}>
-            发布里程碑
-          </Button>
-          <Button size="small" startIcon={<EmojiEventsRoundedIcon />} onClick={() => openCreate('host_tribute')}>
-            Host 致敬
-          </Button>
+          <Button size="small" startIcon={<CampaignRoundedIcon />} onClick={() => openCreate('announcement')}>发布公告</Button>
+          <Button size="small" startIcon={<CelebrationRoundedIcon />} onClick={() => openCreate('milestone')}>发布里程碑</Button>
+          <Button size="small" startIcon={<EmojiEventsRoundedIcon />} onClick={() => openCreate('host_tribute')}>Host 致敬</Button>
         </Stack>
       </Stack>
 
@@ -188,22 +145,24 @@ export default function AdminAnnouncementsPage() {
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
               <Box sx={{ flex: 1 }}>
                 <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
-                  {typeIcon[item.type]}
-                  <Chip size="small" label={typeLabel[item.type]} color={typeColor[item.type]} />
+                  {typeIcon[(item.type as AnnouncementType) ?? 'announcement']}
+                  <Chip size="small" label={typeLabel[(item.type as AnnouncementType) ?? 'announcement']} color={typeColor[(item.type as AnnouncementType) ?? 'announcement']} />
                   {item.pinned && <Chip size="small" label="📌 置顶" color="warning" />}
-                  <Typography variant="caption" color="text.secondary">{item.createdAt} · {item.author}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString('zh-CN') : ''} · {item.author?.name ?? '—'}
+                  </Typography>
                 </Stack>
                 <Typography fontWeight={600}>{item.title}</Typography>
                 <Typography variant="body2" mt={0.5} sx={{ opacity: 0.85 }}>{item.body}</Typography>
               </Box>
               <Stack direction="row">
-                <IconButton size="small" onClick={() => togglePin(item.id)} color={item.pinned ? 'warning' : 'default'}>
+                <IconButton size="small" onClick={() => handleTogglePin(item)} color={item.pinned ? 'warning' : 'default'}>
                   <PushPinRoundedIcon fontSize="small" />
                 </IconButton>
                 <IconButton size="small" onClick={() => openEdit(item)}>
                   <EditRoundedIcon fontSize="small" />
                 </IconButton>
-                <IconButton size="small" color="error" onClick={() => deleteItem(item.id)}>
+                <IconButton size="small" color="error" onClick={() => handleDelete(item.id)}>
                   <DeleteRoundedIcon fontSize="small" />
                 </IconButton>
               </Stack>
@@ -227,30 +186,21 @@ export default function AdminAnnouncementsPage() {
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
-            <TextField
-              label="类型"
-              select
-              value={formType}
-              onChange={e => setFormType(e.target.value as AnnouncementType)}
-              fullWidth
-              slotProps={{ select: { native: true } }}
-            >
+            <TextField label="类型" select value={formType} onChange={e => setFormType(e.target.value as AnnouncementType)} fullWidth slotProps={{ select: { native: true } }}>
               <option value="announcement">📢 公告</option>
               <option value="milestone">🎉 里程碑</option>
               <option value="host_tribute">🏠 Host 致敬</option>
             </TextField>
             <TextField label="标题" value={formTitle} onChange={e => setFormTitle(e.target.value)} fullWidth />
             <TextField label="内容" value={formBody} onChange={e => setFormBody(e.target.value)} fullWidth multiline rows={4} />
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Button
-                variant={formPinned ? 'contained' : 'outlined'}
-                size="small"
-                startIcon={<PushPinRoundedIcon />}
-                onClick={() => setFormPinned(!formPinned)}
-              >
-                {formPinned ? '已置顶' : '置顶动态流'}
-              </Button>
-            </Stack>
+            <Button
+              variant={formPinned ? 'contained' : 'outlined'}
+              size="small"
+              startIcon={<PushPinRoundedIcon />}
+              onClick={() => setFormPinned(!formPinned)}
+            >
+              {formPinned ? '已置顶' : '置顶动态流'}
+            </Button>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -264,14 +214,7 @@ export default function AdminAnnouncementsPage() {
         <DialogTitle>编辑</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
-            <TextField
-              label="类型"
-              select
-              value={formType}
-              onChange={e => setFormType(e.target.value as AnnouncementType)}
-              fullWidth
-              slotProps={{ select: { native: true } }}
-            >
+            <TextField label="类型" select value={formType} onChange={e => setFormType(e.target.value as AnnouncementType)} fullWidth slotProps={{ select: { native: true } }}>
               <option value="announcement">📢 公告</option>
               <option value="milestone">🎉 里程碑</option>
               <option value="host_tribute">🏠 Host 致敬</option>

@@ -119,4 +119,19 @@ export class EventRepository {
       },
     });
   }
+
+  listCancelled() {
+    return this.prisma.event.findMany({
+      where: { status: 'cancelled' },
+      orderBy: { startsAt: 'desc' },
+      include: {
+        host: { select: { id: true, name: true, avatar: true } },
+        _count: { select: { signups: true } },
+      },
+    });
+  }
+
+  delete(id: string) {
+    return this.prisma.event.delete({ where: { id } });
+  }
 }

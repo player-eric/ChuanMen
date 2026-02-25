@@ -33,4 +33,14 @@ export const postcardRoutes: FastifyPluginAsync = async (app) => {
     await service.delete(id, userId);
     return reply.code(204).send();
   });
+
+  // Admin: list all postcards
+  app.get('/admin/list', async () => service.adminListAll());
+
+  // Admin: delete any postcard
+  app.delete('/admin/:id', async (request) => {
+    const { id } = request.params as { id: string };
+    await service.adminDelete(id);
+    return { ok: true };
+  });
 };

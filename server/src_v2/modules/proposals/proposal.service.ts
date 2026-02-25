@@ -38,4 +38,6 @@ export class ProposalService {
   }
 
   search(keyword: string) { return this.repository.search(keyword); }
+
+  delete(id: string) { return this.repository.delete(id); }
 }

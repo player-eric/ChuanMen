@@ -33,6 +33,20 @@ export class MovieService {
     return this.repository.create(data);
   }
 
+  update(id: string, input: unknown) {
+    const data = z.object({
+      title: z.string().min(1).optional(),
+      status: z.enum(['candidate', 'screened']).optional(),
+      director: z.string().optional(),
+      synopsis: z.string().optional(),
+    }).parse(input);
+    return this.repository.update(id, data);
+  }
+
+  delete(id: string) {
+    return this.repository.delete(id);
+  }
+
   async searchExternal(query: string) {
     const apiKey = env.TMDB_API_KEY;
     if (!apiKey) return { items: [], source: 'tmdb', error: 'TMDB_API_KEY not configured' };

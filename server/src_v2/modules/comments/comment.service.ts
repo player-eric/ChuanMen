@@ -27,4 +27,8 @@ export class CommentService {
   delete(id: string) {
     return this.repository.delete(id);
   }
+
+  adminListAll() {
+    return this.repository.adminListAll();
+  }
 }

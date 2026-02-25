@@ -71,4 +71,12 @@ export class EventService {
   listPast() {
     return this.repository.listPast();
   }
+
+  listCancelled() {
+    return this.repository.listCancelled();
+  }
+
+  delete(id: string) {
+    return this.repository.delete(id);
+  }
 }

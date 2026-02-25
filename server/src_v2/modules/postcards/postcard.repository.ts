@@ -79,4 +79,20 @@ export class PostcardRepository {
   async findById(id: string) {
     return this.prisma.postcard.findUnique({ where: { id } });
   }
+
+  adminListAll() {
+    return this.prisma.postcard.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        from: { select: { id: true, name: true, avatar: true } },
+        to: { select: { id: true, name: true, avatar: true } },
+        event: { select: { id: true, title: true } },
+        tags: true,
+      },
+    });
+  }
+
+  adminDelete(id: string) {
+    return this.prisma.postcard.delete({ where: { id } });
+  }
 }

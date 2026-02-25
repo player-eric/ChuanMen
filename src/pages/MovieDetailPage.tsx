@@ -40,6 +40,9 @@ export default function MovieDetailPage() {
   })();
 
   const [voted, setVoted] = useState(serverVoted);
+  const [voters, setVoters] = useState<{ id: string; name: string }[]>(
+    (raw?.votes ?? []).map((v: any) => ({ id: v.user?.id ?? v.userId ?? '', name: v.user?.name ?? '?' })),
+  );
   const [comments, setComments] = useState<EventComment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [nominateOpen, setNominateOpen] = useState(false);
@@ -214,36 +217,48 @@ export default function MovieDetailPage() {
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
               <Typography variant="subtitle1" fontWeight={700}>
-                投票 ({v + (voted && !serverVoted ? 1 : !voted && serverVoted ? -1 : 0)})
+                投票 ({voters.length})
               </Typography>
               <Button
                 variant={voted ? 'contained' : 'outlined'}
                 size="small"
                 onClick={async () => {
                   if (!user?.id) return;
+                  const wasVoted = voted;
+                  // Optimistic update
+                  setVoted(!wasVoted);
+                  if (wasVoted) {
+                    setVoters((prev) => prev.filter((v) => v.id !== user.id));
+                  } else {
+                    setVoters((prev) => [...prev, { id: user.id, name: user.name }]);
+                  }
                   try {
                     await toggleMovieVote(String(raw.id ?? (raw as any).id), user.id);
-                    setVoted(!voted);
-                  } catch { /* ignore */ }
+                  } catch {
+                    // Revert on error
+                    setVoted(wasVoted);
+                    if (wasVoted) {
+                      setVoters((prev) => [...prev, { id: user.id, name: user.name }]);
+                    } else {
+                      setVoters((prev) => prev.filter((v) => v.id !== user.id));
+                    }
+                  }
                 }}
               >
                 ▲ {voted ? '已投票' : '我想看'}
               </Button>
             </Stack>
-            {(movie.votes ?? []).length > 0 && (
+            {voters.length > 0 && (
               <AvatarGroup max={10} sx={{ justifyContent: 'flex-start' }}>
-                {(movie.votes ?? []).map((vote: any) => {
-                  const name = vote.user?.name ?? '?';
-                  return (
+                {voters.map((voter) => (
                   <Avatar
-                    key={vote.id ?? name}
+                    key={voter.id}
                     sx={{ width: 32, height: 32, cursor: 'pointer' }}
-                    onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
+                    onClick={() => navigate(`/members/${encodeURIComponent(voter.name)}`)}
                   >
-                    {name[0]}
+                    {voter.name[0]}
                   </Avatar>
-                  );
-                })}
+                ))}
               </AvatarGroup>
             )}
           </CardContent>

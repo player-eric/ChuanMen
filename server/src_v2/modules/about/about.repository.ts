@@ -39,4 +39,46 @@ export class AboutRepository {
       include: { author: { select: { id: true, name: true, avatar: true } } },
     });
   }
+
+  // --- Admin: Announcement CRUD ---
+  listAnnouncementsAdmin() {
+    return this.prisma.announcement.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { author: { select: { id: true, name: true, avatar: true } } },
+    });
+  }
+
+  createAnnouncement(data: { title: string; body: string; type: string; pinned: boolean; authorId: string }) {
+    return this.prisma.announcement.create({
+      data: { ...data, published: true },
+      include: { author: { select: { id: true, name: true, avatar: true } } },
+    });
+  }
+
+  updateAnnouncement(id: string, data: { title?: string; body?: string; type?: string; pinned?: boolean }) {
+    return this.prisma.announcement.update({
+      where: { id },
+      data,
+      include: { author: { select: { id: true, name: true, avatar: true } } },
+    });
+  }
+
+  deleteAnnouncement(id: string) {
+    return this.prisma.announcement.delete({ where: { id } });
+  }
+
+  // --- Admin: About Content CRUD ---
+  upsertContent(type: string, data: { title: string; content: string }) {
+    return this.prisma.aboutContent.upsert({
+      where: { id: type },
+      create: { id: type, type: type as any, title: data.title, content: data.content },
+      update: { title: data.title, content: data.content },
+    });
+  }
+
+  listAllContent() {
+    return this.prisma.aboutContent.findMany({
+      orderBy: { type: 'asc' },
+    });
+  }
 }

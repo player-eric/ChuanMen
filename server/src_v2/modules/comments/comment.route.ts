@@ -23,4 +23,7 @@ export const commentRoutes: FastifyPluginAsync = async (app) => {
     await service.delete(id);
     return { ok: true };
   });
+
+  // Admin: list all comments across all entities
+  app.get('/admin/list', async () => service.adminListAll());
 };

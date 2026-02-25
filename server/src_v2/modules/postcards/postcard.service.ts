@@ -46,4 +46,12 @@ export class PostcardService {
     }
     return this.repository.delete(id);
   }
+
+  adminListAll() {
+    return this.repository.adminListAll();
+  }
+
+  adminDelete(id: string) {
+    return this.repository.adminDelete(id);
+  }
 }

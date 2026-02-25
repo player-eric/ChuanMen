@@ -67,4 +67,8 @@ export class ProposalRepository {
       },
     });
   }
+
+  delete(id: string) {
+    return this.prisma.proposal.delete({ where: { id } });
+  }
 }
