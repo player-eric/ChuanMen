@@ -1,14 +1,20 @@
 type EntityMap = Record<string, unknown>;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
+const isSSR = typeof window === 'undefined';
+/** During SSR, Node.js fetch needs an absolute URL; fall back to the co-located API server */
+const ssrApiOrigin = 'http://localhost:4000';
 
 function getApiUrl(path: string): string {
-  if (!apiBaseUrl) {
-    return path;
+  if (apiBaseUrl) {
+    const normalizedBase = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+    return `${normalizedBase}${path}`;
   }
-
-  const normalizedBase = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-  return `${normalizedBase}${path}`;
+  // In SSR (Node.js), relative URLs don't work with fetch — prepend the local API origin
+  if (isSSR) {
+    return `${ssrApiOrigin}${path}`;
+  }
+  return path;
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
