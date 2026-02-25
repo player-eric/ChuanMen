@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/auth/AuthContext';
-import { signupEvent } from '@/lib/domainApi';
+import { signupEvent, cancelSignup } from '@/lib/domainApi';
 import type { FeedComment } from '@/types';
 import FavoriteBorderRounded from '@mui/icons-material/FavoriteBorderRounded';
 import FavoriteRounded from '@mui/icons-material/FavoriteRounded';
@@ -204,14 +204,18 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
 
   const handleSignup = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (joined) return;
     if (!eventId || !user?.id) {
       if (goNav) goNav();
       return;
     }
     try {
-      await signupEvent(eventId, user.id);
-      setJoined(true);
+      if (joined) {
+        await cancelSignup(eventId, user.id);
+        setJoined(false);
+      } else {
+        await signupEvent(eventId, user.id);
+        setJoined(true);
+      }
     } catch { /* ignore */ }
   };
 
@@ -565,9 +569,11 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
 
   const handleSignup = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (joined) return;
     if (!eventId || !user?.id) { if (goNav) goNav(); return; }
-    try { await signupEvent(eventId, user.id); setJoined(true); } catch { /* ignore */ }
+    try {
+      if (joined) { await cancelSignup(eventId, user.id); setJoined(false); }
+      else { await signupEvent(eventId, user.id); setJoined(true); }
+    } catch { /* ignore */ }
   };
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
 
@@ -650,9 +656,11 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
 
   const handleSignup = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (joined) return;
     if (!eventId || !user?.id) { if (goNav) goNav(); return; }
-    try { await signupEvent(eventId, user.id); setJoined(true); } catch { /* ignore */ }
+    try {
+      if (joined) { await cancelSignup(eventId, user.id); setJoined(false); }
+      else { await signupEvent(eventId, user.id); setJoined(true); }
+    } catch { /* ignore */ }
   };
 
   if (isPrivate) {

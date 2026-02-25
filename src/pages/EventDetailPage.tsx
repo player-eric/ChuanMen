@@ -29,7 +29,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import type { EventComment, EventData, EventPhoto, FoodOption, TaskRole } from '@/types';
-import { getEventById, signupEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, addComment as addCommentApi, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
+import { getEventById, signupEvent, cancelSignup, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, addComment as addCommentApi, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
@@ -1103,8 +1103,18 @@ export default function EventDetailPage() {
             <Button onClick={() => setCancelDialogOpen(false)}>保持报名</Button>
             <Button
               color="warning"
-              onClick={() => {
-                setSignedUp(false);
+              onClick={async () => {
+                if (eventId && user?.id) {
+                  try {
+                    await cancelSignup(eventId, user.id);
+                    setSignedUp(false);
+                    setFlash({ open: true, severity: 'success', message: '已取消报名' });
+                  } catch {
+                    setFlash({ open: true, severity: 'error', message: '取消报名失败，请稍后重试' });
+                  }
+                } else {
+                  setSignedUp(false);
+                }
                 setCancelDialogOpen(false);
               }}
             >
