@@ -1,6 +1,7 @@
 import { Box, Stack, Typography } from '@mui/material';
 import { useColors } from '@/hooks/useColors';
 import { Ava, Stamp } from './Atoms';
+import { titleDefinitions } from '@/mock/data';
 
 interface PostCardProps {
   from: string;
@@ -50,7 +51,7 @@ export function PostCard({ from, to, message, stamp = '✉', date, photo, isPriv
   const contentArea = (
     <Box sx={{ p: '12px 14px 14px', position: 'relative', flex: horiz ? 1 : undefined, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: 0 }}>
       <Box>
-        <Box sx={{ position: 'absolute', top: 8, right: 10 }}><Stamp emoji={stamp} size={22} /></Box>
+        <Box sx={{ position: 'absolute', top: 8, right: 10 }}><Stamp emoji={stamp} size={22} tooltip={titleDefinitions.find((t) => t.stampEmoji === stamp)?.name} /></Box>
         <Typography variant="overline" sx={{ color: c.inkLight }}>TO: {to}</Typography>
         <Typography variant="body2" sx={{ color: c.ink, fontStyle: 'italic', lineHeight: 1.7, maxWidth: '85%', mt: 0.5 }}>{message}</Typography>
       </Box>

@@ -79,16 +79,18 @@ export function AvaStack({ names, size = 22 }: AvaStackProps) {
 }
 
 /* ═══ Stamp ═══ */
-export function Stamp({ emoji = '✉', size = 24 }: { emoji?: string; size?: number }) {
+export function Stamp({ emoji = '✉', size = 24, tooltip }: { emoji?: string; size?: number; tooltip?: string }) {
   const c = useColors();
   return (
     <div
+      title={tooltip}
       style={{
         width: size, height: size * 1.22, borderRadius: 2,
         border: `1.5px solid ${c.stamp}`,
         background: `linear-gradient(160deg, #FFF8F0, ${c.paperDark})`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: size * 0.55, flexShrink: 0,
+        cursor: tooltip ? 'help' : undefined,
       }}
     >
       {emoji}
