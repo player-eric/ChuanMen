@@ -31,7 +31,15 @@ export default function MovieDetailPage() {
   const { user } = useAuth();
   const c = useColors();
   const raw = useLoaderData() as any;
-  const [voted, setVoted] = useState(false);
+
+  // Determine if current user already voted (from server data)
+  const serverVoted = (() => {
+    if (!user?.id || !raw) return false;
+    const voters: any[] = raw.votes ?? [];
+    return voters.some((v: any) => v.user?.id === user.id || v.userId === user.id);
+  })();
+
+  const [voted, setVoted] = useState(serverVoted);
   const [comments, setComments] = useState<EventComment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [nominateOpen, setNominateOpen] = useState(false);
@@ -206,7 +214,7 @@ export default function MovieDetailPage() {
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
               <Typography variant="subtitle1" fontWeight={700}>
-                投票 ({v + (voted ? 1 : 0)})
+                投票 ({v + (voted && !serverVoted ? 1 : !voted && serverVoted ? -1 : 0)})
               </Typography>
               <Button
                 variant={voted ? 'contained' : 'outlined'}

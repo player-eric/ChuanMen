@@ -642,3 +642,35 @@ export async function previewEmailTemplate(subject: string, body: string, variab
     body: JSON.stringify({ subject, body, variables }),
   });
 }
+
+/* ── Admin: User management ── */
+
+/** List users with detail counts (for admin page) */
+export async function fetchUsersAdmin() {
+  return requestJson<EntityMap[]>('/api/users/admin/list');
+}
+
+/** Admin update user fields (role, userStatus, name, email, location, etc.) */
+export async function adminUpdateUser(userId: string, data: Record<string, unknown>) {
+  return requestJson<{ ok: boolean; user: EntityMap }>(`/api/users/${userId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+/** Admin: delete user */
+export async function adminDeleteUser(userId: string) {
+  return requestJson<{ ok: boolean }>(`/api/users/${userId}`, {
+    method: 'DELETE',
+  });
+}
+
+/** Admin: set operator roles */
+export async function adminSetOperatorRoles(userId: string, roles: string[]) {
+  return requestJson<EntityMap>(`/api/users/${userId}/operator-roles`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ roles }),
+  });
+}

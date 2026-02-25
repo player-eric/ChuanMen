@@ -5,6 +5,9 @@ import { UserService } from './user.service.js';
 export const userRoutes: FastifyPluginAsync = async (app) => {
   const service = new UserService(new UserRepository(app.prisma));
 
+  // Admin: list users with detail counts (host count, event count, operator roles)
+  app.get('/admin/list', async () => service.listUsersDetailed());
+
   app.get('/', async () => service.listUsers());
 
   app.get('/by-email/:email', async (request, reply) => {
@@ -43,5 +46,25 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     }
     const updated = await service.updateSettings(userId, request.body);
     return { ok: true, user: updated };
+  });
+
+  // Admin: update user (role, status, name, email, location, etc.)
+  app.patch('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const updated = await service.adminUpdateUser(id, request.body);
+    return { ok: true, user: updated };
+  });
+
+  // Admin: delete user
+  app.delete('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    await service.deleteUser(id);
+    return { ok: true };
+  });
+
+  // Admin: set operator roles
+  app.put('/:id/operator-roles', async (request) => {
+    const { id } = request.params as { id: string };
+    return service.setOperatorRoles(id, request.body);
   });
 };

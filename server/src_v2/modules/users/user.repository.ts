@@ -112,4 +112,66 @@ export class UserRepository {
       update: data as any,
     });
   }
+
+  // Admin: update any user fields (role, userStatus, name, etc.)
+  adminUpdate(userId: string, data: Record<string, unknown>) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data,
+      include: {
+        preferences: true,
+        socialTitles: true,
+        operatorRoles: true,
+      },
+    });
+  }
+
+  // Admin: list users including operator roles for admin page
+  listWithDetails() {
+    return this.prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        preferences: true,
+        socialTitles: true,
+        operatorRoles: true,
+        _count: {
+          select: {
+            hostedEvents: true,
+            eventSignups: true,
+          },
+        },
+      },
+    });
+  }
+
+  // Admin: delete user
+  async deleteUser(userId: string) {
+    // Delete related records first, then the user
+    await this.prisma.$transaction([
+      this.prisma.userPreference.deleteMany({ where: { userId } }),
+      this.prisma.userOperatorRole.deleteMany({ where: { userId } }),
+      this.prisma.userSocialTitle.deleteMany({ where: { userId } }),
+      this.prisma.movieVote.deleteMany({ where: { userId } }),
+      this.prisma.proposalVote.deleteMany({ where: { userId } }),
+      this.prisma.like.deleteMany({ where: { userId } }),
+      this.prisma.comment.deleteMany({ where: { authorId: userId } }),
+      this.prisma.eventSignup.deleteMany({ where: { userId } }),
+      this.prisma.user.delete({ where: { id: userId } }),
+    ]);
+    return { ok: true };
+  }
+
+  // Admin: set operator roles for a user
+  async setOperatorRoles(userId: string, roles: string[]) {
+    await this.prisma.userOperatorRole.deleteMany({ where: { userId } });
+    if (roles.length > 0) {
+      await this.prisma.userOperatorRole.createMany({
+        data: roles.map((value) => ({ userId, value })),
+      });
+    }
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { operatorRoles: true },
+    });
+  }
 }

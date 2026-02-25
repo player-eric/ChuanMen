@@ -45,6 +45,16 @@ const updateSettingsSchema = z.object({
   notifyAnnounce: z.boolean().optional(),
 });
 
+// Admin: update any user fields
+const adminUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  email: z.email().optional(),
+  role: z.enum(['admin', 'host', 'member']).optional(),
+  userStatus: z.enum(['applicant', 'approved', 'rejected', 'banned']).optional(),
+  location: z.string().optional(),
+  bio: z.string().optional(),
+});
+
 export class UserService {
   constructor(private readonly repository: UserRepository) {}
 
@@ -89,5 +99,27 @@ export class UserService {
     }
 
     return this.repository.updateSettings(userId, userFields);
+  }
+
+  // Admin: list users with detail counts
+  listUsersDetailed() {
+    return this.repository.listWithDetails();
+  }
+
+  // Admin: update user (role, status, name, email, location, etc.)
+  adminUpdateUser(userId: string, input: unknown) {
+    const data = adminUpdateSchema.parse(input);
+    return this.repository.adminUpdate(userId, data);
+  }
+
+  // Admin: delete user
+  deleteUser(userId: string) {
+    return this.repository.deleteUser(userId);
+  }
+
+  // Admin: set operator roles
+  setOperatorRoles(userId: string, input: unknown) {
+    const { roles } = z.object({ roles: z.array(z.string()) }).parse(input);
+    return this.repository.setOperatorRoles(userId, roles);
   }
 }
