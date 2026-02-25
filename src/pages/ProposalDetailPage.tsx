@@ -166,6 +166,7 @@ export default function ProposalDetailPage() {
             comments={raw.comments ?? []}
             entityType="proposal"
             entityId={String(raw.id)}
+            defaultExpanded
           />
         </Card>
       </Stack>

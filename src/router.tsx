@@ -281,7 +281,21 @@ async function proposalDetailLoader({ params }: { params: Record<string, string 
   const id = params.proposalId;
   if (!id) return null;
   try {
-    return await fetchProposalByIdApi(id);
+    const p: any = await fetchProposalByIdApi(id);
+    if (!p) return null;
+    return {
+      id: p.id,
+      name: p.author?.name ?? p.name ?? '?',
+      title: p.title ?? '',
+      description: p.description ?? '',
+      descriptionHtml: p.descriptionHtml ?? p.description ?? '',
+      votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
+      interested: Array.isArray(p.votes) ? p.votes.map((v: any) => v.user?.name ?? '?') : p.interested ?? [],
+      time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
+      comments: p.comments ?? [],
+      likes: p.likes ?? 0,
+      likedBy: p.likedBy ?? [],
+    };
   } catch {
     return null;
   }

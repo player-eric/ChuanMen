@@ -455,15 +455,14 @@ export default function QuickActionDialog({ open, onClose }: QuickActionDialogPr
         </Typography>
         <TextField
           multiline
-          minRows={3}
-          maxRows={6}
+          minRows={4}
+          maxRows={10}
           placeholder="写点什么..."
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
           autoFocus
           fullWidth
           variant="outlined"
-          size="small"
         />
         <Stack direction="row" justifyContent="flex-end">
           <IconButton
