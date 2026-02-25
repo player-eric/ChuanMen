@@ -223,16 +223,16 @@ interface FeedActivityProps extends InteractionProps {
 export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
-  const [joined, setJoined] = useState(false);
+  const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
   const [cancelOpen, setCancelOpen] = useState(false);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const eventId = extractEventId(navTarget);
 
-  // Sync signup state from DB data
+  // Sync signup state when data refreshes
   useEffect(() => {
-    if (user?.id && signupUserIds?.includes(user.id)) setJoined(true);
+    setJoined(Boolean(user?.id && signupUserIds?.includes(user.id)));
   }, [user, signupUserIds]);
 
   const handleSignup = async (e: React.MouseEvent) => {
@@ -609,14 +609,14 @@ interface FeedSmallGroupProps extends InteractionProps {
 export function FeedSmallGroup({ name, title, date, location, weekNumber, people, signupUserIds, capacity, isPrivate, navTarget, likes, likedBy, comments, newComments }: FeedSmallGroupProps) {
   const c = useColors();
   const { user } = useAuth();
-  const [joined, setJoined] = useState(false);
+  const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
   const [cancelOpen, setCancelOpen] = useState(false);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const eventId = extractEventId(navTarget);
 
   useEffect(() => {
-    if (user?.id && signupUserIds?.includes(user.id)) setJoined(true);
+    setJoined(Boolean(user?.id && signupUserIds?.includes(user.id)));
   }, [user, signupUserIds]);
 
   const handleSignup = async (e: React.MouseEvent) => {

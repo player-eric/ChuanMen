@@ -117,7 +117,7 @@ export default function MemberDetailPage() {
               : <Typography variant="body2" color="text.secondary">暂无共同活动</Typography>}
           </Stack>
 
-          <Button variant="contained" sx={{ mt: 2 }} onClick={() => navigate('/cards')} disabled={!user}>
+          <Button variant="contained" sx={{ mt: 2 }} onClick={() => navigate('/cards', { state: { recipientName: member.name, recipientId: (member as any).id } })} disabled={!user}>
             {user ? '✉ 寄张感谢卡' : '登录后可寄感谢卡'}
           </Button>
         </CardContent>

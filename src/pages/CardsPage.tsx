@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useLoaderData, useNavigate, useOutletContext, useRevalidator } from 'react-router';
+import { useState, useEffect } from 'react';
+import { useLoaderData, useLocation, useNavigate, useOutletContext, useRevalidator } from 'react-router';
 import {
   Avatar,
   Alert,
@@ -49,6 +49,7 @@ export default function CardsPage() {
 
 function FullCards() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const data = useLoaderData() as CardsPageData;
   const revalidator = useRevalidator();
@@ -67,6 +68,18 @@ function FullCards() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; from: string } | null>(null);
 
   const { people, quickMessages, myCards, sentCards, credits } = data;
+
+  /* If navigated from MemberDetailPage with recipient info, pre-select */
+  useEffect(() => {
+    const state = location.state as { recipientName?: string; recipientId?: string } | null;
+    if (state?.recipientName) {
+      setWho(state.recipientName);
+      setWhoId(state.recipientId ?? state.recipientName);
+      setStep(1);
+      // Clear location state so refreshing doesn't re-trigger
+      window.history.replaceState({}, '');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const reset = () => {
     setStep(0);

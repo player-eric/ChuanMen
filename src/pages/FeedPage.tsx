@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLoaderData, useOutletContext } from 'react-router';
 import {
   Box,
   Button,
   Card,
   CardContent,
+  CircularProgress,
   Grid,
+  Skeleton,
   Snackbar,
   Stack,
   Typography,
@@ -82,11 +84,36 @@ function gridSizeFor(type: FeedItem['type']) {
 }
 
 /* ═══ Full Feed (Timeline) ═══ */
+const PAGE_SIZE = 8;
+
 function FullFeed() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { items } = useLoaderData() as FeedPageData;
   const [snackMsg, setSnackMsg] = useState('');
+  const [visible, setVisible] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const hasMore = visible < items.length;
+
+  const loadMore = useCallback(() => {
+    setVisible((v) => Math.min(v + PAGE_SIZE, items.length));
+  }, [items.length]);
+
+  // IntersectionObserver for infinite scroll
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0]?.isIntersecting) loadMore(); },
+      { rootMargin: '200px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadMore]);
+
+  // Reset visible count when items change (e.g. revalidation)
+  useEffect(() => { setVisible(PAGE_SIZE); }, [items]);
 
   const canInteract = Boolean(user);
   const isDrawnPerson = user?.name === currentDraw.person;
@@ -126,7 +153,7 @@ function FullFeed() {
       )}
 
       <Grid container spacing={2}>
-        {items.map((item, idx) => (
+        {items.slice(0, visible).map((item, idx) => (
           <Grid key={idx} size={gridSizeFor(item.type)} sx={
             (item.type !== 'time' && item.type !== 'milestone')
               ? { display: 'grid', '& > *': { minHeight: 0 } }
@@ -136,6 +163,14 @@ function FullFeed() {
           </Grid>
         ))}
       </Grid>
+
+      {/* Sentinel + loading indicator for infinite scroll */}
+      <div ref={sentinelRef} />
+      {hasMore && (
+        <Stack alignItems="center" sx={{ py: 3 }}>
+          <CircularProgress size={28} />
+        </Stack>
+      )}
 
       <Stack spacing={1} sx={{ position: 'fixed', right: { xs: 16, md: 32 }, bottom: { xs: 84, md: 24 }, alignItems: 'stretch' }}>
         <Button variant="contained" size="small" onClick={() => navigate('/events/new')} disabled={!canInteract}
