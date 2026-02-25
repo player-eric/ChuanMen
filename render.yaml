@@ -27,7 +27,7 @@ services:
       - key: TRUST_PROXY
         value: "true"
       - key: FRONTEND_ORIGIN
-        value: https://www.chuanmen.co
+        value: https://www.chuanmener.club
       # ── Database (auto-linked from Render Postgres) ──
       - key: DATABASE_URL
         fromDatabase:
@@ -56,7 +56,7 @@ services:
     runtime: docker
     dockerfilePath: ./server/Dockerfile
     dockerContext: ./server
-    schedule: "*/10 * * * *"
+    schedule: "0 14 * * *"
     plan: starter
     region: oregon
     dockerCommand: node dist/workers/agentTick.js

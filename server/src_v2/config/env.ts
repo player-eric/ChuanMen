@@ -39,8 +39,8 @@ const envSchema = z.object({
   S3_PRESIGN_EXPIRES_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
   // Resend (email) — optional, email features degrade gracefully when absent
   RESEND_API_KEY: z.string().default(''),
-  RESEND_FROM_EMAIL: z.string().default('noreply@chuanmen.co'),
-  RESEND_REPLY_TO: z.string().default('hi@chuanmen.co'),
+  RESEND_FROM_EMAIL: z.string().default('noreply@chuanmener.club'),
+  RESEND_REPLY_TO: z.string().default('hi@chuanmener.club'),
   // TMDB — optional, external movie search degrades gracefully
   TMDB_API_KEY: z.string().default(''),
 });

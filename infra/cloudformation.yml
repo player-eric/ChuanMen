@@ -28,7 +28,7 @@ Parameters:
   # ── App config ──
   FrontendOrigin:
     Type: String
-    Default: 'https://www.chuanmen.co'
+    Default: 'https://www.chuanmener.club'
   AwsRegion:
     Type: String
     Default: us-east-1
@@ -37,10 +37,10 @@ Parameters:
     Default: chuanmen-media
   ResendFromEmail:
     Type: String
-    Default: noreply@chuanmen.co
+    Default: noreply@chuanmener.club
   ResendReplyTo:
     Type: String
-    Default: hi@chuanmen.co
+    Default: hi@chuanmener.club
   ResendApiKeySecretArn:
     Type: String
     Description: Secrets Manager ARN for RESEND_API_KEY
