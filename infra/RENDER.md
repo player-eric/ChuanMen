@@ -134,19 +134,19 @@ For public image access, add a bucket policy:
 
 ---
 
-## Using AWS RDS Instead of Render PostgreSQL
+## Database
 
-If you prefer RDS:
+The project uses Render PostgreSQL. The `DATABASE_URL` is automatically linked via `render.yaml`'s `fromDatabase` reference.
 
-1. Create an RDS PostgreSQL 16 instance (publicly accessible or VPC-peered)
-2. Set `DATABASE_URL` in Render to the RDS connection string:
-   ```
-   postgresql://user:pass@your-rds-host.rds.amazonaws.com:5432/chuanmen?sslmode=require
-   ```
-3. Remove the `databases` section from `render.yaml`
-4. Remove the `fromDatabase` references and replace with `sync: false` for `DATABASE_URL`
+For local development against the Render dev database, switch with:
+```bash
+npm run db:dev
+```
 
-> **Note**: Render services run in AWS Oregon (us-west-2). If your RDS is in a different region, latency increases. Use `us-west-2` for RDS if possible.
+To switch back to local Docker Postgres:
+```bash
+npm run db:local
+```
 
 ---
 

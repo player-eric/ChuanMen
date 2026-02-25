@@ -35,6 +35,10 @@ DROP TYPE "PushFrequency";
 -- Create new enum
 CREATE TYPE "EventPhase_new" AS ENUM ('invite', 'open', 'closed', 'ended', 'cancelled');
 
+-- Drop the default before changing type
+ALTER TABLE "Event"
+  ALTER COLUMN "phase" DROP DEFAULT;
+
 -- Migrate existing data: any 'live' rows become 'closed'
 ALTER TABLE "Event"
   ALTER COLUMN "phase" TYPE TEXT;

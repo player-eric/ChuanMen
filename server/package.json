@@ -11,7 +11,7 @@
     "docker:down": "docker compose down",
     "docker:reset": "docker compose down -v && docker compose up -d",
     "db:local": "ln -sf .env.development .env && echo '✅ Switched to LOCAL (Docker Postgres)'",
-    "db:dev": "ln -sf .env.dev .env && echo '✅ Switched to DEV (RDS chuanmener-dev)'",
+    "db:dev": "ln -sf .env.dev .env && echo '✅ Switched to DEV (Render chuanmener-dev)'",
     "db:prod": "ln -sf .env.production .env && echo '⚠️  Switched to PROD (RDS chuanmener-prod)'",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
