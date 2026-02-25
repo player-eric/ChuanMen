@@ -3,11 +3,11 @@ import type { RecommendationCategory } from '@prisma/client';
 import type { RecommendationRepository } from './recommendation.repository.js';
 
 const listSchema = z.object({
-  category: z.enum(['movie', 'recipe', 'music', 'place']).optional(),
+  category: z.enum(['movie', 'recipe', 'music', 'place', 'book']).optional(),
 });
 
 const createSchema = z.object({
-  category: z.enum(['movie', 'recipe', 'music', 'place']),
+  category: z.enum(['movie', 'recipe', 'music', 'place', 'book']),
   title: z.string().min(1),
   authorId: z.string().min(1),
   description: z.string().optional(),
@@ -32,7 +32,7 @@ export class RecommendationService {
   search(query: unknown) {
     const parsed = z.object({
       q: z.string().default(''),
-      category: z.enum(['movie', 'recipe', 'music', 'place']).optional(),
+      category: z.enum(['movie', 'recipe', 'music', 'place', 'book']).optional(),
     }).parse(query);
     return this.repository.search(parsed.q, parsed.category as RecommendationCategory | undefined);
   }

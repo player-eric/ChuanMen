@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLoaderData, useLocation, useNavigate, useOutletContext, useRevalidator } from 'react-router';
+import { useLoaderData, useLocation, useNavigate, useRevalidator } from 'react-router';
 import {
   Avatar,
   Alert,
@@ -12,6 +12,7 @@ import {
   Grid,
   Radio,
   RadioGroup,
+  Snackbar,
   Stack,
   Step,
   StepLabel,
@@ -22,6 +23,7 @@ import {
 import type { CardsPageData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { PostCard } from '@/components/PostCard';
+import { EmptyState } from '@/components/EmptyState';
 import { titleDefinitions } from '@/mock/data';
 
 function EmptyCards() {
@@ -39,7 +41,10 @@ function EmptyCards() {
 }
 
 export default function CardsPage() {
-  const { isEmpty } = useOutletContext<{ isEmpty: boolean }>();
+  const data = useLoaderData() as CardsPageData;
+  const { user } = useAuth();
+  // Show empty state when not logged in or no cards and no eligible people
+  const isEmpty = !user || (data.myCards.length === 0 && data.sentCards.length === 0 && data.people.length === 0);
   if (isEmpty) return <EmptyCards />;
   return <FullCards />;
 }
@@ -64,6 +69,7 @@ function FullCards() {
   const [showCardInfo, setShowCardInfo] = useState(false);
   const [showAll, setShowAll] = useState(true);
   const [showAllSent, setShowAllSent] = useState(true);
+  const [snackMsg, setSnackMsg] = useState('');
 
   const { people, quickMessages, myCards, sentCards, credits } = data;
 
@@ -71,11 +77,16 @@ function FullCards() {
   useEffect(() => {
     const state = location.state as { recipientName?: string; recipientId?: string } | null;
     if (state?.recipientName) {
-      setWho(state.recipientName);
-      setWhoId(state.recipientId ?? state.recipientName);
       const match = people.find((p) => (p.id ?? p.name) === (state.recipientId ?? state.recipientName));
-      if (match) setWhoCtx(match.ctx);
-      setStep(1);
+      if (match) {
+        setWho(state.recipientName);
+        setWhoId(state.recipientId ?? state.recipientName);
+        setWhoCtx(match.ctx);
+        setStep(1);
+      } else {
+        // Recipient not in eligible list
+        setSnackMsg('需要一起参加过活动才能寄感谢卡，去看看最近的活动，或者直接约人吧');
+      }
       // Clear location state so refreshing doesn't re-trigger
       window.history.replaceState({}, '');
     }
@@ -165,26 +176,35 @@ function FullCards() {
             </Stepper>
 
             {step === 0 && (
-              <Grid container spacing={1.5}>
-                {people.filter((p) => (p.id ?? p.name) !== user?.id).map((person, index) => (
-                  <Grid key={index} size={{ xs: 6, md: 4 }}>
-                    <Card
-                      variant="outlined"
-                      onClick={() => {
-                        setWho(person.name);
-                        setWhoId(person.id ?? person.name);
-                        setWhoCtx(person.ctx);
-                        setStep(1);
-                      }}
-                      sx={{ p: 1.5, cursor: 'pointer', textAlign: 'center' }}
-                    >
-                      <Avatar sx={{ mx: 'auto', mb: 1 }}>{person.name[0]}</Avatar>
-                      <Typography fontWeight={700}>{person.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">{person.ctx}</Typography>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
+              people.filter((p) => (p.id ?? p.name) !== user?.id).length === 0 ? (
+                <EmptyState
+                  icon="✉"
+                  title="参加一次活动，就可以给同行的人寄感谢卡"
+                  description="感谢卡只能寄给一起参加过活动的人。快去看看有什么活动吧！"
+                  action={{ label: '看看最近的活动', to: '/events' }}
+                />
+              ) : (
+                <Grid container spacing={1.5}>
+                  {people.filter((p) => (p.id ?? p.name) !== user?.id).map((person, index) => (
+                    <Grid key={index} size={{ xs: 6, md: 4 }}>
+                      <Card
+                        variant="outlined"
+                        onClick={() => {
+                          setWho(person.name);
+                          setWhoId(person.id ?? person.name);
+                          setWhoCtx(person.ctx);
+                          setStep(1);
+                        }}
+                        sx={{ p: 1.5, cursor: 'pointer', textAlign: 'center' }}
+                      >
+                        <Avatar sx={{ mx: 'auto', mb: 1 }}>{person.name[0]}</Avatar>
+                        <Typography fontWeight={700}>{person.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">{person.ctx}</Typography>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              )
             )}
 
             {step === 1 && who && (
@@ -390,28 +410,36 @@ function FullCards() {
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
             <Typography variant="subtitle1" fontWeight={700}>收到的感谢卡 · {myCards.length} 张</Typography>
-            <Button size="small" onClick={() => setShowAll(!showAll)}>{showAll ? '收起' : '展开'}</Button>
+            {myCards.length > 0 && (
+              <Button size="small" onClick={() => setShowAll(!showAll)}>{showAll ? '收起' : '展开'}</Button>
+            )}
           </Stack>
 
-          <Grid container spacing={1.5}>
-            {(showAll ? myCards : myCards.slice(0, 2)).map((card, index) => (
-              <Grid key={index} size={{ xs: 12, md: 6 }}>
-                <PostCard
-                  from={card.from}
-                  to={user?.name ?? '我'}
-                  message={card.message}
-                  stamp={card.stamp}
-                  date={card.date}
-                  photo={card.photo}
-                  isPrivate={card.visibility === 'private'}
-                  showVisibility
-                  layout="horizontal"
-                  eventCtx={card.eventCtx}
-                  onToggleVisibility={card.id ? () => toggleCardVisibility(card.id!, card.visibility) : undefined}
-                />
-              </Grid>
-            ))}
-          </Grid>
+          {myCards.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+              还没有收到感谢卡——参加活动后，朋友可能会给你寄一张哦！
+            </Typography>
+          ) : (
+            <Grid container spacing={1.5}>
+              {(showAll ? myCards : myCards.slice(0, 2)).map((card, index) => (
+                <Grid key={index} size={{ xs: 12, md: 6 }}>
+                  <PostCard
+                    from={card.from}
+                    to={user?.name ?? '我'}
+                    message={card.message}
+                    stamp={card.stamp}
+                    date={card.date}
+                    photo={card.photo}
+                    isPrivate={card.visibility === 'private'}
+                    showVisibility
+                    layout="horizontal"
+                    eventCtx={card.eventCtx}
+                    onToggleVisibility={card.id ? () => toggleCardVisibility(card.id!, card.visibility) : undefined}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </CardContent>
       </Card>
 
@@ -420,31 +448,45 @@ function FullCards() {
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
             <Typography variant="subtitle1" fontWeight={700}>寄出的感谢卡 · {sentCards.length} 张</Typography>
-            <Button size="small" onClick={() => setShowAllSent(!showAllSent)}>{showAllSent ? '收起' : '展开'}</Button>
+            {sentCards.length > 0 && (
+              <Button size="small" onClick={() => setShowAllSent(!showAllSent)}>{showAllSent ? '收起' : '展开'}</Button>
+            )}
           </Stack>
 
-          <Grid container spacing={1.5}>
-            {(showAllSent ? sentCards : sentCards.slice(0, 2)).map((card, index) => (
-              <Grid key={index} size={{ xs: 12, md: 6 }}>
-                <PostCard
-                  from={card.from}
-                  to={(card as any).to ?? '...'}
-                  message={card.message}
-                  stamp={card.stamp}
-                  date={card.date}
-                  photo={card.photo}
-                  isPrivate={card.visibility === 'private'}
-                  showVisibility
-                  layout="horizontal"
-                  eventCtx={card.eventCtx}
-                  onToggleVisibility={card.id ? () => toggleCardVisibility(card.id!, card.visibility) : undefined}
-                />
-              </Grid>
-            ))}
-          </Grid>
+          {sentCards.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+              还没有寄出感谢卡
+            </Typography>
+          ) : (
+            <Grid container spacing={1.5}>
+              {(showAllSent ? sentCards : sentCards.slice(0, 2)).map((card, index) => (
+                <Grid key={index} size={{ xs: 12, md: 6 }}>
+                  <PostCard
+                    from={card.from}
+                    to={(card as any).to ?? '...'}
+                    message={card.message}
+                    stamp={card.stamp}
+                    date={card.date}
+                    photo={card.photo}
+                    isPrivate={card.visibility === 'private'}
+                    showVisibility
+                    layout="horizontal"
+                    eventCtx={card.eventCtx}
+                    onToggleVisibility={card.id ? () => toggleCardVisibility(card.id!, card.visibility) : undefined}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </CardContent>
       </Card>
 
+      <Snackbar
+        open={Boolean(snackMsg)}
+        autoHideDuration={4000}
+        onClose={() => setSnackMsg('')}
+        message={snackMsg}
+      />
     </Stack>
   );
 }

@@ -357,7 +357,7 @@ export default function MovieDetailPage() {
             <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
               💬 讨论 ({comments.length})
             </Typography>
-            {comments.length > 0 && (
+            {comments.length > 0 ? (
               <Stack spacing={1.5} sx={{ mb: 2 }}>
                 {comments.map((cm, i) => (
                   <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
@@ -377,6 +377,10 @@ export default function MovieDetailPage() {
                   </Stack>
                 ))}
               </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                暂无讨论，来说点什么吧！
+              </Typography>
             )}
             {user ? (
               <Stack direction="row" spacing={1} alignItems="flex-start">

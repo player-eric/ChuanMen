@@ -36,11 +36,23 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** Returns true if the id looks like a real DB cuid (not a walkthrough placeholder) */
+function isRealId(id?: string): boolean {
+  return Boolean(id && !id.startsWith('walkthrough-') && id.length > 20);
+}
+
 function readStoredUser(): AuthUser | null {
   try {
     const raw = localStorage.getItem(storageKey) ?? sessionStorage.getItem(storageKey);
     if (!raw) return null;
-    return JSON.parse(raw) as AuthUser;
+    const parsed = JSON.parse(raw) as AuthUser;
+    // Discard cached walkthrough IDs — force re-resolution from DB
+    if (parsed && !isRealId(parsed.id)) {
+      localStorage.removeItem(storageKey);
+      sessionStorage.removeItem(storageKey);
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -50,15 +62,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(() => readStoredUser());
   const [hydrated, setHydrated] = useState(false);
 
-  // Mark as hydrated once client-side code runs
-  useEffect(() => { setHydrated(true); }, []);
-
-  // Resolve walkthrough / stored user against real DB to get correct id
+  // Resolve user against real DB to get correct id, then mark hydrated
   useEffect(() => {
     const current = user;
-    if (!current?.email) return;
-    // If the id looks like a real cuid, skip resolution
-    if (current.id && !current.id.startsWith('walkthrough-') && current.id.length > 20) return;
+    // No user stored — nothing to resolve
+    if (!current?.email) { setHydrated(true); return; }
+    // Already resolved — skip
+    if (isRealId(current.id)) { setHydrated(true); return; }
     let cancelled = false;
     getUserByEmail(current.email)
       .then((dbUser) => {
@@ -74,7 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserState(resolved);
         localStorage.setItem(storageKey, JSON.stringify(resolved));
       })
-      .catch(() => { /* API not available — keep local user */ });
+      .catch(() => { /* API not available — keep local user */ })
+      .finally(() => { if (!cancelled) setHydrated(true); });
     return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

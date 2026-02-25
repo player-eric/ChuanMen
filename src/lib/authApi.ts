@@ -42,10 +42,9 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthUser> 
 export async function loginUser(email: string): Promise<AuthUser> {
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Accept both the old test email and the real seeded email
+  // Walkthrough emails get special handling (fallback to hardcoded user)
   const walkthroughEmails = ['cm@gmail.com', 'yuan@chuanmen.app'];
   if (walkthroughEmails.includes(normalizedEmail)) {
-    // Try to resolve from real DB first
     try {
       const dbUser = await getUserByEmail(WALKTHROUGH_USER.email);
       return {
@@ -56,34 +55,26 @@ export async function loginUser(email: string): Promise<AuthUser> {
         role: (dbUser.role as string) || WALKTHROUGH_USER.role,
       };
     } catch {
-      // API unavailable — fall back to hardcoded user
       return WALKTHROUGH_USER;
     }
   }
 
-  // Only the walkthrough account is allowed in demo mode
-  throw new Error('当前仅支持测试账号 cm@gmail.com 登录');
-
-  const response = await fetch(getApiUrl('/api/auth/login'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email }),
-  });
-
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(data?.message ?? '登录失败，请稍后再试');
+  // All other emails — look up in real DB
+  try {
+    const dbUser = await getUserByEmail(normalizedEmail);
+    return {
+      id: dbUser.id,
+      name: dbUser.name ?? '',
+      email: dbUser.email ?? normalizedEmail,
+      avatar: (dbUser.avatar as string) || undefined,
+      bio: (dbUser.bio as string) || undefined,
+      role: (dbUser.role as string) || 'member',
+    };
+  } catch (err: unknown) {
+    // Distinguish 404 (not registered) from network errors
+    if (err && typeof err === 'object' && 'status' in err && (err as any).status === 404) {
+      throw new Error('该邮箱未注册，请先申请加入');
+    }
+    throw new Error('网络错误，请稍后重试');
   }
-
-  return {
-    id: data._id,
-    name: data.name,
-    email: data.email,
-    avatar: data.avatar,
-    bio: data.bio,
-    role: data.role,
-  };
 }

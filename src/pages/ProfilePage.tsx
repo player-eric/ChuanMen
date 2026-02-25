@@ -26,6 +26,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { PostCard } from '@/components/PostCard';
 import { Poster } from '@/components/Poster';
+import { EmptyState } from '@/components/EmptyState';
 import { useColors } from '@/hooks/useColors';
 import { photos } from '@/theme';
 
@@ -296,6 +297,14 @@ export default function ProfilePage() {
       {/* ══════ Tab 0: 活动记忆 ══════ */}
       {tab === 0 && (
         <Stack spacing={2}>
+          {data.upcomingEvents.length === 0 && allGalleryPhotos.length === 0 && data.myEvents.length === 0 && data.timeline.length === 0 && (
+            <EmptyState
+              icon="📅"
+              title="还没有参加过活动，去看看有什么活动吧！"
+              action={{ label: '浏览活动', to: '/events' }}
+            />
+          )}
+
           {/* Upcoming Events — pinned to top */}
           {data.upcomingEvents.length > 0 && (
             <Card>
@@ -494,6 +503,15 @@ export default function ProfilePage() {
       {/* ══════ Tab 1: 电影 ══════ */}
       {tab === 1 && (
         <Stack spacing={2}>
+          {data.myMovies.length === 0 && data.votedMovies.length === 0 && (
+            <EmptyState
+              icon="🎬"
+              title="还没有推荐或投票过电影"
+              description="去推荐页看看有什么好电影吧！"
+              action={{ label: '去发现', to: '/discover' }}
+            />
+          )}
+
           {/* My Recommended Movies */}
           {data.myMovies.length > 0 && (
             <Card>

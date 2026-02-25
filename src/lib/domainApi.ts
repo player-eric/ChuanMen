@@ -21,7 +21,9 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(getApiUrl(path), init);
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(data?.message ?? '请求失败，请稍后重试');
+    const err = new Error(data?.message ?? '请求失败，请稍后重试');
+    (err as any).status = response.status;
+    throw err;
   }
   if (data === null) {
     throw new Error('Invalid JSON response');

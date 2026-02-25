@@ -10,6 +10,7 @@ import {
   CircularProgress,
   Grid,
   InputAdornment,
+  Snackbar,
   Stack,
   Tab,
   Tabs,
@@ -21,7 +22,7 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import type { DiscoverPageData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { Poster } from '@/components/Poster';
-import { bookPool as bookPoolData } from '@/mock/data';
+import { EmptyState } from '@/components/EmptyState';
 import { toggleMovieVote, searchExternalMovies, createMovie } from '@/lib/domainApi';
 import type { ExternalMovieResult } from '@/lib/domainApi';
 
@@ -225,71 +226,88 @@ function MoviesSection() {
       </Tabs>
 
       {tab === 'pool' && (
-        <Grid container spacing={1.5}>
-          {filteredPool.map((m) => (
-            <Grid key={m.id} size={{ xs: 12, md: 6 }}>
-              <Card>
-                <CardActionArea onClick={() => navigate(`/discover/movies/${m.id}`)}>
-                  <CardContent>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
-                      <Poster title={m.title} w={40} h={56} />
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Box>
-                            <Typography fontWeight={700}>{m.title}</Typography>
-                            <Typography variant="body2" color="text.secondary">{m.year}  {m.dir}</Typography>
-                            <Typography variant="caption" color="text.secondary">{m.by} 推荐</Typography>
-                          </Box>
-                          <Button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              toggle(m.id);
-                            }}
-                            variant={votes[m.id] ? 'contained' : 'outlined'}
-                            size="small"
-                            disabled={!user}
-                          >
-                            ▲ {m.v + (votes[m.id] && !m.voterIds.includes(user?.id ?? '') ? 1 : !votes[m.id] && m.voterIds.includes(user?.id ?? '') ? -1 : 0)}
-                          </Button>
-                        </Stack>
-                        {m.status && <Chip sx={{ mt: 1 }} size="small" color="success" label={`✓ ${m.status}`} />}
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </CardActionArea>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
-
-      {tab === 'screened' && (
-        <Grid container spacing={1.5}>
-          {screened.map((m: any, i: number) => {
-            const match = pool.find((p: any) => p.title === m.title);
-            return (
-              <Grid key={i} size={{ xs: 12, md: 6 }}>
+        filteredPool.length === 0 ? (
+          <EmptyState
+            icon="🎬"
+            title="还没有推荐电影，来添加第一部！"
+            description="搜索你喜欢的电影，推荐给大家一起看。"
+            action={user ? { label: '添加电影', to: '/discover/movie/add' } : undefined}
+          />
+        ) : (
+          <Grid container spacing={1.5}>
+            {filteredPool.map((m) => (
+              <Grid key={m.id} size={{ xs: 12, md: 6 }}>
                 <Card>
-                  <CardActionArea
-                    onClick={() => match && navigate(`/discover/movies/${match.id}`)}
-                    disabled={!match}
-                  >
+                  <CardActionArea onClick={() => navigate(`/discover/movies/${m.id}`)}>
                     <CardContent>
                       <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Poster title={m.title} w={36} h={50} />
-                        <Box>
-                          <Typography fontWeight={700}>{m.title}</Typography>
-                          <Typography variant="body2" color="text.secondary">{m.year}  {m.dir}</Typography>
-                          <Typography variant="caption" color="text.secondary">{m.date}  {m.host} Host</Typography>
+                        <Poster title={m.title} w={40} h={56} />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Box>
+                              <Typography fontWeight={700}>{m.title}</Typography>
+                              <Typography variant="body2" color="text.secondary">{m.year}  {m.dir}</Typography>
+                              <Typography variant="caption" color="text.secondary">{m.by} 推荐</Typography>
+                            </Box>
+                            <Button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggle(m.id);
+                              }}
+                              variant={votes[m.id] ? 'contained' : 'outlined'}
+                              size="small"
+                              disabled={!user}
+                            >
+                              ▲ {m.v + (votes[m.id] && !m.voterIds.includes(user?.id ?? '') ? 1 : !votes[m.id] && m.voterIds.includes(user?.id ?? '') ? -1 : 0)}
+                            </Button>
+                          </Stack>
+                          {m.status && <Chip sx={{ mt: 1 }} size="small" color="success" label={`✓ ${m.status}`} />}
                         </Box>
                       </Stack>
                     </CardContent>
                   </CardActionArea>
                 </Card>
               </Grid>
-            );
-          })}
-        </Grid>
+            ))}
+          </Grid>
+        )
+      )}
+
+      {tab === 'screened' && (
+        screened.length === 0 ? (
+          <EmptyState
+            icon="📽"
+            title="还没有放映记录"
+            description="电影放映后，记录会出现在这里。"
+          />
+        ) : (
+          <Grid container spacing={1.5}>
+            {screened.map((m: any, i: number) => {
+              const match = pool.find((p: any) => p.title === m.title);
+              return (
+                <Grid key={i} size={{ xs: 12, md: 6 }}>
+                  <Card>
+                    <CardActionArea
+                      onClick={() => match && navigate(`/discover/movies/${match.id}`)}
+                      disabled={!match}
+                    >
+                      <CardContent>
+                        <Stack direction="row" spacing={1.5} alignItems="center">
+                          <Poster title={m.title} w={36} h={50} />
+                          <Box>
+                            <Typography fontWeight={700}>{m.title}</Typography>
+                            <Typography variant="body2" color="text.secondary">{m.year}  {m.dir}</Typography>
+                            <Typography variant="caption" color="text.secondary">{m.date}  {m.host} Host</Typography>
+                          </Box>
+                        </Stack>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
+                </Grid>
+              );
+            })}
+          </Grid>
+        )
       )}
     </Box>
   );
@@ -302,7 +320,11 @@ function BooksSection() {
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'pool' | 'read'>('pool');
   const [votes, setVotes] = useState<Record<string, boolean>>({});
-  const toggle = (id: string) => setVotes((v) => ({ ...v, [id]: !v[id] }));
+  const [snackMsg, setSnackMsg] = useState('');
+  const toggle = (id: string) => {
+    setVotes((v) => ({ ...v, [id]: !v[id] }));
+    setSnackMsg('投票功能即将开放');
+  };
 
   const q = search.toLowerCase();
   const filteredPool = q
@@ -341,72 +363,88 @@ function BooksSection() {
       </Tabs>
 
       {tab === 'pool' && (
-        <Grid container spacing={1.5}>
-          {filteredPool.map((b) => (
-            <Grid key={b.id} size={{ xs: 12, md: 6 }}>
-              <Card>
-                <CardActionArea onClick={() => navigate(`/discover/books/${b.id}`)}>
-                  <CardContent>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
-                      <Poster title={b.title} w={40} h={56} />
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Box>
-                            <Typography fontWeight={700}>{b.title}</Typography>
-                            <Typography variant="body2" color="text.secondary">{b.year} · {b.author}</Typography>
-                            <Typography variant="caption" color="text.secondary">{b.by} 推荐</Typography>
-                          </Box>
-                          <Button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              toggle(b.id);
-                            }}
-                            variant={votes[b.id] ? 'contained' : 'outlined'}
-                            size="small"
-                            disabled={!user}
-                          >
-                            ▲ {b.v + (votes[b.id] ? 1 : 0)}
-                          </Button>
-                        </Stack>
-                        {b.status && <Chip sx={{ mt: 1 }} size="small" color="success" label={`✓ ${b.status}`} />}
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </CardActionArea>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
-
-      {tab === 'read' && (
-        <Grid container spacing={1.5}>
-          {filteredRead.map((b, i) => {
-            const match = bookPoolData.find((p) => p.title === b.title);
-            return (
-              <Grid key={i} size={{ xs: 12, md: 6 }}>
+        filteredPool.length === 0 ? (
+          <EmptyState
+            icon="📖"
+            title="还没有推荐图书，来添加第一本！"
+            description="分享你喜欢的书，推荐给大家一起读。"
+            action={user ? { label: '添加图书', to: '/discover/book/add' } : undefined}
+          />
+        ) : (
+          <Grid container spacing={1.5}>
+            {filteredPool.map((b) => (
+              <Grid key={b.id} size={{ xs: 12, md: 6 }}>
                 <Card>
-                  <CardActionArea
-                    onClick={() => match && navigate(`/discover/books/${match.id}`)}
-                    disabled={!match}
-                  >
+                  <CardActionArea onClick={() => navigate(`/discover/books/${b.id}`)}>
                     <CardContent>
                       <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Poster title={b.title} w={36} h={50} />
-                        <Box>
-                          <Typography fontWeight={700}>{b.title}</Typography>
-                          <Typography variant="body2" color="text.secondary">{b.year} · {b.author}</Typography>
-                          <Typography variant="caption" color="text.secondary">{b.date} · {b.host} Host</Typography>
+                        <Poster title={b.title} w={40} h={56} />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Box>
+                              <Typography fontWeight={700}>{b.title}</Typography>
+                              <Typography variant="body2" color="text.secondary">{b.year} · {b.author}</Typography>
+                              <Typography variant="caption" color="text.secondary">{b.by} 推荐</Typography>
+                            </Box>
+                            <Button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggle(b.id);
+                              }}
+                              variant={votes[b.id] ? 'contained' : 'outlined'}
+                              size="small"
+                              disabled={!user}
+                            >
+                              ▲ {b.v + (votes[b.id] ? 1 : 0)}
+                            </Button>
+                          </Stack>
+                          {b.status && <Chip sx={{ mt: 1 }} size="small" color="success" label={`✓ ${b.status}`} />}
                         </Box>
                       </Stack>
                     </CardContent>
                   </CardActionArea>
                 </Card>
               </Grid>
-            );
-          })}
-        </Grid>
+            ))}
+          </Grid>
+        )
       )}
+
+      {tab === 'read' && (
+        filteredRead.length === 0 ? (
+          <EmptyState
+            icon="📚"
+            title="还没有已读记录"
+            description="读书活动结束后，记录会出现在这里。"
+          />
+        ) : (
+          <Grid container spacing={1.5}>
+            {filteredRead.map((b, i) => (
+              <Grid key={i} size={{ xs: 12, md: 6 }}>
+                <Card>
+                  <CardContent>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      <Poster title={b.title} w={36} h={50} />
+                      <Box>
+                        <Typography fontWeight={700}>{b.title}</Typography>
+                        <Typography variant="body2" color="text.secondary">{b.year} · {b.author}</Typography>
+                        <Typography variant="caption" color="text.secondary">{b.date} · {b.host} Host</Typography>
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )
+      )}
+
+      <Snackbar
+        open={Boolean(snackMsg)}
+        autoHideDuration={3000}
+        onClose={() => setSnackMsg('')}
+        message={snackMsg}
+      />
     </Box>
   );
 }

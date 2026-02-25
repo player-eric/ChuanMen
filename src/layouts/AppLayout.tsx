@@ -365,7 +365,7 @@ export default function AppLayout() {
               </Stack>
             </Stack>
           ) : (
-            <Outlet context={{ isEmpty: false }} />
+            <Outlet />
           )}
         </Box>
 

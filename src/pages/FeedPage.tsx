@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate, useLoaderData, useOutletContext } from 'react-router';
+import { useNavigate, useLoaderData } from 'react-router';
 import {
   Box,
   Button,
@@ -224,6 +224,8 @@ function renderFeedItem(item: FeedItem) {
 
 /* ═══ FeedPage ═══ */
 export default function FeedPage() {
-  const { isEmpty } = useOutletContext<{ isEmpty: boolean }>();
+  const data = useLoaderData() as FeedPageData;
+  // Feed is "empty" when there are no real content items (only milestone placeholder counts as empty)
+  const isEmpty = !data.items || data.items.length === 0 || (data.items.length === 1 && data.items[0].type === 'milestone');
   return isEmpty ? <EmptyFeed /> : <FullFeed />;
 }

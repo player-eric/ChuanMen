@@ -31,6 +31,7 @@ import { searchProposals, toggleProposalVote } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { useColors } from '@/hooks/useColors';
 import { Ava, AvaStack } from '@/components/Atoms';
+import { EmptyState } from '@/components/EmptyState';
 import { FeedActions } from '@/components/FeedItems';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
@@ -203,13 +204,25 @@ export default function EventsPage() {
 
       {tab === 'upcoming' && (
         <Stack spacing={2}>
-          <Grid container spacing={2}>
-            {upcomingEvents.map((evt) => (
-              <Grid key={evt.id} size={{ xs: 12, md: 6 }}>
-                <EventCard evt={evt} navigate={navigate} />
-              </Grid>
-            ))}
-          </Grid>
+          {upcomingEvents.length === 0 ? (
+            <EmptyState
+              icon="📅"
+              title="暂时没有活动，快来组织一场吧！"
+              description="浏览创意孵化中的点子，或者直接发起一个新活动。"
+              action={canInteract
+                ? { label: '发起活动', to: '/events/new' }
+                : { label: '浏览创意', onClick: () => setTab('ideas') }
+              }
+            />
+          ) : (
+            <Grid container spacing={2}>
+              {upcomingEvents.map((evt) => (
+                <Grid key={evt.id} size={{ xs: 12, md: 6 }}>
+                  <EventCard evt={evt} navigate={navigate} />
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </Stack>
       )}
 
@@ -253,6 +266,15 @@ export default function EventsPage() {
 
           {!!keyword.trim() && searchedItems.length === 0 && !searchError && (
             <Typography variant="body2" color="text.secondary">没有匹配创意</Typography>
+          )}
+
+          {!keyword.trim() && data.proposals.length === 0 && (
+            <EmptyState
+              icon="💡"
+              title="还没有人提创意，成为第一个！"
+              description="分享你想组织的活动创意，看看有没有人感兴趣。"
+              action={canInteract ? { label: '提创意', to: '/events/proposals/new' } : undefined}
+            />
           )}
 
           {data.proposals.map((proposal) => {
@@ -330,6 +352,13 @@ export default function EventsPage() {
 
       {tab === 'past' && (
         <Stack spacing={2}>
+          {pastEvents.length === 0 && data.past.length === 0 && (
+            <EmptyState
+              icon="📷"
+              title="还没有过往活动记录"
+              description="活动结束后，记录会出现在这里。"
+            />
+          )}
           <Grid container spacing={2}>
             {/* EventData items with phase='ended' — full rich card */}
             {pastEvents.map((evt) => (

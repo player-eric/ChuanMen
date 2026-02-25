@@ -117,17 +117,24 @@ export default function EventDetailPage() {
       }
       try {
         const item = await getEventById(eventId);
+        const hostName = typeof (item as any).host === 'string' ? (item as any).host : (item as any).host?.name ?? 'Host';
+        const signups = ((item as any).signups ?? []) as any[];
+        const people = signups.map((s: any) => s.user?.name ?? s.userName ?? '?');
+        // Host 默认也是参与者之一
+        if (hostName && hostName !== '?' && !people.includes(hostName)) {
+          people.unshift(hostName);
+        }
         setEvent({
           id: '',
           title: String(item.title ?? ''),
-          host: 'Host',
+          host: hostName,
           date: new Date(String(item.startsAt ?? new Date().toISOString())).toLocaleString('zh-CN'),
           location: String(item.location ?? ''),
           scene: 'small-group',
           film: undefined,
-          spots: Math.max(0, Number(item.capacity ?? 0)),
+          spots: Math.max(0, Number(item.capacity ?? 0) - people.length),
           total: Number(item.capacity ?? 0),
-          people: [],
+          people,
           phase: String(item.phase ?? 'open') === 'invite' ? 'invite' : 'open',
           desc: String(item.description ?? ''),
         });
@@ -188,6 +195,10 @@ export default function EventDetailPage() {
       const signups = (raw as any).signups ?? [];
       const people = signups.map((s: any) => s.user?.name ?? s.userName ?? '?');
       const hostName = typeof (raw as any).host === 'string' ? (raw as any).host : (raw as any).host?.name ?? '?';
+      // Host 默认也是参与者之一
+      if (hostName && hostName !== '?' && !people.includes(hostName)) {
+        people.unshift(hostName);
+      }
       setEvent((prev) => prev ? {
         ...prev,
         people,
@@ -538,7 +549,7 @@ export default function EventDetailPage() {
                 {event.people.map((name) => (
                   <Avatar
                     key={name}
-                    sx={{ cursor: 'pointer', width: 34, height: 34 }}
+                    sx={{ cursor: 'pointer', width: 34, height: 34, ...(name === event.host ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
                     onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
                   >
                     {name[0]}
@@ -546,12 +557,9 @@ export default function EventDetailPage() {
                 ))}
               </AvatarGroup>
             </Stack>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-              <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>{event.host[0]}</Avatar>
-              <Typography variant="body2" color="text.secondary">
-                {event.host} · Host
-              </Typography>
-            </Stack>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              🏠 {event.host} · Host
+            </Typography>
           </CardContent>
         </Card>
 
@@ -1009,7 +1017,7 @@ export default function EventDetailPage() {
             <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
               💬 讨论 ({comments.length})
             </Typography>
-            {comments.length > 0 && (
+            {comments.length > 0 ? (
               <Stack spacing={1.5} sx={{ mb: 2 }}>
                 {comments.map((c, i) => (
                   <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
@@ -1029,6 +1037,10 @@ export default function EventDetailPage() {
                   </Stack>
                 ))}
               </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                暂无讨论，来说点什么吧！
+              </Typography>
             )}
             {user ? (
               <Stack direction="row" spacing={1} alignItems="flex-start">

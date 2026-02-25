@@ -54,6 +54,7 @@ import {
   fetchUserByIdApi,
   fetchAboutStatsApi,
   fetchProposalsApi,
+  fetchRecommendationsApi,
 } from '@/lib/domainApi';
 import { fetchBookDetail } from '@/mock/api';
 import { eventTagToScene } from '@/lib/mappings';
@@ -296,9 +297,10 @@ async function eventRecordsLoader() {
 
 async function discoverLoader() {
   try {
-    const [rawPool, rawScreened] = await Promise.all([
+    const [rawPool, rawScreened, rawBooks] = await Promise.all([
       fetchMoviesApi(),
       fetchScreenedMoviesApi(),
+      fetchRecommendationsApi('book').catch(() => []),
     ]);
     const pool = (rawPool as any[]).map((m: any) => ({
       id: m.id,
@@ -317,7 +319,16 @@ async function discoverLoader() {
       date: s.event?.startsAt ? new Date(s.event.startsAt).toLocaleDateString('zh-CN') : (s.date ?? ''),
       host: s.event?.host?.name ?? s.host ?? '',
     }));
-    return { pool, screened, bookPool: [], bookRead: [] };
+    const bookPool = (rawBooks as any[]).map((b: any) => ({
+      id: b.id,
+      title: b.title ?? '',
+      year: '',
+      author: b.author?.name ?? b.description ?? '',
+      v: b.voteCount ?? 0,
+      by: b.author?.name ?? '',
+      status: b.status === 'candidate' ? undefined : b.status,
+    }));
+    return { pool, screened, bookPool, bookRead: [] };
   } catch {
     return { pool: [], screened: [], bookPool: [], bookRead: [] };
   }

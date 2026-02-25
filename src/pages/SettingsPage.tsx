@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Alert,
@@ -14,11 +14,12 @@ import {
   Stack,
   Switch,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { ImageUpload } from '@/components/ImageUpload';
-import { updateUserSettings } from '@/lib/domainApi';
+import { updateUserSettings, fetchPostcardsApi } from '@/lib/domainApi';
 import type { AuthUser } from '@/types/auth';
 
 export default function SettingsPage() {
@@ -57,6 +58,15 @@ export default function SettingsPage() {
   const [notifyCards, setNotifyCards] = useState(prefs?.notifyCards ?? true);
   const [notifyOps, setNotifyOps] = useState(prefs?.notifyOps ?? true);
   const [notifyAnnounce, setNotifyAnnounce] = useState(prefs?.notifyAnnounce ?? true);
+
+  // Card credits
+  const [cardCredits, setCardCredits] = useState<number | null>(null);
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchPostcardsApi(user.id)
+      .then((data) => setCardCredits(data.credits ?? 0))
+      .catch(() => setCardCredits(null));
+  }, [user?.id]);
 
   // Save state
   const [saving, setSaving] = useState(false);
@@ -200,10 +210,18 @@ export default function SettingsPage() {
             {hasGoogle ? (
               <Box>
                 <Typography variant="body2">已绑定: {user.email}</Typography>
-                <Button size="small" color="error" sx={{ mt: 0.5 }}>解绑 Google 账号</Button>
+                <Tooltip title="即将开放" arrow>
+                  <span>
+                    <Button size="small" color="error" sx={{ mt: 0.5 }} disabled>解绑 Google 账号</Button>
+                  </span>
+                </Tooltip>
               </Box>
             ) : (
-              <Button variant="outlined" size="small">绑定 Google 账号</Button>
+              <Tooltip title="即将开放" arrow>
+                <span>
+                  <Button variant="outlined" size="small" disabled>绑定 Google 账号</Button>
+                </span>
+              </Tooltip>
             )}
           </Stack>
         </CardContent>
@@ -246,14 +264,18 @@ export default function SettingsPage() {
               control={<Switch checked={hideEmail} onChange={() => setHideEmail(!hideEmail)} />}
               label="隐藏 Email（关闭后对其他成员不可见）"
             />
-            <FormControlLabel
-              control={<Switch checked={hideActivity} onChange={() => setHideActivity(!hideActivity)} />}
-              label="隐藏参与记录"
-            />
-            <FormControlLabel
-              control={<Switch checked={hideStats} onChange={() => setHideStats(!hideStats)} />}
-              label="隐藏贡献统计"
-            />
+            <Tooltip title="即将开放" arrow placement="right">
+              <FormControlLabel
+                control={<Switch checked={hideActivity} onChange={() => setHideActivity(!hideActivity)} disabled />}
+                label="隐藏参与记录"
+              />
+            </Tooltip>
+            <Tooltip title="即将开放" arrow placement="right">
+              <FormControlLabel
+                control={<Switch checked={hideStats} onChange={() => setHideStats(!hideStats)} disabled />}
+                label="隐藏贡献统计"
+              />
+            </Tooltip>
             {/* TODO: 称号显示控制 - list all earned titles with individual toggles */}
           </Stack>
         </CardContent>
@@ -264,8 +286,8 @@ export default function SettingsPage() {
       <Card>
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="body1">当前可寄: <b>6</b> 张</Typography>
-            <Button variant="outlined" size="small">购买感谢卡 · $5/张</Button>
+            <Typography variant="body1">当前可寄: <b>{cardCredits ?? '...'}</b> 张</Typography>
+            <Button variant="outlined" size="small" disabled>购买感谢卡 · 暂未开放</Button>
           </Stack>
         </CardContent>
       </Card>

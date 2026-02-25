@@ -4,6 +4,7 @@ import { Avatar, Card, CardActionArea, CardContent, Chip, Grid, InputAdornment, 
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import type { MemberData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
+import { EmptyState } from '@/components/EmptyState';
 
 export default function MembersPage() {
   const { members } = useLoaderData() as { members: MemberData[] };
@@ -76,7 +77,14 @@ export default function MembersPage() {
         ))}
       </Grid>
 
-      {filteredMembers.length === 0 && (
+      {filteredMembers.length === 0 && !keyword.trim() && (
+        <EmptyState
+          icon="👥"
+          title="暂时无法加载成员信息"
+          description="请稍后重试"
+        />
+      )}
+      {filteredMembers.length === 0 && keyword.trim() && (
         <Typography variant="body2" color="text.secondary">没有匹配成员，请更换关键词</Typography>
       )}
     </Stack>
