@@ -58,12 +58,15 @@ export default function EventDetailPage() {
   const { user } = useAuth();
   const loadedEvent = useLoaderData() as EventData | null;
   const [event, setEvent] = useState<EventData | null>(loadedEvent);
-  const [signedUp, setSignedUp] = useState(() => {
-    if (loadedEvent && user?.id && Array.isArray((loadedEvent as any).signupUserIds)) {
-      return (loadedEvent as any).signupUserIds.includes(user.id);
+  const [signedUp, setSignedUp] = useState(false);
+
+  // Re-check signup status when user becomes available (auth loads from localStorage after hydration)
+  useEffect(() => {
+    if (user?.id && loadedEvent && Array.isArray((loadedEvent as any).signupUserIds)) {
+      setSignedUp((loadedEvent as any).signupUserIds.includes(user.id));
     }
-    return false;
-  });
+  }, [user?.id, loadedEvent]);
+
   const [comments, setComments] = useState<EventComment[]>(loadedEvent?.comments ?? []);
   const [commentText, setCommentText] = useState('');
   const [inviteDeclined, setInviteDeclined] = useState(false);
