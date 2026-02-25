@@ -43,6 +43,13 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     return { ok: true, event };
   });
 
+  // Invite users to event
+  app.post('/:id/invite', async (request) => {
+    const { id } = request.params as { id: string };
+    const signups = await service.inviteUsers(id, request.body);
+    return { ok: true, signups };
+  });
+
   // Event signup
   app.post('/:id/signup', async (request) => {
     const { id } = request.params as { id: string };

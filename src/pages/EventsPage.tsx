@@ -190,8 +190,16 @@ export default function EventsPage() {
 
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
 
-  /* Split events by phase */
-  const upcomingEvents = data.upcoming.filter((e) => e.phase === 'invite' || e.phase === 'open' || e.phase === 'closed' || e.phase === 'cancelled');
+  /* Split events by phase, filtering invite-phase by user visibility */
+  const allUpcoming = data.upcoming.filter((e: any) => e.phase === 'invite' || e.phase === 'open' || e.phase === 'closed' || e.phase === 'cancelled');
+  const upcomingEvents = allUpcoming.filter((e: any) => {
+    if (e.phase === 'invite') {
+      if (!user) return false;
+      // Visible to host or anyone in signupUserIds (invited users)
+      return e.hostId === user.id || (e.signupUserIds ?? []).includes(user.id);
+    }
+    return true;
+  });
   const pastEvents = data.upcoming.filter((e) => e.phase === 'ended');
 
   return (

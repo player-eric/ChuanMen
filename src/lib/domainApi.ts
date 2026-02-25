@@ -172,11 +172,21 @@ export async function createEvent(payload: {
   description?: string;
   tags?: string[];
   isWeeklyLotteryEvent?: boolean;
+  phase?: 'invite' | 'open';
+  publishAt?: string;
 }) {
   return requestJson<EntityMap>('/api/events', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+  });
+}
+
+export async function inviteToEvent(eventId: string, userIds: string[], invitedById: string) {
+  return requestJson<{ ok: boolean; signups: EntityMap[] }>(`/api/events/${eventId}/invite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userIds, invitedById }),
   });
 }
 

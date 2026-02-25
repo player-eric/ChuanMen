@@ -10,6 +10,13 @@ const createEventSchema = z.object({
   tags: z.array(z.enum(['movie', 'chuanmen', 'holiday', 'hiking', 'outdoor', 'small_group', 'other'])).optional(),
   titleImageUrl: z.string().optional(),
   capacity: z.number().int().positive().optional(),
+  phase: z.enum(['invite', 'open']).optional(),
+  publishAt: z.coerce.date().optional(),
+});
+
+const inviteUsersSchema = z.object({
+  userIds: z.array(z.string().min(1)).min(1),
+  invitedById: z.string().min(1),
 });
 
 const updateEventSchema = z.object({
@@ -53,6 +60,11 @@ export class EventService {
 
   removeRecapPhoto(eventId: string, photoUrl: string) {
     return this.repository.removeRecapPhoto(eventId, photoUrl);
+  }
+
+  inviteUsers(eventId: string, input: unknown) {
+    const data = inviteUsersSchema.parse(input);
+    return this.repository.inviteUsers(eventId, data.userIds, data.invitedById);
   }
 
   signup(eventId: string, input: unknown) {

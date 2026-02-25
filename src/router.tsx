@@ -183,14 +183,21 @@ function mapApiEvent(e: any): any {
   const signups = e.signups ?? [];
   const people = signups.map((s: any) => s.user?.name ?? s.userName ?? '?');
   const hostName = typeof e.host === 'string' ? e.host : e.host?.name ?? '?';
+  const hostId = typeof e.host === 'string' ? e.host : e.host?.id ?? '';
   // Host 默认也是参与者之一
   if (hostName && hostName !== '?' && !people.includes(hostName)) {
     people.unshift(hostName);
+  }
+  // Collect signup user IDs for visibility checks (invite phase)
+  const signupUserIds = signups.map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
+  if (hostId && !signupUserIds.includes(hostId)) {
+    signupUserIds.unshift(hostId);
   }
   return {
     id: e.id,
     title: e.title ?? '',
     host: hostName,
+    hostId,
     date: e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }) : '',
     endDate: e.endsAt ? new Date(e.endsAt).toLocaleDateString('zh-CN') : undefined,
     location: e.location ?? '',
@@ -200,6 +207,7 @@ function mapApiEvent(e: any): any {
     spots: Math.max(0, (e.capacity ?? 0) - people.length),
     total: e.capacity ?? 0,
     people,
+    signupUserIds,
     phase: e.phase ?? 'open',
     desc: e.description ?? '',
     houseRules: e.houseRules || undefined,
@@ -256,13 +264,13 @@ async function eventDetailLoader({ params }: { params: Record<string, string | u
     const base = mapApiEvent(raw);
     // Detail-specific fields
     base.desc = raw.description ?? '';
-    const signupUserIds = ((raw.signups ?? []) as any[]).map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
-    // Host 默认也是参与者 — 确保 host ID 在列表中
-    const hostId = typeof raw.host === 'string' ? raw.host : (raw.host as any)?.id;
-    if (hostId && !signupUserIds.includes(hostId)) {
-      signupUserIds.unshift(hostId);
-    }
-    base.signupUserIds = signupUserIds;
+    // Find invitedBy name from signups (the person who invited the current user — resolved client-side)
+    // We pass invitedById per signup so the client can look it up
+    const signups = (raw.signups ?? []) as any[];
+    const hostName = base.host;
+    base.signupInvites = signups
+      .filter((s: any) => s.invitedById)
+      .map((s: any) => ({ userId: s.user?.id ?? s.userId, invitedById: s.invitedById }));
     base.comments = [];
     base.tasks = [];
     base.nominations = [];

@@ -14,7 +14,7 @@ export class EventRepository {
           },
         },
         signups: {
-          where: { status: 'accepted' },
+          where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } },
           include: { user: { select: { id: true, name: true, avatar: true } } },
         },
         selectedMovie: { select: { title: true } },
@@ -46,6 +46,8 @@ export class EventRepository {
     tags?: ('movie' | 'chuanmen' | 'holiday' | 'hiking' | 'outdoor' | 'small_group' | 'other')[];
     titleImageUrl?: string;
     capacity?: number;
+    phase?: 'invite' | 'open';
+    publishAt?: Date;
   }) {
     return this.prisma.event.create({
       data: {
@@ -57,6 +59,8 @@ export class EventRepository {
         tags: input.tags ?? ['other'],
         titleImageUrl: input.titleImageUrl ?? '',
         capacity: input.capacity ?? 10,
+        phase: input.phase,
+        publishAt: input.publishAt,
       },
     });
   }
@@ -100,6 +104,20 @@ export class EventRepository {
       update: { status: status as any },
       include: { user: { select: { id: true, name: true, avatar: true } } },
     });
+  }
+
+  async inviteUsers(eventId: string, userIds: string[], invitedById: string) {
+    const results = [];
+    for (const userId of userIds) {
+      const signup = await this.prisma.eventSignup.upsert({
+        where: { eventId_userId: { eventId, userId } },
+        create: { eventId, userId, invitedById, status: 'invited', invitedAt: new Date() },
+        update: {},
+        include: { user: { select: { id: true, name: true, avatar: true } } },
+      });
+      results.push(signup);
+    }
+    return results;
   }
 
   cancelSignup(eventId: string, userId: string) {

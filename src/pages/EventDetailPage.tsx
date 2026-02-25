@@ -29,7 +29,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import type { EventComment, EventData, EventPhoto, FoodOption, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, addComment as addCommentApi, fetchCommentsApi, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
+import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, addComment as addCommentApi, fetchCommentsApi, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
@@ -91,6 +91,10 @@ export default function EventDetailPage() {
   const [uploadPreviews, setUploadPreviews] = useState<{ file: File; preview: string; caption: string }[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  // Host invite dialog
+  const [hostInviteOpen, setHostInviteOpen] = useState(false);
+  const [hostInviteSearch, setHostInviteSearch] = useState('');
+  const [hostInvitedPeople, setHostInvitedPeople] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [flash, setFlash] = useState<{
     open: boolean;
@@ -104,7 +108,7 @@ export default function EventDetailPage() {
 
   // API-loaded data for movies & members
   const [allMovies, setAllMovies] = useState<any[]>([]);
-  const [allMembers, setAllMembers] = useState<{ name: string }[]>([]);
+  const [allMembers, setAllMembers] = useState<{ id: string; name: string }[]>([]);
   useEffect(() => {
     fetchMoviesApi().then((m: any[]) => setAllMovies(m)).catch(() => {});
     fetchMembersApi().then((m: any[]) => setAllMembers(m)).catch(() => {});
@@ -146,6 +150,19 @@ export default function EventDetailPage() {
     void run();
   }, [eventId, loadedEvent]);
 
+  // Resolve invitedBy from signupInvites data
+  const resolvedInvitedBy = (() => {
+    if (event?.invitedBy) return event.invitedBy;
+    if (!user?.id || !loadedEvent) return undefined;
+    const invites = (loadedEvent as any).signupInvites ?? [];
+    const myInvite = invites.find((i: any) => i.userId === user.id);
+    if (!myInvite) return undefined;
+    // invitedById is usually the host
+    if (myInvite.invitedById === (loadedEvent as any).hostId) return event?.host;
+    // Look up the name from event people
+    return event?.host; // fallback to host name
+  })();
+
   if (!event) {
     return (
       <Card>
@@ -155,6 +172,26 @@ export default function EventDetailPage() {
         </CardContent>
       </Card>
     );
+  }
+
+  // Access control: invite-phase events are only visible to host and invited users
+  if (event.phase === 'invite') {
+    const signupUserIds: string[] = (loadedEvent as any)?.signupUserIds ?? [];
+    const hostId: string = (loadedEvent as any)?.hostId ?? '';
+    const canView = user && (user.id === hostId || signupUserIds.includes(user.id) || user.role === 'admin');
+    if (!canView) {
+      return (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ mb: 1 }}>此活动为私人邀请</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              你暂无权限查看此活动，请等待 Host 邀请。
+            </Typography>
+            <Button variant="outlined" onClick={() => navigate('/events')}>返回活动页</Button>
+          </CardContent>
+        </Card>
+      );
+    }
   }
 
   const onSignup = async () => {
@@ -242,18 +279,31 @@ export default function EventDetailPage() {
         </Snackbar>
 
         {/* Invite banner */}
-        {event.invitedBy && !signedUp && !inviteDeclined && (
+        {resolvedInvitedBy && !signedUp && !inviteDeclined && (
           <Alert
             severity="info"
             sx={{ '& .MuiAlert-message': { width: '100%' } }}
           >
             <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" spacing={1}>
-              <Typography variant="body2">{event.invitedBy} 邀请你参加这场活动</Typography>
+              <Typography variant="body2">{resolvedInvitedBy} 邀请你参加这场活动</Typography>
               <Stack direction="row" spacing={1}>
                 <Button
                   size="small"
                   variant="contained"
-                  onClick={() => setSignedUp(true)}
+                  onClick={async () => {
+                    if (eventId && user?.id) {
+                      try {
+                        await signupEvent(eventId, user.id);
+                        setSignedUp(true);
+                        setFlash({ open: true, severity: 'success', message: '已接受邀请' });
+                        await refreshEvent();
+                      } catch {
+                        setFlash({ open: true, severity: 'error', message: '接受邀请失败，请稍后重试' });
+                      }
+                    } else {
+                      setSignedUp(true);
+                    }
+                  }}
                 >
                   接受邀请
                 </Button>
@@ -560,6 +610,27 @@ export default function EventDetailPage() {
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
               🏠 {event.host} · Host
             </Typography>
+            {user?.name === event.host && event.phase === 'invite' && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={() => setHostInviteOpen(true)}
+                sx={{ mt: 1.5 }}
+              >
+                邀请成员
+              </Button>
+            )}
+            {event.phase === 'ended' && user && (
+              <Button
+                variant="contained"
+                fullWidth
+                sx={{ mt: 2 }}
+                onClick={() => navigate('/cards')}
+              >
+                ✉ 给 Ta 们寄张感谢卡
+              </Button>
+            )}
           </CardContent>
         </Card>
 
@@ -704,20 +775,20 @@ export default function EventDetailPage() {
           </Card>
         )}
 
-        {/* Photo Gallery */}
-        {photos.length > 0 && (
-          <Card>
-            <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-                <Typography variant="subtitle1" fontWeight={700}>
-                  活动照片 ({photos.length})
-                </Typography>
-                {user && (
-                  <Button size="small" onClick={() => setUploadOpen(true)}>
-                    上传照片
-                  </Button>
-                )}
-              </Stack>
+        {/* Photo Gallery — always visible */}
+        <Card>
+          <CardContent>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+              <Typography variant="subtitle1" fontWeight={700}>
+                📷 活动照片{photos.length > 0 ? ` (${photos.length})` : ''}
+              </Typography>
+              {user && photos.length > 0 && (
+                <Button size="small" onClick={() => setUploadOpen(true)}>
+                  上传照片
+                </Button>
+              )}
+            </Stack>
+            {photos.length > 0 ? (
               <Box
                 sx={{
                   display: 'grid',
@@ -767,9 +838,24 @@ export default function EventDetailPage() {
                   </Box>
                 ))}
               </Box>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                还没有照片
+              </Typography>
+            )}
+            {user && (
+              <Button
+                variant="outlined"
+                fullWidth
+                size="small"
+                onClick={() => setUploadOpen(true)}
+                sx={{ mt: 1.5 }}
+              >
+                📷 上传照片
+              </Button>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Lightbox Dialog */}
         <Dialog
@@ -1092,26 +1178,8 @@ export default function EventDetailPage() {
           </CardContent>
         </Card>
 
-        {/* 10. Action button */}
-        {event.phase === 'ended' ? (
-          <Stack direction="row" spacing={2}>
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={() => navigate('/cards')}
-            >
-              ✉ 发感谢卡
-            </Button>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => setUploadOpen(true)}
-              disabled={!user}
-            >
-              📷 上传照片
-            </Button>
-          </Stack>
-        ) : (
+        {/* 10. Action button — only for non-ended events */}
+        {event.phase !== 'ended' && (
           <Box>
             <Button
               variant="contained"
@@ -1132,6 +1200,88 @@ export default function EventDetailPage() {
             </Button>
           </Box>
         )}
+
+        {/* Host invite dialog */}
+        <Dialog open={hostInviteOpen} onClose={() => { setHostInviteOpen(false); setHostInviteSearch(''); }} maxWidth="xs" fullWidth>
+          <DialogTitle>邀请成员</DialogTitle>
+          <DialogContent>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="搜索成员名..."
+              value={hostInviteSearch}
+              onChange={(e) => setHostInviteSearch(e.target.value)}
+              autoFocus
+              sx={{ mb: 1.5, mt: 0.5 }}
+            />
+            {(() => {
+              const hq = hostInviteSearch.toLowerCase();
+              const filtered = allMembers.filter((m) => {
+                if (event.people.includes(m.name)) return false;
+                if (hostInvitedPeople.includes(m.name)) return false;
+                if (hq && !m.name.toLowerCase().includes(hq)) return false;
+                return true;
+              }).slice(0, 10);
+              return (
+                <Stack spacing={0.5}>
+                  {hostInvitedPeople.length > 0 && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
+                      已选 {hostInvitedPeople.length} 人
+                    </Typography>
+                  )}
+                  {filtered.map((m) => (
+                    <Stack direction="row" key={m.name} justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Avatar sx={{ width: 28, height: 28 }}>{m.name[0]}</Avatar>
+                        <Typography variant="body2">{m.name}</Typography>
+                      </Stack>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setHostInvitedPeople((prev) => [...prev, m.name])}
+                      >
+                        邀请
+                      </Button>
+                    </Stack>
+                  ))}
+                  {filtered.length === 0 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ py: 1, textAlign: 'center' }}>
+                      {hostInviteSearch ? '未找到匹配成员' : '没有更多可邀请的成员'}
+                    </Typography>
+                  )}
+                </Stack>
+              );
+            })()}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => { setHostInviteOpen(false); setHostInviteSearch(''); setHostInvitedPeople([]); }}>取消</Button>
+            <Button
+              variant="contained"
+              disabled={hostInvitedPeople.length === 0}
+              onClick={async () => {
+                if (eventId && user?.id && hostInvitedPeople.length > 0) {
+                  try {
+                    const userIds = hostInvitedPeople
+                      .map((name) => allMembers.find((m) => m.name === name)?.id)
+                      .filter(Boolean) as string[];
+                    if (userIds.length > 0) {
+                      await inviteToEvent(eventId, userIds, user.id);
+                      setFlash({ open: true, severity: 'success', message: `已邀请 ${userIds.length} 人` });
+                      await refreshEvent();
+                    }
+                  } catch {
+                    setFlash({ open: true, severity: 'error', message: '邀请失败，请稍后重试' });
+                  }
+                }
+                setHostInviteOpen(false);
+                setHostInviteSearch('');
+                setHostInvitedPeople([]);
+              }}
+            >
+              确认邀请
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Cancel signup dialog */}
         <Dialog open={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)}>

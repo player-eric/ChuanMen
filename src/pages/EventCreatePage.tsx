@@ -27,7 +27,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import { useAuth } from '@/auth/AuthContext';
 import { taskPresets } from '@/mock/data';
-import { createEvent, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
+import { createEvent, inviteToEvent, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
 import type { FoodOption, TaskRole } from '@/types';
 import { Poster } from '@/components/Poster';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -70,8 +70,8 @@ export default function EventCreatePage() {
   const [error, setError] = useState('');
   const [snackOpen, setSnackOpen] = useState(false);
 
-  // Invite dialog state
-  const [created, setCreated] = useState(false);
+  // Invite dialog state — stores created event ID (empty string = not yet created)
+  const [createdId, setCreatedId] = useState('');
   const [inviteSearch, setInviteSearch] = useState('');
   const [invitedPeople, setInvitedPeople] = useState<string[]>([]);
 
@@ -93,7 +93,7 @@ export default function EventCreatePage() {
   const [titleImageUrl, setTitleImageUrl] = useState('');
 
   // API-loaded data for members & movies
-  const [allMembers, setAllMembers] = useState<{ name: string; avatar?: string }[]>([]);
+  const [allMembers, setAllMembers] = useState<{ id: string; name: string; avatar?: string }[]>([]);
   const [allMovies, setAllMovies] = useState<any[]>([]);
 
   useEffect(() => {
@@ -158,7 +158,7 @@ export default function EventCreatePage() {
     }
     try {
       const mappedTags = tags.map((t) => chineseTagToEventTag[t]).filter(Boolean);
-      await createEvent({
+      const result = await createEvent({
         title: name.trim(),
         hostId: user.id,
         location: isHome ? '(居家)' : location.trim(),
@@ -166,8 +166,10 @@ export default function EventCreatePage() {
         capacity,
         description,
         tags: mappedTags.length > 0 ? mappedTags : undefined,
+        phase: delayPublish ? 'invite' : 'open',
+        publishAt: delayPublish && publishDate ? combineDT(publishDate, publishTime || '00:00') : undefined,
       });
-      setCreated(true);
+      setCreatedId(String((result as any).id ?? ''));
     } catch (err: any) {
       setError(err?.message ?? '创建失败，请重试');
     }
@@ -657,11 +659,11 @@ export default function EventCreatePage() {
         </Stack>
       </CardContent>
 
-      <Dialog open={created} fullWidth maxWidth="xs">
+      <Dialog open={Boolean(createdId)} fullWidth maxWidth="xs">
         <DialogTitle>活动创建成功！</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            邀请朋友参加吧
+            {delayPublish ? '邀请阶段，选择你要邀请的成员' : '邀请朋友参加吧'}
           </Typography>
           <TextField fullWidth size="small" placeholder="搜索成员名..." value={inviteSearch}
             onChange={(e) => setInviteSearch(e.target.value)} sx={{ mb: 1.5 }} />
@@ -677,20 +679,32 @@ export default function EventCreatePage() {
                   onClick={() => setInvitedPeople((prev) =>
                     invited ? prev.filter((n) => n !== m.name) : [...prev, m.name]
                   )}>
-                  {invited ? '✓ 已邀请' : '邀请'}
+                  {invited ? '✓ 已选' : '邀请'}
                 </Button>
               </Stack>
             );
           })}
           {invitedPeople.length > 0 && (
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              已邀请 {invitedPeople.length} 人
+              已选 {invitedPeople.length} 人
             </Typography>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => navigate('/events')}>跳过</Button>
-          <Button variant="contained" onClick={() => navigate('/events')}>完成</Button>
+          <Button onClick={() => navigate(`/events/${createdId}`)}>跳过</Button>
+          <Button variant="contained" onClick={async () => {
+            if (invitedPeople.length > 0 && createdId) {
+              try {
+                const userIds = invitedPeople
+                  .map((name) => allMembers.find((m) => m.name === name)?.id)
+                  .filter(Boolean) as string[];
+                if (userIds.length > 0) {
+                  await inviteToEvent(createdId, userIds, user.id);
+                }
+              } catch { /* best effort */ }
+            }
+            navigate(`/events/${createdId}`);
+          }}>完成</Button>
         </DialogActions>
       </Dialog>
 

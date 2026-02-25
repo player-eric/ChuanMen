@@ -267,7 +267,8 @@ model Event {
   endsAt                 DateTime?
   capacity               Int                       @default(10)
   tags                   EventTag[]                @default([other])
-  phase                  EventPhase                @default(invite)
+  phase                  EventPhase                @default(open)
+  publishAt              DateTime?
   status                 EventStatus               @default(scheduled)
   selectedMovieId        String?
   recap                  String                    @default("")
