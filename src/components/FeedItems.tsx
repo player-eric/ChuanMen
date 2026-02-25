@@ -2,12 +2,20 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/auth/AuthContext';
+import { signupEvent } from '@/lib/domainApi';
 import type { FeedComment } from '@/types';
 import FavoriteBorderRounded from '@mui/icons-material/FavoriteBorderRounded';
 import FavoriteRounded from '@mui/icons-material/FavoriteRounded';
 import ChatBubbleOutlineRounded from '@mui/icons-material/ChatBubbleOutlineRounded';
 import { Ava, AvaStack, Card } from './Atoms';
 import { Poster } from './Poster';
+
+/** Extract event ID from navTarget like '/events/xxx' */
+function extractEventId(navTarget?: string): string | undefined {
+  if (!navTarget) return undefined;
+  const m = navTarget.match(/^\/events\/([^/]+)$/);
+  return m?.[1];
+}
 import { PostCard } from './PostCard';
 import { ScenePhoto } from './ScenePhoto';
 
@@ -182,10 +190,25 @@ interface FeedActivityProps extends InteractionProps {
 
 export function FeedActivity({ name, title, date, location, spots, people, film, scene, navTarget, likes, likedBy, comments, newComments }: FeedActivityProps) {
   const c = useColors();
+  const { user } = useAuth();
   const [joined, setJoined] = useState(false);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+  const eventId = extractEventId(navTarget);
+
+  const handleSignup = async () => {
+    if (joined) return;
+    if (!eventId || !user?.id) {
+      // Navigate to detail page if we can't sign up directly
+      if (goNav) goNav();
+      return;
+    }
+    try {
+      await signupEvent(eventId, user.id);
+      setJoined(true);
+    } catch { /* ignore */ }
+  };
 
   return (
     <Card>
@@ -224,7 +247,7 @@ export function FeedActivity({ name, title, date, location, spots, people, film,
           {'💡'} 星星也报名了（你们一起参加过 2 次活动）
         </div>
         <button
-          onClick={() => setJoined(!joined)}
+          onClick={handleSignup}
           style={{
             width: '100%', padding: '9px 0', borderRadius: 8,
             background: joined ? c.s2 : c.warm,
@@ -525,9 +548,17 @@ interface FeedSmallGroupProps extends InteractionProps {
 
 export function FeedSmallGroup({ name, title, date, location, weekNumber, people, capacity, isPrivate, navTarget, likes, likedBy, comments, newComments }: FeedSmallGroupProps) {
   const c = useColors();
+  const { user } = useAuth();
   const [joined, setJoined] = useState(false);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
+  const eventId = extractEventId(navTarget);
+
+  const handleSignup = async () => {
+    if (joined) return;
+    if (!eventId || !user?.id) { if (goNav) goNav(); return; }
+    try { await signupEvent(eventId, user.id); setJoined(true); } catch { /* ignore */ }
+  };
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
 
   if (isPrivate) {
@@ -570,7 +601,7 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
           <span style={{ fontSize: 12, color: people.length < capacity ? c.green : c.red }}>{people.length}/{capacity}</span>
         </div>
         <button
-          onClick={() => setJoined(!joined)}
+          onClick={handleSignup}
           style={{
             width: '100%', padding: '9px 0', borderRadius: 8,
             background: joined ? c.s2 : c.warm,
@@ -596,10 +627,18 @@ interface FeedCompactSmallGroupProps extends InteractionProps {
 
 export function FeedCompactSmallGroup({ name, title, date, location, weekNumber, people, capacity, time, isPrivate, navTarget, likes, likedBy, comments, newComments }: FeedCompactSmallGroupProps) {
   const c = useColors();
+  const { user } = useAuth();
   const [joined, setJoined] = useState(false);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+  const eventId = extractEventId(navTarget);
+
+  const handleSignup = async () => {
+    if (joined) return;
+    if (!eventId || !user?.id) { if (goNav) goNav(); return; }
+    try { await signupEvent(eventId, user.id); setJoined(true); } catch { /* ignore */ }
+  };
 
   if (isPrivate) {
     return (
@@ -634,7 +673,7 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
             <AvaStack names={people} size={16} />
           </div>
           <button
-            onClick={(e) => { e.stopPropagation(); setJoined(!joined); }}
+            onClick={(e) => { e.stopPropagation(); handleSignup(); }}
             style={{
               padding: '3px 10px', borderRadius: 5,
               background: joined ? c.warm + '15' : c.s2,

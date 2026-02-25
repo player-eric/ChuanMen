@@ -23,7 +23,7 @@ import type { EventComment } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
-import { toggleMovieVote, addComment } from '@/lib/domainApi';
+import { toggleMovieVote, addComment, fetchCommentsApi } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 
 export default function MovieDetailPage() {
@@ -38,9 +38,12 @@ export default function MovieDetailPage() {
   const [flash, setFlash] = useState<{ open: boolean; severity: 'success' | 'error'; message: string }>({ open: false, severity: 'success', message: '' });
 
   useEffect(() => {
-    if (raw && 'comments' in raw && raw.comments) {
-      setComments(raw.comments);
-    }
+    if (!raw?.id) return;
+    fetchCommentsApi('movie', String(raw.id)).then((list) => {
+      if (Array.isArray(list)) {
+        setComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('zh-CN') : '' })));
+      }
+    }).catch(() => {});
   }, [raw]);
 
   if (!raw) {
