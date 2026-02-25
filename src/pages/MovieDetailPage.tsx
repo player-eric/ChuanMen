@@ -155,7 +155,7 @@ export default function MovieDetailPage() {
                   textShadow: '0 1px 4px rgba(0,0,0,0.5)',
                 }}
               >
-                {year} · {dir}
+                {year}  {dir}
               </Typography>
               {poster.sub && (
                 <Typography

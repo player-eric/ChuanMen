@@ -41,6 +41,8 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().default(''),
   RESEND_FROM_EMAIL: z.string().default('noreply@chuanmen.co'),
   RESEND_REPLY_TO: z.string().default('hi@chuanmen.co'),
+  // TMDB — optional, external movie search degrades gracefully
+  TMDB_API_KEY: z.string().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);

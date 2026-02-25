@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useLoaderData, useNavigate } from 'react-router';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useLoaderData, useNavigate, useRevalidator } from 'react-router';
 import {
   Box,
   Button,
@@ -7,6 +7,7 @@ import {
   CardActionArea,
   CardContent,
   Chip,
+  CircularProgress,
   Grid,
   InputAdornment,
   Stack,
@@ -21,7 +22,8 @@ import type { DiscoverPageData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { Poster } from '@/components/Poster';
 import { bookPool as bookPoolData } from '@/mock/data';
-import { toggleMovieVote } from '@/lib/domainApi';
+import { toggleMovieVote, searchExternalMovies, createMovie } from '@/lib/domainApi';
+import type { ExternalMovieResult } from '@/lib/domainApi';
 
 /* ═══ DiscoverPage ═══ */
 export default function DiscoverPage() {
@@ -70,11 +72,15 @@ function MoviesSection() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const data = useLoaderData() as DiscoverPageData;
+  const revalidator = useRevalidator();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'pool' | 'screened'>('pool');
-  const [results, setResults] = useState(false);
-  const [added, setAdded] = useState(false);
   const [votes, setVotes] = useState<Record<string, boolean>>({});
+  const [extResults, setExtResults] = useState<ExternalMovieResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [addedTitle, setAddedTitle] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const toggle = async (id: string) => {
     setVotes((v) => ({ ...v, [id]: !v[id] }));
     if (user?.id) {
@@ -84,16 +90,54 @@ function MoviesSection() {
 
   const { pool, screened } = data;
 
+  // Filter local pool by search keyword
+  const q = search.toLowerCase();
+  const filteredPool = q
+    ? pool.filter((m) => m.title.toLowerCase().includes(q) || m.dir.toLowerCase().includes(q))
+    : pool;
+
+  // Debounced external search
+  const handleSearch = useCallback((value: string) => {
+    setSearch(value);
+    setAddedTitle(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.length < 2) { setExtResults([]); setSearching(false); return; }
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await searchExternalMovies(value);
+        setExtResults(res.items ?? []);
+      } catch { setExtResults([]); }
+      setSearching(false);
+    }, 400);
+  }, []);
+
+  // Cleanup debounce
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  const handleRecommend = async (ext: ExternalMovieResult) => {
+    if (!user?.id) return;
+    try {
+      await createMovie({
+        title: ext.title || ext.originalTitle,
+        year: ext.year ? Number(ext.year) : undefined,
+        poster: ext.poster,
+        synopsis: ext.overview,
+        recommendedById: user.id,
+      });
+      setAddedTitle(ext.title || ext.originalTitle);
+      setExtResults([]);
+      setSearch('');
+      revalidator.revalidate();
+    } catch { /* ignore */ }
+  };
+
   return (
     <Box>
       <TextField
         fullWidth
         value={search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          setResults(e.target.value.length > 1);
-          setAdded(false);
-        }}
+        onChange={(e) => handleSearch(e.target.value)}
         placeholder="搜电影名、导演..."
         sx={{ mb: 2 }}
         InputProps={{
@@ -102,6 +146,11 @@ function MoviesSection() {
               <SearchRoundedIcon fontSize="small" />
             </InputAdornment>
           ),
+          endAdornment: searching ? (
+            <InputAdornment position="end">
+              <CircularProgress size={18} />
+            </InputAdornment>
+          ) : undefined,
         }}
       />
       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
@@ -111,32 +160,51 @@ function MoviesSection() {
         <Button variant="outlined" onClick={() => navigate('/discover/movie')}>查看全部电影</Button>
       </Stack>
 
-      {results && !added && (
+      {/* External search results from TMDB */}
+      {extResults.length > 0 && !addedTitle && (
         <Card sx={{ mb: 2 }}>
           <CardContent>
-            <Typography variant="caption" color="text.secondary">搜索结果</Typography>
+            <Typography variant="caption" color="text.secondary">搜索结果（来自 TMDB）</Typography>
             <Stack spacing={1.2} sx={{ mt: 1 }}>
-          {[{ title: '重庆森林', year: '1994', dir: '王家卫', rating: '8.8' }, { title: '重庆', year: '2023', dir: '徐磊', rating: '6.2' }].map((m, i) => (
-              <Stack key={i} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
-                <Box>
-                  <Typography fontWeight={700}>{m.title}</Typography>
-                  <Typography variant="body2" color="text.secondary">{m.year} · {m.dir} · ⭐{m.rating}</Typography>
-                </Box>
-                <Button onClick={() => { if (i === 0) setAdded(true); }} variant="contained" size="small" disabled={!user}>
-                  {user ? '推荐' : '登录后可推荐'}
-                </Button>
-              </Stack>
-            ))}
+              {extResults.map((m) => (
+                <Stack key={m.tmdbId} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+                    {m.poster ? (
+                      <img src={m.poster} alt={m.title} style={{ width: 36, height: 52, borderRadius: 4, objectFit: 'cover' }} />
+                    ) : (
+                      <Poster title={m.title} w={36} h={52} />
+                    )}
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography fontWeight={700} noWrap>{m.title}</Typography>
+                      <Typography variant="body2" color="text.secondary" noWrap>
+                        {m.year}{m.rating != null ? `  ⭐${m.rating}` : ''}
+                      </Typography>
+                      {m.originalTitle && m.originalTitle !== m.title && (
+                        <Typography variant="caption" color="text.secondary" noWrap>{m.originalTitle}</Typography>
+                      )}
+                    </Box>
+                  </Stack>
+                  <Button
+                    onClick={() => handleRecommend(m)}
+                    variant="contained"
+                    size="small"
+                    disabled={!user}
+                    sx={{ ml: 1, flexShrink: 0 }}
+                  >
+                    {user ? '推荐' : '登录'}
+                  </Button>
+                </Stack>
+              ))}
             </Stack>
           </CardContent>
         </Card>
       )}
 
-      {added && (
+      {addedTitle && (
         <Card sx={{ mb: 2 }}>
           <CardContent>
-            <Typography color="success.main" fontWeight={700}>✓ 已推荐「重庆森林」</Typography>
-            <Typography variant="body2" color="text.secondary">信息已自动填好</Typography>
+            <Typography color="success.main" fontWeight={700}>✓ 已推荐「{addedTitle}」</Typography>
+            <Typography variant="body2" color="text.secondary">电影已添加到候选列表</Typography>
           </CardContent>
         </Card>
       )}
@@ -148,7 +216,7 @@ function MoviesSection() {
 
       {tab === 'pool' && (
         <Grid container spacing={1.5}>
-          {pool.map((m) => (
+          {filteredPool.map((m) => (
             <Grid key={m.id} size={{ xs: 12, md: 6 }}>
               <Card>
                 <CardActionArea onClick={() => navigate(`/discover/movies/${m.id}`)}>
@@ -159,7 +227,7 @@ function MoviesSection() {
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
                           <Box>
                             <Typography fontWeight={700}>{m.title}</Typography>
-                            <Typography variant="body2" color="text.secondary">{m.year} · {m.dir}</Typography>
+                            <Typography variant="body2" color="text.secondary">{m.year}  {m.dir}</Typography>
                             <Typography variant="caption" color="text.secondary">{m.by} 推荐</Typography>
                           </Box>
                           <Button
@@ -201,8 +269,8 @@ function MoviesSection() {
                         <Poster title={m.title} w={36} h={50} />
                         <Box>
                           <Typography fontWeight={700}>{m.title}</Typography>
-                          <Typography variant="body2" color="text.secondary">{m.year} · {m.dir}</Typography>
-                          <Typography variant="caption" color="text.secondary">{m.date} · {m.host} Host</Typography>
+                          <Typography variant="body2" color="text.secondary">{m.year}  {m.dir}</Typography>
+                          <Typography variant="caption" color="text.secondary">{m.date}  {m.host} Host</Typography>
                         </Box>
                       </Stack>
                     </CardContent>

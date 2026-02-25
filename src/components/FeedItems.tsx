@@ -380,7 +380,7 @@ export function FeedMovie({ name, title, year, dir, votes: initV, likes, likedBy
           <Poster title={title} w={52} h={72} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
-            <div style={{ fontSize: 12, color: c.text3, marginTop: 2 }}>{year} · {dir}</div>
+            <div style={{ fontSize: 12, color: c.text3, marginTop: 2 }}>{year}  {dir}</div>
             <div style={{ marginTop: 6 }}>
               <button
                 onClick={() => setV(!v)}
@@ -484,7 +484,7 @@ export function FeedCompactMovie({ name, title, year, dir, votes: initV, time, n
         <Poster title={title} w={36} h={50} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
-          <div style={{ fontSize: 12, color: c.text3, marginTop: 1 }}>{year} · {dir}</div>
+          <div style={{ fontSize: 12, color: c.text3, marginTop: 1 }}>{year}  {dir}</div>
           <div style={{ fontSize: 11, color: c.text3, marginTop: 2 }}>
             <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</span> 推荐 · {time}
           </div>

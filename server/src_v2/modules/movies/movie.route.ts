@@ -16,11 +16,21 @@ export const movieRoutes: FastifyPluginAsync = async (app) => {
     return { items };
   });
 
+  app.get('/search-external', async (request) => {
+    const { q } = request.query as { q?: string };
+    if (!q) return { items: [], source: 'tmdb' };
+    return service.searchExternal(q);
+  });
+
   app.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const movie = await service.getById(id);
     if (!movie) return reply.notFound('电影不存在');
     return movie;
+  });
+
+  app.post('/', async (request) => {
+    return service.create(request.body);
   });
 
   app.post('/:id/vote', async (request) => {

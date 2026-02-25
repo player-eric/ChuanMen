@@ -345,6 +345,35 @@ export async function toggleMovieVote(movieId: string, userId: string) {
   });
 }
 
+export async function searchExternalMovies(query: string) {
+  return requestJson<{ items: ExternalMovieResult[]; source: string }>(`/api/movies/search-external${toQueryString({ q: query })}`);
+}
+
+export interface ExternalMovieResult {
+  tmdbId: number;
+  title: string;
+  originalTitle: string;
+  year: string;
+  overview: string;
+  poster: string;
+  rating: number | null;
+}
+
+export async function createMovie(data: {
+  title: string;
+  year?: number;
+  director?: string;
+  poster?: string;
+  synopsis?: string;
+  recommendedById: string;
+}) {
+  return requestJson<EntityMap>('/api/movies', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
 /* ═══════════════════════════════════════════════════════════════
    Proposals API
    ═══════════════════════════════════════════════════════════════ */

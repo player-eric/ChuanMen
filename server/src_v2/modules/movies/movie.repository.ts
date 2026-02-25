@@ -63,6 +63,25 @@ export class MovieRepository {
     return { voted: true };
   }
 
+  create(data: { title: string; year?: number; director?: string; poster?: string; doubanUrl?: string; doubanRating?: number; synopsis?: string; recommendedById: string }) {
+    return this.prisma.movie.create({
+      data: {
+        title: data.title,
+        year: data.year,
+        director: data.director ?? '',
+        poster: data.poster ?? '',
+        doubanUrl: data.doubanUrl ?? '',
+        doubanRating: data.doubanRating,
+        synopsis: data.synopsis ?? '',
+        recommendedById: data.recommendedById,
+      },
+      include: {
+        recommendedBy: { select: { id: true, name: true } },
+        _count: { select: { votes: true } },
+      },
+    });
+  }
+
   screened() {
     return this.prisma.movieScreening.findMany({
       orderBy: { event: { startsAt: 'desc' } },

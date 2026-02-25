@@ -275,10 +275,26 @@ async function eventRecordsLoader() {
 
 async function discoverLoader() {
   try {
-    const [pool, screened] = await Promise.all([
+    const [rawPool, rawScreened] = await Promise.all([
       fetchMoviesApi(),
       fetchScreenedMoviesApi(),
     ]);
+    const pool = (rawPool as any[]).map((m: any) => ({
+      id: m.id,
+      title: m.title ?? '',
+      year: String(m.year ?? ''),
+      dir: m.director ?? '',
+      v: m._count?.votes ?? 0,
+      status: m.status === 'candidate' ? undefined : m.status,
+      by: m.recommendedBy?.name ?? '',
+    }));
+    const screened = (rawScreened as any[]).map((s: any) => ({
+      title: s.movie?.title ?? s.title ?? '',
+      year: String(s.movie?.year ?? s.year ?? ''),
+      dir: s.movie?.director ?? s.director ?? '',
+      date: s.event?.startsAt ? new Date(s.event.startsAt).toLocaleDateString('zh-CN') : (s.date ?? ''),
+      host: s.event?.host?.name ?? s.host ?? '',
+    }));
     return { pool, screened, bookPool: [], bookRead: [] };
   } catch {
     return { pool: [], screened: [], bookPool: [], bookRead: [] };
