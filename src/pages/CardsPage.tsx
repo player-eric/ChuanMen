@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLoaderData, useNavigate, useOutletContext } from 'react-router';
+import { useLoaderData, useNavigate, useOutletContext, useRevalidator } from 'react-router';
 import {
   Avatar,
   Alert,
@@ -10,6 +10,7 @@ import {
   Chip,
   FormControlLabel,
   Grid,
+  IconButton,
   Radio,
   RadioGroup,
   Stack,
@@ -19,9 +20,11 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
 import type { CardsPageData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { PostCard } from '@/components/PostCard';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { titleDefinitions } from '@/mock/data';
 
 function EmptyCards() {
@@ -48,8 +51,10 @@ function FullCards() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const data = useLoaderData() as CardsPageData;
+  const revalidator = useRevalidator();
   const [step, setStep] = useState(0);
   const [who, setWho] = useState<string | null>(null);
+  const [whoId, setWhoId] = useState<string | null>(null);
   const [stamp, setStamp] = useState('');
   const [msg, setMsg] = useState('');
   const [hasPhoto, setHasPhoto] = useState(false);
@@ -59,12 +64,14 @@ function FullCards() {
   const [showCardInfo, setShowCardInfo] = useState(false);
   const [showAll, setShowAll] = useState(true);
   const [showAllSent, setShowAllSent] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; from: string } | null>(null);
 
   const { people, quickMessages, myCards, sentCards, credits } = data;
 
   const reset = () => {
     setStep(0);
     setWho(null);
+    setWhoId(null);
     setStamp('');
     setMsg('');
     if (photoPreview) URL.revokeObjectURL(photoPreview);
@@ -72,6 +79,16 @@ function FullCards() {
     setHasPhoto(false);
     setSent(false);
     setIsPrivate(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget?.id || !user?.id) return;
+    try {
+      const { deletePostcard } = await import('@/lib/domainApi');
+      await deletePostcard(deleteTarget.id, user.id);
+      revalidator.revalidate();
+    } catch { /* ignore */ }
+    setDeleteTarget(null);
   };
 
   return (
@@ -140,6 +157,7 @@ function FullCards() {
                       variant="outlined"
                       onClick={() => {
                         setWho(person.name);
+                        setWhoId(person.id ?? person.name);
                         setStep(1);
                       }}
                       sx={{ p: 1.5, cursor: 'pointer', textAlign: 'center' }}
@@ -306,15 +324,14 @@ function FullCards() {
                       if (!user?.id || !who) return;
                       try {
                         const { sendPostcard } = await import('@/lib/domainApi');
-                        // Find recipient user ID — for now use name-based lookup
-                        // TODO: resolve real user ID from `who` name
                         await sendPostcard({
                           fromId: user.id,
-                          toId: who, // will need resolution
+                          toId: whoId ?? who,
                           message: msg,
                           visibility: isPrivate ? 'private' : 'public',
                           tags: stamp ? [stamp] : [],
                         });
+                        revalidator.revalidate();
                       } catch { /* still show sent UI */ }
                       setSent(true);
                     }}
@@ -349,16 +366,27 @@ function FullCards() {
           <Grid container spacing={1.5}>
             {(showAll ? myCards : myCards.slice(0, 2)).map((card, index) => (
               <Grid key={index} size={{ xs: 12, md: 6 }}>
-                <PostCard
-                  from={card.from}
-                  to={user?.name ?? '我'}
-                  message={card.message}
-                  stamp={card.stamp}
-                  date={card.date}
-                  photo={card.photo}
-                  isPrivate={card.visibility === 'private'}
-                  showVisibility
-                />
+                <Box sx={{ position: 'relative' }}>
+                  <PostCard
+                    from={card.from}
+                    to={user?.name ?? '我'}
+                    message={card.message}
+                    stamp={card.stamp}
+                    date={card.date}
+                    photo={card.photo}
+                    isPrivate={card.visibility === 'private'}
+                    showVisibility
+                  />
+                  {card.id && (
+                    <IconButton
+                      size="small"
+                      onClick={() => setDeleteTarget({ id: card.id!, from: card.from })}
+                      sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'rgba(0,0,0,0.4)', color: '#fff', '&:hover': { bgcolor: 'rgba(0,0,0,0.6)' }, width: 28, height: 28 }}
+                    >
+                      <DeleteOutlineRounded sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  )}
+                </Box>
               </Grid>
             ))}
           </Grid>
@@ -376,21 +404,43 @@ function FullCards() {
           <Grid container spacing={1.5}>
             {(showAllSent ? sentCards : sentCards.slice(0, 2)).map((card, index) => (
               <Grid key={index} size={{ xs: 12, md: 6 }}>
-                <PostCard
-                  from={card.from}
-                  to="..."
-                  message={card.message}
-                  stamp={card.stamp}
-                  date={card.date}
-                  photo={card.photo}
-                  isPrivate={card.visibility === 'private'}
-                  showVisibility
-                />
+                <Box sx={{ position: 'relative' }}>
+                  <PostCard
+                    from={card.from}
+                    to={(card as any).to ?? '...'}
+                    message={card.message}
+                    stamp={card.stamp}
+                    date={card.date}
+                    photo={card.photo}
+                    isPrivate={card.visibility === 'private'}
+                    showVisibility
+                  />
+                  {card.id && (
+                    <IconButton
+                      size="small"
+                      onClick={() => setDeleteTarget({ id: card.id!, from: card.from })}
+                      sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'rgba(0,0,0,0.4)', color: '#fff', '&:hover': { bgcolor: 'rgba(0,0,0,0.6)' }, width: 28, height: 28 }}
+                    >
+                      <DeleteOutlineRounded sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  )}
+                </Box>
               </Grid>
             ))}
           </Grid>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="删除感谢卡"
+        message={`确定要删除这张${deleteTarget?.from ? ' ' + deleteTarget.from + ' 的' : ''}感谢卡吗？删除后不可恢复。`}
+        confirmLabel="删除"
+        cancelLabel="取消"
+        confirmColor="error"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </Stack>
   );
 }

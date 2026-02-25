@@ -329,6 +329,7 @@ async function cardsLoader() {
       fetchMembersApi().catch(() => []),
     ]);
     const people = (members ?? []).map((m: any) => ({
+      id: typeof m === 'string' ? m : m.id ?? '',
       name: typeof m === 'string' ? m : m.name ?? '?',
       ctx: '',
     }));

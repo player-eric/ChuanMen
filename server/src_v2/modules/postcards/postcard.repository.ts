@@ -71,4 +71,12 @@ export class PostcardRepository {
       data: { postcardCredits: { decrement: 1 } },
     });
   }
+
+  async delete(id: string) {
+    return this.prisma.postcard.delete({ where: { id } });
+  }
+
+  async findById(id: string) {
+    return this.prisma.postcard.findUnique({ where: { id } });
+  }
 }

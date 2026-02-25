@@ -25,4 +25,12 @@ export const postcardRoutes: FastifyPluginAsync = async (app) => {
     const created = await service.create(request.body);
     return reply.code(201).send(created);
   });
+
+  app.delete('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { userId } = request.query as { userId: string };
+    if (!userId) throw new Error('缺少 userId');
+    await service.delete(id, userId);
+    return reply.code(204).send();
+  });
 };

@@ -37,4 +37,13 @@ export class PostcardService {
   getCredits(userId: string) {
     return this.repository.getCredits(userId);
   }
+
+  async delete(id: string, userId: string) {
+    const postcard = await this.repository.findById(id);
+    if (!postcard) throw new Error('感谢卡不存在');
+    if (postcard.fromId !== userId && postcard.toId !== userId) {
+      throw new Error('无权删除此感谢卡');
+    }
+    return this.repository.delete(id);
+  }
 }

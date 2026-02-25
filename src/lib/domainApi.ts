@@ -411,6 +411,12 @@ export async function sendPostcard(payload: {
   });
 }
 
+export async function deletePostcard(id: string, userId: string) {
+  return requestJson<void>(`/api/postcards/${id}${toQueryString({ userId })}`, {
+    method: 'DELETE',
+  });
+}
+
 /* ═══════════════════════════════════════════════════════════════
    About / Announcements API
    ═══════════════════════════════════════════════════════════════ */

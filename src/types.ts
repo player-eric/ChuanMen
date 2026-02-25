@@ -299,7 +299,7 @@ export interface DiscoverPageData {
 }
 
 export interface CardsPageData {
-  people: { name: string; ctx: string; badge?: string }[];
+  people: { id?: string; name: string; ctx: string; badge?: string }[];
   quickMessages: string[];
   myCards: CardReceived[];
   sentCards: CardReceived[];

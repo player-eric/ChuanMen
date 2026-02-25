@@ -9,6 +9,7 @@ import FavoriteRounded from '@mui/icons-material/FavoriteRounded';
 import ChatBubbleOutlineRounded from '@mui/icons-material/ChatBubbleOutlineRounded';
 import { Ava, AvaStack, Card } from './Atoms';
 import { Poster } from './Poster';
+import ConfirmDialog from './ConfirmDialog';
 
 /** Extract event ID from navTarget like '/events/xxx' */
 function extractEventId(navTarget?: string): string | undefined {
@@ -223,6 +224,7 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
@@ -239,14 +241,22 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
       if (goNav) goNav();
       return;
     }
+    if (joined) {
+      setCancelOpen(true);
+      return;
+    }
     try {
-      if (joined) {
-        await cancelSignup(eventId, user.id);
-        setJoined(false);
-      } else {
-        await signupEvent(eventId, user.id);
-        setJoined(true);
-      }
+      await signupEvent(eventId, user.id);
+      setJoined(true);
+    } catch { /* ignore */ }
+  };
+
+  const confirmCancel = async () => {
+    setCancelOpen(false);
+    if (!eventId || !user?.id) return;
+    try {
+      await cancelSignup(eventId, user.id);
+      setJoined(false);
     } catch { /* ignore */ }
   };
 
@@ -300,6 +310,16 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
       </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} {...extractEntity(navTarget)} />
+      <ConfirmDialog
+        open={cancelOpen}
+        title="取消报名"
+        message="确定要取消报名这个活动吗？"
+        confirmLabel="取消报名"
+        cancelLabel="再想想"
+        confirmColor="error"
+        onConfirm={confirmCancel}
+        onCancel={() => setCancelOpen(false)}
+      />
     </Card>
   );
 }
@@ -590,6 +610,7 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const eventId = extractEventId(navTarget);
@@ -601,9 +622,19 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
   const handleSignup = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!eventId || !user?.id) { if (goNav) goNav(); return; }
+    if (joined) { setCancelOpen(true); return; }
     try {
-      if (joined) { await cancelSignup(eventId, user.id); setJoined(false); }
-      else { await signupEvent(eventId, user.id); setJoined(true); }
+      await signupEvent(eventId, user.id);
+      setJoined(true);
+    } catch { /* ignore */ }
+  };
+
+  const confirmCancel = async () => {
+    setCancelOpen(false);
+    if (!eventId || !user?.id) return;
+    try {
+      await cancelSignup(eventId, user.id);
+      setJoined(false);
     } catch { /* ignore */ }
   };
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
@@ -661,6 +692,16 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
         </button>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} {...extractEntity(navTarget)} />
+      <ConfirmDialog
+        open={cancelOpen}
+        title="取消报名"
+        message="确定要取消报名这个小聚吗？"
+        confirmLabel="取消报名"
+        cancelLabel="再想想"
+        confirmColor="error"
+        onConfirm={confirmCancel}
+        onCancel={() => setCancelOpen(false)}
+      />
     </Card>
   );
 }
@@ -676,6 +717,7 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
@@ -688,9 +730,19 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
   const handleSignup = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!eventId || !user?.id) { if (goNav) goNav(); return; }
+    if (joined) { setCancelOpen(true); return; }
     try {
-      if (joined) { await cancelSignup(eventId, user.id); setJoined(false); }
-      else { await signupEvent(eventId, user.id); setJoined(true); }
+      await signupEvent(eventId, user.id);
+      setJoined(true);
+    } catch { /* ignore */ }
+  };
+
+  const confirmCancel = async () => {
+    setCancelOpen(false);
+    if (!eventId || !user?.id) return;
+    try {
+      await cancelSignup(eventId, user.id);
+      setJoined(false);
     } catch { /* ignore */ }
   };
 
@@ -740,6 +792,16 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
         </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact {...extractEntity(navTarget)} />
+      <ConfirmDialog
+        open={cancelOpen}
+        title="取消报名"
+        message="确定要取消报名这个小聚吗？"
+        confirmLabel="取消报名"
+        cancelLabel="再想想"
+        confirmColor="error"
+        onConfirm={confirmCancel}
+        onCancel={() => setCancelOpen(false)}
+      />
     </div>
   );
 }
