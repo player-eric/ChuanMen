@@ -8,6 +8,7 @@ export class UserRepository {
       orderBy: { createdAt: 'desc' },
       include: {
         preferences: true,
+        socialTitles: true,
       },
     });
   }

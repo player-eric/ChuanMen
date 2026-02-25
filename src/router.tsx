@@ -171,6 +171,31 @@ async function feedLoader() {
   }
 }
 
+function mapApiEvent(e: any): any {
+  const signups = e.signups ?? [];
+  const people = signups.map((s: any) => s.user?.name ?? s.userName ?? '?');
+  const hostName = typeof e.host === 'string' ? e.host : e.host?.name ?? '?';
+  return {
+    id: e.id,
+    title: e.title ?? '',
+    host: hostName,
+    date: e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }) : '',
+    endDate: e.endsAt ? new Date(e.endsAt).toLocaleDateString('zh-CN') : undefined,
+    location: e.location ?? '',
+    isHomeEvent: e.isHomeEvent ?? false,
+    scene: e.titleImageUrl || e.scene || '',
+    film: e.selectedMovie?.title ?? e.film ?? undefined,
+    spots: Math.max(0, (e.capacity ?? 0) - people.length),
+    total: e.capacity ?? 0,
+    people,
+    phase: e.phase ?? 'open',
+    desc: e.description ?? '',
+    houseRules: e.houseRules || undefined,
+    photoCount: e.recapPhotoUrls?.length || undefined,
+    tags: e.tags ?? [],
+  };
+}
+
 async function eventsLoader() {
   try {
     const [events, proposals, past] = await Promise.all([
@@ -178,7 +203,28 @@ async function eventsLoader() {
       fetchProposalsApi(),
       fetchPastEventsApi(),
     ]);
-    return { upcoming: events, proposals, past };
+    return {
+      upcoming: (events ?? []).map(mapApiEvent),
+      proposals: (proposals ?? []).map((p: any) => ({
+        id: p.id,
+        name: p.author?.name ?? p.name ?? '?',
+        title: p.title ?? '',
+        description: p.description ?? '',
+        votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
+        interested: Array.isArray(p.votes) ? p.votes.map((v: any) => v.user?.name ?? '?') : p.interested ?? [],
+        time: p.createdAt ? timeAgo(new Date(p.createdAt)) : p.time ?? '',
+      })),
+      past: (past ?? []).map((e: any) => ({
+        id: e.id,
+        title: e.title ?? '',
+        host: typeof e.host === 'string' ? e.host : e.host?.name ?? '?',
+        date: e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }) : '',
+        people: e._count?.signups ?? e.people ?? 0,
+        scene: e.titleImageUrl || e.scene || '',
+        film: e.selectedMovie?.title ?? e.film ?? undefined,
+        photoCount: e.recapPhotoUrls?.length || undefined,
+      })),
+    };
   } catch {
     return { upcoming: [], proposals: [], past: [] };
   }
@@ -188,7 +234,20 @@ async function eventDetailLoader({ params }: { params: Record<string, string | u
   const id = params.eventId;
   if (!id) return null;
   try {
-    return await getEventById(id);
+    const raw = await getEventById(id);
+    if (!raw) return null;
+    const base = mapApiEvent(raw);
+    // Detail-specific fields
+    base.desc = raw.description ?? '';
+    base.comments = [];
+    base.tasks = [];
+    base.nominations = [];
+    base.photos = (raw.recapPhotoUrls ?? []).map((url: string, i: number) => ({
+      id: `${raw.id}-${i}`,
+      url,
+      caption: '',
+    }));
+    return base;
   } catch {
     return null;
   }
@@ -245,12 +304,39 @@ function getStoredUserId(): string {
   }
 }
 
+function mapApiCard(c: any): any {
+  return {
+    id: c.id,
+    from: typeof c.from === 'string' ? c.from : c.from?.name ?? '?',
+    to: typeof c.to === 'string' ? c.to : c.to?.name ?? '?',
+    message: c.message ?? '',
+    stamp: c.tags?.[0]?.value ?? c.stamp ?? '',
+    date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('zh-CN') : '',
+    photo: c.photoUrl ?? c.photo ?? undefined,
+    visibility: c.visibility ?? 'public',
+    tags: (c.tags ?? []).map((t: any) => typeof t === 'string' ? t : t.value ?? ''),
+  };
+}
+
 async function cardsLoader() {
   const userId = getStoredUserId();
   if (!userId) return { myCards: [], sentCards: [], credits: 0, people: [], quickMessages: [] };
   try {
-    const data = await fetchPostcardsApi(userId);
-    return { myCards: data.received ?? [], sentCards: data.sent ?? [], credits: data.credits ?? 0, people: [], quickMessages: [] };
+    const [data, members] = await Promise.all([
+      fetchPostcardsApi(userId),
+      fetchMembersApi().catch(() => []),
+    ]);
+    const people = (members ?? []).map((m: any) => ({
+      name: typeof m === 'string' ? m : m.name ?? '?',
+      ctx: '',
+    }));
+    return {
+      myCards: (data.received ?? []).map(mapApiCard),
+      sentCards: (data.sent ?? []).map(mapApiCard),
+      credits: data.credits ?? 0,
+      people,
+      quickMessages: ['谢谢你的热情招待！🏠', '和你聊天超开心 😊', '下次一起看电影吧 🎬', '好久不见，想你了 💌'],
+    };
   } catch {
     return { myCards: [], sentCards: [], credits: 0, people: [], quickMessages: [] };
   }
@@ -266,9 +352,31 @@ async function profileLoader() {
   }
 }
 
+function mapApiMember(m: any) {
+  const raw = m.mutual ?? {};
+  return {
+    ...m,
+    titles: Array.isArray(m.titles)
+      ? m.titles
+      : Array.isArray(m.socialTitles)
+        ? m.socialTitles.map((t: any) => (typeof t === 'string' ? t : t.value))
+        : [],
+    host: m.host ?? m.hostCount ?? 0,
+    mutual: {
+      evtCount: raw.evtCount ?? 0,
+      cards: raw.cards ?? raw.cardCount ?? 0,
+      movies: Array.isArray(raw.movies) ? raw.movies : [],
+      events: Array.isArray(raw.events) ? raw.events : [],
+      movieCount: raw.movieCount ?? 0,
+    },
+    role: m.role ?? 'member',
+  };
+}
+
 async function membersLoader() {
   try {
-    const members = await fetchMembersApi();
+    const raw = await fetchMembersApi() as any[];
+    const members = raw.map(mapApiMember);
     return { members };
   } catch {
     return { members: [] };
@@ -282,8 +390,8 @@ async function memberDetailLoader({ params }: { params: Record<string, string | 
   // For now, fetch all members and filter (we could add a search endpoint later)
   try {
     const members = await fetchMembersApi() as any[];
-    const member = members.find((m: any) => m.name === name);
-    return member ? { member } : null;
+    const raw = members.find((m: any) => m.name === name);
+    return raw ? { member: mapApiMember(raw) } : null;
   } catch {
     return null;
   }

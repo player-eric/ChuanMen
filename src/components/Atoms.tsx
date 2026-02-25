@@ -12,7 +12,8 @@ interface AvaProps {
   onTap?: () => void;
 }
 
-export function Ava({ name, src, size = 28, border, badge, onTap }: AvaProps) {
+export function Ava({ name: rawName, src, size = 28, border, badge, onTap }: AvaProps) {
+  const name = typeof rawName === 'string' ? rawName : String(rawName ?? '?');
   const c = useColors();
   return (
     <div style={{ position: 'relative', flexShrink: 0, cursor: onTap ? 'pointer' : undefined }} onClick={onTap}>

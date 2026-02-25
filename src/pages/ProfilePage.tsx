@@ -38,12 +38,12 @@ const sceneEmoji: Record<string, string> = {
 };
 
 export default function ProfilePage() {
-  const data = useLoaderData() as ProfilePageData | null;
+  const raw = useLoaderData() as any;
   const { user } = useAuth();
   const navigate = useNavigate();
   const c = useColors();
 
-  if (!data) {
+  if (!raw) {
     return (
       <Stack spacing={2} alignItems="center" sx={{ py: 8, textAlign: 'center' }}>
         <Typography variant="h6" fontWeight={700}>无法加载个人页面</Typography>
@@ -52,6 +52,39 @@ export default function ProfilePage() {
       </Stack>
     );
   }
+
+  // Map API shape → ProfilePageData
+  const data: ProfilePageData = {
+    titles: raw.user?.titles ?? raw.titles ?? [],
+    role: raw.user?.role ?? raw.role ?? '',
+    participationStats: raw.stats ?? raw.participationStats ?? { eventCount: 0, hostCount: 0, movieCount: 0, screenedCount: 0, proposalCount: 0, voteCount: 0 },
+    contribution: raw.stats ?? raw.contribution ?? { hostCount: 0, eventCount: 0, movieCount: 0, cardsSent: 0, cardsReceived: 0 },
+    myMovies: raw.recentMovies ?? raw.myMovies ?? [],
+    votedMovies: raw.votedMovies ?? [],
+    upcomingEvents: raw.upcomingEvents ?? [],
+    myEvents: raw.pastEvents ?? raw.myEvents ?? [],
+    recentCards: (raw.postcardsReceived ?? raw.recentCards ?? []).map((c: any) => ({
+      ...c,
+      from: typeof c.from === 'object' ? c.from?.name ?? '' : c.from ?? '',
+      to: typeof c.to === 'object' ? c.to?.name ?? '' : c.to ?? '',
+      date: c.date ?? (c.createdAt ? new Date(c.createdAt).toLocaleDateString('zh-CN') : ''),
+      photo: c.photo ?? c.photoUrl ?? '',
+      stamp: c.stamp ?? (c.tags?.map((t: any) => typeof t === 'string' ? t : t.value).join(', ') ?? ''),
+    })),
+    sentCards: (raw.postcardsSent ?? raw.sentCards ?? []).map((c: any) => ({
+      ...c,
+      from: typeof c.from === 'object' ? c.from?.name ?? '' : c.from ?? '',
+      to: typeof c.to === 'object' ? c.to?.name ?? '' : c.to ?? '',
+      date: c.date ?? (c.createdAt ? new Date(c.createdAt).toLocaleDateString('zh-CN') : ''),
+      photo: c.photo ?? c.photoUrl ?? '',
+      stamp: c.stamp ?? (c.tags?.map((t: any) => typeof t === 'string' ? t : t.value).join(', ') ?? ''),
+    })),
+    galleryPhotos: raw.galleryPhotos ?? [],
+    timeline: raw.timeline ?? [],
+    mostSharedWith: raw.mostSharedWith ?? null,
+    closestTaste: raw.closestTaste ?? null,
+    recentClosest: raw.recentClosest ?? null,
+  };
 
   const [tab, setTab] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState(-1);

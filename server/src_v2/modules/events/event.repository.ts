@@ -13,6 +13,12 @@ export class EventRepository {
             user: true,
           },
         },
+        signups: {
+          where: { status: 'accepted' },
+          include: { user: { select: { id: true, name: true, avatar: true } } },
+        },
+        selectedMovie: { select: { title: true } },
+        _count: { select: { signups: true } },
       },
     });
   }

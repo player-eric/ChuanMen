@@ -32,13 +32,13 @@ interface InteractionProps {
 }
 
 /* ═══ FeedActions (shared like + comment bar) ═══ */
-export function FeedActions({ likes, likedBy, comments, compact, newComments }: InteractionProps & { compact?: boolean; newComments?: number }) {
+export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, newComments }: InteractionProps & { compact?: boolean; newComments?: number }) {
   const c = useColors();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [liked, setLiked] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [localComments, setLocalComments] = useState(comments);
+  const [localComments, setLocalComments] = useState(comments ?? []);
   const [input, setInput] = useState('');
 
   const likeCount = likes + (liked ? 1 : 0);
