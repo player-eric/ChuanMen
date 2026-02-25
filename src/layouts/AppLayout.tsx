@@ -236,7 +236,10 @@ export default function AppLayout() {
           }}
         >
           <Toolbar>
-            <Typography variant="h6" sx={{ cursor: 'pointer' }} onClick={() => navigate('/')}>串门儿</Typography>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
+              <img src="/logo.png" alt="" style={{ height: 28, width: 'auto' }} />
+              <Typography variant="h6">串门儿</Typography>
+            </Stack>
           </Toolbar>
           <Box sx={{ px: 1 }}>
             {visibleTabs.length > 0 && (
@@ -302,6 +305,9 @@ export default function AppLayout() {
                     <MenuRoundedIcon />
                   </IconButton>
                 )
+              )}
+              {!isDesktop && pathname === '/' && (
+                <img src="/logo.png" alt="" style={{ height: 24, width: 'auto', marginRight: 4 }} />
               )}
               <Typography
                 variant="h6"

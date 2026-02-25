@@ -69,7 +69,10 @@ export default function LoginPage() {
             autoComplete="on"
           >
             <Box>
-              <Typography variant="h5" fontWeight={700}>登录串门儿</Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <img src="/logo.png" alt="" style={{ height: 32, width: 'auto' }} />
+                <Typography variant="h5" fontWeight={700}>登录串门儿</Typography>
+              </Stack>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 输入注册邮箱即可登录。
               </Typography>
