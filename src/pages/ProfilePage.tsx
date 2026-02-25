@@ -62,8 +62,24 @@ export default function ProfilePage() {
     contribution: raw.stats ?? raw.contribution ?? { hostCount: 0, eventCount: 0, movieCount: 0, cardsSent: 0, cardsReceived: 0 },
     myMovies: raw.recentMovies ?? raw.myMovies ?? [],
     votedMovies: raw.votedMovies ?? [],
-    upcomingEvents: raw.upcomingEvents ?? [],
-    myEvents: raw.pastEvents ?? raw.myEvents ?? [],
+    upcomingEvents: (raw.upcomingEvents ?? []).map((e: any) => ({
+      id: e.id,
+      title: e.title ?? '',
+      date: e.startsAt
+        ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })
+        : e.date ?? '',
+      scene: e.tags?.[0] ?? e.scene ?? '',
+      role: e.hostId === user?.id ? 'Host' : e.role,
+    })),
+    myEvents: (raw.pastEvents ?? raw.myEvents ?? []).map((e: any) => ({
+      id: e.id,
+      title: e.title ?? '',
+      date: e.startsAt
+        ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })
+        : e.date ?? '',
+      scene: e.tags?.[0] ?? e.scene ?? '',
+      role: e.hostId === user?.id ? 'Host' : e.role,
+    })),
     recentCards: (raw.postcardsReceived ?? raw.recentCards ?? []).map((c: any) => ({
       ...c,
       from: typeof c.from === 'object' ? c.from?.name ?? '' : c.from ?? '',
@@ -88,6 +104,7 @@ export default function ProfilePage() {
   };
 
   const [tab, setTab] = useState(0);
+  const [eventFilter, setEventFilter] = useState<'all' | 'host'>('all');
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [timelineExpanded, setTimelineExpanded] = useState(false);
@@ -191,19 +208,35 @@ export default function ProfilePage() {
             sx={{ mb: 1.5 }}
           >
             {[
-              { value: data.participationStats.eventCount, label: '场活动' },
-              { value: data.participationStats.hostCount, label: '次Host' },
-              { value: data.participationStats.movieCount, label: '部电影' },
-            ].map((stat) => (
-              <Box key={stat.label} sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" fontWeight={700} color="text.primary">
-                  {stat.value}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {stat.label}
-                </Typography>
-              </Box>
-            ))}
+              { value: data.participationStats.eventCount, label: '场活动', action: () => { setTab(0); setEventFilter('all'); } },
+              { value: data.participationStats.hostCount, label: '次Host', action: () => { setTab(0); setEventFilter('host'); } },
+              { value: data.participationStats.movieCount, label: '部电影', action: () => { setTab(1); } },
+            ].map((stat) => {
+              const active =
+                (stat.label === '场活动' && tab === 0 && eventFilter === 'all') ||
+                (stat.label === '次Host' && tab === 0 && eventFilter === 'host') ||
+                (stat.label === '部电影' && tab === 1);
+              return (
+                <Box
+                  key={stat.label}
+                  onClick={stat.action}
+                  sx={{
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    px: 1.5,
+                    py: 0.5,
+                    '&:hover .kpi-value': { color: c.warm },
+                  }}
+                >
+                  <Typography className="kpi-value" variant="h5" fontWeight={700} sx={{ color: active ? c.warm : 'text.primary', transition: 'color 0.2s' }}>
+                    {stat.value}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {stat.label}
+                  </Typography>
+                </Box>
+              );
+            })}
           </Stack>
 
           {/* Social Connections */}
@@ -295,7 +328,15 @@ export default function ProfilePage() {
       </Box>
 
       {/* ══════ Tab 0: 活动记忆 ══════ */}
-      {tab === 0 && (
+      {tab === 0 && (() => {
+        const filteredUpcoming = eventFilter === 'host'
+          ? data.upcomingEvents.filter((e) => e.role === 'Host')
+          : data.upcomingEvents;
+        const filteredPast = eventFilter === 'host'
+          ? data.myEvents.filter((e) => e.role === 'Host')
+          : data.myEvents;
+
+        return (
         <Stack spacing={2}>
           {data.upcomingEvents.length === 0 && allGalleryPhotos.length === 0 && data.myEvents.length === 0 && data.timeline.length === 0 && (
             <EmptyState
@@ -305,34 +346,45 @@ export default function ProfilePage() {
             />
           )}
 
+          {/* Filter chip */}
+          {eventFilter === 'host' && (
+            <Chip
+              label="只看我Host的"
+              onDelete={() => setEventFilter('all')}
+              color="warning"
+              size="small"
+              sx={{ alignSelf: 'flex-start' }}
+            />
+          )}
+
           {/* Upcoming Events — pinned to top */}
-          {data.upcomingEvents.length > 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-                  📅 即将参加
-                </Typography>
-                <Stack spacing={1}>
-                  {data.upcomingEvents.map((event) => (
-                    <CardActionArea
-                      key={event.id}
-                      onClick={() => navigate(`/events/${event.id}`)}
-                      sx={{ borderRadius: 2 }}
-                    >
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1 }}>
-                        <Box sx={{ minWidth: 0 }}>
-                          <Typography variant="body2" noWrap>
-                            {sceneEmoji[event.scene] ?? '📅'} {event.title}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">{event.date}</Typography>
-                        </Box>
-                        {event.role && <Chip size="small" color="warning" label={`🏠 ${event.role}`} />}
-                      </Stack>
-                    </CardActionArea>
-                  ))}
-                </Stack>
-              </CardContent>
-            </Card>
+          {filteredUpcoming.length > 0 && (
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                📅 即将参加
+              </Typography>
+              <Grid container spacing={1.5}>
+                {filteredUpcoming.map((event) => (
+                  <Grid key={event.id} size={{ xs: 12, sm: 6 }}>
+                    <Card variant="outlined">
+                      <CardActionArea onClick={() => navigate(`/events/${event.id}`)}>
+                        <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography variant="body2" fontWeight={600} noWrap>
+                                {sceneEmoji[event.scene] ?? '📅'} {event.title}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">{event.date}</Typography>
+                            </Box>
+                            {event.role === 'Host' && <Chip size="small" color="warning" label="🏠 Host" />}
+                          </Stack>
+                        </CardContent>
+                      </CardActionArea>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
           )}
 
           {/* Photo Gallery */}
@@ -408,38 +460,38 @@ export default function ProfilePage() {
           )}
 
           {/* Past Events */}
-          {data.myEvents.length > 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-                  📅 参加过的活动
-                </Typography>
-                <Stack spacing={1}>
-                  {data.myEvents.slice(0, 8).map((event) => (
-                    <CardActionArea
-                      key={event.id}
-                      onClick={() => navigate(`/events/${event.id}`)}
-                      sx={{ borderRadius: 2 }}
-                    >
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1 }}>
-                        <Box sx={{ minWidth: 0 }}>
-                          <Typography variant="body2" noWrap>
-                            {sceneEmoji[event.scene] ?? '📅'} {event.title}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">{event.date}</Typography>
-                        </Box>
-                        {event.role && <Chip size="small" color="warning" label={`🏠 ${event.role}`} />}
-                      </Stack>
-                    </CardActionArea>
-                  ))}
-                </Stack>
-                {data.myEvents.length > 8 && (
-                  <Button size="small" sx={{ mt: 1 }} onClick={() => navigate('/events')}>
-                    查看全部 →
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+          {filteredPast.length > 0 && (
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                📅 参加过的活动
+              </Typography>
+              <Grid container spacing={1.5}>
+                {filteredPast.slice(0, 8).map((event) => (
+                  <Grid key={event.id} size={{ xs: 12, sm: 6 }}>
+                    <Card variant="outlined">
+                      <CardActionArea onClick={() => navigate(`/events/${event.id}`)}>
+                        <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography variant="body2" fontWeight={600} noWrap>
+                                {sceneEmoji[event.scene] ?? '📅'} {event.title}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">{event.date}</Typography>
+                            </Box>
+                            {event.role === 'Host' && <Chip size="small" color="warning" label="🏠 Host" />}
+                          </Stack>
+                        </CardContent>
+                      </CardActionArea>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+              {filteredPast.length > 8 && (
+                <Button size="small" sx={{ mt: 1 }} onClick={() => navigate('/events')}>
+                  查看全部 →
+                </Button>
+              )}
+            </Box>
           )}
 
           {/* Timeline */}
@@ -498,7 +550,8 @@ export default function ProfilePage() {
             </Card>
           )}
         </Stack>
-      )}
+        );
+      })()}
 
       {/* ══════ Tab 1: 电影 ══════ */}
       {tab === 1 && (
