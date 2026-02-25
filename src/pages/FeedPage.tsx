@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import type { FeedPageData, FeedItem } from '@/types';
+import QuickActionDialog from '@/components/QuickActionDialog';
 import {
   FeedTime,
   FeedActivity,
@@ -92,6 +93,7 @@ function FullFeed() {
   const { items } = useLoaderData() as FeedPageData;
   const [snackMsg, setSnackMsg] = useState('');
   const [visible, setVisible] = useState(PAGE_SIZE);
+  const [quickOpen, setQuickOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const hasMore = visible < items.length;
@@ -173,8 +175,12 @@ function FullFeed() {
       )}
 
       <Stack spacing={1} sx={{ position: 'fixed', right: { xs: 16, md: 32 }, bottom: { xs: 84, md: 24 }, alignItems: 'stretch' }}>
-        <Button variant="contained" size="small" onClick={() => navigate('/events/new')} disabled={!canInteract}
+        <Button variant="contained" size="small" onClick={() => setQuickOpen(true)} disabled={!canInteract}
           sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start' }}>
+          ✏️ 写点什么
+        </Button>
+        <Button variant="outlined" size="small" onClick={() => navigate('/events/new')} disabled={!canInteract}
+          sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start', bgcolor: 'background.paper' }}>
           + 发起活动
         </Button>
         <Button variant="outlined" size="small" onClick={() => navigate('/events/proposals/new')} disabled={!canInteract}
@@ -190,6 +196,8 @@ function FullFeed() {
           👍 推荐电影
         </Button>
       </Stack>
+
+      <QuickActionDialog open={quickOpen} onClose={() => setQuickOpen(false)} />
 
       <Snackbar
         open={Boolean(snackMsg)}

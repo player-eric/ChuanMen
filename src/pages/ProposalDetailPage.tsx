@@ -32,6 +32,7 @@ export default function ProposalDetailPage() {
 
   const isAuthor = user?.name === raw.name;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+  const interestedList = raw.interested ?? [];
 
   return (
     <Box sx={{ maxWidth: 680, mx: 'auto' }}>
@@ -104,14 +105,14 @@ export default function ProposalDetailPage() {
         <Card>
           <CardContent>
             <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
-              感兴趣的人 ({raw.interested.length + (interested ? 1 : 0)})
+              感兴趣的人 ({interestedList.length + (interested ? 1 : 0)})
             </Typography>
 
-            {raw.interested.length > 0 && (
+            {interestedList.length > 0 && (
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
-                <AvaStack names={raw.interested} size={28} />
+                <AvaStack names={interestedList} size={28} />
                 <Typography variant="body2" color="text.secondary">
-                  {raw.interested.slice(0, 3).join('、')}{raw.interested.length > 3 ? ` 等 ${raw.interested.length} 人` : ''}
+                  {interestedList.slice(0, 3).join('、')}{interestedList.length > 3 ? ` 等 ${interestedList.length} 人` : ''}
                 </Typography>
               </Stack>
             )}
