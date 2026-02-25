@@ -83,6 +83,7 @@ function buildFeedItems(data: any): any[] {
       location: e.location ?? '',
       spots: (e.capacity ?? 8) - (e.signups?.length ?? 0),
       people: (e.signups ?? []).map((s: any) => s.user?.name).filter(Boolean),
+      signupUserIds: (e.signups ?? []).map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
       film: e.selectedMovie?.title,
       scene: eventTagToScene[e.tags?.[0]] ?? e.tags?.[0] ?? '',
       navTarget: `/events/${e.id}`,

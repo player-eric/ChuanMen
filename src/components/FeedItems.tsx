@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/auth/AuthContext';
@@ -184,11 +184,11 @@ export function FeedTime({ label }: { label: string }) {
 /* ═══ FeedActivity ═══ */
 interface FeedActivityProps extends InteractionProps {
   name: string; title: string; date: string; location: string;
-  spots: number; people: string[]; film?: string; scene?: string;
+  spots: number; people: string[]; signupUserIds?: string[]; film?: string; scene?: string;
   navTarget?: string;
 }
 
-export function FeedActivity({ name, title, date, location, spots, people, film, scene, navTarget, likes, likedBy, comments, newComments }: FeedActivityProps) {
+export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(false);
@@ -197,10 +197,15 @@ export function FeedActivity({ name, title, date, location, spots, people, film,
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const eventId = extractEventId(navTarget);
 
-  const handleSignup = async () => {
+  // Sync signup state from DB data
+  useEffect(() => {
+    if (user?.id && signupUserIds?.includes(user.id)) setJoined(true);
+  }, [user, signupUserIds]);
+
+  const handleSignup = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (joined) return;
     if (!eventId || !user?.id) {
-      // Navigate to detail page if we can't sign up directly
       if (goNav) goNav();
       return;
     }
@@ -212,8 +217,8 @@ export function FeedActivity({ name, title, date, location, spots, people, film,
 
   return (
     <Card>
+      <div onClick={goNav} style={{ cursor: goNav ? 'pointer' : 'default' }}>
       {scene && (
-        <div onClick={goNav} style={{ cursor: goNav ? 'pointer' : 'default' }}>
           <ScenePhoto scene={scene} h={90}>
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', background: `linear-gradient(transparent, ${c.s1})` }} />
             <div style={{ position: 'absolute', top: 8, right: 10 }}>
@@ -221,17 +226,16 @@ export function FeedActivity({ name, title, date, location, spots, people, film,
             </div>
             {film && <div style={{ position: 'absolute', bottom: 8, left: 10 }}><Poster title={film} w={32} h={44} /></div>}
           </ScenePhoto>
-        </div>
       )}
       <div style={{ padding: 14 }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <Ava name={name} size={32} badge="🏠" onTap={() => goMember(name)} />
+          <span onClick={(e) => { e.stopPropagation(); goMember(name); }}><Ava name={name} size={32} badge="🏠" /></span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 发起了活动</div>
+            <div style={{ fontSize: 14 }}><b onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</b> 发起了活动</div>
             <div style={{ fontSize: 12, color: c.text3 }}>2 小时前</div>
           </div>
         </div>
-        <div onClick={goNav} style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, cursor: goNav ? 'pointer' : 'default' }}>{title}</div>
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{title}</div>
         {!scene && <div style={{ fontSize: 13, color: c.text2, marginBottom: 8 }}>{date} · {location}</div>}
         {scene && <div style={{ fontSize: 13, color: c.text2, marginBottom: 8 }}>{location}</div>}
         {!scene && film && (
@@ -258,6 +262,7 @@ export function FeedActivity({ name, title, date, location, spots, people, film,
         >
           {joined ? '✓ 已报名' : '报名参加'}
         </button>
+      </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} />
     </Card>
@@ -542,11 +547,11 @@ export function FeedBook({ name, title, year, author, votes: initV, likes, liked
 /* ═══ FeedSmallGroup ═══ */
 interface FeedSmallGroupProps extends InteractionProps {
   name: string; title: string; date: string; location: string;
-  weekNumber: number; people: string[]; capacity: number;
+  weekNumber: number; people: string[]; signupUserIds?: string[]; capacity: number;
   description?: string; isHome?: boolean; isPrivate?: boolean; navTarget?: string;
 }
 
-export function FeedSmallGroup({ name, title, date, location, weekNumber, people, capacity, isPrivate, navTarget, likes, likedBy, comments, newComments }: FeedSmallGroupProps) {
+export function FeedSmallGroup({ name, title, date, location, weekNumber, people, signupUserIds, capacity, isPrivate, navTarget, likes, likedBy, comments, newComments }: FeedSmallGroupProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(false);
@@ -554,7 +559,12 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const eventId = extractEventId(navTarget);
 
-  const handleSignup = async () => {
+  useEffect(() => {
+    if (user?.id && signupUserIds?.includes(user.id)) setJoined(true);
+  }, [user, signupUserIds]);
+
+  const handleSignup = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (joined) return;
     if (!eventId || !user?.id) { if (goNav) goNav(); return; }
     try { await signupEvent(eventId, user.id); setJoined(true); } catch { /* ignore */ }
@@ -580,11 +590,11 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
 
   return (
     <Card>
-      <div style={{ padding: 14 }}>
+      <div onClick={goNav} style={{ cursor: goNav ? 'pointer' : 'default', padding: 14 }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <Ava name={name} size={32} badge="🎲" onTap={() => goMember(name)} />
+          <span onClick={(e) => { e.stopPropagation(); goMember(name); }}><Ava name={name} size={32} badge="🎲" /></span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 发起了小聚</div>
+            <div style={{ fontSize: 14 }}><b onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</b> 发起了小聚</div>
             <div style={{ fontSize: 12, color: c.text3 }}>Host · {date}</div>
           </div>
           <div style={{
@@ -594,7 +604,7 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
             🎲 第 {weekNumber} 期
           </div>
         </div>
-        <div onClick={goNav} style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, cursor: goNav ? 'pointer' : 'default' }}>{title}</div>
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{title}</div>
         <div style={{ fontSize: 13, color: c.text2, marginBottom: 8 }}>📍 {location}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <AvaStack names={people} />
@@ -621,11 +631,11 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
 /* ═══ FeedCompactSmallGroup ═══ */
 interface FeedCompactSmallGroupProps extends InteractionProps {
   name: string; title: string; date: string; location: string;
-  weekNumber: number; people: string[]; capacity: number;
+  weekNumber: number; people: string[]; signupUserIds?: string[]; capacity: number;
   time: string; isPrivate?: boolean; navTarget?: string;
 }
 
-export function FeedCompactSmallGroup({ name, title, date, location, weekNumber, people, capacity, time, isPrivate, navTarget, likes, likedBy, comments, newComments }: FeedCompactSmallGroupProps) {
+export function FeedCompactSmallGroup({ name, title, date, location, weekNumber, people, signupUserIds, capacity, time, isPrivate, navTarget, likes, likedBy, comments, newComments }: FeedCompactSmallGroupProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(false);
@@ -634,7 +644,12 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const eventId = extractEventId(navTarget);
 
-  const handleSignup = async () => {
+  useEffect(() => {
+    if (user?.id && signupUserIds?.includes(user.id)) setJoined(true);
+  }, [user, signupUserIds]);
+
+  const handleSignup = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (joined) return;
     if (!eventId || !user?.id) { if (goNav) goNav(); return; }
     try { await signupEvent(eventId, user.id); setJoined(true); } catch { /* ignore */ }
@@ -673,7 +688,7 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
             <AvaStack names={people} size={16} />
           </div>
           <button
-            onClick={(e) => { e.stopPropagation(); handleSignup(); }}
+            onClick={handleSignup}
             style={{
               padding: '3px 10px', borderRadius: 5,
               background: joined ? c.warm + '15' : c.s2,
