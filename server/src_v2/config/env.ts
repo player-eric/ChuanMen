@@ -19,7 +19,7 @@ const envSchema = z.object({
   APP_ENV: z.enum(['local', 'dev', 'prod']).default('local'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
-  FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),
+  FRONTEND_ORIGIN: z.string().default('http://localhost:3000'),
   TRUST_PROXY: z
     .string()
     .optional()

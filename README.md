@@ -127,7 +127,7 @@ npm run system:test:down
 npm run dev
 ```
 
-访问：`http://localhost:5173`
+访问：`http://localhost:3000`
 
 说明：Vite 已配置 `/api -> http://localhost:4000` 代理。
 

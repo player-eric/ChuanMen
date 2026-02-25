@@ -9,7 +9,7 @@ import { fork } from 'node:child_process';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isProd = process.env.NODE_ENV === 'production';
-const defaultPort = isProd ? 4173 : 5173;
+const defaultPort = isProd ? 4173 : 3000;
 const port = Number(process.env.PORT ?? defaultPort);
 const API_INTERNAL_PORT = 4000;
 const apiTarget = process.env.API_TARGET ?? `http://localhost:${API_INTERNAL_PORT}`;
