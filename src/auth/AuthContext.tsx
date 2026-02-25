@@ -30,6 +30,7 @@ export const WALKTHROUGH_USER: AuthUser = {
 interface AuthContextValue {
   user: AuthUser | null;
   isRegistered: boolean;
+  hydrated: boolean;
   setUser: (user: AuthUser | null, options?: { remember?: boolean }) => void;
 }
 
@@ -47,6 +48,10 @@ function readStoredUser(): AuthUser | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(() => readStoredUser());
+  const [hydrated, setHydrated] = useState(false);
+
+  // Mark as hydrated once client-side code runs
+  useEffect(() => { setHydrated(true); }, []);
 
   // Resolve walkthrough / stored user against real DB to get correct id
   useEffect(() => {
@@ -96,9 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       isRegistered: Boolean(user),
+      hydrated,
       setUser,
     }),
-    [user],
+    [user, hydrated],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

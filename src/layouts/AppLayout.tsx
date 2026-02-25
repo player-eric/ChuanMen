@@ -88,7 +88,6 @@ function getTitle(pathname: string): string {
 }
 
 function getBackTarget(pathname: string): string | null {
-  if (pathname === '/about') return '/';
   if (pathname.startsWith('/about/')) return '/about';
   if (pathname === '/members') return '/';
   if (pathname.startsWith('/members/')) return null;
@@ -108,7 +107,6 @@ function getBackTarget(pathname: string): string | null {
 /** Routes that show a back button instead of the hamburger */
 function isSubRoute(pathname: string): boolean {
   return (
-    pathname === '/about' ||
     pathname.startsWith('/about/') ||
     pathname === '/members' ||
     pathname.startsWith('/members/') ||
@@ -129,7 +127,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
-  const { user, setUser } = useAuth();
+  const { user, setUser, hydrated } = useAuth();
   const { mode, toggleColorMode } = useColorMode();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -139,7 +137,7 @@ export default function AppLayout() {
   const showBack = isSubRoute(pathname);
 
   // Guest access: check if current path needs auth
-  const needsAuth = !user && authPaths.some((p) => p === '/' ? pathname === '/' : pathname.startsWith(p));
+  const needsAuth = hydrated && !user && authPaths.some((p) => p === '/' ? pathname === '/' : pathname.startsWith(p));
 
   // Tabs visible to current user
   const visibleTabs = user ? bottomTabs : [];
@@ -312,11 +310,6 @@ export default function AppLayout() {
               >
                 {title}
               </Typography>
-              {pathname === '/' && (
-                <IconButton size="small" onClick={() => navigate('/about')}>
-                  <InfoOutlinedIcon fontSize="small" />
-                </IconButton>
-              )}
             </Stack>
             <Stack direction="row" spacing={1} alignItems="center">
               <IconButton size="small" onClick={toggleColorMode} aria-label={mode === 'dark' ? '切换到浅色模式' : '切换到深色模式'}>

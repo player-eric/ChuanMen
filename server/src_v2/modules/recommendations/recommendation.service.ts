@@ -31,7 +31,7 @@ export class RecommendationService {
 
   search(query: unknown) {
     const parsed = z.object({
-      q: z.string().min(1),
+      q: z.string().default(''),
       category: z.enum(['movie', 'recipe', 'music', 'place']).optional(),
     }).parse(query);
     return this.repository.search(parsed.q, parsed.category as RecommendationCategory | undefined);
