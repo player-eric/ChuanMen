@@ -17,6 +17,7 @@ import type { EventComment, BookDetailData, BookPool } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
+import { addComment, fetchCommentsApi } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 
 export default function BookDetailPage() {
@@ -29,9 +30,13 @@ export default function BookDetailPage() {
   const [commentText, setCommentText] = useState('');
 
   useEffect(() => {
-    if (raw && 'comments' in raw && raw.comments) {
-      setComments(raw.comments);
-    }
+    const bookId = raw && 'id' in raw ? (raw as any).id : null;
+    if (!bookId) return;
+    fetchCommentsApi('seed', String(bookId)).then((list) => {
+      if (Array.isArray(list)) {
+        setComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('zh-CN') : '' })));
+      }
+    }).catch(() => {});
   }, [raw]);
 
   if (!raw) {
@@ -242,11 +247,16 @@ export default function BookDetailPage() {
                   placeholder="说点什么..."
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={(e) => {
+                  onKeyDown={async (e) => {
                     if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
                       e.preventDefault();
-                      setComments((prev) => [...prev, { name: user.name ?? '我', text: commentText.trim(), date: '刚刚' }]);
+                      const text = commentText.trim();
+                      setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
                       setCommentText('');
+                      const bookId = raw && 'id' in raw ? (raw as any).id : null;
+                      if (bookId && user.id) {
+                        try { await addComment({ entityType: 'seed', entityId: String(bookId), authorId: user.id, content: text }); } catch { /* optimistic */ }
+                      }
                     }
                   }}
                 />
@@ -254,10 +264,15 @@ export default function BookDetailPage() {
                   variant="contained"
                   size="small"
                   disabled={!commentText.trim()}
-                  onClick={() => {
+                  onClick={async () => {
                     if (commentText.trim()) {
-                      setComments((prev) => [...prev, { name: user.name ?? '我', text: commentText.trim(), date: '刚刚' }]);
+                      const text = commentText.trim();
+                      setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
                       setCommentText('');
+                      const bookId = raw && 'id' in raw ? (raw as any).id : null;
+                      if (bookId && user.id) {
+                        try { await addComment({ entityType: 'seed', entityId: String(bookId), authorId: user.id, content: text }); } catch { /* optimistic */ }
+                      }
                     }
                   }}
                   sx={{ mt: 0.5 }}

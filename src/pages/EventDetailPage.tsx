@@ -29,7 +29,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import type { EventComment, EventData, EventPhoto, FoodOption, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, addComment as addCommentApi, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
+import { getEventById, signupEvent, cancelSignup, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, addComment as addCommentApi, fetchCommentsApi, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
@@ -67,8 +67,18 @@ export default function EventDetailPage() {
     }
   }, [user?.id, loadedEvent]);
 
-  const [comments, setComments] = useState<EventComment[]>(loadedEvent?.comments ?? []);
+  const [comments, setComments] = useState<EventComment[]>([]);
   const [commentText, setCommentText] = useState('');
+
+  // Load comments from API
+  useEffect(() => {
+    if (!eventId) return;
+    fetchCommentsApi('event', eventId).then((list) => {
+      if (Array.isArray(list)) {
+        setComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('zh-CN') : '' })));
+      }
+    }).catch(() => {});
+  }, [eventId]);
   const [inviteDeclined, setInviteDeclined] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [tasks, setTasks] = useState<TaskRole[]>(loadedEvent?.tasks ?? []);

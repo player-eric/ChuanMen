@@ -163,6 +163,8 @@ export default function ProposalDetailPage() {
             likes={raw.likes ?? 0}
             likedBy={raw.likedBy ?? []}
             comments={raw.comments ?? []}
+            entityType="proposal"
+            entityId={String(raw.id)}
           />
         </Card>
       </Stack>

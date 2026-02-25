@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/auth/AuthContext';
-import { signupEvent, cancelSignup } from '@/lib/domainApi';
+import { signupEvent, cancelSignup, addComment, fetchCommentsApi } from '@/lib/domainApi';
 import type { FeedComment } from '@/types';
 import FavoriteBorderRounded from '@mui/icons-material/FavoriteBorderRounded';
 import FavoriteRounded from '@mui/icons-material/FavoriteRounded';
@@ -15,6 +15,18 @@ function extractEventId(navTarget?: string): string | undefined {
   if (!navTarget) return undefined;
   const m = navTarget.match(/^\/events\/([^/]+)$/);
   return m?.[1];
+}
+
+/** Extract entityType + entityId from navTarget for comment persistence */
+function extractEntity(navTarget?: string): { entityType: string; entityId: string } | undefined {
+  if (!navTarget) return undefined;
+  let m = navTarget.match(/^\/events\/proposals\/([^/]+)$/);
+  if (m) return { entityType: 'proposal', entityId: m[1] };
+  m = navTarget.match(/^\/events\/([^/]+)$/);
+  if (m) return { entityType: 'event', entityId: m[1] };
+  m = navTarget.match(/^\/discover\/movies\/([^/]+)$/);
+  if (m) return { entityType: 'movie', entityId: m[1] };
+  return undefined;
 }
 import { PostCard } from './PostCard';
 import { ScenePhoto } from './ScenePhoto';
@@ -40,7 +52,7 @@ interface InteractionProps {
 }
 
 /* ═══ FeedActions (shared like + comment bar) ═══ */
-export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, newComments }: InteractionProps & { compact?: boolean; newComments?: number }) {
+export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, newComments, entityType, entityId }: InteractionProps & { compact?: boolean; newComments?: number; entityType?: string; entityId?: string }) {
   const c = useColors();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -48,14 +60,33 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   const [expanded, setExpanded] = useState(false);
   const [localComments, setLocalComments] = useState(comments ?? []);
   const [input, setInput] = useState('');
+  const [loaded, setLoaded] = useState(false);
+
+  // Load persisted comments from API when section is first expanded
+  useEffect(() => {
+    if (expanded && !loaded && entityType && entityId) {
+      setLoaded(true);
+      fetchCommentsApi(entityType, entityId).then((list) => {
+        if (Array.isArray(list) && list.length > 0) {
+          setLocalComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleDateString('zh-CN') : '' })));
+        }
+      }).catch(() => {});
+    }
+  }, [expanded, loaded, entityType, entityId]);
 
   const likeCount = likes + (liked ? 1 : 0);
   const px = compact ? 10 : 14;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!input.trim() || !user) return;
-    setLocalComments(prev => [...prev, { name: user.name, text: input.trim(), date: '刚刚' }]);
+    const text = input.trim();
+    setLocalComments(prev => [...prev, { name: user.name, text, date: '刚刚' }]);
     setInput('');
+    if (entityType && entityId) {
+      try {
+        await addComment({ entityType, entityId, authorId: user.id, content: text });
+      } catch { /* optimistic */ }
+    }
   };
 
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
@@ -268,7 +299,7 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
         </button>
       </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} {...extractEntity(navTarget)} />
     </Card>
   );
 }
@@ -299,7 +330,7 @@ export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, 
         </div>
         <PostCard from={from} to={to} message={message} stamp="🎬" photo={photo} />
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} {...extractEntity(navTarget)} />
     </Card>
   );
 }
@@ -450,7 +481,7 @@ export function FeedCompactMovie({ name, title, year, dir, votes: initV, time, n
           ▲ {initV + (v ? 1 : 0)}
         </button>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact {...extractEntity(navTarget)} />
     </div>
   );
 }
@@ -494,7 +525,7 @@ export function FeedCompactProposal({ name, title, votes: initV, interested, tim
           </button>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact {...extractEntity(navTarget)} />
     </div>
   );
 }
@@ -589,7 +620,7 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
             </div>
           </div>
         </div>
-        <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} />
+        <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} {...extractEntity(navTarget)} />
       </Card>
     );
   }
@@ -629,7 +660,7 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
           {joined ? '✓ 已报名' : '🎲 我要参加'}
         </button>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} {...extractEntity(navTarget)} />
     </Card>
   );
 }
@@ -671,7 +702,7 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
             <span onClick={() => goMember(name)} style={{ cursor: 'pointer', fontWeight: 600 }}>{name}</span> 发起了私密局 · {time}
           </div>
         </div>
-        <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact />
+        <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact {...extractEntity(navTarget)} />
       </div>
     );
   }
@@ -708,7 +739,7 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
           </button>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact {...extractEntity(navTarget)} />
     </div>
   );
 }

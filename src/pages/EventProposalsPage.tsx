@@ -139,6 +139,8 @@ export default function EventProposalsPage() {
               likes={proposal.likes ?? 0}
               likedBy={proposal.likedBy ?? []}
               comments={proposal.comments ?? []}
+              entityType="proposal"
+              entityId={String(proposal.id)}
             />
           </Card>
         );
