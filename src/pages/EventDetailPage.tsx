@@ -146,8 +146,7 @@ export default function EventDetailPage() {
       return;
     }
 
-    if (!eventId || eventId.length !== 24) {
-      // Mock event — toggle locally
+    if (!eventId) {
       setSignedUp(true);
       return;
     }
