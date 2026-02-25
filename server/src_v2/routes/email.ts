@@ -92,7 +92,7 @@ export const emailRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ ok: true });
   });
 
-  // ── POST /templates/preview — render through MJML ───────
+  // ── POST /templates/preview — render email HTML ──────────
   app.post('/templates/preview', async (request, reply) => {
     const { subject, body, variables } = previewSchema.parse(request.body);
     const rendered = renderEmail({ subject, body, variables });

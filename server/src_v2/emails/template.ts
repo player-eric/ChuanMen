@@ -1,5 +1,3 @@
-import mjml2html from 'mjml';
-
 // ── Design tokens ──────────────────────────────────────────
 const BG_OUTER  = '#f4f4f5';
 const BG_CARD   = '#ffffff';
@@ -7,6 +5,9 @@ const CLR_TEXT   = '#18181b';
 const CLR_MUTED  = '#71717a';
 const CLR_LINK   = '#2563eb';
 const CLR_BORDER = '#e4e4e7';
+
+const FONT_STACK =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif";
 
 // ── Public API ─────────────────────────────────────────────
 
@@ -30,8 +31,8 @@ export interface RenderedEmail {
  * Render a branded email from a template subject/body + variables.
  *
  * 1. Replace `{key}` placeholders in subject + body
- * 2. Convert body text to MJML paragraphs (\n\n → sections, \n → <br/>)
- * 3. Compile MJML → responsive HTML
+ * 2. Convert body text to HTML paragraphs (\n\n → sections, \n → <br/>)
+ * 3. Build responsive HTML email (table-based, no MJML dependency)
  * 4. Generate plain-text fallback
  */
 export function renderEmail(options: RenderEmailOptions): RenderedEmail {
@@ -52,103 +53,104 @@ export function renderEmail(options: RenderEmailOptions): RenderedEmail {
   const resolvedBody = sub(body);
   const resolvedCtaUrl = ctaUrl ? sub(ctaUrl) : undefined;
 
-  // 2. Convert body to MJML paragraphs
+  // 2. Convert body to HTML paragraphs
   const paragraphs = resolvedBody
     .split('\n\n')
     .map((p) => p.trim())
     .filter(Boolean);
 
-  const bodyMjml = paragraphs
+  const bodyHtml = paragraphs
     .map(
       (p) =>
-        `<mj-text font-size="15px" line-height="1.6" color="${CLR_TEXT}" padding="0 0 16px 0">${linkify(p.replace(/\n/g, '<br/>'))}</mj-text>`,
+        `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:${CLR_TEXT};font-family:${FONT_STACK};">${linkify(p.replace(/\n/g, '<br/>'))}</p>`,
     )
-    .join('\n          ');
+    .join('\n');
 
-  // 3. Build MJML document
+  // 3. Build HTML email
   const ctaSection =
     ctaLabel && resolvedCtaUrl
       ? `
-        <mj-section padding="0 24px 8px">
-          <mj-column>
-            <mj-button
-              background-color="${CLR_LINK}"
-              color="#ffffff"
-              font-size="15px"
-              font-weight="600"
-              border-radius="8px"
-              inner-padding="12px 32px"
-              href="${escapeAttr(resolvedCtaUrl)}"
-            >${escapeHtml(ctaLabel)}</mj-button>
-          </mj-column>
-        </mj-section>`
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 16px;">
+              <tr><td align="center">
+                <a href="${escapeAttr(resolvedCtaUrl)}" style="display:inline-block;background-color:${CLR_LINK};color:#ffffff;font-size:15px;font-weight:600;font-family:${FONT_STACK};text-decoration:none;padding:12px 32px;border-radius:8px;" target="_blank">${escapeHtml(ctaLabel)}</a>
+              </td></tr>
+            </table>`
       : '';
 
-  const unsubSection = unsubscribeUrl
+  const unsubLine = unsubscribeUrl
     ? `<a href="${escapeAttr(unsubscribeUrl)}" style="color:${CLR_MUTED};text-decoration:underline;">不想收到邮件？点此退订</a><br/>`
     : '';
 
-  const previewMjml = previewText
-    ? `<mj-preview>${escapeHtml(sub(previewText))}</mj-preview>`
+  const previewHidden = previewText
+    ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${escapeHtml(sub(previewText))}${'&zwnj;&nbsp;'.repeat(40)}</div>`
     : '';
 
-  const mjmlString = `
-<mjml>
-  <mj-head>
-    ${previewMjml}
-    <mj-attributes>
-      <mj-all font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif" />
-      <mj-text padding="0" />
-    </mj-attributes>
-    <mj-style>
-      a { color: ${CLR_LINK}; text-decoration: none; }
-      a:hover { text-decoration: underline; }
-    </mj-style>
-  </mj-head>
-  <mj-body background-color="${BG_OUTER}">
-    <!-- Header -->
-    <mj-section padding="32px 24px 16px">
-      <mj-column>
-        <mj-text font-size="22px" font-weight="700" color="${CLR_TEXT}" align="center">串门儿</mj-text>
-      </mj-column>
-    </mj-section>
+  const html = `<!DOCTYPE html>
+<html lang="zh" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>${escapeHtml(subject)}</title>
+  <!--[if mso]><style>table,td{font-family:Arial,'Noto Sans SC',sans-serif!important;}</style><![endif]-->
+  <style>
+    body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+    table,td{mso-table-lspace:0;mso-table-rspace:0;}
+    img{-ms-interpolation-mode:bicubic;border:0;height:auto;line-height:100%;outline:none;text-decoration:none;}
+    a{color:${CLR_LINK};text-decoration:none;}
+    a:hover{text-decoration:underline;}
+    @media only screen and (max-width:600px){
+      .email-container{width:100%!important;max-width:100%!important;}
+      .fluid-padding{padding-left:16px!important;padding-right:16px!important;}
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:${BG_OUTER};font-family:${FONT_STACK};">
+  ${previewHidden}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BG_OUTER};">
+    <tr><td align="center" style="padding:0;">
 
-    <mj-section padding="0 24px">
-      <mj-column>
-        <mj-divider border-color="${CLR_BORDER}" border-width="1px" padding="0 0 24px" />
-      </mj-column>
-    </mj-section>
+      <!-- Main container -->
+      <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
-    <!-- Body -->
-    <mj-section background-color="${BG_CARD}" padding="24px 24px 8px" border-radius="8px">
-      <mj-column>
-        ${bodyMjml}
-      </mj-column>
-    </mj-section>
+        <!-- Header -->
+        <tr><td align="center" style="padding:32px 24px 16px;">
+          <h1 style="margin:0;font-size:22px;font-weight:700;color:${CLR_TEXT};font-family:${FONT_STACK};">串门儿</h1>
+        </td></tr>
 
-    <!-- CTA -->${ctaSection}
+        <!-- Divider -->
+        <tr><td style="padding:0 24px 24px;">
+          <hr style="border:none;border-top:1px solid ${CLR_BORDER};margin:0;"/>
+        </td></tr>
 
-    <!-- Footer -->
-    <mj-section padding="24px 24px 8px">
-      <mj-column>
-        <mj-divider border-color="${CLR_BORDER}" border-width="1px" padding="0 0 16px" />
-      </mj-column>
-    </mj-section>
+        <!-- Body card -->
+        <tr><td class="fluid-padding" style="padding:0 24px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BG_CARD};border-radius:8px;">
+            <tr><td style="padding:24px 24px 8px;">
+              ${bodyHtml}
+            </td></tr>
+          </table>
+        </td></tr>
 
-    <mj-section padding="0 24px 32px">
-      <mj-column>
-        <mj-text font-size="12px" color="${CLR_MUTED}" align="center" line-height="1.5">
-          ${unsubSection}串门儿 · Edison, NJ
-        </mj-text>
-      </mj-column>
-    </mj-section>
-  </mj-body>
-</mjml>`;
+        <!-- CTA -->${ctaSection}
 
-  const { html, errors } = mjml2html(mjmlString, { validationLevel: 'soft' });
-  if (errors.length > 0) {
-    console.warn('[email-template] MJML warnings:', errors.map((e) => e.message));
-  }
+        <!-- Footer divider -->
+        <tr><td style="padding:24px 24px 16px;">
+          <hr style="border:none;border-top:1px solid ${CLR_BORDER};margin:0;"/>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td align="center" style="padding:0 24px 32px;">
+          <p style="margin:0;font-size:12px;color:${CLR_MUTED};line-height:1.5;font-family:${FONT_STACK};">
+            ${unsubLine}串门儿 · Edison, NJ
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
 
   // 4. Plain-text fallback
   const text = buildPlainText(subject, resolvedBody, ctaLabel, resolvedCtaUrl);
