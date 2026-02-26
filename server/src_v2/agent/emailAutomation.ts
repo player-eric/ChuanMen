@@ -3,6 +3,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import { sendTemplatedEmail } from '../services/emailService.js';
 import { filterByCooldown, filterByRefId, ELIGIBLE_USER_WHERE } from './helpers.js';
 import type { HostTributeResult } from './contentAutomation.js';
+import { renderDigestBlock, type DigestSection } from '../emails/template.js';
 
 // ── Shared types ─────────────────────────────────────────────
 
@@ -241,7 +242,7 @@ export async function sendMilestoneNotif(
 
 // ── DIGEST: Daily community digest ──────────────────────────
 
-async function buildDigestContent(prisma: PrismaClient): Promise<string | null> {
+async function buildDigestSections(prisma: PrismaClient): Promise<DigestSection[] | null> {
   const cutoff = new Date();
   cutoff.setTime(cutoff.getTime() - 24 * 60 * 60 * 1000);
 
@@ -249,7 +250,7 @@ async function buildDigestContent(prisma: PrismaClient): Promise<string | null> 
   const in7Days = new Date();
   in7Days.setDate(in7Days.getDate() + 7);
 
-  const lines: string[] = [];
+  const sections: DigestSection[] = [];
 
   // 1. New or updated events (created or updated in last 24h, not cancelled)
   const newEvents = await prisma.event.findMany({
@@ -263,9 +264,15 @@ async function buildDigestContent(prisma: PrismaClient): Promise<string | null> 
     select: { id: true, title: true, startsAt: true },
     orderBy: { startsAt: 'asc' },
   });
-  for (const e of newEvents) {
-    const d = e.startsAt.toISOString().split('T')[0];
-    lines.push(`🎬 新活动：[${e.title}](https://chuanmener.club/events/${e.id})（${d}）`);
+  if (newEvents.length > 0) {
+    sections.push({
+      icon: '🎬',
+      title: '新活动',
+      items: newEvents.map((e) => {
+        const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+        return { text: `${e.title}（${d}）`, url: `https://chuanmener.club/events/${e.id}` };
+      }),
+    });
   }
 
   // 2. Upcoming events in the next 7 days (open or invite phase)
@@ -273,15 +280,20 @@ async function buildDigestContent(prisma: PrismaClient): Promise<string | null> 
     where: {
       startsAt: { gte: now, lte: in7Days },
       phase: { in: ['open', 'invite'] },
-      // Exclude events already listed as new
       id: { notIn: newEvents.map((e) => e.id) },
     },
     select: { id: true, title: true, startsAt: true },
     orderBy: { startsAt: 'asc' },
   });
-  for (const e of upcoming) {
-    const d = e.startsAt.toISOString().split('T')[0];
-    lines.push(`📅 即将开始：[${e.title}](https://chuanmener.club/events/${e.id})（${d}）`);
+  if (upcoming.length > 0) {
+    sections.push({
+      icon: '📅',
+      title: '即将开始',
+      items: upcoming.map((e) => {
+        const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+        return { text: `${e.title}（${d}）`, url: `https://chuanmener.club/events/${e.id}` };
+      }),
+    });
   }
 
   // 3. New recommendations
@@ -289,8 +301,12 @@ async function buildDigestContent(prisma: PrismaClient): Promise<string | null> 
     where: { createdAt: { gte: cutoff } },
     select: { title: true },
   });
-  for (const r of newRecs) {
-    lines.push(`📖 新推荐：${r.title}`);
+  if (newRecs.length > 0) {
+    sections.push({
+      icon: '📖',
+      title: '新推荐',
+      items: newRecs.map((r) => ({ text: r.title })),
+    });
   }
 
   // 4. New postcards (total count, not per-user)
@@ -298,7 +314,11 @@ async function buildDigestContent(prisma: PrismaClient): Promise<string | null> 
     where: { createdAt: { gte: cutoff } },
   });
   if (postcardCount > 0) {
-    lines.push(`💌 社区发出了 ${postcardCount} 张新感谢卡`);
+    sections.push({
+      icon: '💌',
+      title: '感谢卡',
+      items: [{ text: `社区本周发出了 ${postcardCount} 张新感谢卡` }],
+    });
   }
 
   // 5. New members
@@ -307,11 +327,14 @@ async function buildDigestContent(prisma: PrismaClient): Promise<string | null> 
     select: { name: true },
   });
   if (newMembers.length > 0) {
-    const names = newMembers.map((u) => u.name).join('、');
-    lines.push(`👥 新成员：${names}`);
+    sections.push({
+      icon: '👥',
+      title: '新成员',
+      items: newMembers.map((u) => ({ text: `${u.name} 加入了串门儿！` })),
+    });
   }
 
-  return lines.length > 0 ? lines.join('\n') : null;
+  return sections.length > 0 ? sections : null;
 }
 
 export async function sendDailyDigest(
@@ -322,11 +345,13 @@ export async function sendDailyDigest(
   if (!rule?.enabled) return 0;
 
   // Build content FIRST — skip if nothing happened
-  const digestContent = await buildDigestContent(prisma);
-  if (!digestContent) {
+  const sections = await buildDigestSections(prisma);
+  if (!sections) {
     log.info('DIGEST: no content, skipping');
     return 0;
   }
+
+  const digestHtml = renderDigestBlock(sections);
 
   // Get eligible users (approved + not unsubscribed)
   const candidates: UserRow[] = await prisma.user.findMany({
@@ -351,7 +376,8 @@ export async function sendDailyDigest(
       const result = await sendTemplatedEmail(prisma, {
         to: user.email,
         ruleId: 'DIGEST',
-        variables: { date, digestContent },
+        variables: { date },
+        htmlBlock: digestHtml,
         ctaLabel: '查看完整动态',
         ctaUrl: 'https://chuanmener.club',
       });
