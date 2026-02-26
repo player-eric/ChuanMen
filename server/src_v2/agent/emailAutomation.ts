@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import type { FastifyBaseLogger } from 'fastify';
 import { sendTemplatedEmail } from '../services/emailService.js';
-import { filterByCooldown, filterByRefId } from './helpers.js';
+import { filterByCooldown, filterByRefId, ELIGIBLE_USER_WHERE } from './helpers.js';
 import type { HostTributeResult } from './contentAutomation.js';
 
 // ── Shared types ─────────────────────────────────────────────
@@ -237,6 +237,135 @@ export async function sendMilestoneNotif(
 
   log.info(`P4-A milestone notif: ${totalSent} sent for ${milestones.length} milestones`);
   return totalSent;
+}
+
+// ── DIGEST: Daily community digest ──────────────────────────
+
+async function buildDigestContent(prisma: PrismaClient): Promise<string | null> {
+  const cutoff = new Date();
+  cutoff.setTime(cutoff.getTime() - 24 * 60 * 60 * 1000);
+
+  const now = new Date();
+  const in7Days = new Date();
+  in7Days.setDate(in7Days.getDate() + 7);
+
+  const lines: string[] = [];
+
+  // 1. New or updated events (created or updated in last 24h, not cancelled)
+  const newEvents = await prisma.event.findMany({
+    where: {
+      phase: { not: 'cancelled' },
+      OR: [
+        { createdAt: { gte: cutoff } },
+        { updatedAt: { gte: cutoff } },
+      ],
+    },
+    select: { id: true, title: true, startsAt: true },
+    orderBy: { startsAt: 'asc' },
+  });
+  for (const e of newEvents) {
+    const d = e.startsAt.toISOString().split('T')[0];
+    lines.push(`🎬 新活动：[${e.title}](https://chuanmener.club/events/${e.id})（${d}）`);
+  }
+
+  // 2. Upcoming events in the next 7 days (open or invite phase)
+  const upcoming = await prisma.event.findMany({
+    where: {
+      startsAt: { gte: now, lte: in7Days },
+      phase: { in: ['open', 'invite'] },
+      // Exclude events already listed as new
+      id: { notIn: newEvents.map((e) => e.id) },
+    },
+    select: { id: true, title: true, startsAt: true },
+    orderBy: { startsAt: 'asc' },
+  });
+  for (const e of upcoming) {
+    const d = e.startsAt.toISOString().split('T')[0];
+    lines.push(`📅 即将开始：[${e.title}](https://chuanmener.club/events/${e.id})（${d}）`);
+  }
+
+  // 3. New recommendations
+  const newRecs = await prisma.recommendation.findMany({
+    where: { createdAt: { gte: cutoff } },
+    select: { title: true },
+  });
+  for (const r of newRecs) {
+    lines.push(`📖 新推荐：${r.title}`);
+  }
+
+  // 4. New postcards (total count, not per-user)
+  const postcardCount = await prisma.postcard.count({
+    where: { createdAt: { gte: cutoff } },
+  });
+  if (postcardCount > 0) {
+    lines.push(`💌 社区发出了 ${postcardCount} 张新感谢卡`);
+  }
+
+  // 5. New members
+  const newMembers = await prisma.user.findMany({
+    where: { createdAt: { gte: cutoff }, userStatus: 'approved' },
+    select: { name: true },
+  });
+  if (newMembers.length > 0) {
+    const names = newMembers.map((u) => u.name).join('、');
+    lines.push(`👥 新成员：${names}`);
+  }
+
+  return lines.length > 0 ? lines.join('\n') : null;
+}
+
+export async function sendDailyDigest(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const rule = await prisma.emailRule.findUnique({ where: { id: 'DIGEST' } });
+  if (!rule?.enabled) return 0;
+
+  // Build content FIRST — skip if nothing happened
+  const digestContent = await buildDigestContent(prisma);
+  if (!digestContent) {
+    log.info('DIGEST: no content, skipping');
+    return 0;
+  }
+
+  // Get eligible users (approved + not unsubscribed)
+  const candidates: UserRow[] = await prisma.user.findMany({
+    where: ELIGIBLE_USER_WHERE,
+    select: { id: true, name: true, email: true },
+  });
+
+  // 1-day cooldown: one digest per user per day
+  const eligible = await filterByCooldown(
+    prisma,
+    candidates.map((u) => u.id),
+    'DIGEST',
+    rule.cooldownDays,
+  );
+
+  const date = new Date().toISOString().split('T')[0];
+  let sent = 0;
+
+  for (const user of candidates) {
+    if (!eligible.has(user.id)) continue;
+    try {
+      const result = await sendTemplatedEmail(prisma, {
+        to: user.email,
+        ruleId: 'DIGEST',
+        variables: { date, digestContent },
+        ctaLabel: '查看完整动态',
+        ctaUrl: 'https://chuanmener.club',
+      });
+      await prisma.emailLog.create({
+        data: { userId: user.id, ruleId: 'DIGEST', messageId: result.MessageId },
+      });
+      sent++;
+    } catch (err) {
+      log.error({ err, userId: user.id }, 'DIGEST send failed');
+    }
+  }
+
+  log.info(`DIGEST: ${sent}/${candidates.length} sent`);
+  return sent;
 }
 
 // ── P4-C: Host tribute notification (tribute hosts only) ────

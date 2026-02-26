@@ -218,9 +218,17 @@ interface FeedActivityProps extends InteractionProps {
   name: string; title: string; date: string; location: string;
   spots: number; people: string[]; signupUserIds?: string[]; film?: string; scene?: string;
   navTarget?: string;
+  /** 'feed' = full card with signup/actions (default); 'list' = compact list card for EventsPage */
+  mode?: 'feed' | 'list';
+  phase?: string;
+  isHomeEvent?: boolean;
+  houseRules?: string;
+  photoCount?: number;
+  commentCount?: number;
+  hostId?: string;
 }
 
-export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments }: FeedActivityProps) {
+export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, houseRules, photoCount, commentCount }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -229,6 +237,9 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const eventId = extractEventId(navTarget);
+  const isList = mode === 'list';
+  const isCancelled = phase === 'cancelled';
+  const isEnded = phase === 'ended';
 
   // Sync signup state when data refreshes
   useEffect(() => {
@@ -260,53 +271,101 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
     } catch { /* ignore */ }
   };
 
+  /* Phase chip config (list mode only) */
+  const phaseConfig: Record<string, { label: string; bg: string; fg: string }> = {
+    invite:    { label: '🔒 邀请', bg: c.warm + '20', fg: c.warm },
+    open:      { label: '报名中', bg: c.green + '20', fg: c.green },
+    closed:    { label: '报名结束', bg: c.text3 + '20', fg: c.text3 },
+    cancelled: { label: '已取消', bg: c.red + '20', fg: c.red },
+    ended:     { label: '已结束', bg: c.text3 + '20', fg: c.text3 },
+  };
+  const pc = phase ? phaseConfig[phase] : undefined;
+
   return (
     <Card>
-      <div onClick={goNav} style={{ cursor: goNav ? 'pointer' : 'default' }}>
+      <div onClick={goNav} style={{ cursor: goNav ? 'pointer' : 'default', opacity: isList && isCancelled ? 0.6 : 1 }}>
       {scene && (
           <ScenePhoto scene={scene} h={90}>
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', background: `linear-gradient(transparent, ${c.s1})` }} />
-            <div style={{ position: 'absolute', top: 8, right: 10 }}>
-              <div style={{ padding: '3px 8px', background: `${c.s2}cc`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, color: c.text2 }}>{date}</div>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(transparent, rgba(0,0,0,0.45))' }} />
+            <div style={{ position: 'absolute', top: 8, right: 10, display: 'flex', gap: 6 }}>
+              {isList && pc ? (
+                <div style={{ padding: '3px 8px', background: `${pc.bg}`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, fontWeight: 600, color: pc.fg }}>{pc.label}</div>
+              ) : (
+                <div style={{ padding: '3px 8px', background: `${c.s2}cc`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, color: c.text2 }}>{date}</div>
+              )}
             </div>
             {film && <div style={{ position: 'absolute', bottom: 8, left: 10 }}><Poster title={film} w={32} h={44} /></div>}
           </ScenePhoto>
       )}
       <div style={{ padding: 14 }}>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <span onClick={(e) => { e.stopPropagation(); goMember(name); }}><Ava name={name} size={32} badge="🏠" /></span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14 }}><b onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</b> 发起了活动</div>
-            <div style={{ fontSize: 12, color: c.text3 }}>2 小时前</div>
+        {/* Feed mode: author header */}
+        {!isList && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <span onClick={(e) => { e.stopPropagation(); goMember(name); }}><Ava name={name} size={32} badge="🏠" /></span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14 }}><b onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</b> 发起了活动</div>
+              <div style={{ fontSize: 12, color: c.text3 }}>2 小时前</div>
+            </div>
           </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, flex: 1 }}>{title}</div>
+          {isHomeEvent && (
+            <div style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: c.warmDim, color: c.warm, flexShrink: 0 }}>🏠 在家</div>
+          )}
+          {isList && !scene && pc && (
+            <div style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: pc.bg, color: pc.fg, flexShrink: 0 }}>{pc.label}</div>
+          )}
         </div>
-        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{title}</div>
         {!scene && <div style={{ fontSize: 13, color: c.text2, marginBottom: 8 }}>{date} · {location}</div>}
-        {scene && <div style={{ fontSize: 13, color: c.text2, marginBottom: 8 }}>{location}</div>}
+        {scene && <div style={{ fontSize: 13, color: c.text2, marginBottom: 8 }}>{isList ? `${date} · ${location}` : location}</div>}
         {!scene && film && (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', background: c.s2, borderRadius: 6, marginBottom: 8 }}>
             <Poster title={film} w={20} h={28} /><span style={{ fontSize: 12, color: c.text2 }}>放映 {film}</span>
           </div>
         )}
+        {isList && houseRules && (
+          <div style={{ fontSize: 12, color: c.text3, fontStyle: 'italic', marginBottom: 8 }}>🏠 {houseRules}</div>
+        )}
+        {/* List mode: host row */}
+        {isList && (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
+            <Ava name={name} size={22} onTap={() => goMember(name)} />
+            <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ fontSize: 12, color: c.text3, cursor: 'pointer' }}>{name} Host</span>
+          </div>
+        )}
+        {/* People + spots (both modes) */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <AvaStack names={people} />
-          <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `还剩 ${spots} 位` : '已满 · 可排队'}</span>
+          {isEnded ? (
+            <div style={{ display: 'flex', gap: 8 }}>
+              {photoCount != null && photoCount > 0 && <span style={{ fontSize: 12, color: c.text3 }}>📷 {photoCount}</span>}
+              {commentCount != null && commentCount > 0 && <span style={{ fontSize: 12, color: c.text3 }}>💬 {commentCount}</span>}
+            </div>
+          ) : !isCancelled && (
+            <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `还剩 ${spots} 位` : '已满 · 可排队'}</span>
+          )}
         </div>
-        <div style={{ background: c.warmDim, borderRadius: 6, padding: '5px 10px', marginBottom: 10, fontSize: 12, color: c.warm }}>
-          {'💡'} 星星也报名了（你们一起参加过 2 次活动）
-        </div>
-        <button
-          onClick={handleSignup}
-          style={{
-            width: '100%', padding: '9px 0', borderRadius: 8,
-            background: joined ? c.s2 : c.warm,
-            border: joined ? `1px solid ${c.green}30` : 'none',
-            color: joined ? c.green : c.bg,
-            fontSize: 14, fontWeight: 700, cursor: 'pointer',
-          }}
-        >
-          {joined ? '✓ 已报名' : '报名参加'}
-        </button>
+        {/* Social hint + signup (skip for ended/cancelled) */}
+        {!isEnded && !isCancelled && (
+          <>
+            <div style={{ background: c.warmDim, borderRadius: 6, padding: '5px 10px', marginBottom: 10, fontSize: 12, color: c.warm }}>
+              {'💡'} 星星也报名了（你们一起参加过 2 次活动）
+            </div>
+            <button
+              onClick={handleSignup}
+              style={{
+                width: '100%', padding: '9px 0', borderRadius: 8,
+                background: joined ? c.s2 : c.warm,
+                border: joined ? `1px solid ${c.green}30` : 'none',
+                color: joined ? c.green : c.bg,
+                fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              {joined ? '✓ 已报名' : '报名参加'}
+            </button>
+          </>
+        )}
       </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} {...extractEntity(navTarget)} />

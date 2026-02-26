@@ -17,7 +17,7 @@ export function createAppTheme(mode: AppColorMode = 'dark') {
           }
         : {
             default: '#f6f1e8',
-            paper: '#fffaf2',
+            paper: '#FFFFFF',
           },
       text: isDark
         ? {

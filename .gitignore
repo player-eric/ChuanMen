@@ -6,3 +6,4 @@ server/node_modules
 .env.*
 server/.env
 server/.env.*
+server/uploads

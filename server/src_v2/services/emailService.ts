@@ -37,13 +37,15 @@ export interface SendTemplatedEmailOptions {
   previewText?: string;
   ctaLabel?: string;
   ctaUrl?: string;
+  /** Raw HTML block inserted between body text and CTA button */
+  htmlBlock?: string;
 }
 
 export async function sendTemplatedEmail(
   prisma: PrismaClient,
   options: SendTemplatedEmailOptions,
 ): Promise<{ MessageId: string }> {
-  const { to, ruleId, variantKey = 'default', variables, previewText, ctaLabel, ctaUrl } = options;
+  const { to, ruleId, variantKey = 'default', variables, previewText, ctaLabel, ctaUrl, htmlBlock } = options;
 
   const template = await prisma.emailTemplate.findUnique({
     where: { ruleId_variantKey: { ruleId, variantKey } },
@@ -61,6 +63,7 @@ export async function sendTemplatedEmail(
     previewText,
     ctaLabel,
     ctaUrl,
+    htmlBlock,
   });
 
   return sendEmail({

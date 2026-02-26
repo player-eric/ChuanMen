@@ -22,6 +22,49 @@ export class UserRepository {
     });
   }
 
+  /** Fetch a member by name with all their activity data */
+  getByNameWithActivities(name: string) {
+    return this.prisma.user.findFirst({
+      where: { name },
+      include: {
+        socialTitles: true,
+        preferences: true,
+        eventSignups: {
+          include: { event: { select: { id: true, title: true, startsAt: true, tags: true } } },
+          orderBy: { createdAt: 'desc' },
+        },
+        hostedEvents: {
+          select: { id: true, title: true, startsAt: true, tags: true },
+          orderBy: { startsAt: 'desc' },
+        },
+        movieVotes: {
+          include: { movie: { select: { id: true, title: true, poster: true } } },
+          orderBy: { createdAt: 'desc' },
+        },
+        _count: {
+          select: {
+            postcardsSent: true,
+            postcardsReceived: true,
+            hostedEvents: true,
+          },
+        },
+      },
+    });
+  }
+
+  /** Fetch a user's event signup IDs and movie vote IDs (for mutual computation) */
+  getActivityIds(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        eventSignups: { select: { eventId: true } },
+        movieVotes: { select: { movieId: true } },
+        postcardsSent: { where: {}, select: { toId: true } },
+        postcardsReceived: { where: {}, select: { fromId: true } },
+      },
+    });
+  }
+
   getByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },

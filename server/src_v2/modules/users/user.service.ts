@@ -70,6 +70,73 @@ export class UserService {
     return this.repository.getByEmail(email);
   }
 
+  /** Get a member's full profile + activities, with optional mutual computation */
+  async getMemberProfile(name: string, viewerId?: string) {
+    const member = await this.repository.getByNameWithActivities(name);
+    if (!member) return null;
+
+    // All activities
+    const allEvents = member.eventSignups.map((s) => ({
+      id: s.event.id,
+      title: s.event.title,
+      date: s.event.startsAt.toISOString(),
+    }));
+    const allMovies = member.movieVotes.map((v) => ({
+      id: v.movie.id,
+      title: v.movie.title,
+      poster: v.movie.poster,
+    }));
+    const hostedEvents = member.hostedEvents.map((e) => ({
+      id: e.id,
+      title: e.title,
+      date: e.startsAt.toISOString(),
+    }));
+
+    // Mutual activities (if viewer is logged in)
+    let mutual = { evtCount: 0, cards: 0, movies: [] as string[], events: [] as string[] };
+    if (viewerId && viewerId !== member.id) {
+      const viewer = await this.repository.getActivityIds(viewerId);
+      if (viewer) {
+        const viewerEventIds = new Set(viewer.eventSignups.map((s) => s.eventId));
+        const viewerMovieIds = new Set(viewer.movieVotes.map((v) => v.movieId));
+
+        const mutualEvents = member.eventSignups
+          .filter((s) => viewerEventIds.has(s.event.id))
+          .map((s) => s.event.title);
+        const mutualMovies = member.movieVotes
+          .filter((v) => viewerMovieIds.has(v.movie.id))
+          .map((v) => v.movie.title);
+
+        // Cards exchanged between them
+        const sentToViewer = viewer.postcardsReceived.filter((p) => p.fromId === member.id).length;
+        const receivedFromViewer = viewer.postcardsSent.filter((p) => p.toId === member.id).length;
+
+        mutual = {
+          evtCount: mutualEvents.length,
+          cards: sentToViewer + receivedFromViewer,
+          movies: mutualMovies,
+          events: mutualEvents,
+        };
+      }
+    }
+
+    // Strip activity relations from the member object to keep response clean
+    const { eventSignups: _es, movieVotes: _mv, hostedEvents: _he, _count, ...profile } = member;
+
+    return {
+      ...profile,
+      hostCount: _count.hostedEvents,
+      activities: {
+        events: allEvents,
+        movies: allMovies,
+        hostedEvents,
+        postcardsSent: _count.postcardsSent,
+        postcardsReceived: _count.postcardsReceived,
+      },
+      mutual,
+    };
+  }
+
   createUser(input: unknown) {
     const data = createUserSchema.parse(input);
     return this.repository.create(data);

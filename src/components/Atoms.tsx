@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode, MouseEventHandler } from 'react';
+import { useTheme } from '@mui/material/styles';
 import { useColors } from '@/hooks/useColors';
 import { hf } from '@/theme';
 
@@ -82,18 +83,20 @@ export function AvaStack({ names, size = 22 }: AvaStackProps) {
 export function Stamp({ emoji = '✉', size = 24, tooltip }: { emoji?: string; size?: number; tooltip?: string }) {
   const c = useColors();
   return (
-    <div
-      title={tooltip}
-      style={{
-        width: size, height: size * 1.22, borderRadius: 2,
-        border: `1.5px solid ${c.stamp}`,
-        background: `linear-gradient(160deg, #FFF8F0, ${c.paperDark})`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: size * 0.55, flexShrink: 0,
-        cursor: tooltip ? 'help' : undefined,
-      }}
-    >
-      {emoji}
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+      <div
+        style={{
+          width: size, height: size * 1.22, borderRadius: 2,
+          border: `1.5px solid ${c.stamp}`,
+          background: `linear-gradient(160deg, ${c.bg}, ${c.stamp}35)`,
+          boxShadow: `0 0 0 0.5px ${c.stamp}40`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: size * 0.55,
+        }}
+      >
+        {emoji}
+      </div>
+      {tooltip && <span style={{ fontSize: size * 0.45, color: c.stamp, fontWeight: 600, whiteSpace: 'nowrap' }}>{tooltip}</span>}
     </div>
   );
 }
@@ -176,11 +179,13 @@ interface CardProps {
 
 export function Card({ children, glow, style = {} }: CardProps) {
   const c = useColors();
+  const isLight = useTheme().palette.mode === 'light';
   return (
     <div
       style={{
         background: c.s1, borderRadius: 12,
         border: `1px solid ${glow ? c.warm + '25' : c.line}`,
+        boxShadow: isLight ? '0 1px 4px rgba(0,0,0,0.07)' : 'none',
         overflow: 'hidden', ...style,
       }}
     >

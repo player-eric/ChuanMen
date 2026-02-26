@@ -26,7 +26,7 @@ const cDark = {
 
 export const cLight: DesignTokens = {
   bg: '#FAFAF8',
-  s1: '#F2F0ED',
+  s1: '#FFFFFF',
   s2: '#E8E6E2',
   s3: '#DEDCD8',
   line: '#D0CEC8',

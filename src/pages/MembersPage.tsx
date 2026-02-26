@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
-import { Avatar, Card, CardActionArea, CardContent, Chip, Grid, InputAdornment, Stack, TextField, Typography } from '@mui/material';
+import { Avatar, Box, Card, CardActionArea, CardContent, Chip, Grid, InputAdornment, Stack, TextField, Typography } from '@mui/material';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import type { MemberData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { EmptyState } from '@/components/EmptyState';
+import { photos } from '@/theme';
 
 export default function MembersPage() {
   const { members } = useLoaderData() as { members: MemberData[] };
@@ -42,11 +43,19 @@ export default function MembersPage() {
       <Grid container spacing={1.5}>
         {filteredMembers.map((member) => (
           <Grid key={member.name} size={{ xs: 12, sm: 6, md: 4 }}>
-            <Card>
+            <Card sx={{ overflow: 'hidden' }}>
               <CardActionArea onClick={() => navigate(`/members/${encodeURIComponent(member.name)}`)}>
-                <CardContent>
+                {/* Mini cover strip */}
+                {(() => {
+                  const raw = member.coverImageUrl || photos.cozy;
+                  const isGrad = raw.startsWith('linear-gradient') || raw.startsWith('radial-gradient');
+                  return (
+                    <Box sx={{ height: 56, background: isGrad ? raw : `url(${raw}) center/cover no-repeat` }} />
+                  );
+                })()}
+                <CardContent sx={{ mt: -3.5 }}>
                   <Stack spacing={1.2} alignItems="center" textAlign="center">
-                    <Avatar sx={{ width: 48, height: 48 }}>{member.name[0]}</Avatar>
+                    <Avatar src={member.avatar} sx={{ width: 52, height: 52, border: '2.5px solid', borderColor: 'background.paper', fontSize: 20 }}>{member.name[0]}</Avatar>
                     <Typography fontWeight={700}>{member.name}</Typography>
                     {member.location && (
                       <Typography variant="caption" color="text.secondary">{member.location}</Typography>

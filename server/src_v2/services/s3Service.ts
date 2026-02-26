@@ -2,8 +2,11 @@ import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } fro
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../config/env.js';
 
+/** Whether S3 is configured (all 3 required env vars present) */
+export const s3Configured = Boolean(env.AWS_REGION && env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY);
+
 function getS3Client(): S3Client {
-  if (!env.AWS_REGION || !env.AWS_ACCESS_KEY_ID || !env.AWS_SECRET_ACCESS_KEY) {
+  if (!s3Configured) {
     throw new Error('S3 is not configured — set AWS_REGION, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY');
   }
   return new S3Client({
@@ -36,7 +39,9 @@ export async function createUploadUrl(key: string, contentType: string) {
 
   const publicUrl = env.AWS_S3_PUBLIC_BASE_URL
     ? `${env.AWS_S3_PUBLIC_BASE_URL.replace(/\/$/, '')}/${key}`
-    : `https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
+    : env.AWS_S3_ENDPOINT
+      ? `${env.AWS_S3_ENDPOINT.replace(/\/$/, '')}/${env.AWS_S3_BUCKET}/${key}`
+      : `https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
 
   return { uploadUrl, publicUrl };
 }

@@ -51,6 +51,8 @@ import {
   fetchPostcardsApi,
   fetchProfileApi,
   fetchMembersApi,
+  fetchMemberByNameApi,
+  fetchProfileByNameApi,
   fetchUserByIdApi,
   fetchAboutStatsApi,
   fetchProposalsApi,
@@ -94,6 +96,7 @@ function buildFeedItems(data: any): any[] {
       film: e.selectedMovie?.title,
       scene: eventTagToScene[e.tags?.[0]] ?? e.tags?.[0] ?? '',
       navTarget: `/events/${e.id}`,
+      isHomeEvent: e.isHomeEvent ?? false,
     });
   }
 
@@ -202,7 +205,7 @@ function mapApiEvent(e: any): any {
     endDate: e.endsAt ? new Date(e.endsAt).toLocaleDateString('zh-CN') : undefined,
     location: e.location ?? '',
     isHomeEvent: e.isHomeEvent ?? false,
-    scene: e.titleImageUrl || e.scene || '',
+    scene: e.titleImageUrl || eventTagToScene[e.tags?.[0]] || e.tags?.[0] || '',
     film: e.selectedMovie?.title ?? e.film ?? undefined,
     spots: Math.max(0, (e.capacity ?? 0) - people.length),
     total: e.capacity ?? 0,
@@ -244,7 +247,7 @@ async function eventsLoader() {
         host: typeof e.host === 'string' ? e.host : e.host?.name ?? '?',
         date: e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }) : '',
         people: peopleCount,
-        scene: e.titleImageUrl || e.scene || '',
+        scene: e.titleImageUrl || eventTagToScene[e.tags?.[0]] || e.tags?.[0] || '',
         film: e.selectedMovie?.title ?? e.film ?? undefined,
         photoCount: e.recapPhotoUrls?.length || undefined,
       };
@@ -458,12 +461,17 @@ async function membersLoader() {
 async function memberDetailLoader({ params }: { params: Record<string, string | undefined> }) {
   const name = params.name ? decodeURIComponent(params.name) : '';
   if (!name) return null;
-  // The URL param is a name — we need to find the user by name
-  // For now, fetch all members and filter (we could add a search endpoint later)
+  // Get viewer ID for mutual computation (from localStorage if available)
+  let viewerId: string | undefined;
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('chuanmen.auth.user') || sessionStorage.getItem('chuanmen.auth.user');
+      if (stored) viewerId = JSON.parse(stored)?.id;
+    } catch { /* ignore */ }
+  }
   try {
-    const members = await fetchMembersApi() as any[];
-    const raw = members.find((m: any) => m.name === name);
-    return raw ? { member: mapApiMember(raw) } : null;
+    // Use the same profile API as ProfilePage, but queried by name
+    return await fetchProfileByNameApi(name, viewerId);
   } catch {
     return null;
   }

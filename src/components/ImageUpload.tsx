@@ -36,17 +36,20 @@ export function ImageUpload({
   ...uploadOpts
 }: ImageUploadProps) {
   const c = useColors();
+  // Local blob URL — kept alive until remote URL loads successfully
   const [preview, setPreview] = useState<string | null>(null);
+  // Tracks if the remote `value` URL failed to load
+  const [remoteFailed, setRemoteFailed] = useState(false);
 
   const { pickFile, upload, isUploading, progress, error } = useMediaUpload({
     ...uploadOpts,
     onSuccess: (url, asset) => {
-      setPreview(null);
+      // Don't clear preview yet — let onLoad do it once remote URL is verified
       onChange?.(url);
       uploadOpts.onSuccess?.(url, asset);
     },
     onError: (err) => {
-      setPreview(null);
+      // Upload itself failed — keep blob preview so user still sees their image
       uploadOpts.onError?.(err);
     },
   });
@@ -57,6 +60,7 @@ export function ImageUpload({
       if (disabled || isUploading) return;
       const file = e.dataTransfer.files[0];
       if (file) {
+        setRemoteFailed(false);
         setPreview(URL.createObjectURL(file));
         upload(file);
       }
@@ -73,6 +77,7 @@ export function ImageUpload({
     input.onchange = () => {
       const file = input.files?.[0];
       if (file) {
+        setRemoteFailed(false);
         setPreview(URL.createObjectURL(file));
         upload(file);
       }
@@ -80,7 +85,8 @@ export function ImageUpload({
     input.click();
   }, [disabled, isUploading, upload, uploadOpts.accept]);
 
-  const displayUrl = preview ?? value;
+  // Priority: blob preview > remote value (if it loaded OK) > nothing
+  const displayUrl = preview ?? (remoteFailed ? null : value) ?? null;
   const borderRadius = shape === 'circle' ? '50%' : 6;
 
   return (
@@ -111,6 +117,14 @@ export function ImageUpload({
           src={displayUrl}
           alt=""
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+          onLoad={() => {
+            // Remote URL loaded OK — safe to release blob preview
+            if (preview && value && displayUrl === value) setPreview(null);
+          }}
+          onError={() => {
+            // If we're showing the remote URL and it failed, mark it
+            if (!preview && value) setRemoteFailed(true);
+          }}
         />
       )}
 

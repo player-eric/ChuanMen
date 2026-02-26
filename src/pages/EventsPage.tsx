@@ -2,19 +2,9 @@ import { useEffect, useState } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
 import {
   Alert,
-  Avatar,
-  AvatarGroup,
   Box,
   Button,
   Card,
-  CardActionArea,
-  CardActions,
-  CardContent,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Grid,
   InputAdornment,
   Snackbar,
@@ -26,132 +16,13 @@ import {
 } from '@mui/material';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
-import type { EventData, EventsPageData } from '@/types';
+import type { EventsPageData } from '@/types';
 import { searchProposals, toggleProposalVote } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { useColors } from '@/hooks/useColors';
 import { Ava, AvaStack } from '@/components/Atoms';
 import { EmptyState } from '@/components/EmptyState';
-import { FeedActions } from '@/components/FeedItems';
-import { ScenePhoto } from '@/components/ScenePhoto';
-import { Poster } from '@/components/Poster';
-
-const phaseChip: Record<string, { label: string; color: 'warning' | 'success' | 'primary' | 'default' | 'error' }> = {
-  invite: { label: '🔒 邀请', color: 'warning' },
-  open: { label: '报名中', color: 'success' },
-  closed: { label: '报名结束', color: 'default' },
-  cancelled: { label: '已取消', color: 'error' },
-  ended: { label: '已结束', color: 'default' },
-};
-
-function EventDetailDialog({ evt, open, onClose }: { evt: EventData | null; open: boolean; onClose: () => void }) {
-  if (!evt) return null;
-
-  return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{evt.title}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={1.5}>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            <Chip size="small" label={`📅 ${evt.date}`} />
-            <Chip size="small" label={`📍 ${evt.location}`} />
-            {evt.phase === 'invite' && <Chip size="small" color="warning" label="邀请阶段" />}
-          </Stack>
-          <Typography variant="body2" color="text.secondary">{evt.desc}</Typography>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Avatar>{evt.host[0]}</Avatar>
-            <Typography variant="body2">Host：{evt.host}</Typography>
-          </Stack>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <AvatarGroup max={5}>
-              {evt.people.map((name) => (
-                <Avatar key={name}>{name[0]}</Avatar>
-              ))}
-            </AvatarGroup>
-            <Typography variant="body2" color={evt.spots > 0 ? 'success.main' : 'text.secondary'}>
-              {evt.spots > 0 ? `还剩 ${evt.spots}/${evt.total} 位` : '已满，可排队'}
-            </Typography>
-          </Stack>
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>关闭</Button>
-        <Button variant="contained">{evt.phase === 'invite' ? '接受邀请' : '报名参加'}</Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
-/** Shared event card used in both "即将到来" and "过往活动" tabs */
-function EventCard({ evt, navigate }: { evt: EventData; navigate: ReturnType<typeof useNavigate> }) {
-  const phase = phaseChip[evt.phase] ?? phaseChip.open;
-  const isCancelled = evt.phase === 'cancelled';
-
-  return (
-    <Card sx={{ height: '100%', overflow: 'hidden', opacity: isCancelled ? 0.6 : 1 }}>
-      <CardActionArea onClick={() => navigate(`/events/${evt.id}`)}>
-        {evt.scene && (
-          <Box sx={{ position: 'relative' }}>
-            <ScenePhoto scene={evt.scene} h={100} style={{ borderRadius: 0 }}>
-              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', background: 'linear-gradient(transparent, rgba(0,0,0,0.5))' }} />
-              <Box sx={{ position: 'absolute', top: 8, right: 10 }}>
-                <Chip size="small" color={phase.color} label={phase.label} sx={{ height: 22, fontSize: '0.7rem' }} />
-              </Box>
-              {evt.film && (
-                <Box sx={{ position: 'absolute', bottom: 8, left: 10 }}>
-                  <Poster title={evt.film} w={28} h={40} />
-                </Box>
-              )}
-            </ScenePhoto>
-          </Box>
-        )}
-        <CardContent>
-          <Stack spacing={1.5}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h6">{evt.title}</Typography>
-              {!evt.scene && <Chip size="small" color={phase.color} label={phase.label} />}
-              {evt.isHomeEvent && <Chip size="small" variant="outlined" label="🏠 在家" />}
-            </Stack>
-            <Typography variant="body2" color="text.secondary">{evt.date} · {evt.location}</Typography>
-            {evt.isHomeEvent && evt.phase === 'open' && (
-              <Typography variant="caption" color="text.secondary">📍 报名后可见完整地址</Typography>
-            )}
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Avatar sx={{ width: 26, height: 26 }}>{evt.host[0]}</Avatar>
-              <Typography variant="body2" color="text.secondary">{evt.host} Host</Typography>
-            </Stack>
-            {evt.houseRules && (
-              <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                🏠 {evt.houseRules}
-              </Typography>
-            )}
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <AvatarGroup max={4}>
-                {evt.people.map((name) => (
-                  <Avatar key={name}>{name[0]}</Avatar>
-                ))}
-              </AvatarGroup>
-              {evt.phase !== 'ended' && evt.phase !== 'cancelled' && (
-                <Typography variant="body2" color={evt.spots > 0 ? 'success.main' : 'text.secondary'}>
-                  {evt.spots > 0 ? `还剩 ${evt.spots} 位` : '已满'}
-                </Typography>
-              )}
-              {(evt.phase === 'ended') && (
-                <Stack direction="row" spacing={0.5}>
-                  {evt.photoCount && <Chip size="small" variant="outlined" label={`📷 ${evt.photoCount}`} />}
-                  {evt.commentCount && <Chip size="small" variant="outlined" label={`💬 ${evt.commentCount}`} />}
-                </Stack>
-              )}
-            </Stack>
-          </Stack>
-        </CardContent>
-      </CardActionArea>
-      <CardActions>
-        <Button size="small" onClick={() => navigate(`/events/${evt.id}`)}>查看详情</Button>
-      </CardActions>
-    </Card>
-  );
-}
+import { FeedActions, FeedActivity } from '@/components/FeedItems';
 
 export default function EventsPage() {
   const navigate = useNavigate();
@@ -159,7 +30,6 @@ export default function EventsPage() {
   const c = useColors();
   const data = useLoaderData() as EventsPageData;
   const [tab, setTab] = useState<'upcoming' | 'ideas' | 'past'>('upcoming');
-  const [selected, setSelected] = useState<EventData | null>(null);
   const [snackMsg, setSnackMsg] = useState('');
   const canInteract = Boolean(user);
 
@@ -224,9 +94,26 @@ export default function EventsPage() {
             />
           ) : (
             <Grid container spacing={2}>
-              {upcomingEvents.map((evt) => (
+              {upcomingEvents.map((evt: any) => (
                 <Grid key={evt.id} size={{ xs: 12, md: 6 }}>
-                  <EventCard evt={evt} navigate={navigate} />
+                  <FeedActivity
+                    mode="list"
+                    name={evt.host}
+                    title={evt.title}
+                    date={evt.date}
+                    location={evt.location}
+                    spots={evt.spots}
+                    people={evt.people}
+                    signupUserIds={evt.signupUserIds}
+                    film={evt.film}
+                    scene={evt.scene}
+                    navTarget={`/events/${evt.id}`}
+                    phase={evt.phase}
+                    isHomeEvent={evt.isHomeEvent}
+                    houseRules={evt.houseRules}
+                    hostId={evt.hostId}
+                    likes={0} likedBy={[]} comments={[]}
+                  />
                 </Grid>
               ))}
             </Grid>
@@ -368,42 +255,46 @@ export default function EventsPage() {
             />
           )}
           <Grid container spacing={2}>
-            {/* EventData items with phase='ended' — full rich card */}
-            {pastEvents.map((evt) => (
+            {/* EventData items with phase='ended' */}
+            {pastEvents.map((evt: any) => (
               <Grid key={evt.id} size={{ xs: 12, md: 6 }}>
-                <EventCard evt={evt} navigate={navigate} />
+                <FeedActivity
+                  mode="list"
+                  name={evt.host}
+                  title={evt.title}
+                  date={evt.date}
+                  location={evt.location}
+                  spots={evt.spots}
+                  people={evt.people}
+                  film={evt.film}
+                  scene={evt.scene}
+                  navTarget={`/events/${evt.id}`}
+                  phase="ended"
+                  photoCount={evt.photoCount}
+                  commentCount={evt.commentCount}
+                  likes={0} likedBy={[]} comments={[]}
+                />
               </Grid>
             ))}
-            {/* Older PastEvent items — same visual style */}
+            {/* Older PastEvent items */}
             {data.past.map((evt, idx) => (
               <Grid key={`past-${idx}`} size={{ xs: 12, md: 6 }}>
-                <Card sx={{ height: '100%', overflow: 'hidden' }}>
-                  {evt.scene && (
-                    <Box sx={{ position: 'relative' }}>
-                      <ScenePhoto scene={evt.scene} h={100} style={{ borderRadius: 0 }}>
-                        <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', background: 'linear-gradient(transparent, rgba(0,0,0,0.5))' }} />
-                        {evt.film && (
-                          <Box sx={{ position: 'absolute', bottom: 8, left: 10 }}>
-                            <Poster title={evt.film} w={28} h={40} />
-                          </Box>
-                        )}
-                      </ScenePhoto>
-                    </Box>
-                  )}
-                  <CardContent>
-                    <Stack spacing={1.5}>
-                      <Typography variant="h6">{evt.title}</Typography>
-                      <Typography variant="body2" color="text.secondary">{evt.date} · {evt.host} Host</Typography>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography variant="body2" color="text.secondary">{evt.people} 人参加</Typography>
-                        <Stack direction="row" spacing={0.5}>
-                          {evt.photoCount && <Chip size="small" variant="outlined" label={`📷 ${evt.photoCount}`} />}
-                          {evt.commentCount && <Chip size="small" variant="outlined" label={`💬 ${evt.commentCount}`} />}
-                        </Stack>
-                      </Stack>
-                    </Stack>
-                  </CardContent>
-                </Card>
+                <FeedActivity
+                  mode="list"
+                  name={evt.host}
+                  title={evt.title}
+                  date={evt.date}
+                  location=""
+                  spots={0}
+                  people={[]}
+                  film={evt.film}
+                  scene={evt.scene}
+                  navTarget={evt.id ? `/events/${evt.id}` : undefined}
+                  phase="ended"
+                  photoCount={evt.photoCount}
+                  commentCount={evt.commentCount}
+                  likes={0} likedBy={[]} comments={[]}
+                />
               </Grid>
             ))}
           </Grid>
@@ -416,7 +307,7 @@ export default function EventsPage() {
           + 发起活动
         </Button>
         <Button variant="outlined" size="small" onClick={() => navigate('/events/proposals/new')} disabled={!canInteract}
-          sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start', bgcolor: 'background.paper' }}>
+          sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start', bgcolor: 'background.paper', borderColor: 'divider', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
           💡 提创意
         </Button>
       </Stack>
@@ -427,8 +318,6 @@ export default function EventsPage() {
         onClose={() => setSnackMsg('')}
         message={snackMsg}
       />
-
-      <EventDetailDialog evt={selected} open={Boolean(selected)} onClose={() => setSelected(null)} />
     </Box>
   );
 }

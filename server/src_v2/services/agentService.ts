@@ -6,6 +6,7 @@ import {
   sendEncourageHosting,
   sendMilestoneNotif,
   sendHostTributeNotif,
+  sendDailyDigest,
 } from '../agent/emailAutomation.js';
 
 export async function runAgentCycle(app: FastifyInstance) {
@@ -60,6 +61,12 @@ export async function runAgentCycle(app: FastifyInstance) {
     } catch (err) {
       log.error({ err }, 'Agent: sendHostTributeNotif failed');
     }
+  }
+
+  try {
+    await sendDailyDigest(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendDailyDigest failed');
   }
 
   return { milestones, tribute };

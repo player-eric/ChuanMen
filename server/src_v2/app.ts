@@ -31,6 +31,11 @@ export async function createApp() {
     prefix: '/system-test/',
   });
 
+  // Parse image/* content types as raw Buffer (for direct file upload, up to 10MB)
+  app.addContentTypeParser(['image/jpeg', 'image/png', 'image/webp', 'image/gif'], { parseAs: 'buffer', bodyLimit: 10 * 1024 * 1024 }, (_req, body, done) => {
+    done(null, body);
+  });
+
   app.get('/', async () => ({ service: 'chuanmen-server-fastify', status: 'ok' }));
   await app.register(apiRoutes, { prefix: '/api' });
 

@@ -17,6 +17,15 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     return user;
   });
 
+  // Member profile by name — includes all activities + mutual with viewer
+  app.get('/by-name/:name', async (request, reply) => {
+    const { name } = request.params as { name: string };
+    const viewerId = (request.headers['x-user-id'] as string) || '';
+    const member = await service.getMemberProfile(decodeURIComponent(name), viewerId || undefined);
+    if (!member) return reply.notFound('找不到这个成员');
+    return member;
+  });
+
   app.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const user = await service.getUserById(id);

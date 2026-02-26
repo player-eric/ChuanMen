@@ -1,24 +1,25 @@
 import type { FastifyPluginAsync } from 'fastify';
 
 /**
- * GET /api/profile?userId=xxx
+ * GET /api/profile?userId=xxx  OR  ?name=xxx
+ * Optional: viewerId (via query or x-user-id header) for mutual computation
  * Returns aggregated user profile data
  */
 export const profileRoutes: FastifyPluginAsync = async (app) => {
   app.get('/', async (request, reply) => {
-    const { userId } = request.query as { userId?: string };
-    if (!userId) return reply.badRequest('缺少 userId');
+    const { userId, name, viewerId: qViewerId } = request.query as { userId?: string; name?: string; viewerId?: string };
+    if (!userId && !name) return reply.badRequest('缺少 userId 或 name');
 
     const prisma = app.prisma;
+    const viewerId = qViewerId || (request.headers['x-user-id'] as string) || '';
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        socialTitles: true,
-        preferences: true,
-      },
-    });
+    const user = name
+      ? await prisma.user.findFirst({ where: { name }, include: { socialTitles: true, preferences: true } })
+      : await prisma.user.findUnique({ where: { id: userId! }, include: { socialTitles: true, preferences: true } });
     if (!user) return reply.notFound('用户不存在');
+
+    const targetId = user.id;
+    const isOwnProfile = !!(viewerId && viewerId === targetId);
 
     // Parallelize all aggregation queries
     const [
@@ -37,30 +38,30 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
       galleryEvents,
     ] = await Promise.all([
       // Events user hosted
-      prisma.event.count({ where: { hostId: userId } }),
+      prisma.event.count({ where: { hostId: targetId } }),
 
       // Events user participated in (accepted signups)
-      prisma.eventSignup.count({ where: { userId, status: 'accepted' } }),
+      prisma.eventSignup.count({ where: { userId: targetId, status: 'accepted' } }),
 
       // Movies recommended
-      prisma.movie.count({ where: { recommendedById: userId } }),
+      prisma.movie.count({ where: { recommendedById: targetId } }),
 
       // Movies screened
       prisma.movie.count({
-        where: { recommendedById: userId, status: 'screened' },
+        where: { recommendedById: targetId, status: 'screened' },
       }),
 
       // Proposal count
-      prisma.proposal.count({ where: { authorId: userId } }),
+      prisma.proposal.count({ where: { authorId: targetId } }),
 
       // MovieVote count (votes user received on their movies)
       prisma.movieVote.count({
-        where: { movie: { recommendedById: userId } },
+        where: { movie: { recommendedById: targetId } },
       }),
 
-      // Postcards sent
+      // Postcards sent (for non-owner: only public ones)
       prisma.postcard.findMany({
-        where: { fromId: userId },
+        where: { fromId: targetId, ...(isOwnProfile ? {} : { visibility: 'public' }) },
         orderBy: { createdAt: 'desc' },
         take: 10,
         include: {
@@ -69,9 +70,9 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         },
       }),
 
-      // Postcards received
+      // Postcards received (for non-owner: only public ones)
       prisma.postcard.findMany({
-        where: { toId: userId },
+        where: { toId: targetId, ...(isOwnProfile ? {} : { visibility: 'public' }) },
         orderBy: { createdAt: 'desc' },
         take: 10,
         include: {
@@ -82,7 +83,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
 
       // Recent movies user recommended
       prisma.movie.findMany({
-        where: { recommendedById: userId },
+        where: { recommendedById: targetId },
         orderBy: { createdAt: 'desc' },
         take: 20,
         include: { _count: { select: { votes: true } } },
@@ -90,7 +91,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
 
       // Movies user voted for (not their own)
       prisma.movieVote.findMany({
-        where: { userId, movie: { recommendedById: { not: userId } } },
+        where: { userId: targetId, movie: { recommendedById: { not: targetId } } },
         include: {
           movie: {
             include: {
@@ -109,8 +110,8 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           status: 'scheduled',
           startsAt: { gte: new Date() },
           OR: [
-            { hostId: userId },
-            { signups: { some: { userId, status: 'accepted' } } },
+            { hostId: targetId },
+            { signups: { some: { userId: targetId, status: 'accepted' } } },
           ],
         },
         orderBy: { startsAt: 'asc' },
@@ -124,8 +125,8 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
       prisma.event.findMany({
         where: {
           OR: [
-            { hostId: userId, status: 'completed' },
-            { signups: { some: { userId, status: 'accepted' } }, status: 'completed' },
+            { hostId: targetId, status: 'completed' },
+            { signups: { some: { userId: targetId, status: 'accepted' } }, status: 'completed' },
           ],
         },
         orderBy: { startsAt: 'desc' },
@@ -140,8 +141,8 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         where: {
           recapPhotoUrls: { isEmpty: false },
           OR: [
-            { hostId: userId },
-            { signups: { some: { userId, status: 'accepted' } } },
+            { hostId: targetId },
+            { signups: { some: { userId: targetId, status: 'accepted' } } },
           ],
         },
         orderBy: { startsAt: 'desc' },
@@ -155,11 +156,50 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
       }),
     ]);
 
+    // Mutual computation (when viewing someone else's profile)
+    let mutual = undefined;
+    if (viewerId && !isOwnProfile) {
+      const [viewerSignups, viewerVotes, mutualCardsSent, mutualCardsReceived] = await Promise.all([
+        prisma.eventSignup.findMany({ where: { userId: viewerId, status: 'accepted' }, select: { eventId: true } }),
+        prisma.movieVote.findMany({ where: { userId: viewerId }, select: { movieId: true } }),
+        prisma.postcard.count({ where: { fromId: viewerId, toId: targetId } }),
+        prisma.postcard.count({ where: { fromId: targetId, toId: viewerId } }),
+      ]);
+
+      const viewerEventIds = new Set(viewerSignups.map((s) => s.eventId));
+      const viewerMovieIds = new Set(viewerVotes.map((v) => v.movieId));
+
+      // Find mutual events from pastEvents (already fetched)
+      const mutualEvents = pastEvents
+        .filter((e) => viewerEventIds.has(e.id))
+        .map((e) => ({ id: e.id, title: e.title }));
+      // Also check upcoming
+      const mutualUpcoming = upcomingEvents
+        .filter((e) => viewerEventIds.has(e.id))
+        .map((e) => ({ id: e.id, title: e.title }));
+
+      // Find mutual movies from votedMovies (already fetched)
+      const targetMovieIds = votedMovies.map((v) => v.movie.id);
+      const mutualMovies = targetMovieIds
+        .filter((id) => viewerMovieIds.has(id))
+        .map((id) => {
+          const m = votedMovies.find((v) => v.movie.id === id)!.movie;
+          return { id: m.id, title: m.title };
+        });
+
+      mutual = {
+        evtCount: mutualEvents.length + mutualUpcoming.length,
+        events: [...mutualUpcoming, ...mutualEvents],
+        movies: mutualMovies,
+        cards: mutualCardsSent + mutualCardsReceived,
+      };
+    }
+
     return {
       user: {
         id: user.id,
         name: user.name,
-        email: user.email,
+        email: isOwnProfile ? user.email : undefined,
         avatar: user.avatar,
         bio: user.bio,
         role: user.role,
@@ -196,6 +236,8 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           createdAt: e.startsAt.toISOString(),
         })),
       ),
+      isOwnProfile,
+      mutual,
     };
   });
 };
