@@ -935,6 +935,35 @@ export interface AdminStats {
   activeHosts: number;
   totalMovies: number;
   totalProposals: number;
+  // Activity supply
+  monthActiveHosts: number;
+  waitlistPercent: number;
+  distinctTagCount: number;
+  topTags: string[];
+  // Postcard breakdown
+  publicCards: number;
+  privateCards: number;
+  publicPercent: number;
+  // Member activity
+  monthParticipants: number;
+  monthMovieRecommenders: number;
+  newMemberParticipationRate: number;
+  // Host funnel
+  hostFunnel: {
+    activeParticipants3: number;
+    firstCoHosts: number;
+    soloHosts: number;
+    veteranHosts: number;
+  };
+  // Email stats
+  emailStats: {
+    active: number;
+    weekly: number;
+    stopped: number;
+    unsubscribed: number;
+  };
+  // Recent activity
+  recentActivity: { text: string; time: string }[];
 }
 
 export async function fetchAdminStats() {
