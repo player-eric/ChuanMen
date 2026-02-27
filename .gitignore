@@ -7,3 +7,6 @@ server/node_modules
 server/.env
 server/.env.*
 server/uploads
+
+# Notion export data (private, not committed)
+notionData/
