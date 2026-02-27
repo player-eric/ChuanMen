@@ -206,8 +206,6 @@ export default function EventCreatePage() {
           {fromProposal && (
             <Chip size="small" label={`从创意「${fromProposal.title}」发起`} color="info" variant="outlined" />
           )}
-          {error && <Alert severity="error">{error}</Alert>}
-
           <TextField
             label="名称"
             value={name}
@@ -714,6 +712,17 @@ export default function EventCreatePage() {
         onClose={() => setSnackOpen(false)}
         message="活动创建成功！"
       />
+
+      <Snackbar
+        open={!!error}
+        autoHideDuration={5000}
+        onClose={() => setError('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" onClose={() => setError('')} sx={{ width: '100%' }}>
+          {error}
+        </Alert>
+      </Snackbar>
     </Card>
   );
 }

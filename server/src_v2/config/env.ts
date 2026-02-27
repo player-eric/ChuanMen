@@ -2,7 +2,10 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-// APP_ENV drives which .env file to load: local | dev | prod
+// APP_ENV drives which .env file to load:
+//   local → .env.development  (local web + Docker Postgres + Docker MinIO + real Resend)
+//   dev   → .env.dev          (local web + Render dev DB + AWS S3 dev bucket + real Resend)
+//   prod  → .env.production   (Render web + Render prod DB + AWS S3 prod bucket + real Resend)
 const appEnv = process.env.APP_ENV ?? 'local';
 const envFileMap: Record<string, string> = {
   local: '.env.development',

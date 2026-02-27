@@ -133,36 +133,18 @@ export async function uploadMedia(
   category: MediaCategory,
   ownerId?: string,
 ): Promise<{ publicUrl: string; asset: MediaAsset }> {
-  // Try S3 presign flow first
-  try {
-    const { uploadUrl, publicUrl, asset } = await requestPresignedUrl({
-      category,
-      contentType: file.type,
-      fileSize: file.size,
-      ownerId,
-      fileName: file.name,
-    });
+  const { uploadUrl, publicUrl, asset } = await requestPresignedUrl({
+    category,
+    contentType: file.type,
+    fileSize: file.size,
+    ownerId,
+    fileName: file.name,
+  });
 
-    await uploadFileToS3(uploadUrl, file);
-    const { asset: confirmed } = await confirmMediaUpload(asset.id);
+  await uploadFileToS3(uploadUrl, file);
+  const { asset: confirmed } = await confirmMediaUpload(asset.id);
 
-    return { publicUrl, asset: confirmed };
-  } catch {
-    // S3 not configured — fall back to direct upload
-    const params = new URLSearchParams({ category });
-    if (ownerId) params.set('ownerId', ownerId);
-    const base = typeof window === 'undefined' ? 'http://localhost:4000' : '';
-    const res = await fetch(`${base}/api/media/upload?${params}`, {
-      method: 'POST',
-      headers: { 'Content-Type': file.type },
-      body: file,
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`上传失败: ${res.status} ${text}`);
-    }
-    return res.json();
-  }
+  return { publicUrl, asset: confirmed };
 }
 
 export type RecommendationCategory = 'movie' | 'book' | 'recipe' | 'music' | 'place';

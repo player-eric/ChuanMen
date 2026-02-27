@@ -1,18 +1,11 @@
-import path from 'node:path';
-import fs from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { createUploadUrl, deleteObject, s3Configured } from '../services/s3Service.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { createUploadUrl, deleteObject } from '../services/s3Service.js';
 
 /* ────────── helpers ────────── */
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-const LOCAL_UPLOADS_DIR = path.resolve(__dirname, '../../uploads');
 
 /**
  * Category → S3 key prefix mapping.
@@ -60,11 +53,6 @@ const presignBody = z.object({
 
 const confirmBody = z.object({
   assetId: z.string().min(1),
-});
-
-const uploadBody = z.object({
-  category: z.string().default('general'),
-  ownerId: z.string().optional(),
 });
 
 /* ────────── routes ────────── */
@@ -119,81 +107,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
   });
 
   /**
-   * POST /upload — direct file upload (local fallback when S3 is unavailable)
-   * Body: raw file bytes, Content-Type header = file MIME type
-   * Query: ?category=avatar&ownerId=xxx
-   * Returns: { publicUrl, asset }
-   */
-  app.post('/upload', async (request, reply) => {
-    const contentType = (request.headers['content-type'] ?? '').split(';')[0].trim();
-    if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
-      return reply.badRequest(`不支持的文件类型: ${contentType}`);
-    }
-
-    const query = uploadBody.parse(request.query);
-    const key = buildKey(query.category, query.ownerId, contentType);
-    const fileData = request.body as Buffer;
-
-    if (!fileData || fileData.length === 0) {
-      return reply.badRequest('请求体为空');
-    }
-    if (fileData.length > MAX_FILE_SIZE) {
-      return reply.badRequest('文件过大');
-    }
-
-    // Save to local uploads directory
-    const filePath = path.join(LOCAL_UPLOADS_DIR, key);
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, fileData);
-
-    const publicUrl = `/api/media/files/${key}`;
-
-    const asset = await app.prisma.mediaAsset.create({
-      data: {
-        key,
-        ownerId: query.ownerId,
-        contentType,
-        fileSize: fileData.length,
-        status: 'uploaded',
-        url: publicUrl,
-      },
-    });
-
-    return reply.send({ publicUrl, asset });
-  });
-
-  /**
-   * GET /files/* — serve locally uploaded files
-   */
-  app.get('/files/*', async (request, reply) => {
-    const fileKey = (request.params as Record<string, string>)['*'];
-    if (!fileKey) return reply.notFound();
-
-    const filePath = path.join(LOCAL_UPLOADS_DIR, fileKey);
-
-    // Prevent directory traversal
-    if (!filePath.startsWith(LOCAL_UPLOADS_DIR)) {
-      return reply.forbidden();
-    }
-
-    try {
-      await fs.access(filePath);
-    } catch {
-      return reply.notFound();
-    }
-
-    const ext = path.extname(filePath).slice(1);
-    const mimeMap: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
-    const mime = mimeMap[ext] ?? 'application/octet-stream';
-
-    reply.header('Content-Type', mime);
-    reply.header('Cache-Control', 'public, max-age=31536000, immutable');
-    const data = await fs.readFile(filePath);
-    return reply.send(data);
-  });
-
-  /**
-   * DELETE /:id — delete a media asset (and its S3 object or local file)
+   * DELETE /:id — delete a media asset and its S3 object
    */
   app.delete<{ Params: { id: string } }>('/:id', async (request, reply) => {
     const asset = await app.prisma.mediaAsset.findUnique({
@@ -201,15 +115,10 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!asset) return reply.notFound('Media asset not found');
 
-    // Delete file (S3 or local)
     try {
-      if (s3Configured) {
-        await deleteObject(asset.key);
-      } else {
-        await fs.unlink(path.join(LOCAL_UPLOADS_DIR, asset.key)).catch(() => {});
-      }
+      await deleteObject(asset.key);
     } catch (err) {
-      app.log.warn({ err, key: asset.key }, 'Failed to delete file');
+      app.log.warn({ err, key: asset.key }, 'Failed to delete S3 object');
     }
 
     await app.prisma.mediaAsset.delete({ where: { id: asset.id } });
