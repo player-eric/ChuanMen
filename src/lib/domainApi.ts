@@ -557,6 +557,48 @@ export async function toggleLike(entityType: string, entityId: string, userId: s
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   Auth API — Email verification code login
+   ═══════════════════════════════════════════════════════════════ */
+
+/** Send a 6-digit login verification code to the given email */
+export async function sendLoginCode(email: string) {
+  return requestJson<{ ok: boolean; message: string }>('/api/auth/send-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+}
+
+/** Verify a login code and get user data */
+export async function verifyLoginCode(email: string, code: string) {
+  const url = getApiUrl('/api/auth/verify-code');
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+  });
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const err = new Error(data?.message ?? '验证失败');
+    (err as any).status = response.status;
+    (err as any).errorCode = data?.error;
+    throw err;
+  }
+
+  return data as { ok: boolean; user: EntityMap };
+}
+
+/** Check email registration status (before sending code) */
+export async function checkEmailStatus(email: string) {
+  return requestJson<{ status: string }>('/api/auth/check-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
    Application API
    ═══════════════════════════════════════════════════════════════ */
 
@@ -576,6 +618,22 @@ export async function submitApplication(payload: {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Admin: Approve / Reject applicant
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function adminApproveUser(userId: string) {
+  return requestJson<{ ok: boolean; user: EntityMap }>(`/api/users/${userId}/approve`, {
+    method: 'POST',
+  });
+}
+
+export async function adminRejectUser(userId: string) {
+  return requestJson<{ ok: boolean; user: EntityMap }>(`/api/users/${userId}/reject`, {
+    method: 'POST',
   });
 }
 

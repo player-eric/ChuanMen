@@ -29,7 +29,7 @@ import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { fetchUsersAdmin, adminUpdateUser, adminDeleteUser } from '@/lib/domainApi';
+import { fetchUsersAdmin, adminUpdateUser, adminApproveUser, adminRejectUser } from '@/lib/domainApi';
 
 /* ── PRD 11.1.1 ── Operational identities  ── */
 const OP_IDENTITIES = [
@@ -165,7 +165,7 @@ export default function AdminMembersPage() {
   const handleApprove = async (m: MemberRow) => {
     setBusy(true);
     try {
-      await adminUpdateUser(m.id, { userStatus: 'approved' });
+      await adminApproveUser(m.id);
       updateUserLocal(m.id, { userStatus: 'approved' });
     } catch { /* ignore */ }
     setBusy(false);
@@ -176,8 +176,8 @@ export default function AdminMembersPage() {
   const handleDeny = async (m: MemberRow) => {
     setBusy(true);
     try {
-      await adminDeleteUser(m.id);
-      removeUserLocal(m.id);
+      await adminRejectUser(m.id);
+      updateUserLocal(m.id, { userStatus: 'rejected' });
     } catch { /* ignore */ }
     setBusy(false);
     setConfirmDeny(null);
@@ -353,9 +353,11 @@ export default function AdminMembersPage() {
               <Card><CardContent><Typography color="text.secondary" textAlign="center">暂无待审核申请</Typography></CardContent></Card>
             </Grid>
           )}
-          {pendingApplicants.map((a) => (
+          {pendingApplicants.map((a) => {
+            const daysPending = a.createdAt ? Math.floor((Date.now() - new Date(a.createdAt).getTime()) / 86400000) : 0;
+            return (
             <Grid key={a.id} size={{ xs: 12, md: 6 }}>
-              <Card>
+              <Card sx={daysPending >= 7 ? { border: '2px solid', borderColor: 'warning.main' } : undefined}>
                 <CardContent>
                   <Stack spacing={1.5}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -366,13 +368,13 @@ export default function AdminMembersPage() {
                           <Typography variant="caption" color="text.secondary">{a.email}</Typography>
                         </Box>
                       </Stack>
-                      <Chip label="待审核" size="small" color="warning" variant="outlined" />
+                      <Chip label={daysPending >= 7 ? `待审核 · ${daysPending}天` : '待审核'} size="small" color="warning" variant="outlined" />
                     </Stack>
                     <Typography variant="body2" color="text.secondary">{a.bio || '未填写自我介绍'}</Typography>
                     <Stack direction="row" spacing={2} flexWrap="wrap">
                       {a.location && <Typography variant="caption">📍 {a.location}</Typography>}
                       {a.referralSource && <Typography variant="caption">🤝 来源：{a.referralSource}</Typography>}
-                      <Typography variant="caption">📅 {new Date(a.createdAt).toLocaleDateString('zh-CN')}</Typography>
+                      <Typography variant="caption" color={daysPending >= 7 ? 'warning.main' : undefined}>📅 {new Date(a.createdAt).toLocaleDateString('zh-CN')}</Typography>
                     </Stack>
                     <Stack direction="row" spacing={1}>
                       <Button size="small" variant="contained" color="success" disabled={busy} onClick={() => setConfirmApprove(a)}>
@@ -389,7 +391,8 @@ export default function AdminMembersPage() {
                 </CardContent>
               </Card>
             </Grid>
-          ))}
+            );
+          })}
         </Grid>
       )}
 
@@ -457,7 +460,7 @@ export default function AdminMembersPage() {
       <ConfirmDialog
         open={!!confirmDeny}
         title="确认拒绝申请"
-        message={`确定要拒绝「${confirmDeny?.name ?? ''}」的入社申请吗？此操作将删除该申请。`}
+        message={`确定要拒绝「${confirmDeny?.name ?? ''}」的入社申请吗？该申请者将收到拒绝通知邮件，30 天后可重新申请。`}
         confirmLabel="拒绝"
         confirmColor="error"
         onConfirm={() => confirmDeny && handleDeny(confirmDeny)}

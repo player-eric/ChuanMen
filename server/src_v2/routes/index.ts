@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { healthRoutes } from './health.js';
+import { authRoutes } from './auth.js';
 import { mediaRoutes } from './media.js';
 import { agentRoutes } from './agent.js';
 import { emailRoutes } from './email.js';
@@ -19,6 +20,7 @@ import { taskPresetRoutes } from '../modules/task-presets/task-preset.route.js';
 
 export const apiRoutes: FastifyPluginAsync = async (app) => {
   app.register(healthRoutes, { prefix: '/health' });
+  app.register(authRoutes);
   app.register(userRoutes, { prefix: '/users' });
   app.register(eventRoutes, { prefix: '/events' });
   app.register(recommendationRoutes, { prefix: '/recommendations' });

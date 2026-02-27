@@ -710,6 +710,17 @@ model EmailLog {
   @@index([userId, sentAt(sort: Desc)])
 }
 
+model LoginCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([email, code])
+}
+
 model TitleRule {
   id          String   @id @default(cuid())
   emoji       String

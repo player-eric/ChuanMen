@@ -1,6 +1,4 @@
 import type { AuthUser, RegisterPayload } from '@/types/auth';
-import { WALKTHROUGH_USER } from '@/auth/AuthContext';
-import { getUserByEmail } from '@/lib/domainApi';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -37,44 +35,4 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthUser> 
     role: data.role,
     coverImageUrl: data.cover_image_url,
   };
-}
-
-export async function loginUser(email: string): Promise<AuthUser> {
-  const normalizedEmail = email.trim().toLowerCase();
-
-  // Walkthrough emails get special handling (fallback to hardcoded user)
-  const walkthroughEmails = ['cm@gmail.com', 'yuan@chuanmen.app'];
-  if (walkthroughEmails.includes(normalizedEmail)) {
-    try {
-      const dbUser = await getUserByEmail(WALKTHROUGH_USER.email);
-      return {
-        ...WALKTHROUGH_USER,
-        id: dbUser.id,
-        name: dbUser.name ?? WALKTHROUGH_USER.name,
-        avatar: (dbUser.avatar as string) || WALKTHROUGH_USER.avatar,
-        role: (dbUser.role as string) || WALKTHROUGH_USER.role,
-      };
-    } catch {
-      return WALKTHROUGH_USER;
-    }
-  }
-
-  // All other emails — look up in real DB
-  try {
-    const dbUser = await getUserByEmail(normalizedEmail);
-    return {
-      id: dbUser.id,
-      name: dbUser.name ?? '',
-      email: dbUser.email ?? normalizedEmail,
-      avatar: (dbUser.avatar as string) || undefined,
-      bio: (dbUser.bio as string) || undefined,
-      role: (dbUser.role as string) || 'member',
-    };
-  } catch (err: unknown) {
-    // Distinguish 404 (not registered) from network errors
-    if (err && typeof err === 'object' && 'status' in err && (err as any).status === 404) {
-      throw new Error('该邮箱未注册，请先申请加入');
-    }
-    throw new Error('网络错误，请稍后重试');
-  }
 }
