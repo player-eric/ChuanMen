@@ -17,6 +17,47 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const { email } = z.object({ email: z.string().email() }).parse(request.body);
     const normalizedEmail = email.trim().toLowerCase();
 
+    // Check if user exists and is approved before sending code
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { userStatus: true, createdAt: true },
+    });
+
+    if (!user) {
+      return reply.code(404).send({
+        error: 'not_registered',
+        message: '该邮箱尚未注册，请先申请加入',
+      });
+    }
+
+    if (user.userStatus === 'applicant') {
+      return reply.code(403).send({
+        error: 'pending_review',
+        message: '你的申请正在审核中，我们会在 3 天内通过 Email 回复你',
+      });
+    }
+
+    if (user.userStatus === 'rejected') {
+      const daysSinceCreation = (Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceCreation >= 30) {
+        return reply.code(403).send({
+          error: 'rejected_can_reapply',
+          message: '你的申请未通过，但你可以重新申请',
+        });
+      }
+      return reply.code(403).send({
+        error: 'rejected',
+        message: '你的申请未通过。30 天后可重新申请。',
+      });
+    }
+
+    if (user.userStatus === 'banned') {
+      return reply.code(403).send({
+        error: 'banned',
+        message: '该账号已被停用',
+      });
+    }
+
     // Generate 6-digit code
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes

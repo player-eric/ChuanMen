@@ -67,7 +67,16 @@ export default function LoginPage() {
       setStep('code');
       setCountdown(60);
     } catch (err: unknown) {
-      setErrorMessage(err instanceof Error ? err.message : '发送验证码失败');
+      const errorCode = (err as any)?.errorCode;
+      const statusTypes: StatusInfo['type'][] = [
+        'pending_review', 'rejected', 'rejected_can_reapply', 'banned', 'not_registered',
+      ];
+      if (errorCode && statusTypes.includes(errorCode)) {
+        setStatusInfo({ type: errorCode, message: (err as Error).message });
+        setStep('status');
+      } else {
+        setErrorMessage(err instanceof Error ? err.message : '发送验证码失败');
+      }
     } finally {
       setIsSubmitting(false);
     }

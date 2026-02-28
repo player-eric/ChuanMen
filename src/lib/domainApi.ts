@@ -562,11 +562,22 @@ export async function toggleLike(entityType: string, entityId: string, userId: s
 
 /** Send a 6-digit login verification code to the given email */
 export async function sendLoginCode(email: string) {
-  return requestJson<{ ok: boolean; message: string }>('/api/auth/send-code', {
+  const url = getApiUrl('/api/auth/send-code');
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   });
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const err = new Error(data?.message ?? '发送验证码失败');
+    (err as any).status = response.status;
+    (err as any).errorCode = data?.error;
+    throw err;
+  }
+
+  return data as { ok: boolean; message: string };
 }
 
 /** Verify a login code and get user data */
