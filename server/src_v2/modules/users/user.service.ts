@@ -142,9 +142,28 @@ export class UserService {
     return this.repository.create(data);
   }
 
-  // v2.1: Submit application
+  // v2.1: Submit application (with duplicate name/email check)
   async submitApplication(input: unknown) {
     const data = applySchema.parse(input);
+
+    // Check for duplicate email
+    const existingByEmail = await this.repository.getByEmail(data.email);
+    if (existingByEmail) {
+      const err = new Error('该邮箱已被注册') as any;
+      err.statusCode = 409;
+      err.errorCode = 'EMAIL_EXISTS';
+      throw err;
+    }
+
+    // Check for duplicate display name
+    const existingByName = await this.repository.getByName(data.displayName);
+    if (existingByName) {
+      const err = new Error('该用户名已被使用') as any;
+      err.statusCode = 409;
+      err.errorCode = 'NAME_EXISTS';
+      throw err;
+    }
+
     return this.repository.createApplicant(data);
   }
 

@@ -625,11 +625,19 @@ export async function submitApplication(payload: {
   referralSource?: string;
   coverImageUrl?: string;
 }) {
-  return requestJson<{ ok: boolean; id: string }>('/api/users/apply', {
+  const base = typeof window === 'undefined' ? 'http://localhost:4000' : '';
+  const res = await fetch(`${base}/api/users/apply`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data.error || 'Submit failed') as any;
+    err.errorCode = data.errorCode;
+    throw err;
+  }
+  return data as { ok: boolean; id: string };
 }
 
 /* ═══════════════════════════════════════════════════════════════

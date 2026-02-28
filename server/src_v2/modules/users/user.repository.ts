@@ -74,6 +74,13 @@ export class UserRepository {
     });
   }
 
+  getByName(name: string) {
+    return this.prisma.user.findFirst({
+      where: { name },
+      select: { id: true },
+    });
+  }
+
   create(input: {
     name: string;
     email: string;

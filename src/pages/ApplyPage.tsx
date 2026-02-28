@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { submitApplication } from '@/lib/domainApi';
+import { ImageUpload } from '@/components/ImageUpload';
 import {
   Alert,
   Box,
@@ -33,6 +34,8 @@ const welcomeText = `你好，欢迎来串门儿！
 export default function ApplyPage() {
   const navigate = useNavigate();
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ displayName?: string; email?: string }>({});
   const [form, setForm] = useState({
     displayName: '',
     location: '',
@@ -43,6 +46,7 @@ export default function ApplyPage() {
     email: '',
     wechatId: '',
     referralSource: '',
+    coverImageUrl: '',
   });
 
   const update = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -53,15 +57,22 @@ export default function ApplyPage() {
 
   const handleSubmit = async () => {
     if (!requiredFilled) return;
+    setSubmitError(null);
+    setFieldErrors({});
     try {
       await submitApplication({
         ...form,
         participationPlan: form.participationPlan.join(', '),
       });
       setSubmitted(true);
-    } catch {
-      // Could add error snackbar here
-      setSubmitted(true);
+    } catch (err: any) {
+      if (err.errorCode === 'EMAIL_EXISTS') {
+        setFieldErrors({ email: '该邮箱已被注册' });
+      } else if (err.errorCode === 'NAME_EXISTS') {
+        setFieldErrors({ displayName: '该用户名已被使用' });
+      } else {
+        setSubmitError(err.message || '提交失败，请稍后再试');
+      }
     }
   };
 
@@ -98,6 +109,8 @@ export default function ApplyPage() {
         value={form.displayName}
         onChange={update('displayName')}
         placeholder="显示名，不要求实名"
+        error={!!fieldErrors.displayName}
+        helperText={fieldErrors.displayName}
       />
 
       <TextField
@@ -173,7 +186,8 @@ export default function ApplyPage() {
         type="email"
         value={form.email}
         onChange={update('email')}
-        helperText="建议填写 Google 邮箱，方便后续一键登录"
+        helperText={fieldErrors.email || '建议填写 Google 邮箱，方便后续一键登录'}
+        error={!!fieldErrors.email}
       />
 
       <TextField
@@ -193,13 +207,23 @@ export default function ApplyPage() {
 
       <Box>
         <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>封面图（可选）</Typography>
-        <Button variant="outlined" disabled fullWidth>
-          上传封面图（即将开放）
-        </Button>
+        <ImageUpload
+          value={form.coverImageUrl || null}
+          onChange={(url) => setForm((prev) => ({ ...prev, coverImageUrl: url }))}
+          category="cover"
+          width="100%"
+          height={160}
+          shape="rect"
+          maxSize={10 * 1024 * 1024}
+        />
         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
           封面图将展示在你的个人页面顶部，通过申请后也可以在设置中上传
         </Typography>
       </Box>
+
+      {submitError && (
+        <Alert severity="error">{submitError}</Alert>
+      )}
 
       <Button
         variant="contained"

@@ -46,7 +46,15 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
 
   // v2.1: Application submission — creates applicant + notifies admins
   app.post('/apply', async (request, reply) => {
-    const applicant = await service.submitApplication(request.body);
+    let applicant;
+    try {
+      applicant = await service.submitApplication(request.body);
+    } catch (err: any) {
+      if (err.errorCode === 'EMAIL_EXISTS' || err.errorCode === 'NAME_EXISTS') {
+        return reply.code(409).send({ error: err.message, errorCode: err.errorCode });
+      }
+      throw err;
+    }
 
     // ── Notify admins about new application ──
     try {
