@@ -630,6 +630,29 @@ export default function EventDetailPage() {
                 </CardActionArea>
               </Card>
             )}
+
+            {/* 6b. Linked recommendations */}
+            {(event as any).linkedRecommendations?.length > 0 && (
+              <Card variant="outlined" sx={{ mb: 2 }}>
+                <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                  <Typography variant="caption" fontWeight={700} sx={{ mb: 1, display: 'block' }}>
+                    📋 相关推荐
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {(event as any).linkedRecommendations.map((rec: any) => (
+                      <Chip
+                        key={rec.id}
+                        label={rec.title}
+                        variant="outlined"
+                        size="small"
+                        clickable
+                        onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}
+                      />
+                    ))}
+                  </Stack>
+                </CardContent>
+              </Card>
+            )}
           </CardContent>
         </Card>
 

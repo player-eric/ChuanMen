@@ -95,7 +95,7 @@ function buildFeedItems(data: any): any[] {
       spots: Math.max(0, (e.capacity ?? 8) - feedOccupying.length),
       people,
       signupUserIds: allSignups.map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
-      film: e.selectedMovie?.title,
+      film: e.screenedMovies?.[0]?.movie?.title,
       scene: eventTagToScene[e.tags?.[0]] ?? e.tags?.[0] ?? '',
       navTarget: `/events/${e.id}`,
       isHomeEvent: e.isHomeEvent ?? false,
@@ -251,7 +251,13 @@ function mapApiEvent(e: any): any {
     location: e.location ?? '',
     isHomeEvent: e.isHomeEvent ?? false,
     scene: e.titleImageUrl || eventTagToScene[e.tags?.[0]] || e.tags?.[0] || '',
-    film: e.selectedMovie?.title ?? e.film ?? undefined,
+    film: e.screenedMovies?.[0]?.movie?.title ?? e.film ?? undefined,
+    linkedRecommendations: (e.recommendations ?? []).map((er: any) => ({
+      id: er.recommendation?.id,
+      title: er.recommendation?.title,
+      category: er.recommendation?.category,
+      coverUrl: er.recommendation?.coverUrl || undefined,
+    })),
     spots: Math.max(0, (e.capacity ?? 0) - occupying.length),
     total: e.capacity ?? 0,
     people,
@@ -295,7 +301,7 @@ async function eventsLoader() {
         date: e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }) : '',
         people: peopleCount,
         scene: e.titleImageUrl || eventTagToScene[e.tags?.[0]] || e.tags?.[0] || '',
-        film: e.selectedMovie?.title ?? e.film ?? undefined,
+        film: e.screenedMovies?.[0]?.movie?.title ?? e.film ?? undefined,
         photoCount: e.recapPhotoUrls?.length || undefined,
       };
       }),
@@ -383,13 +389,14 @@ function mapRecommendation(r: any) {
 
 async function discoverLoader() {
   try {
-    const [rawPool, rawScreened, rawBooks, rawRecipes, rawMusic, rawPlaces] = await Promise.all([
+    const [rawPool, rawScreened, rawBooks, rawRecipes, rawMusic, rawPlaces, rawExternalEvents] = await Promise.all([
       fetchMoviesApi(),
       fetchScreenedMoviesApi(),
       fetchRecommendationsApi('book').catch(() => []),
       fetchRecommendationsApi('recipe').catch(() => []),
       fetchRecommendationsApi('music').catch(() => []),
       fetchRecommendationsApi('place').catch(() => []),
+      fetchRecommendationsApi('external_event').catch(() => []),
     ]);
     const pool = (rawPool as any[]).map((m: any) => ({
       id: m.id,
@@ -423,9 +430,10 @@ async function discoverLoader() {
       recipes: (rawRecipes as any[]).map(mapRecommendation),
       music: (rawMusic as any[]).map(mapRecommendation),
       places: (rawPlaces as any[]).map(mapRecommendation),
+      externalEvents: (rawExternalEvents as any[]).map(mapRecommendation),
     };
   } catch {
-    return { pool: [], screened: [], bookPool: [], bookRead: [], recipes: [], music: [], places: [] };
+    return { pool: [], screened: [], bookPool: [], bookRead: [], recipes: [], music: [], places: [], externalEvents: [] };
   }
 }
 

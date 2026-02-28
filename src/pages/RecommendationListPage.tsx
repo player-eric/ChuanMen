@@ -24,10 +24,11 @@ const categoryMap: Record<RecommendationCategory, { title: string; icon: string 
   recipe: { title: '菜谱推荐', icon: '🍜' },
   music: { title: '音乐推荐', icon: '🎵' },
   place: { title: '好店推荐', icon: '📍' },
+  external_event: { title: '演出和其他', icon: '🎭' },
 };
 
 function isCategory(value: string | undefined): value is RecommendationCategory {
-  return value === 'movie' || value === 'book' || value === 'recipe' || value === 'music' || value === 'place';
+  return value === 'movie' || value === 'book' || value === 'recipe' || value === 'music' || value === 'place' || value === 'external_event';
 }
 
 export default function RecommendationListPage() {
@@ -61,7 +62,7 @@ export default function RecommendationListPage() {
   return (
     <Stack spacing={2}>
       <Stack direction="row" spacing={1} sx={{ overflowX: 'auto' }}>
-        {(['movie', 'recipe', 'music', 'place'] as RecommendationCategory[]).map((cat) => (
+        {(['movie', 'recipe', 'music', 'place', 'external_event'] as RecommendationCategory[]).map((cat) => (
           <Button
             key={cat}
             variant={cat === currentCategory ? 'contained' : 'outlined'}

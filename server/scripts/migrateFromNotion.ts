@@ -452,7 +452,6 @@ async function main() {
           capacity,
           phase: EventPhase.ended,
           status: EventStatus.completed,
-          selectedMovieId,
           recorderUserId,
         },
       });

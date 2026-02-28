@@ -24,7 +24,15 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
               where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } },
               include: { user: { select: { id: true, name: true } } },
             },
-            selectedMovie: { select: { title: true } },
+            screenedMovies: {
+              include: { movie: { select: { id: true, title: true } } },
+              take: 1,
+            },
+            recommendations: {
+              include: {
+                recommendation: { select: { id: true, title: true, category: true } },
+              },
+            },
           },
         }),
 

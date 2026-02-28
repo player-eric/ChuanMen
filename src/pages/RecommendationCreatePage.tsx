@@ -22,10 +22,11 @@ const categoryMap: Record<string, string> = {
   recipe: '菜谱',
   music: '音乐',
   place: '好店',
+  external_event: '演出和其他',
 };
 
 function isCategory(value: string | undefined): value is RecommendationCategory {
-  return value === 'movie' || value === 'book' || value === 'recipe' || value === 'music' || value === 'place';
+  return value === 'movie' || value === 'book' || value === 'recipe' || value === 'music' || value === 'place' || value === 'external_event';
 }
 
 export default function RecommendationCreatePage() {

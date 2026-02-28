@@ -119,6 +119,29 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  // ── Event ↔ Recommendation linking ──
+
+  app.post('/:id/recommendations', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { recommendationId } = request.body as { recommendationId: string };
+    if (!recommendationId) return reply.badRequest('缺少 recommendationId');
+    const link = await app.prisma.eventRecommendation.upsert({
+      where: { eventId_recommendationId: { eventId: id, recommendationId } },
+      create: { eventId: id, recommendationId },
+      update: {},
+      include: { recommendation: { select: { id: true, title: true, category: true } } },
+    });
+    return reply.code(201).send({ ok: true, link });
+  });
+
+  app.delete('/:id/recommendations/:recommendationId', async (request, reply) => {
+    const { id, recommendationId } = request.params as { id: string; recommendationId: string };
+    await app.prisma.eventRecommendation.deleteMany({
+      where: { eventId: id, recommendationId },
+    });
+    return { ok: true };
+  });
+
   // Cancelled events list
   app.get('/cancelled', async () => service.listCancelled());
 

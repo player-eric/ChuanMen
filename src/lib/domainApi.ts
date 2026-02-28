@@ -106,7 +106,7 @@ export async function uploadMedia(
   return data as { publicUrl: string; asset: MediaAsset };
 }
 
-export type RecommendationCategory = 'movie' | 'book' | 'recipe' | 'music' | 'place';
+export type RecommendationCategory = 'movie' | 'book' | 'recipe' | 'music' | 'place' | 'external_event';
 
 /* ═══════════════════════════════════════════════════════════════
    User lookup API
@@ -274,6 +274,20 @@ export async function removeEventRecapPhoto(eventId: string, photoUrl: string) {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ photoUrl }),
+  });
+}
+
+export async function linkEventRecommendation(eventId: string, recommendationId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/recommendations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recommendationId }),
+  });
+}
+
+export async function unlinkEventRecommendation(eventId: string, recommendationId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/recommendations/${recommendationId}`, {
+    method: 'DELETE',
   });
 }
 

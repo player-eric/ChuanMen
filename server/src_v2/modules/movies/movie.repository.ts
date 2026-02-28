@@ -25,11 +25,6 @@ export class MovieRepository {
             event: { select: { id: true, title: true, startsAt: true, status: true, host: { select: { name: true } }, _count: { select: { signups: true } } } },
           },
         },
-        selectedInEvents: {
-          select: { id: true, title: true, startsAt: true, status: true, host: { select: { name: true } }, _count: { select: { signups: true } } },
-          where: { status: { not: 'cancelled' } },
-          orderBy: { startsAt: 'asc' },
-        },
         _count: { select: { votes: true } },
       },
     });

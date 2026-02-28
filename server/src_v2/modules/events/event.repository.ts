@@ -20,7 +20,15 @@ export class EventRepository {
           where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } },
           include: { user: { select: { id: true, name: true, avatar: true } } },
         },
-        selectedMovie: { select: { title: true } },
+        screenedMovies: {
+          include: { movie: { select: { id: true, title: true } } },
+          take: 1,
+        },
+        recommendations: {
+          include: {
+            recommendation: { select: { id: true, title: true, category: true, coverUrl: true } },
+          },
+        },
         _count: { select: { signups: true } },
       },
     });
@@ -35,6 +43,15 @@ export class EventRepository {
         signups: {
           where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } },
           include: { user: true },
+        },
+        screenedMovies: {
+          include: { movie: { select: { id: true, title: true } } },
+          take: 1,
+        },
+        recommendations: {
+          include: {
+            recommendation: { select: { id: true, title: true, category: true, coverUrl: true } },
+          },
         },
       },
     });

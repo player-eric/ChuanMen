@@ -60,6 +60,7 @@ enum RecommendationCategory {
   recipe
   music
   place
+  external_event
 }
 
 enum RecommendationStatus {
@@ -282,7 +283,6 @@ model Event {
   phase                  EventPhase                @default(open)
   publishAt              DateTime?
   status                 EventStatus               @default(scheduled)
-  selectedMovieId        String?
   recap                  String                    @default("")
   recapPhotoUrls         String[]
   recorderUserId         String?
@@ -298,7 +298,6 @@ model Event {
 
   host                   User                      @relation("EventHost", fields: [hostId], references: [id], onDelete: Restrict)
   proposal               Proposal?                 @relation("EventProposal", fields: [proposalId], references: [id], onDelete: SetNull)
-  selectedMovie          Movie?                    @relation("EventSelectedMovie", fields: [selectedMovieId], references: [id], onDelete: SetNull)
   recorder               User?                     @relation("EventRecorder", fields: [recorderUserId], references: [id], onDelete: SetNull)
   coHosts                EventCoHost[]
   visibilityExclusions   EventVisibilityExclusion[]
@@ -306,6 +305,7 @@ model Event {
   postcards              Postcard[]
   weeklyLotteryEntries   WeeklyLottery[]
   screenedMovies         MovieScreening[]
+  recommendations        EventRecommendation[]
 
   @@index([startsAt, phase])
   @@index([startsAt(sort: Desc), status])
@@ -372,6 +372,7 @@ model Recommendation {
 
   author      User                   @relation(fields: [authorId], references: [id], onDelete: Restrict)
   tags        RecommendationTag[]
+  events      EventRecommendation[]
 
   @@index([category, createdAt(sort: Desc)])
   @@index([title])
@@ -385,6 +386,20 @@ model RecommendationTag {
   recommendation   Recommendation  @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
 
   @@unique([recommendationId, value])
+}
+
+model EventRecommendation {
+  id               String          @id @default(cuid())
+  eventId          String
+  recommendationId String
+  createdAt        DateTime        @default(now())
+
+  event            Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  recommendation   Recommendation  @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, recommendationId])
+  @@index([eventId])
+  @@index([recommendationId])
 }
 
 model Movie {
@@ -404,8 +419,6 @@ model Movie {
   recommendedBy User         @relation("MovieRecommender", fields: [recommendedById], references: [id], onDelete: Restrict)
   screenedEvents MovieScreening[]
   votes         MovieVote[]
-  selectedInEvents Event[]   @relation("EventSelectedMovie")
-
   @@index([status, createdAt(sort: Desc)])
   @@index([title])
 }

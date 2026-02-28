@@ -23,7 +23,7 @@ import { getRecommendationById, deleteRecommendation, updateRecommendation, type
 import { RichTextViewer } from '@/components/RichTextEditor';
 
 function isCategory(value: string | undefined): value is RecommendationCategory {
-  return value === 'movie' || value === 'book' || value === 'recipe' || value === 'music' || value === 'place';
+  return value === 'movie' || value === 'book' || value === 'recipe' || value === 'music' || value === 'place' || value === 'external_event';
 }
 
 export default function RecommendationDetailPage() {

@@ -58,6 +58,7 @@ export interface EventData {
   isHomeEvent?: boolean;
   scene: string;
   film?: string;
+  linkedRecommendations?: { id: string; title: string; category: string; coverUrl?: string }[];
   spots: number;
   total: number;
   people: string[];
@@ -348,6 +349,7 @@ export interface DiscoverPageData {
   recipes: RecommendationItem[];
   music: RecommendationItem[];
   places: RecommendationItem[];
+  externalEvents: RecommendationItem[];
 }
 
 export interface CardsPageData {

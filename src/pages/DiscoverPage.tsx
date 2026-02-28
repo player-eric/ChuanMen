@@ -25,7 +25,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { toggleMovieVote, searchExternalMovies, createMovie } from '@/lib/domainApi';
 import type { ExternalMovieResult } from '@/lib/domainApi';
 
-type Category = 'movie' | 'book' | 'recipe' | 'music' | 'place';
+type Category = 'movie' | 'book' | 'recipe' | 'music' | 'place' | 'external_event';
 
 const categoryTabs: { key: Category; label: string }[] = [
   { key: 'movie', label: '🎬 电影' },
@@ -33,6 +33,7 @@ const categoryTabs: { key: Category; label: string }[] = [
   { key: 'recipe', label: '🍜 菜谱' },
   { key: 'music', label: '🎵 音乐' },
   { key: 'place', label: '📍 好店' },
+  { key: 'external_event', label: '🎭 演出和其他' },
 ];
 
 const categoryAddLabels: Record<Category, string> = {
@@ -41,6 +42,7 @@ const categoryAddLabels: Record<Category, string> = {
   recipe: '添加菜谱',
   music: '添加音乐',
   place: '添加好店',
+  external_event: '添加演出',
 };
 
 /* ═══ DiscoverPage ═══ */
@@ -63,7 +65,7 @@ export default function DiscoverPage() {
       </Stack>
       {activeCategory === 'movie' && <MoviesSection />}
       {activeCategory === 'book' && <BooksSection />}
-      {(activeCategory === 'recipe' || activeCategory === 'music' || activeCategory === 'place') && (
+      {(activeCategory === 'recipe' || activeCategory === 'music' || activeCategory === 'place' || activeCategory === 'external_event') && (
         <RecommendationSection category={activeCategory} />
       )}
     </Box>
@@ -449,8 +451,8 @@ function BooksSection() {
   );
 }
 
-/** Generic section for recipe / music / place recommendations */
-function RecommendationSection({ category }: { category: 'recipe' | 'music' | 'place' }) {
+/** Generic section for recipe / music / place / external_event recommendations */
+function RecommendationSection({ category }: { category: 'recipe' | 'music' | 'place' | 'external_event' }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const data = useLoaderData() as DiscoverPageData;
@@ -460,6 +462,7 @@ function RecommendationSection({ category }: { category: 'recipe' | 'music' | 'p
     recipe: data.recipes,
     music: data.music,
     place: data.places,
+    external_event: data.externalEvents,
   };
   const items = dataMap[category] ?? [];
 
@@ -472,6 +475,7 @@ function RecommendationSection({ category }: { category: 'recipe' | 'music' | 'p
     recipe: { icon: '🍜', title: '还没有推荐菜谱', desc: '分享你的拿手菜或发现的好菜谱。' },
     music: { icon: '🎵', title: '还没有推荐音乐', desc: '推荐你喜欢的歌曲或专辑。' },
     place: { icon: '📍', title: '还没有推荐好店', desc: '分享你发现的好店好去处。' },
+    external_event: { icon: '🎭', title: '还没有推荐演出', desc: '分享你发现的演出、展览或其他活动。' },
   };
   const empty = emptyMap[category];
 

@@ -526,7 +526,7 @@ async function main() {
         data: {
           title, hostId, startsAt: date, tags, location, capacity,
           phase: EventPhase.ended, status: EventStatus.completed,
-          selectedMovieId, recorderUserId,
+          recorderUserId,
         },
       });
     }
