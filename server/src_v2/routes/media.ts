@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { createUploadUrl, deleteObject } from '../services/s3Service.js';
+import { createUploadUrl, deleteObject, uploadObject } from '../services/s3Service.js';
 
 /* ────────── helpers ────────── */
 
@@ -104,6 +104,51 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     });
 
     return reply.send({ asset });
+  });
+
+  /**
+   * POST /upload — direct server-side upload (avoids browser→S3 CORS issues).
+   * Body: raw file bytes (binary).
+   * Query: ?category=cover&ownerId=xxx&contentType=image/jpeg&fileSize=12345
+   * Returns: { publicUrl, asset }
+   */
+  app.post('/upload', {
+    config: { rawBody: true },
+  }, async (request, reply) => {
+    const q = request.query as Record<string, string>;
+    const category = q.category || 'general';
+    const ownerId = q.ownerId || undefined;
+    const contentType = q.contentType || (request.headers['content-type'] as string) || 'application/octet-stream';
+    const fileSize = Number(q.fileSize) || 0;
+
+    // Validate
+    if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
+      return reply.badRequest(`不支持的文件类型: ${contentType}。允许: ${ALLOWED_IMAGE_TYPES.join(', ')}`);
+    }
+    if (fileSize > MAX_FILE_SIZE) {
+      return reply.badRequest(`文件过大 (${(fileSize / 1024 / 1024).toFixed(1)} MB)。最大: 10 MB`);
+    }
+
+    const body = request.body as Buffer;
+    if (!body || !Buffer.isBuffer(body) || body.length === 0) {
+      return reply.badRequest('请求体为空');
+    }
+
+    const key = buildKey(category, ownerId, contentType);
+    const { publicUrl } = await uploadObject(key, body, contentType);
+
+    const asset = await app.prisma.mediaAsset.create({
+      data: {
+        key,
+        ownerId,
+        contentType,
+        fileSize: body.length,
+        status: 'uploaded',
+        url: publicUrl,
+      },
+    });
+
+    return reply.send({ publicUrl, asset });
   });
 
   /**

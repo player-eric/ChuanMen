@@ -67,54 +67,6 @@ export interface MediaAsset {
   updatedAt: string;
 }
 
-interface PresignResponse {
-  uploadUrl: string;
-  publicUrl: string;
-  asset: MediaAsset;
-}
-
-/**
- * Step 1 — Request a presigned S3 upload URL from the server.
- */
-export async function requestPresignedUrl(opts: {
-  category: MediaCategory;
-  contentType: string;
-  fileSize: number;
-  ownerId?: string;
-  fileName?: string;
-}): Promise<PresignResponse> {
-  return requestJson<PresignResponse>('/api/media/presign', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(opts),
-  });
-}
-
-/**
- * Step 2 — Upload the file directly to S3 using the presigned URL.
- */
-export async function uploadFileToS3(uploadUrl: string, file: File): Promise<void> {
-  const res = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': file.type },
-    body: file,
-  });
-  if (!res.ok) {
-    throw new Error(`S3 upload failed: ${res.status} ${res.statusText}`);
-  }
-}
-
-/**
- * Step 3 — Confirm the upload so the server marks the asset as "uploaded".
- */
-export async function confirmMediaUpload(assetId: string): Promise<{ asset: MediaAsset }> {
-  return requestJson<{ asset: MediaAsset }>('/api/media/confirm', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ assetId }),
-  });
-}
-
 /**
  * Delete a media asset (and its S3 object).
  */
@@ -125,7 +77,8 @@ export async function deleteMediaAsset(assetId: string): Promise<void> {
 }
 
 /**
- * Convenience: presign → upload → confirm in one call.
+ * Upload a file via the server-side upload endpoint (avoids browser→S3 CORS).
+ * Sends the raw file bytes to /api/media/upload with metadata in query params.
  * Returns the public URL of the uploaded file.
  */
 export async function uploadMedia(
@@ -133,18 +86,24 @@ export async function uploadMedia(
   category: MediaCategory,
   ownerId?: string,
 ): Promise<{ publicUrl: string; asset: MediaAsset }> {
-  const { uploadUrl, publicUrl, asset } = await requestPresignedUrl({
+  const params = new URLSearchParams({
     category,
     contentType: file.type,
-    fileSize: file.size,
-    ownerId,
-    fileName: file.name,
+    fileSize: String(file.size),
   });
+  if (ownerId) params.set('ownerId', ownerId);
 
-  await uploadFileToS3(uploadUrl, file);
-  const { asset: confirmed } = await confirmMediaUpload(asset.id);
-
-  return { publicUrl, asset: confirmed };
+  const arrayBuffer = await file.arrayBuffer();
+  const response = await fetch(getApiUrl(`/api/media/upload?${params}`), {
+    method: 'POST',
+    headers: { 'Content-Type': file.type },
+    body: arrayBuffer,
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message ?? '上传失败');
+  }
+  return data as { publicUrl: string; asset: MediaAsset };
 }
 
 export type RecommendationCategory = 'movie' | 'book' | 'recipe' | 'music' | 'place';

@@ -57,6 +57,26 @@ export async function createDownloadUrl(key: string) {
   });
 }
 
+/** Upload a Buffer directly to S3 (server-side, no presigning needed). */
+export async function uploadObject(key: string, body: Buffer, contentType: string) {
+  const command = new PutObjectCommand({
+    Bucket: env.AWS_S3_BUCKET,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+  });
+
+  await s3().send(command);
+
+  const publicUrl = env.AWS_S3_PUBLIC_BASE_URL
+    ? `${env.AWS_S3_PUBLIC_BASE_URL.replace(/\/$/, '')}/${key}`
+    : env.AWS_S3_ENDPOINT
+      ? `${env.AWS_S3_ENDPOINT.replace(/\/$/, '')}/${env.AWS_S3_BUCKET}/${key}`
+      : `https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
+
+  return { publicUrl };
+}
+
 export async function deleteObject(key: string) {
   const command = new DeleteObjectCommand({
     Bucket: env.AWS_S3_BUCKET,
