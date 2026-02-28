@@ -25,6 +25,7 @@ import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
 import { toggleMovieVote, addComment, fetchCommentsApi } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
+import { firstNonEmoji } from '@/components/Atoms';
 
 export default function MovieDetailPage() {
   const navigate = useNavigate();
@@ -204,7 +205,7 @@ export default function MovieDetailPage() {
             <CardContent>
               <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>推荐人</Typography>
               <Stack direction="row" spacing={1.5} alignItems="center">
-                <Avatar sx={{ width: 36, height: 36 }}>{by[0]}</Avatar>
+                <Avatar sx={{ width: 36, height: 36 }}>{firstNonEmoji(by)}</Avatar>
                 <Typography variant="body1">{by}</Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto !important' }}>查看主页 →</Typography>
               </Stack>
@@ -257,7 +258,7 @@ export default function MovieDetailPage() {
                     sx={{ width: 32, height: 32, cursor: 'pointer' }}
                     onClick={() => navigate(`/members/${encodeURIComponent(voter.name)}`)}
                   >
-                    {voter.name[0]}
+                    {firstNonEmoji(voter.name)}
                   </Avatar>
                 ))}
               </AvatarGroup>
@@ -366,7 +367,7 @@ export default function MovieDetailPage() {
                       sx={{ width: 28, height: 28, fontSize: 12, cursor: 'pointer', mt: 0.25 }}
                       onClick={() => navigate(`/members/${encodeURIComponent(cm.name)}`)}
                     >
-                      {cm.name[0]}
+                      {firstNonEmoji(cm.name)}
                     </Avatar>
                     <Box sx={{ flex: 1 }}>
                       <Stack direction="row" spacing={1} alignItems="baseline">
@@ -386,7 +387,7 @@ export default function MovieDetailPage() {
             {user ? (
               <Stack direction="row" spacing={1} alignItems="flex-start">
                 <Avatar sx={{ width: 28, height: 28, fontSize: 12, mt: 0.5 }}>
-                  {user.name?.[0] ?? 'U'}
+                  {firstNonEmoji(user.name ?? 'U')}
                 </Avatar>
                 <TextField
                   size="small"

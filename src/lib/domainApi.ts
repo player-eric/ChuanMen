@@ -1031,3 +1031,15 @@ export interface AdminStats {
 export async function fetchAdminStats() {
   return requestJson<AdminStats>('/api/admin/stats');
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Feedback API
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function submitFeedback(payload: { name: string; email?: string; message: string; page?: string }) {
+  return requestJson<{ ok: boolean }>('/api/email/feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}

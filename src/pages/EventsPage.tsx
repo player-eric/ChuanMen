@@ -151,7 +151,8 @@ export default function EventsPage() {
           {searchError && <Alert severity="error">{searchError}</Alert>}
 
           {searchedItems.map((item) => (
-            <Card key={String(item._id)} sx={{ borderRadius: 2 }}>
+            <Card key={String(item._id)} sx={{ borderRadius: 2, cursor: 'pointer' }}
+              onClick={() => navigate(`/events/proposals/${item._id}`)}>
               <div style={{ padding: 14 }}>
                 <div style={{ fontSize: 15, fontWeight: 700 }}>{String(item.title ?? '')}</div>
                 <div style={{ fontSize: 14, color: c.text2, marginTop: 4 }}>{String(item.description ?? '')}</div>
@@ -175,19 +176,19 @@ export default function EventsPage() {
           {data.proposals.map((proposal) => {
             const v = interested[proposal.id] ?? false;
             return (
-              <Card key={proposal.id} sx={{ borderRadius: 2 }}>
+              <Card key={proposal.id} sx={{ borderRadius: 2, cursor: 'pointer' }}
+                onClick={() => navigate(`/events/proposals/${proposal.id}`)}>
                 <div style={{ padding: '10px 14px' }}>
                   {/* Author + time */}
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
                     <Ava name={proposal.name} size={24} onTap={() => goMember(proposal.name)} />
-                    <b onClick={() => goMember(proposal.name)} style={{ cursor: 'pointer', fontSize: 13 }}>{proposal.name}</b>
+                    <b onClick={(e) => { e.stopPropagation(); goMember(proposal.name); }} style={{ cursor: 'pointer', fontSize: 13 }}>{proposal.name}</b>
                     <span style={{ fontSize: 12, color: c.text3 }}>· {proposal.time}</span>
                   </div>
 
-                  {/* Title — clickable to detail */}
+                  {/* Title */}
                   <div
-                    style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, cursor: 'pointer' }}
-                    onClick={() => navigate(`/events/proposals/${proposal.id}`)}
+                    style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}
                   >{'💡'} {proposal.title}</div>
 
                   {/* Interested people + action buttons on one row */}
@@ -198,7 +199,8 @@ export default function EventsPage() {
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button
-                        onClick={async () => {
+                        onClick={async (e) => {
+                          e.stopPropagation();
                           if (!user?.id) return;
                           setInterested((prev) => ({ ...prev, [proposal.id]: !prev[proposal.id] }));
                           try { await toggleProposalVote(String(proposal.id), user.id); } catch { /* optimistic */ }
@@ -215,7 +217,7 @@ export default function EventsPage() {
                         {v ? '✓ 感兴趣' : '感兴趣'} · {proposal.votes + (v ? 1 : 0)}
                       </button>
                       <button
-                        onClick={() => user && navigate('/events/new', { state: { fromProposal: { title: proposal.title, descriptionHtml: proposal.descriptionHtml ?? '' } } })}
+                        onClick={(e) => { e.stopPropagation(); user && navigate('/events/new', { state: { fromProposal: { title: proposal.title, descriptionHtml: proposal.descriptionHtml ?? '' } } }); }}
                         style={{
                           padding: '4px 12px', borderRadius: 6,
                           background: c.warm,

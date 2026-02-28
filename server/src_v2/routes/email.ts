@@ -112,4 +112,55 @@ export const emailRoutes: FastifyPluginAsync = async (app) => {
     const rendered = renderEmail({ subject, body, variables, ctaLabel, ctaUrl, unsubscribeUrl });
     return reply.send(rendered);
   });
+
+  // ── POST /feedback — send feedback to all admins ─────────
+  const feedbackSchema = z.object({
+    name: z.string().min(1).max(100),
+    email: z.string().email().optional(),
+    message: z.string().min(1).max(2000),
+    page: z.string().optional(), // which page the feedback came from
+  });
+
+  app.post('/feedback', async (request, reply) => {
+    const { name, message, email: senderEmail, page } = safeParse(feedbackSchema, request.body);
+
+    // Find all admin users
+    const admins = await app.prisma.user.findMany({
+      where: { role: 'admin', userStatus: 'approved' },
+      select: { email: true, name: true },
+    });
+
+    if (admins.length === 0) {
+      app.log.warn('No admin users found to receive feedback');
+      return reply.send({ ok: true });
+    }
+
+    const fromInfo = senderEmail ? `${name} (${senderEmail})` : name;
+    const pageInfo = page ? `\n来源页面: ${page}` : '';
+
+    const rendered = renderEmail({
+      subject: `用户反馈 — ${name}`,
+      body: `收到一条用户反馈：\n\n**发送人：** ${fromInfo}${pageInfo}\n\n**内容：**\n\n${message}`,
+      variables: {},
+      previewText: `${name} 发送了反馈`,
+    });
+
+    const results = await Promise.allSettled(
+      admins.map((admin) =>
+        sendEmail({
+          to: admin.email,
+          subject: rendered.subject,
+          text: rendered.text,
+          html: rendered.html,
+        }),
+      ),
+    );
+
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    if (failed > 0) {
+      app.log.error(`Failed to send feedback to ${failed}/${admins.length} admins`);
+    }
+
+    return reply.send({ ok: true });
+  });
 };

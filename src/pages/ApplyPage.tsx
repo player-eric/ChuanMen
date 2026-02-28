@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { submitApplication } from '@/lib/domainApi';
 import { ImageUpload } from '@/components/ImageUpload';
+import { FeedbackDialog } from '@/components/FeedbackDialog';
 import {
   Alert,
   Box,
@@ -17,6 +18,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import ContactSupportRoundedIcon from '@mui/icons-material/ContactSupportRounded';
 
 const welcomeText = `你好，欢迎来串门儿！
 
@@ -36,6 +38,7 @@ export default function ApplyPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ displayName?: string; email?: string }>({});
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [form, setForm] = useState({
     displayName: '',
     location: '',
@@ -237,6 +240,26 @@ export default function ApplyPage() {
       <Box sx={{ textAlign: 'center' }}>
         <Button size="small" onClick={() => navigate('/login')}>已有账号？去登录</Button>
       </Box>
+
+      <Box sx={{ textAlign: 'center', mt: 1 }}>
+        <Button
+          size="small"
+          color="inherit"
+          startIcon={<ContactSupportRoundedIcon />}
+          onClick={() => setFeedbackOpen(true)}
+          sx={{ opacity: 0.7 }}
+        >
+          有问题？联系管理员
+        </Button>
+      </Box>
+
+      <FeedbackDialog
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        defaultName={form.displayName}
+        defaultEmail={form.email}
+        page="申请页"
+      />
     </Stack>
   );
 }

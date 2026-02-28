@@ -1,6 +1,7 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
   Avatar,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -24,7 +25,11 @@ import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import PersonAddRoundedIcon from '@mui/icons-material/PersonAddRounded';
+import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
 import { RichTextViewer } from '@/components/RichTextEditor';
+import { fetchMembersApi } from '@/lib/domainApi';
+import { firstNonEmoji } from '@/components/Atoms';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 
 /* ── Mock newsletters ── */
@@ -91,6 +96,41 @@ export default function AdminNewslettersPage() {
   const [draftSubject, setDraftSubject] = useState('');
   const [draftBody, setDraftBody] = useState('');
 
+  /* ── Recipient mode: 'group' or 'individual' ── */
+  const [recipientMode, setRecipientMode] = useState<'group' | 'individual'>('group');
+  const [selectedGroup, setSelectedGroup] = useState(subscriberGroups[0].label);
+  const [selectedMembers, setSelectedMembers] = useState<{ id: string; name: string; email?: string }[]>([]);
+
+  /* ── Load members when compose opens ── */
+  const [allMembers, setAllMembers] = useState<{ id: string; name: string; email?: string }[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+
+  useEffect(() => {
+    if (composeOpen && allMembers.length === 0 && !membersLoading) {
+      setMembersLoading(true);
+      fetchMembersApi()
+        .then((list) => {
+          const mapped = (list ?? []).map((m: any) => ({
+            id: m.id,
+            name: m.name ?? m.nickname ?? '',
+            email: m.email ?? '',
+          }));
+          setAllMembers(mapped);
+        })
+        .catch(() => {})
+        .finally(() => setMembersLoading(false));
+    }
+  }, [composeOpen]);
+
+  const recipientSummary = useMemo(() => {
+    if (recipientMode === 'group') {
+      const g = subscriberGroups.find((g) => g.label === selectedGroup);
+      return g ? `${g.label}（${g.count} 人）` : selectedGroup;
+    }
+    return selectedMembers.length > 0
+      ? `已选 ${selectedMembers.length} 人：${selectedMembers.map((m) => m.name).join('、')}`
+      : '未选择成员';
+  }, [recipientMode, selectedGroup, selectedMembers]);
   return (
     <Stack spacing={2}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -99,7 +139,7 @@ export default function AdminNewslettersPage() {
           <Tab label={`草稿 (${draftNewsletters.length})`} />
           <Tab label="订阅管理" />
         </Tabs>
-        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => { setComposeOpen(true); setDraftSubject(''); setDraftBody(''); }}>
+        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => { setComposeOpen(true); setDraftSubject(''); setDraftBody(''); setRecipientMode('group'); setSelectedGroup(subscriberGroups[0].label); setSelectedMembers([]); }}>
           写通讯
         </Button>
       </Stack>
@@ -224,17 +264,96 @@ export default function AdminNewslettersPage() {
               onChange={(e) => setDraftSubject(e.target.value)}
               placeholder="串门周报 #13 — ..."
             />
-            <TextField
-              label="收件人"
-              fullWidth
-              size="small"
-              defaultValue="全部成员（28 人）"
-              select
-            >
-              {subscriberGroups.map((g) => (
-                <option key={g.label} value={g.label}>{g.label}（{g.count} 人）</option>
-              ))}
-            </TextField>
+
+            {/* Recipient mode toggle */}
+            <Box>
+              <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                <Chip
+                  icon={<GroupRoundedIcon />}
+                  label="按分组"
+                  variant={recipientMode === 'group' ? 'filled' : 'outlined'}
+                  color={recipientMode === 'group' ? 'primary' : 'default'}
+                  onClick={() => setRecipientMode('group')}
+                />
+                <Chip
+                  icon={<PersonAddRoundedIcon />}
+                  label="选成员"
+                  variant={recipientMode === 'individual' ? 'filled' : 'outlined'}
+                  color={recipientMode === 'individual' ? 'primary' : 'default'}
+                  onClick={() => setRecipientMode('individual')}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', ml: 1 }}>
+                  {recipientSummary}
+                </Typography>
+              </Stack>
+
+              {recipientMode === 'group' ? (
+                <TextField
+                  label="收件分组"
+                  fullWidth
+                  size="small"
+                  value={selectedGroup}
+                  onChange={(e) => setSelectedGroup(e.target.value)}
+                  select
+                  SelectProps={{ native: true }}
+                >
+                  {subscriberGroups.map((g) => (
+                    <option key={g.label} value={g.label}>{g.label}（{g.count} 人）</option>
+                  ))}
+                </TextField>
+              ) : (
+                <Autocomplete
+                  multiple
+                  options={allMembers}
+                  value={selectedMembers}
+                  onChange={(_, newVal) => setSelectedMembers(newVal)}
+                  getOptionLabel={(opt) => opt.name}
+                  isOptionEqualToValue={(a, b) => a.id === b.id}
+                  loading={membersLoading}
+                  loadingText="加载中..."
+                  noOptionsText="无匹配成员"
+                  filterOptions={(options, { inputValue }) => {
+                    const q = inputValue.toLowerCase();
+                    return options.filter(
+                      (o) => o.name.toLowerCase().includes(q) || (o.email ?? '').toLowerCase().includes(q),
+                    );
+                  }}
+                  renderOption={(props, option) => (
+                    <li {...props} key={option.id}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Avatar sx={{ width: 26, height: 26, fontSize: 12 }}>{firstNonEmoji(option.name)}</Avatar>
+                        <Box>
+                          <Typography variant="body2">{option.name}</Typography>
+                          {option.email && (
+                            <Typography variant="caption" color="text.secondary">{option.email}</Typography>
+                          )}
+                        </Box>
+                      </Stack>
+                    </li>
+                  )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((m, i) => (
+                      <Chip
+                        {...getTagProps({ index: i })}
+                        key={m.id}
+                        avatar={<Avatar sx={{ width: 22, height: 22, fontSize: 10 }}>{firstNonEmoji(m.name)}</Avatar>}
+                        label={m.name}
+                        size="small"
+                      />
+                    ))
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="搜索并选择成员"
+                      size="small"
+                      placeholder="输入姓名或邮箱搜索..."
+                    />
+                  )}
+                />
+              )}
+            </Box>
+
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>正文</Typography>
               <Suspense fallback={<div style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>加载编辑器...</div>}>

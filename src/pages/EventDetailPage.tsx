@@ -603,7 +603,7 @@ export default function EventDetailPage() {
                     sx={{ cursor: 'pointer', width: 34, height: 34, ...(name === event.host ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
                     onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
                   >
-                    {name[0]}
+                    {firstNonEmoji(name)}
                   </Avatar>
                 ))}
               </AvatarGroup>
@@ -1112,7 +1112,7 @@ export default function EventDetailPage() {
                       sx={{ width: 28, height: 28, fontSize: 12, cursor: 'pointer', mt: 0.25 }}
                       onClick={() => navigate(`/members/${encodeURIComponent(c.name)}`)}
                     >
-                      {c.name[0]}
+                      {firstNonEmoji(c.name)}
                     </Avatar>
                     <Box sx={{ flex: 1 }}>
                       <Stack direction="row" spacing={1} alignItems="baseline">

@@ -29,6 +29,7 @@ import { Poster } from '@/components/Poster';
 import { EmptyState } from '@/components/EmptyState';
 import { useColors } from '@/hooks/useColors';
 import { photos } from '@/theme';
+import { firstNonEmoji } from '@/components/Atoms';
 
 const sceneEmoji: Record<string, string> = {
   movieNight: '🎬',
@@ -253,7 +254,7 @@ export default function ProfilePage() {
                   >
                     <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 0.8 }}>
                       <Avatar sx={{ width: 36, height: 36, bgcolor: c.warm + '30', color: c.warm, fontSize: 14 }}>
-                        {data.mostSharedWith.name[0]}
+                        {firstNonEmoji(data.mostSharedWith.name)}
                       </Avatar>
                       <Box sx={{ minWidth: 0 }}>
                         <Typography variant="body2" fontWeight={600} noWrap>
@@ -273,7 +274,7 @@ export default function ProfilePage() {
                   >
                     <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 0.8 }}>
                       <Avatar sx={{ width: 36, height: 36, bgcolor: c.blue + '30', color: c.blue, fontSize: 14 }}>
-                        {data.closestTaste.name[0]}
+                        {firstNonEmoji(data.closestTaste.name)}
                       </Avatar>
                       <Box sx={{ minWidth: 0 }}>
                         <Typography variant="body2" fontWeight={600} noWrap>
@@ -293,7 +294,7 @@ export default function ProfilePage() {
                   >
                     <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 0.8 }}>
                       <Avatar sx={{ width: 36, height: 36, bgcolor: '#9c27b0' + '30', color: '#9c27b0', fontSize: 14 }}>
-                        {data.recentClosest.name[0]}
+                        {firstNonEmoji(data.recentClosest.name)}
                       </Avatar>
                       <Box sx={{ minWidth: 0 }}>
                         <Typography variant="body2" fontWeight={600} noWrap>

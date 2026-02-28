@@ -37,6 +37,8 @@ import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
 import { useTheme } from '@mui/material/styles';
 import { useAuth } from '@/auth/AuthContext';
 import { useColorMode } from '@/AppProviders';
+import { FeedbackDialog } from '@/components/FeedbackDialog';
+import { firstNonEmoji } from '@/components/Atoms';
 
 /* ── Bottom Tab 栏: 5 tabs (v2.1 §4.0) ── */
 const bottomTabs = [
@@ -131,6 +133,7 @@ export default function AppLayout() {
   const { mode, toggleColorMode } = useColorMode();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const title = getTitle(pathname);
   const backTarget = getBackTarget(pathname);
@@ -166,7 +169,7 @@ export default function AppLayout() {
         {user ? (
           <Stack direction="row" spacing={1.5} alignItems="center">
             <Avatar sx={{ width: 40, height: 40 }} src={user.avatar || undefined}>
-              {user.name?.[0] ?? 'U'}
+              {firstNonEmoji(user.name ?? 'U')}
             </Avatar>
             <Box>
               <Typography variant="subtitle2" fontWeight={700}>{user.name}</Typography>
@@ -218,6 +221,10 @@ export default function AppLayout() {
           </List>
           <Divider />
           <List>
+            <ListItemButton onClick={() => { setDrawerOpen(false); setFeedbackOpen(true); }}>
+              <ListItemIcon><MailRoundedIcon /></ListItemIcon>
+              <ListItemText primary="联系管理员" />
+            </ListItemButton>
             <ListItemButton onClick={() => { setDrawerOpen(false); setUser(null); navigate('/'); }}>
               <ListItemIcon><LogoutRoundedIcon /></ListItemIcon>
               <ListItemText primary="退出登录" />
@@ -345,7 +352,7 @@ export default function AppLayout() {
               {user ? (
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Avatar sx={{ width: 28, height: 28, cursor: 'pointer' }} src={user.avatar || undefined} onClick={() => navigate('/profile')}>
-                    {user.name?.[0] ?? 'U'}
+                    {firstNonEmoji(user.name ?? 'U')}
                   </Avatar>
                   <Button size="small" color="inherit" onClick={() => { setUser(null); navigate('/'); }}>
                     退出
@@ -428,6 +435,14 @@ export default function AppLayout() {
           </Paper>
         )}
       </Box>
+
+      <FeedbackDialog
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        defaultName={user?.name ?? ''}
+        defaultEmail={user?.email ?? ''}
+        page={pathname}
+      />
     </Box>
   );
 }

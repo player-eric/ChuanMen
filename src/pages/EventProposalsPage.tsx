@@ -63,7 +63,8 @@ export default function EventProposalsPage() {
       {searchError && <Alert severity="error">{searchError}</Alert>}
 
       {searchedItems.map((item) => (
-        <Card key={String(item._id)}>
+        <Card key={String(item._id)} style={{ cursor: 'pointer' }}
+          onClick={() => navigate(`/events/proposals/${item._id}`)}>
           <div style={{ padding: 14 }}>
             <div style={{ fontSize: 15, fontWeight: 700 }}>{String(item.title ?? '')}</div>
             <div style={{ fontSize: 14, color: c.text2, marginTop: 4 }}>{String(item.description ?? '')}</div>

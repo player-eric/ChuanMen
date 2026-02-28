@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { useLoaderData } from 'react-router';
-import { Card, CardContent, Grid, InputAdornment, Stack, TextField, Typography } from '@mui/material';
+import { useLoaderData, useNavigate } from 'react-router';
+import { Card, CardActionArea, CardContent, Grid, InputAdornment, Stack, TextField, Typography } from '@mui/material';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import type { PastEvent } from '@/types';
 
 export default function EventRecordsPage() {
   const records = useLoaderData() as PastEvent[];
+  const navigate = useNavigate();
   const [keyword, setKeyword] = useState('');
 
   const filtered = useMemo(() => {
@@ -34,17 +35,31 @@ export default function EventRecordsPage() {
 
       <Grid container spacing={2}>
         {filtered.map((record, idx) => (
-          <Grid key={idx} size={{ xs: 12, md: 6 }}>
+          <Grid key={record.id ?? idx} size={{ xs: 12, md: 6 }}>
             <Card>
-              <CardContent>
-                <Stack spacing={0.5}>
-                  <Typography variant="subtitle1" fontWeight={700}>{record.title}</Typography>
-                  <Typography variant="body2" color="text.secondary">{record.date} · {record.host} Host · {record.people} 人</Typography>
-                  {record.film && (
-                    <Typography variant="caption" color="text.secondary">🎬 放映：{record.film}</Typography>
-                  )}
-                </Stack>
-              </CardContent>
+              {record.id ? (
+                <CardActionArea onClick={() => navigate(`/events/${record.id}`)}>
+                  <CardContent>
+                    <Stack spacing={0.5}>
+                      <Typography variant="subtitle1" fontWeight={700}>{record.title}</Typography>
+                      <Typography variant="body2" color="text.secondary">{record.date} · {record.host} Host · {record.people} 人</Typography>
+                      {record.film && (
+                        <Typography variant="caption" color="text.secondary">🎬 放映：{record.film}</Typography>
+                      )}
+                    </Stack>
+                  </CardContent>
+                </CardActionArea>
+              ) : (
+                <CardContent>
+                  <Stack spacing={0.5}>
+                    <Typography variant="subtitle1" fontWeight={700}>{record.title}</Typography>
+                    <Typography variant="body2" color="text.secondary">{record.date} · {record.host} Host · {record.people} 人</Typography>
+                    {record.film && (
+                      <Typography variant="caption" color="text.secondary">🎬 放映：{record.film}</Typography>
+                    )}
+                  </Stack>
+                </CardContent>
+              )}
             </Card>
           </Grid>
         ))}

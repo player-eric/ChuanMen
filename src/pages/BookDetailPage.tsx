@@ -19,6 +19,7 @@ import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
 import { addComment, fetchCommentsApi } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
+import { firstNonEmoji } from '@/components/Atoms';
 
 export default function BookDetailPage() {
   const navigate = useNavigate();
@@ -173,7 +174,7 @@ export default function BookDetailPage() {
                     sx={{ width: 32, height: 32, cursor: 'pointer' }}
                     onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
                   >
-                    {name[0]}
+                    {firstNonEmoji(name)}
                   </Avatar>
                 ))}
               </AvatarGroup>
@@ -221,7 +222,7 @@ export default function BookDetailPage() {
                       sx={{ width: 28, height: 28, fontSize: 12, cursor: 'pointer', mt: 0.25 }}
                       onClick={() => navigate(`/members/${encodeURIComponent(cm.name)}`)}
                     >
-                      {cm.name[0]}
+                      {firstNonEmoji(cm.name)}
                     </Avatar>
                     <Box sx={{ flex: 1 }}>
                       <Stack direction="row" spacing={1} alignItems="baseline">
@@ -237,7 +238,7 @@ export default function BookDetailPage() {
             {user ? (
               <Stack direction="row" spacing={1} alignItems="flex-start">
                 <Avatar sx={{ width: 28, height: 28, fontSize: 12, mt: 0.5 }}>
-                  {user.name?.[0] ?? 'U'}
+                  {firstNonEmoji(user.name ?? 'U')}
                 </Avatar>
                 <TextField
                   size="small"

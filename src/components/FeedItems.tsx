@@ -419,17 +419,19 @@ export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, 
 /* ═══ FeedMovie ═══ */
 interface FeedMovieProps extends InteractionProps {
   name: string; title: string; year: string; dir: string; votes: number;
+  navTarget?: string;
 }
 
-export function FeedMovie({ name, title, year, dir, votes: initV, likes, likedBy, comments, newComments }: FeedMovieProps) {
+export function FeedMovie({ name, title, year, dir, votes: initV, navTarget, likes, likedBy, comments, newComments }: FeedMovieProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+  const goNav = navTarget ? () => navigate(navTarget) : undefined;
 
   return (
     <Card>
-      <div style={{ padding: 14 }}>
+      <div style={{ padding: 14, cursor: goNav ? 'pointer' : undefined }} onClick={goNav}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           <Ava name={name} size={32} onTap={() => goMember(name)} />
           <div>
@@ -444,7 +446,7 @@ export function FeedMovie({ name, title, year, dir, votes: initV, likes, likedBy
             <div style={{ fontSize: 12, color: c.text3, marginTop: 2 }}>{year}  {dir}</div>
             <div style={{ marginTop: 6 }}>
               <button
-                onClick={() => setV(!v)}
+                onClick={(e) => { e.stopPropagation(); setV(!v); }}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   padding: '4px 12px', borderRadius: 6,
@@ -485,17 +487,19 @@ export function FeedMilestone({ text, emoji, likes, likedBy, comments, newCommen
 /* ═══ FeedProposal ═══ */
 interface FeedProposalProps extends InteractionProps {
   name: string; title: string; votes: number; interested: string[];
+  navTarget?: string;
 }
 
-export function FeedProposal({ name, title, votes: initV, interested, likes, likedBy, comments, newComments }: FeedProposalProps) {
+export function FeedProposal({ name, title, votes: initV, interested, navTarget, likes, likedBy, comments, newComments }: FeedProposalProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+  const goNav = navTarget ? () => navigate(navTarget) : undefined;
 
   return (
     <Card>
-      <div style={{ padding: 14 }}>
+      <div style={{ padding: 14, cursor: goNav ? 'pointer' : undefined }} onClick={goNav}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
           <Ava name={name} size={32} onTap={() => goMember(name)} />
           <div>
@@ -509,7 +513,7 @@ export function FeedProposal({ name, title, votes: initV, interested, likes, lik
           <span style={{ fontSize: 12, color: c.text3 }}>{interested.length} 人感兴趣</span>
         </div>
         <button
-          onClick={() => setV(!v)}
+          onClick={(e) => { e.stopPropagation(); setV(!v); }}
           style={{
             padding: '6px 16px', borderRadius: 6,
             background: v ? c.blue + '15' : c.s2,
@@ -614,17 +618,19 @@ export function FeedCompactProposal({ name, title, votes: initV, interested, tim
 /* ═══ FeedBook ═══ */
 interface FeedBookProps extends InteractionProps {
   name: string; title: string; year: string; author: string; votes: number;
+  navTarget?: string;
 }
 
-export function FeedBook({ name, title, year, author, votes: initV, likes, likedBy, comments, newComments }: FeedBookProps) {
+export function FeedBook({ name, title, year, author, votes: initV, navTarget, likes, likedBy, comments, newComments }: FeedBookProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+  const goNav = navTarget ? () => navigate(navTarget) : undefined;
 
   return (
     <Card>
-      <div style={{ padding: 14 }}>
+      <div style={{ padding: 14, cursor: goNav ? 'pointer' : undefined }} onClick={goNav}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           <Ava name={name} size={32} onTap={() => goMember(name)} />
           <div>
@@ -639,7 +645,7 @@ export function FeedBook({ name, title, year, author, votes: initV, likes, liked
             <div style={{ fontSize: 12, color: c.text3, marginTop: 2 }}>{year} · {author}</div>
             <div style={{ marginTop: 6 }}>
               <button
-                onClick={() => setV(!v)}
+                onClick={(e) => { e.stopPropagation(); setV(!v); }}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   padding: '4px 12px', borderRadius: 6,
