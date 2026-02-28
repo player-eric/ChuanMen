@@ -174,9 +174,14 @@ export default function AppLayout() {
             </Box>
           </Stack>
         ) : (
-          <Button variant="outlined" fullWidth onClick={() => handleDrawerNav('/apply')}>
-            申请加入
-          </Button>
+          <Stack spacing={1}>
+            <Button variant="outlined" fullWidth onClick={() => handleDrawerNav('/login')}>
+              登录
+            </Button>
+            <Button variant="text" fullWidth onClick={() => handleDrawerNav('/apply')}>
+              申请加入
+            </Button>
+          </Stack>
         )}
       </Box>
       <Divider />
@@ -345,9 +350,14 @@ export default function AppLayout() {
                   </Button>
                 </Stack>
               ) : (
-                <Button size="small" variant="outlined" onClick={() => navigate('/apply')}>
-                  申请加入
-                </Button>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Button size="small" variant="text" color="inherit" onClick={() => navigate('/login')}>
+                    登录
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => navigate('/apply')}>
+                    申请加入
+                  </Button>
+                </Stack>
               )}
             </Stack>
           </Toolbar>
