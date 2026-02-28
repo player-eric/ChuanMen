@@ -24,6 +24,10 @@ const defaultBg = 'linear-gradient(145deg, #1c1814 0%, #2a2018 25%, #3a2a20 50%,
 
 export function PostCard({ from, to, message, stamp = '✉', date, photo, isPrivate = false, showVisibility = false, layout = 'vertical', eventCtx, onToggleVisibility }: PostCardProps) {
   const c = useColors();
+  // Normalize photo: raw URLs → CSS background; already-formatted values pass through
+  const photoBg = photo && !photo.startsWith('url(') && !photo.startsWith('linear-gradient')
+    ? `url(${photo}) center/cover no-repeat`
+    : photo;
   const titleDefs = useTitleDefs();
   const horiz = layout === 'horizontal';
 
@@ -39,7 +43,7 @@ export function PostCard({ from, to, message, stamp = '✉', date, photo, isPriv
     </>
   );
 
-  const watermark = !photo && (
+  const watermark = !photoBg && (
     <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', bottom: eventCtx ? 26 : 10, right: 12, opacity: 0.25, alignItems: 'center' }}>
       <Box sx={{ width: 16, height: 16, borderRadius: 1, background: c.ink + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Typography variant="caption" sx={{ fontSize: '0.5rem', fontWeight: 800, color: c.ink + '60', lineHeight: 1 }}>串</Typography>
@@ -84,7 +88,7 @@ export function PostCard({ from, to, message, stamp = '✉', date, photo, isPriv
     return (
       <Box sx={{ borderRadius: 2, overflow: 'hidden', background: `linear-gradient(165deg, ${c.paper}, ${c.paperDark})`, boxShadow: `0 2px 8px ${c.bg}30`, display: 'flex', aspectRatio: '3 / 2' }}>
         {/* Left: photo / banner */}
-        <div style={{ width: '45%', flexShrink: 0, background: photo || defaultBg, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ width: '45%', flexShrink: 0, background: photoBg || defaultBg, position: 'relative', overflow: 'hidden' }}>
           {bannerDecor}
           {eventCtx && (
             <Typography variant="caption" sx={{ position: 'absolute', bottom: 8, left: 10, right: 10, color: '#fff', fontSize: '0.65rem', opacity: 0.85, textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}>
@@ -102,7 +106,7 @@ export function PostCard({ from, to, message, stamp = '✉', date, photo, isPriv
   return (
     <Box sx={{ borderRadius: 2, overflow: 'hidden', background: `linear-gradient(165deg, ${c.paper}, ${c.paperDark})`, boxShadow: `0 2px 8px ${c.bg}30` }}>
       {/* Banner area */}
-      <div style={{ width: '100%', height: 130, background: photo || defaultBg, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ width: '100%', height: 130, background: photoBg || defaultBg, position: 'relative', overflow: 'hidden' }}>
         {bannerDecor}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '35%', background: `linear-gradient(transparent, ${c.paper}dd)` }} />
         {eventCtx && (

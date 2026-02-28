@@ -119,19 +119,21 @@ export class EventRepository {
   async signup(eventId: string, userId: string, _status: string = 'accepted') {
     const event = await this.prisma.event.findUniqueOrThrow({
       where: { id: eventId },
-      select: { capacity: true, waitlistEnabled: true },
+      select: { capacity: true, waitlistEnabled: true, phase: true, status: true },
     });
+
+    const isEnded = event.phase === 'ended' || event.status === 'completed';
 
     const occupied = await this.countOccupying(eventId);
     let status: EventSignupStatus = 'accepted';
-    if (occupied >= event.capacity && event.waitlistEnabled) {
+    if (!isEnded && occupied >= event.capacity && event.waitlistEnabled) {
       status = 'waitlist';
     }
 
     const signup = await this.prisma.eventSignup.upsert({
       where: { eventId_userId: { eventId, userId } },
-      create: { eventId, userId, status },
-      update: { status },
+      create: { eventId, userId, status, participated: isEnded },
+      update: { status, ...(isEnded ? { participated: true } : {}) },
       include: { user: { select: { id: true, name: true, avatar: true } } },
     });
 

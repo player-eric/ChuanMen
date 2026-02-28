@@ -26,17 +26,26 @@ import { useAuth } from '@/auth/AuthContext';
 import { PostCard } from '@/components/PostCard';
 import { EmptyState } from '@/components/EmptyState';
 import { useTitleDefs } from '@/hooks/useTitleDefs';
+import MailRoundedIcon from '@mui/icons-material/MailRounded';
 
-function EmptyCards() {
+function EmptyCards({ credits }: { credits?: number }) {
   const navigate = useNavigate();
   return (
     <Box sx={{ textAlign: 'center', py: 6 }}>
-      <Typography variant="h3" sx={{ mb: 1.5 }}>✉</Typography>
+      <MailRoundedIcon sx={{ fontSize: 48, mb: 1.5, color: 'text.secondary' }} />
       <Typography variant="h6" sx={{ mb: 1 }}>还没有感谢卡</Typography>
+      {(credits ?? 0) > 0 && (
+        <Typography variant="body2" color="warning.main" sx={{ mb: 1 }}>
+          你有 {credits} 张感谢卡可用
+        </Typography>
+      )}
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5, whiteSpace: 'pre-line' }}>
         参加一次活动后，就可以给同行的人寄一张感谢卡。{'\n'}你的卡片和收到的卡片都会出现在这里。
       </Typography>
-      <Button variant="contained" onClick={() => navigate('/events')}>看看最近的活动</Button>
+      <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap" useFlexGap>
+        <Button variant="contained" onClick={() => navigate('/events')}>看看最近的活动</Button>
+        <Button variant="outlined" onClick={() => navigate('/events/new')}>组织一个小局试试</Button>
+      </Stack>
     </Box>
   );
 }
@@ -46,7 +55,7 @@ export default function CardsPage() {
   const { user } = useAuth();
   // Show empty state when not logged in or no cards and no eligible people
   const isEmpty = !user || (data.myCards.length === 0 && data.sentCards.length === 0 && data.people.length === 0);
-  if (isEmpty) return <EmptyCards />;
+  if (isEmpty) return <EmptyCards credits={data.credits} />;
   return <FullCards />;
 }
 
@@ -64,6 +73,7 @@ function FullCards() {
   const [stamp, setStamp] = useState('');
   const [msg, setMsg] = useState('');
   const [hasPhoto, setHasPhoto] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoPos, setPhotoPos] = useState<'left' | 'center' | 'right'>('center');
   const [sent, setSent] = useState(false);
@@ -108,6 +118,7 @@ function FullCards() {
     setStamp('');
     setMsg('');
     if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(null);
     setPhotoPreview(null);
     setHasPhoto(false);
     setPhotoPos('center');
@@ -127,47 +138,50 @@ function FullCards() {
 
   return (
     <Stack spacing={2}>
-      {/* How to earn cards — collapsed by default */}
-      <Card
-        sx={{ cursor: 'pointer' }}
-        onClick={() => setShowCardInfo((v) => !v)}
-      >
-        <CardContent sx={{ '&:last-child': { pb: showCardInfo ? undefined : 2 } }}>
-          <Typography variant="subtitle2" fontWeight={700}>
-            ✉ 如何获得感谢卡 {showCardInfo ? '▾' : '▸'}
-          </Typography>
-          {showCardInfo && (
-            <Stack spacing={0.5} sx={{ mt: 1 }}>
-              <Typography variant="body2" color="text.secondary">· 每参加一次活动，+2 张感谢卡</Typography>
-              <Typography variant="body2" color="text.secondary">· 每次做 Host，额外 +4 张</Typography>
-              <Typography variant="body2" color="text.secondary">· 购买感谢卡 · $5/张（不限量）</Typography>
-              <Typography variant="body2" color="text.secondary">· 感谢卡不限期，累计不清零</Typography>
-            </Stack>
-          )}
-        </CardContent>
-      </Card>
-
       {!user && (
         <Alert severity="info" action={<Button color="inherit" size="small" onClick={() => navigate('/login')}>去登录</Button>}>
           游客为只读模式，登录后可寄感谢卡。
         </Alert>
       )}
 
-      {/* Credit balance */}
+      {/* Credit balance + earn rules (merged) */}
       {user && (
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-          <Box>
-            <Typography variant="subtitle1" fontWeight={700}>
-              ✉ 可寄 {credits} 张
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              系统赠送的感谢卡只能寄给一起参加过活动的人，付费感谢卡不限
-            </Typography>
-          </Box>
-          <Button variant="outlined" size="small" disabled>
-            购买感谢卡 · 暂未开放
-          </Button>
-        </Stack>
+        <Card variant="outlined">
+          <CardContent sx={{ py: 1.5, '&:last-child': { pb: showCardInfo ? undefined : 1.5 } }}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{ cursor: 'pointer' }}
+              onClick={() => setShowCardInfo((v) => !v)}
+            >
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <MailRoundedIcon sx={{ fontSize: 32, color: 'primary.main' }} />
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    {credits} 张可用
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    如何获得 {showCardInfo ? '▾' : '▸'}
+                  </Typography>
+                </Box>
+              </Stack>
+              {credits === 0 && (
+                <Button variant="outlined" size="small" onClick={(e) => { e.stopPropagation(); navigate('/events'); }}>
+                  去参加活动
+                </Button>
+              )}
+            </Stack>
+            {showCardInfo && (
+              <Stack spacing={0.5} sx={{ mt: 1.5, pl: 6.5 }}>
+                <Typography variant="body2" color="text.secondary">· 新成员自动获得 4 张</Typography>
+                <Typography variant="body2" color="text.secondary">· 每参加一次活动 +2 张</Typography>
+                <Typography variant="body2" color="text.secondary">· 每次做 Host 额外 +4 张</Typography>
+                <Typography variant="body2" color="text.secondary">· 不限期，累计不清零</Typography>
+              </Stack>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {user && !sent ? (
@@ -288,6 +302,7 @@ function FullCards() {
                           const file = e.target.files?.[0];
                           if (file) {
                             if (photoPreview) URL.revokeObjectURL(photoPreview);
+                            setPhotoFile(file);
                             setPhotoPreview(URL.createObjectURL(file));
                             setHasPhoto(true);
                           }
@@ -297,6 +312,7 @@ function FullCards() {
                     {hasPhoto && (
                       <Button size="small" color="error" onClick={() => {
                         if (photoPreview) URL.revokeObjectURL(photoPreview);
+                        setPhotoFile(null);
                         setPhotoPreview(null);
                         setHasPhoto(false);
                       }}>
@@ -344,6 +360,7 @@ function FullCards() {
                       setStamp('');
                       setMsg('');
                       if (photoPreview) URL.revokeObjectURL(photoPreview);
+                      setPhotoFile(null);
                       setPhotoPreview(null);
                       setHasPhoto(false);
                       setPhotoPos('center');
@@ -380,13 +397,19 @@ function FullCards() {
                     onClick={async () => {
                       if (!user?.id || !who) return;
                       try {
-                        const { sendPostcard } = await import('@/lib/domainApi');
+                        const { sendPostcard, uploadMedia } = await import('@/lib/domainApi');
+                        let photoUrl: string | undefined;
+                        if (photoFile) {
+                          const uploaded = await uploadMedia(photoFile, 'postcard', user.id);
+                          photoUrl = uploaded.publicUrl;
+                        }
                         await sendPostcard({
                           fromId: user.id,
                           toId: whoId ?? who,
                           message: msg,
                           eventCtx: whoCtx ?? undefined,
                           visibility: isPrivate ? 'private' : 'public',
+                          photoUrl,
                           tags: stamp ? [stamp] : [],
                         });
                         revalidator.revalidate();

@@ -90,9 +90,20 @@ export class PostcardRepository {
    * Find people the user co-attended events with, returning the most recent shared event title.
    */
   async listEligibleRecipients(userId: string) {
+    // "Participated" means either:
+    //   a) participated flag is true, OR
+    //   b) status is 'accepted' in a past event (phase=ended or status=completed)
+    const participatedFilter = {
+      OR: [
+        { participated: true },
+        { status: 'accepted' as const, event: { phase: 'ended' as const } },
+        { status: 'accepted' as const, event: { status: 'completed' as const } },
+      ],
+    };
+
     // Get events the user participated in
     const mySignups = await this.prisma.eventSignup.findMany({
-      where: { userId, participated: true },
+      where: { userId, ...participatedFilter },
       select: { eventId: true },
     });
     const myEventIds = mySignups.map((s) => s.eventId);
@@ -103,7 +114,7 @@ export class PostcardRepository {
       where: {
         eventId: { in: myEventIds },
         userId: { not: userId },
-        participated: true,
+        ...participatedFilter,
       },
       select: {
         userId: true,
