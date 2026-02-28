@@ -15,12 +15,19 @@ export default function ProposalDetailPage() {
   const c = useColors();
   const raw = useLoaderData() as Proposal | null;
 
-  const interestedList = raw?.interested ?? [];
+  const serverList = raw?.interested ?? [];
   const [interested, setInterested] = useState(
-    () => !!user?.name && interestedList.includes(user.name)
+    () => !!user?.name && serverList.includes(user.name)
   );
   const [editing, setEditing] = useState(false);
   const [descHtml, setDescHtml] = useState(raw?.descriptionHtml ?? '');
+
+  // Build display list: add/remove current user optimistically
+  const interestedList = (() => {
+    const base = serverList.filter((n) => n !== user?.name);
+    if (interested && user?.name) base.push(user.name);
+    return base;
+  })();
 
   if (!raw) {
     return (
@@ -114,7 +121,7 @@ export default function ProposalDetailPage() {
         <Card>
           <CardContent>
             <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
-              感兴趣的人 ({interestedList.length + (interested ? 1 : 0)})
+              感兴趣的人 ({interestedList.length})
             </Typography>
 
             {interestedList.length > 0 && (
@@ -141,7 +148,7 @@ export default function ProposalDetailPage() {
                   opacity: user ? 1 : 0.5,
                 }}
               >
-                {interested ? '✓ 取消感兴趣' : '我感兴趣'} · {raw.votes + (interested ? 1 : 0)}
+                {interested ? '✓ 取消感兴趣' : '我感兴趣'}
               </button>
               <button
                 onClick={() => user && navigate('/events/new', { state: { fromProposal: { title: raw.title, descriptionHtml: descHtml } } })}

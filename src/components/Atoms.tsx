@@ -13,9 +13,17 @@ interface AvaProps {
   onTap?: () => void;
 }
 
+/** Extract the first non-emoji character from a string for avatar display */
+function firstNonEmoji(str: string): string {
+  // Match characters that are NOT emoji-related Unicode ranges
+  const match = str.match(/[^\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2702}-\u{27B0}\u{FE0F}\u{200B}-\u{200D}\u{2028}\u{2029}\u{20E3}\u{E0020}-\u{E007F}]/u);
+  return match ? match[0] : str[0] ?? '?';
+}
+
 export function Ava({ name: rawName, src, size = 28, border, badge, onTap }: AvaProps) {
   const name = typeof rawName === 'string' ? rawName : String(rawName ?? '?');
   const c = useColors();
+  const letter = firstNonEmoji(name);
   return (
     <div style={{ position: 'relative', flexShrink: 0, cursor: onTap ? 'pointer' : undefined }} onClick={onTap}>
       {src ? (
@@ -38,7 +46,7 @@ export function Ava({ name: rawName, src, size = 28, border, badge, onTap }: Ava
             border: border ? `2px solid ${c.s1}` : 'none',
           }}
         >
-          {name[0]}
+          {letter}
         </div>
       )}
       {badge && (
