@@ -9,10 +9,12 @@ import {
   CardActionArea,
   CardContent,
   Chip,
+  IconButton,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import type { EventComment, BookDetailData, BookPool } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
@@ -67,6 +69,7 @@ export default function BookDetailPage() {
   return (
     <Box sx={{ maxWidth: 680, mx: 'auto' }}>
       <Stack spacing={2}>
+        <IconButton onClick={() => navigate('/discover')} size="small" sx={{ alignSelf: 'flex-start' }}><ArrowBackRoundedIcon /></IconButton>
         {/* 1. Hero Poster Header */}
         <Card sx={{ overflow: 'hidden' }}>
           <Box

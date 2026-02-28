@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router';
-import { Card, CardContent, Stack, Typography } from '@mui/material';
+import { useNavigate, useParams } from 'react-router';
+import { Card, CardContent, IconButton, Stack, Typography } from '@mui/material';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { fetchAboutContentApi } from '@/lib/domainApi';
 
 /** Static fallback for content types not in DB */
@@ -143,6 +144,7 @@ const staticContent: Record<string, { title: string; body: string[] }> = {
 };
 
 export default function AboutContentPage() {
+  const navigate = useNavigate();
   const { contentType } = useParams();
   const [apiContent, setApiContent] = useState<{ title: string; body: string[] } | null>(null);
 
@@ -171,7 +173,10 @@ export default function AboutContentPage() {
     <Card>
       <CardContent>
         <Stack spacing={1.5}>
-          <Typography variant="h5" fontWeight={700}>{content.title}</Typography>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <IconButton onClick={() => navigate('/about')} size="small"><ArrowBackRoundedIcon /></IconButton>
+            <Typography variant="h5" fontWeight={700}>{content.title}</Typography>
+          </Stack>
           {content.body.map((paragraph) => (
             <Typography key={paragraph} variant="body2" color="text.secondary">
               {paragraph}

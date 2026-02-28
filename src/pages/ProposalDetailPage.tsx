@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
-import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, IconButton, Stack, Typography } from '@mui/material';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import type { Proposal } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { useColors } from '@/hooks/useColors';
@@ -53,6 +54,7 @@ export default function ProposalDetailPage() {
   return (
     <Box sx={{ maxWidth: 680, mx: 'auto' }}>
       <Stack spacing={2}>
+        <IconButton onClick={() => navigate('/events')} size="small" sx={{ alignSelf: 'flex-start' }}><ArrowBackRoundedIcon /></IconButton>
         {/* 1. Hero Header */}
         <Card sx={{ overflow: 'hidden' }}>
           <Box

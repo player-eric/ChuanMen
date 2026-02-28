@@ -26,6 +26,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
 import { useTaskPresets } from '@/hooks/useTaskPresets';
 import { createEvent, inviteToEvent, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
@@ -210,7 +211,10 @@ export default function EventCreatePage() {
     <Card>
       <CardContent>
         <Stack spacing={2.5}>
-          <Typography variant="h5" fontWeight={700}>发起活动</Typography>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <IconButton onClick={() => navigate('/events')} size="small"><ArrowBackRoundedIcon /></IconButton>
+            <Typography variant="h5" fontWeight={700}>发起活动</Typography>
+          </Stack>
           {fromProposal && (
             <Chip size="small" label={`从创意「${fromProposal.title}」发起`} color="info" variant="outlined" />
           )}

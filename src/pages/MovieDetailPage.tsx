@@ -13,12 +13,14 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   Snackbar,
   Alert,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import type { EventComment } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
@@ -120,6 +122,7 @@ export default function MovieDetailPage() {
   return (
     <Box sx={{ maxWidth: 680, mx: 'auto' }}>
       <Stack spacing={2}>
+        <IconButton onClick={() => navigate('/discover')} size="small" sx={{ alignSelf: 'flex-start' }}><ArrowBackRoundedIcon /> </IconButton>
         <Snackbar
           open={flash.open}
           autoHideDuration={3500}

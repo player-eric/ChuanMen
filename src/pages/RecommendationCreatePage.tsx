@@ -6,10 +6,12 @@ import {
   Button,
   Card,
   CardContent,
+  IconButton,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
 import { createRecommendation, type RecommendationCategory } from '@/lib/domainApi';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -94,7 +96,10 @@ export default function RecommendationCreatePage() {
     <Card>
       <CardContent>
         <Stack spacing={2}>
-          <Typography variant="h5" fontWeight={700}>添加{categoryName}</Typography>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <IconButton onClick={() => navigate('/discover')} size="small"><ArrowBackRoundedIcon /></IconButton>
+            <Typography variant="h5" fontWeight={700}>添加{categoryName}</Typography>
+          </Stack>
           {error && <Alert severity="error">{error}</Alert>}
 
           <TextField label="标题" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth placeholder={isBook ? '书名' : undefined} />

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Alert, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Button, Card, CardContent, IconButton, Stack, TextField, Typography } from '@mui/material';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
 import { createProposal } from '@/lib/domainApi';
 
@@ -54,7 +55,10 @@ export default function ProposalCreatePage() {
     <Card>
       <CardContent>
         <Stack spacing={2}>
-          <Typography variant="h5" fontWeight={700}>添加创意</Typography>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <IconButton onClick={() => navigate('/events')} size="small"><ArrowBackRoundedIcon /></IconButton>
+            <Typography variant="h5" fontWeight={700}>添加创意</Typography>
+          </Stack>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField label="创意标题" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth />
           <div>
