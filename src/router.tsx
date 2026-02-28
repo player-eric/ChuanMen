@@ -8,7 +8,6 @@ import EventRecordsPage from '@/pages/EventRecordsPage';
 import DiscoverPage from '@/pages/DiscoverPage';
 import MovieDetailPage from '@/pages/MovieDetailPage';
 import BookDetailPage from '@/pages/BookDetailPage';
-import RecommendationListPage from '@/pages/RecommendationListPage';
 import RecommendationCreatePage from '@/pages/RecommendationCreatePage';
 import RecommendationDetailPage from '@/pages/RecommendationDetailPage';
 import CardsPage from '@/pages/CardsPage';
@@ -368,12 +367,29 @@ async function eventRecordsLoader() {
   }
 }
 
+function mapRecommendation(r: any) {
+  return {
+    id: r.id,
+    title: r.title ?? '',
+    description: r.description ?? '',
+    authorName: r.author?.name ?? '',
+    authorId: r.author?.id ?? r.authorId ?? '',
+    coverUrl: r.coverUrl || undefined,
+    sourceUrl: r.sourceUrl || undefined,
+    voteCount: r.voteCount ?? 0,
+    category: r.category ?? '',
+  };
+}
+
 async function discoverLoader() {
   try {
-    const [rawPool, rawScreened, rawBooks] = await Promise.all([
+    const [rawPool, rawScreened, rawBooks, rawRecipes, rawMusic, rawPlaces] = await Promise.all([
       fetchMoviesApi(),
       fetchScreenedMoviesApi(),
       fetchRecommendationsApi('book').catch(() => []),
+      fetchRecommendationsApi('recipe').catch(() => []),
+      fetchRecommendationsApi('music').catch(() => []),
+      fetchRecommendationsApi('place').catch(() => []),
     ]);
     const pool = (rawPool as any[]).map((m: any) => ({
       id: m.id,
@@ -384,6 +400,7 @@ async function discoverLoader() {
       voterIds: (m.votes ?? []).map((v: any) => v.user?.id ?? v.userId).filter(Boolean),
       status: m.status === 'candidate' ? undefined : m.status,
       by: m.recommendedBy?.name ?? '',
+      poster: m.poster || undefined,
     }));
     const screened = (rawScreened as any[]).map((s: any) => ({
       title: s.movie?.title ?? s.title ?? '',
@@ -401,9 +418,14 @@ async function discoverLoader() {
       by: b.author?.name ?? '',
       status: b.status === 'candidate' ? undefined : b.status,
     }));
-    return { pool, screened, bookPool, bookRead: [] };
+    return {
+      pool, screened, bookPool, bookRead: [],
+      recipes: (rawRecipes as any[]).map(mapRecommendation),
+      music: (rawMusic as any[]).map(mapRecommendation),
+      places: (rawPlaces as any[]).map(mapRecommendation),
+    };
   } catch {
-    return { pool: [], screened: [], bookPool: [], bookRead: [] };
+    return { pool: [], screened: [], bookPool: [], bookRead: [], recipes: [], music: [], places: [] };
   }
 }
 
@@ -434,6 +456,8 @@ async function bookDetailLoader({ params }: { params: Record<string, string | un
       by: rec.author?.name ?? '',
       synopsis: rec.description ?? '',
       genre: (rec.tags ?? []).map((t: any) => t.value).join(', '),
+      sourceUrl: rec.sourceUrl ?? '',
+      authorId: rec.authorId ?? rec.author?.id ?? '',
     };
   } catch {
     return null;
@@ -608,7 +632,7 @@ export const appRoutes: RouteObject[] = [
         element: <BookDetailPage />,
         loader: bookDetailLoader,
       },
-      { path: 'discover/:category', element: <RecommendationListPage /> },
+      { path: 'discover/:category', element: <Navigate to="/discover" replace /> },
       { path: 'discover/:category/add', element: <RecommendationCreatePage /> },
       { path: 'discover/:category/:recommendationId', element: <RecommendationDetailPage /> },
       { path: 'cards', element: <CardsPage />, loader: cardsLoader },

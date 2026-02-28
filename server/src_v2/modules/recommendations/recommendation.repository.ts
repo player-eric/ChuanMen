@@ -35,6 +35,18 @@ export class RecommendationRepository {
     });
   }
 
+  delete(id: string) {
+    return this.prisma.recommendation.delete({ where: { id } });
+  }
+
+  update(id: string, data: { title?: string; description?: string; sourceUrl?: string; coverUrl?: string }) {
+    return this.prisma.recommendation.update({
+      where: { id },
+      data,
+      include: { author: true, tags: true },
+    });
+  }
+
   create(input: {
     category: RecommendationCategory;
     title: string;

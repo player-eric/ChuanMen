@@ -120,6 +120,7 @@ export interface MoviePool {
   voterIds: string[];
   status?: string;
   by: string;
+  poster?: string;
 }
 
 export interface MovieScreened {
@@ -327,11 +328,26 @@ export interface EventsPageData {
   past: PastEvent[];
 }
 
+export interface RecommendationItem {
+  id: string;
+  title: string;
+  description: string;
+  authorName: string;
+  authorId: string;
+  coverUrl?: string;
+  sourceUrl?: string;
+  voteCount: number;
+  category: string;
+}
+
 export interface DiscoverPageData {
   pool: MoviePool[];
   screened: MovieScreened[];
   bookPool: BookPool[];
   bookRead: BookRead[];
+  recipes: RecommendationItem[];
+  music: RecommendationItem[];
+  places: RecommendationItem[];
 }
 
 export interface CardsPageData {

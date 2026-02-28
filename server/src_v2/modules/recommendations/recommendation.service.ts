@@ -41,4 +41,18 @@ export class RecommendationService {
     const data = createSchema.parse(input);
     return this.repository.create(data);
   }
+
+  delete(id: string) {
+    return this.repository.delete(id);
+  }
+
+  update(id: string, input: unknown) {
+    const data = z.object({
+      title: z.string().min(1).optional(),
+      description: z.string().optional(),
+      sourceUrl: z.string().optional(),
+      coverUrl: z.string().optional(),
+    }).parse(input);
+    return this.repository.update(id, data);
+  }
 }

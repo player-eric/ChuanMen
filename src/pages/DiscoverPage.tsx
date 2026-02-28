@@ -15,29 +15,42 @@ import {
   Tab,
   Tabs,
   TextField,
-  Tooltip,
   Typography,
 } from '@mui/material';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
-import type { DiscoverPageData } from '@/types';
+import type { DiscoverPageData, RecommendationItem } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { Poster } from '@/components/Poster';
 import { EmptyState } from '@/components/EmptyState';
 import { toggleMovieVote, searchExternalMovies, createMovie } from '@/lib/domainApi';
 import type { ExternalMovieResult } from '@/lib/domainApi';
 
+type Category = 'movie' | 'book' | 'recipe' | 'music' | 'place';
+
+const categoryTabs: { key: Category; label: string }[] = [
+  { key: 'movie', label: '🎬 电影' },
+  { key: 'book', label: '📖 读书' },
+  { key: 'recipe', label: '🍜 菜谱' },
+  { key: 'music', label: '🎵 音乐' },
+  { key: 'place', label: '📍 好店' },
+];
+
+const categoryAddLabels: Record<Category, string> = {
+  movie: '添加电影',
+  book: '添加图书',
+  recipe: '添加菜谱',
+  music: '添加音乐',
+  place: '添加好店',
+};
+
 /* ═══ DiscoverPage ═══ */
 export default function DiscoverPage() {
-  const navigate = useNavigate();
-  const [activeCategory, setActiveCategory] = useState<'movie' | 'book'>('movie');
+  const [activeCategory, setActiveCategory] = useState<Category>('movie');
 
   return (
     <Box>
       <Stack direction="row" spacing={1} sx={{ mb: 2, overflowX: 'auto', pb: 0.5 }}>
-        {[
-          { key: 'movie' as const, label: '🎬 电影' },
-          { key: 'book' as const, label: '📖 读书' },
-        ].map((cat) => (
+        {categoryTabs.map((cat) => (
           <Chip
             key={cat.key}
             label={cat.label}
@@ -47,24 +60,12 @@ export default function DiscoverPage() {
             onClick={() => setActiveCategory(cat.key)}
           />
         ))}
-        {[
-          { key: 'recipe', label: '🍜 菜谱' },
-          { key: 'music', label: '🎵 音乐' },
-          { key: 'place', label: '📍 好店' },
-        ].map((cat) => (
-          <Tooltip key={cat.key} title="即将开放" arrow>
-            <span>
-              <Chip
-                label={cat.label}
-                variant="outlined"
-                disabled
-                sx={{ opacity: 0.5 }}
-              />
-            </span>
-          </Tooltip>
-        ))}
       </Stack>
-      {activeCategory === 'movie' ? <MoviesSection /> : <BooksSection />}
+      {activeCategory === 'movie' && <MoviesSection />}
+      {activeCategory === 'book' && <BooksSection />}
+      {(activeCategory === 'recipe' || activeCategory === 'music' || activeCategory === 'place') && (
+        <RecommendationSection category={activeCategory} />
+      )}
     </Box>
   );
 }
@@ -134,6 +135,7 @@ function MoviesSection() {
         poster: ext.poster,
         synopsis: ext.overview,
         recommendedById: user.id,
+        tmdbId: ext.tmdbId,
       });
       setAddedTitle(ext.title || ext.originalTitle);
       setExtResults([]);
@@ -168,7 +170,6 @@ function MoviesSection() {
         <Button variant="contained" onClick={() => navigate('/discover/movie/add')} disabled={!user}>
           {user ? '添加电影' : '登录后可添加电影'}
         </Button>
-        <Button variant="outlined" onClick={() => navigate('/discover/movie')}>查看全部电影</Button>
       </Stack>
 
       {/* External search results from TMDB */}
@@ -231,7 +232,6 @@ function MoviesSection() {
             icon="🎬"
             title="还没有推荐电影，来添加第一部！"
             description="搜索你喜欢的电影，推荐给大家一起看。"
-            action={user ? { label: '添加电影', to: '/discover/movie/add' } : undefined}
           />
         ) : (
           <Grid container spacing={1.5}>
@@ -241,7 +241,7 @@ function MoviesSection() {
                   <CardActionArea onClick={() => navigate(`/discover/movies/${m.id}`)}>
                     <CardContent>
                       <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Poster title={m.title} w={40} h={56} />
+                        <Poster title={m.title} src={m.poster} w={40} h={56} />
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                           <Stack direction="row" justifyContent="space-between" alignItems="center">
                             <Box>
@@ -445,6 +445,90 @@ function BooksSection() {
         onClose={() => setSnackMsg('')}
         message={snackMsg}
       />
+    </Box>
+  );
+}
+
+/** Generic section for recipe / music / place recommendations */
+function RecommendationSection({ category }: { category: 'recipe' | 'music' | 'place' }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const data = useLoaderData() as DiscoverPageData;
+  const [search, setSearch] = useState('');
+
+  const dataMap: Record<string, RecommendationItem[]> = {
+    recipe: data.recipes,
+    music: data.music,
+    place: data.places,
+  };
+  const items = dataMap[category] ?? [];
+
+  const q = search.toLowerCase();
+  const filtered = q
+    ? items.filter((r) => r.title.toLowerCase().includes(q) || r.description.toLowerCase().includes(q))
+    : items;
+
+  const emptyMap: Record<string, { icon: string; title: string; desc: string }> = {
+    recipe: { icon: '🍜', title: '还没有推荐菜谱', desc: '分享你的拿手菜或发现的好菜谱。' },
+    music: { icon: '🎵', title: '还没有推荐音乐', desc: '推荐你喜欢的歌曲或专辑。' },
+    place: { icon: '📍', title: '还没有推荐好店', desc: '分享你发现的好店好去处。' },
+  };
+  const empty = emptyMap[category];
+
+  return (
+    <Box>
+      <TextField
+        fullWidth
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="搜索..."
+        autoComplete="off"
+        sx={{ mb: 2 }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchRoundedIcon fontSize="small" />
+            </InputAdornment>
+          ),
+        }}
+      />
+      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+        <Button variant="contained" onClick={() => navigate(`/discover/${category}/add`)} disabled={!user}>
+          {user ? categoryAddLabels[category] : `登录后可${categoryAddLabels[category]}`}
+        </Button>
+      </Stack>
+
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={empty.icon}
+          title={empty.title}
+          description={empty.desc}
+          action={user ? { label: categoryAddLabels[category], to: `/discover/${category}/add` } : undefined}
+        />
+      ) : (
+        <Stack spacing={1.5}>
+          {filtered.map((r) => (
+            <Card key={r.id}>
+              <CardActionArea onClick={() => navigate(`/discover/${category}/${r.id}`)}>
+                <CardContent>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    {r.coverUrl && (
+                      <img src={r.coverUrl} alt={r.title} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
+                    )}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography fontWeight={700}>{r.title}</Typography>
+                      {r.description && (
+                        <Typography variant="body2" color="text.secondary" noWrap>{r.description}</Typography>
+                      )}
+                      <Typography variant="caption" color="text.secondary">{r.authorName} 推荐</Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          ))}
+        </Stack>
+      )}
     </Box>
   );
 }

@@ -13,10 +13,10 @@ import {
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
-import { createRecommendation, type RecommendationCategory } from '@/lib/domainApi';
+import { createRecommendation, createMovie, type RecommendationCategory } from '@/lib/domainApi';
 import { ImageUpload } from '@/components/ImageUpload';
 
-const categoryMap: Record<RecommendationCategory, string> = {
+const categoryMap: Record<string, string> = {
   movie: '电影',
   book: '图书',
   recipe: '菜谱',
@@ -32,7 +32,7 @@ export default function RecommendationCreatePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { category } = useParams();
-  const currentCategory = isCategory(category) ? category : 'movie';
+  const currentCategory = isCategory(category) ? category : 'book';
   const categoryName = useMemo(() => categoryMap[currentCategory], [currentCategory]);
 
   const [title, setTitle] = useState('');
@@ -53,7 +53,6 @@ export default function RecommendationCreatePage() {
     return null;
   }
 
-  const isMovie = currentCategory === 'movie';
   const isBook = currentCategory === 'book';
 
   const onSubmit = async () => {
@@ -74,17 +73,25 @@ export default function RecommendationCreatePage() {
         .map((value) => value.trim())
         .filter(Boolean);
 
-      const recommendation = await createRecommendation({
-        category: currentCategory,
-        title: title.trim(),
-        description: description.trim(),
-        sourceUrl: sourceUrl.trim(),
-        coverUrl: coverUrl || undefined,
-        tags,
-        authorId: user.id,
-      });
-
-      navigate(`/discover/${currentCategory}/${String(recommendation._id)}`);
+      if (currentCategory === 'movie') {
+        const movie = await createMovie({
+          title: title.trim(),
+          synopsis: description.trim(),
+          recommendedById: user.id,
+        });
+        navigate(`/discover/movies/${String((movie as any).id ?? '')}`);
+      } else {
+        const recommendation = await createRecommendation({
+          category: currentCategory,
+          title: title.trim(),
+          description: description.trim(),
+          sourceUrl: sourceUrl.trim(),
+          coverUrl: coverUrl || undefined,
+          tags,
+          authorId: user.id,
+        });
+        navigate(`/discover/${currentCategory}/${String((recommendation as any).id ?? '')}`);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : '发布失败，请稍后重试');
     } finally {

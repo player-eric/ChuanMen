@@ -25,7 +25,7 @@ import type { EventComment } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
-import { toggleMovieVote, addComment, fetchCommentsApi } from '@/lib/domainApi';
+import { toggleMovieVote, addComment, fetchCommentsApi, updateMovie } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { firstNonEmoji } from '@/components/Atoms';
 
@@ -50,6 +50,9 @@ export default function MovieDetailPage() {
   const [commentText, setCommentText] = useState('');
   const [nominateOpen, setNominateOpen] = useState(false);
   const [flash, setFlash] = useState<{ open: boolean; severity: 'success' | 'error'; message: string }>({ open: false, severity: 'success', message: '' });
+  const [editingLink, setEditingLink] = useState(false);
+  const [linkDraft, setLinkDraft] = useState('');
+  const [movieLink, setMovieLink] = useState<string>(raw?.doubanUrl ?? '');
 
   useEffect(() => {
     if (!raw?.id) return;
@@ -80,8 +83,18 @@ export default function MovieDetailPage() {
   const status = movie.status;
   const v = movie._count?.votes ?? (movie as any).v ?? 0;
 
-  // Poster gradient data
-  const poster = posters[title] || { bg: `linear-gradient(135deg, ${c.s3}, ${c.s2})`, accent: c.text3, sub: '' };
+  const recommenderId = movie.recommendedById ?? movie.recommendedBy?.id ?? '';
+  const canEditLink = user && (
+    (recommenderId && recommenderId === user.id) || user.role === 'admin'
+  );
+
+  // Poster: prefer TMDB image, fall back to gradient
+  const posterUrl = movie.poster as string | undefined;
+  const posterGradient = posters[title] || { bg: `linear-gradient(135deg, ${c.s3}, ${c.s2})`, accent: c.text3, sub: '' };
+  const poster = {
+    ...posterGradient,
+    bg: posterUrl ? `url(${posterUrl}) center/cover no-repeat` : posterGradient.bg,
+  };
 
   // Event connections — from API data
   const upcomingFilm = (movie.selectedInEvents ?? []).filter((e: any) => {
@@ -188,7 +201,33 @@ export default function MovieDetailPage() {
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {movie.doubanRating && <Chip size="small" variant="outlined" label={`⭐ ${movie.doubanRating}`} />}
               {status && <Chip size="small" color="success" label={`✓ ${status}`} />}
+              {movieLink && !editingLink && (
+                <Chip size="small" variant="outlined" label="🔗 查看链接" clickable
+                  component="a" href={movieLink} target="_blank" rel="noreferrer" />
+              )}
+              {canEditLink && !editingLink && (
+                <Chip size="small" variant="outlined"
+                  label={movieLink ? '编辑链接' : '+ 添加链接'}
+                  onClick={() => { setLinkDraft(movieLink); setEditingLink(true); }}
+                />
+              )}
             </Stack>
+            {editingLink && (
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                <TextField size="small" fullWidth placeholder="https://..." value={linkDraft}
+                  onChange={(e) => setLinkDraft(e.target.value)} />
+                <Button size="small" variant="contained" disabled={linkDraft === movieLink}
+                  onClick={async () => {
+                    if (!movie.id) return;
+                    try {
+                      await updateMovie(String(movie.id), { doubanUrl: linkDraft });
+                      setMovieLink(linkDraft);
+                      setEditingLink(false);
+                    } catch { /* ignore */ }
+                  }}>保存</Button>
+                <Button size="small" onClick={() => setEditingLink(false)}>取消</Button>
+              </Stack>
+            )}
           </CardContent>
         </Card>
 

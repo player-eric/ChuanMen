@@ -65,16 +65,14 @@ function getTitle(pathname: string): string {
     return '活动详情';
   }
   if (pathname === '/discover') return '推荐';
-  if (pathname === '/discover/movie') return '电影推荐';
-  if (pathname === '/discover/recipe') return '菜谱推荐';
-  if (pathname === '/discover/music') return '音乐推荐';
-  if (pathname === '/discover/place') return '好店推荐';
   if (pathname === '/discover/movie/add') return '添加电影';
+  if (pathname === '/discover/book/add') return '添加图书';
   if (pathname === '/discover/recipe/add') return '添加菜谱';
   if (pathname === '/discover/music/add') return '添加音乐';
   if (pathname === '/discover/place/add') return '添加好店';
-  if (/^\/discover\/(movie|recipe|music|place)\/.+/.test(pathname) && !pathname.endsWith('/add')) return '推荐详情';
   if (pathname.startsWith('/discover/movies/')) return '电影详情';
+  if (pathname.startsWith('/discover/books/')) return '图书详情';
+  if (/^\/discover\/(book|recipe|music|place)\/.+/.test(pathname) && !pathname.endsWith('/add')) return '推荐详情';
   if (pathname === '/cards') return '感谢卡';
   if (pathname === '/profile') return '我的页面';
   if (pathname === '/settings') return '账号设置';
@@ -97,12 +95,7 @@ function getBackTarget(pathname: string): string | null {
   if (pathname === '/apply') return '/about';
   if (pathname.startsWith('/events/proposals/')) return '/events';
   if (pathname === '/events/history' || pathname.startsWith('/events/')) return '/events';
-  if (pathname.startsWith('/discover/movies/')) return '/discover';
-  if (pathname.startsWith('/discover/movie/')) return '/discover/movie';
-  if (pathname.startsWith('/discover/recipe/')) return '/discover/recipe';
-  if (pathname.startsWith('/discover/music/')) return '/discover/music';
-  if (pathname.startsWith('/discover/place/')) return '/discover/place';
-  if (pathname === '/discover/movie' || pathname === '/discover/recipe' || pathname === '/discover/music' || pathname === '/discover/place') return '/discover';
+  if (pathname.startsWith('/discover/')) return '/discover';
   return null;
 }
 
@@ -115,11 +108,7 @@ function isSubRoute(pathname: string): boolean {
     pathname === '/settings' ||
     pathname === '/apply' ||
     pathname.startsWith('/events/') ||
-    pathname.startsWith('/discover/movies/') ||
-    pathname.startsWith('/discover/movie') ||
-    pathname.startsWith('/discover/recipe') ||
-    pathname.startsWith('/discover/music') ||
-    pathname.startsWith('/discover/place')
+    (pathname.startsWith('/discover/') && pathname !== '/discover')
   );
 }
 

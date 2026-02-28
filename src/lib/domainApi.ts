@@ -342,6 +342,7 @@ export async function createMovie(data: {
   poster?: string;
   synopsis?: string;
   recommendedById: string;
+  tmdbId?: number;
 }) {
   return requestJson<EntityMap>('/api/movies', {
     method: 'POST',
@@ -779,6 +780,21 @@ export async function fetchRecommendationByIdApi(id: string) {
   return requestJson<EntityMap>(`/api/recommendations/${id}`);
 }
 
+export async function deleteRecommendation(id: string, userId: string) {
+  return requestJson<{ ok: boolean }>(`/api/recommendations/${id}`, {
+    method: 'DELETE',
+    headers: { 'x-user-id': userId },
+  });
+}
+
+export async function updateRecommendation(id: string, userId: string, data: { title?: string; description?: string; sourceUrl?: string; coverUrl?: string }) {
+  return requestJson<EntityMap>(`/api/recommendations/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+    body: JSON.stringify(data),
+  });
+}
+
 export async function fetchEmailTemplates(ruleId?: string) {
   return requestJson<EmailTemplateRow[]>(
     `/api/email/templates${toQueryString({ ruleId: ruleId ?? '' })}`,
@@ -875,7 +891,7 @@ export async function fetchCancelledEventsApi() {
    Admin: Movie operations
    ═══════════════════════════════════════════════════════════════ */
 
-export async function updateMovie(movieId: string, payload: { title?: string; status?: string; director?: string; synopsis?: string }) {
+export async function updateMovie(movieId: string, payload: { title?: string; status?: string; director?: string; synopsis?: string; doubanUrl?: string }) {
   return requestJson<{ ok: boolean; movie: EntityMap }>(`/api/movies/${movieId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

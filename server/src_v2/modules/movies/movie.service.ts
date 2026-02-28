@@ -39,6 +39,7 @@ export class MovieService {
       status: z.enum(['candidate', 'screened']).optional(),
       director: z.string().optional(),
       synopsis: z.string().optional(),
+      doubanUrl: z.string().optional(),
     }).parse(input);
     return this.repository.update(id, data);
   }
@@ -68,5 +69,23 @@ export class MovieService {
       rating: r.vote_average ? Number(r.vote_average.toFixed(1)) : null,
     }));
     return { items, source: 'tmdb' };
+  }
+
+  /** Fetch director from TMDB credits API */
+  async fetchDirector(tmdbId: number): Promise<string> {
+    const apiKey = env.TMDB_API_KEY;
+    if (!apiKey || !tmdbId) return '';
+    try {
+      const res = await fetch(
+        `https://api.themoviedb.org/3/movie/${tmdbId}/credits?api_key=${apiKey}`,
+        { headers: { Accept: 'application/json' } },
+      );
+      if (!res.ok) return '';
+      const data = await res.json() as { crew: any[] };
+      const director = (data.crew ?? []).find((c: any) => c.job === 'Director');
+      return director?.name ?? '';
+    } catch {
+      return '';
+    }
   }
 }

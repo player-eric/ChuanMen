@@ -19,7 +19,7 @@ import type { EventComment, BookDetailData, BookPool } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
-import { addComment, fetchCommentsApi } from '@/lib/domainApi';
+import { addComment, fetchCommentsApi, updateRecommendation } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { firstNonEmoji } from '@/components/Atoms';
 
@@ -31,6 +31,9 @@ export default function BookDetailPage() {
   const [voted, setVoted] = useState(false);
   const [comments, setComments] = useState<EventComment[]>([]);
   const [commentText, setCommentText] = useState('');
+  const [editingLink, setEditingLink] = useState(false);
+  const [linkDraft, setLinkDraft] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
 
   useEffect(() => {
     const bookId = raw && 'id' in raw ? (raw as any).id : null;
@@ -62,6 +65,16 @@ export default function BookDetailPage() {
   const by = isDetail ? book.by : basic.by;
   const status = isDetail ? book.status : basic.status;
   const v = isDetail ? book.v : basic.v;
+  const authorId = (raw as any).authorId ?? '';
+  const bookId = (raw as any).id ?? '';
+
+  const canEditLink = user && (
+    (authorId && authorId === user.id) || user.role === 'admin'
+  );
+
+  useEffect(() => {
+    setSourceUrl((raw as any).sourceUrl ?? '');
+  }, [raw]);
 
   // Poster gradient data
   const poster = posters[title] || { bg: `linear-gradient(135deg, ${c.s3}, ${c.s2})`, accent: c.text3, sub: '' };
@@ -126,7 +139,33 @@ export default function BookDetailPage() {
               {isDetail && book.pages && <Chip size="small" variant="outlined" label={book.pages} />}
               {isDetail && book.rating && <Chip size="small" variant="outlined" label={`⭐ ${book.rating}`} />}
               {status && <Chip size="small" color="success" label={`✓ ${status}`} />}
+              {sourceUrl && !editingLink && (
+                <Chip size="small" variant="outlined" label="🔗 查看链接" clickable
+                  component="a" href={sourceUrl} target="_blank" rel="noreferrer" />
+              )}
+              {canEditLink && !editingLink && (
+                <Chip size="small" variant="outlined"
+                  label={sourceUrl ? '编辑链接' : '+ 添加链接'}
+                  onClick={() => { setLinkDraft(sourceUrl); setEditingLink(true); }}
+                />
+              )}
             </Stack>
+            {editingLink && (
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                <TextField size="small" fullWidth placeholder="https://..." value={linkDraft}
+                  onChange={(e) => setLinkDraft(e.target.value)} />
+                <Button size="small" variant="contained" disabled={linkDraft === sourceUrl}
+                  onClick={async () => {
+                    if (!user?.id || !bookId) return;
+                    try {
+                      await updateRecommendation(bookId, user.id, { sourceUrl: linkDraft });
+                      setSourceUrl(linkDraft);
+                      setEditingLink(false);
+                    } catch { /* ignore */ }
+                  }}>保存</Button>
+                <Button size="small" onClick={() => setEditingLink(false)}>取消</Button>
+              </Stack>
+            )}
           </CardContent>
         </Card>
 

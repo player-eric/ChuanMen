@@ -60,7 +60,7 @@ export async function fetchEventRecordsData() {
 
 export async function fetchDiscoverData(): Promise<DiscoverPageData> {
   await delay();
-  return { pool: moviePool, screened: movieScreened, bookPool, bookRead };
+  return { pool: moviePool, screened: movieScreened, bookPool, bookRead, recipes: [], music: [], places: [] };
 }
 
 export async function fetchMovieDetail(movieId: string) {

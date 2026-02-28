@@ -23,4 +23,40 @@ export const recommendationRoutes: FastifyPluginAsync = async (app) => {
     const created = await service.createRecommendation(request.body);
     return reply.code(201).send(created);
   });
+
+  app.delete('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const userId = request.headers['x-user-id'] as string | undefined;
+    if (!userId) return reply.unauthorized('请先登录');
+
+    const item = await service.getById(id);
+    if (!item) return reply.notFound('推荐不存在');
+
+    // Author or admin can delete
+    const user = await app.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+    if (item.authorId !== userId && user?.role !== 'admin') {
+      return reply.forbidden('只能删除自己的推荐');
+    }
+
+    await service.delete(id);
+    return { ok: true };
+  });
+
+  app.patch('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const userId = request.headers['x-user-id'] as string | undefined;
+    if (!userId) return reply.unauthorized('请先登录');
+
+    const item = await service.getById(id);
+    if (!item) return reply.notFound('推荐不存在');
+
+    // Author or admin can edit
+    const user = await app.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+    if (item.authorId !== userId && user?.role !== 'admin') {
+      return reply.forbidden('只能编辑自己的推荐');
+    }
+
+    const updated = await service.update(id, request.body);
+    return updated;
+  });
 };

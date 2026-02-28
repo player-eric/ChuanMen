@@ -30,7 +30,19 @@ export const movieRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post('/', async (request) => {
-    return service.create(request.body);
+    const body = request.body as any;
+    if (body.tmdbId) {
+      // Auto-fetch director from TMDB
+      if (!body.director) {
+        const director = await service.fetchDirector(Number(body.tmdbId));
+        if (director) body.director = director;
+      }
+      // Store TMDB link
+      if (!body.doubanUrl) {
+        body.doubanUrl = `https://www.themoviedb.org/movie/${body.tmdbId}`;
+      }
+    }
+    return service.create(body);
   });
 
   app.post('/:id/vote', async (request) => {
