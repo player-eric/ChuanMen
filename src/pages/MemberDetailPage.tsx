@@ -356,12 +356,18 @@ export default function MemberDetailPage() {
                         } : {}),
                       }}
                     >
-                      <Box sx={{
-                        width: '100%',
-                        height: '100%',
-                        background: photo.url,
-                        filter: 'saturate(0.85) contrast(1.05)',
-                      }} />
+                      <Box
+                        component="img"
+                        src={photo.url}
+                        alt={photo.eventTitle}
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          display: 'block',
+                          filter: 'saturate(0.85) contrast(1.05)',
+                        }}
+                      />
                       <Box sx={{
                         position: 'absolute',
                         bottom: 0,
@@ -728,14 +734,18 @@ export default function MemberDetailPage() {
                     <ArrowBackIosNewIcon />
                   </IconButton>
                 )}
-                <Box sx={{
-                  width: '100%',
-                  maxWidth: 600,
-                  aspectRatio: '4/3',
-                  borderRadius: 2,
-                  background: photo.url,
-                  filter: 'saturate(0.85) contrast(1.05)',
-                }} />
+                <Box
+                  component="img"
+                  src={photo.url}
+                  alt={photo.caption || '照片'}
+                  sx={{
+                    maxWidth: '90%',
+                    maxHeight: 'calc(100vh - 160px)',
+                    borderRadius: 2,
+                    objectFit: 'contain',
+                    filter: 'saturate(0.85) contrast(1.05)',
+                  }}
+                />
                 {lightboxIndex < allGalleryPhotos.length - 1 && (
                   <IconButton
                     onClick={() => setLightboxIndex((i) => i + 1)}

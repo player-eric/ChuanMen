@@ -885,13 +885,15 @@ export default function EventDetailPage() {
                       <ArrowBackIosNewIcon />
                     </IconButton>
                   )}
-                  <Box
+                    <Box
+                    component="img"
+                    src={photo.url.startsWith('linear-gradient') || photo.url.startsWith('radial-gradient') ? undefined : photo.url}
+                    alt={photo.caption || '照片'}
                     sx={{
-                      width: '100%',
-                      maxWidth: 600,
-                      aspectRatio: '4/3',
+                      maxWidth: '90%',
+                      maxHeight: 'calc(100vh - 160px)',
                       borderRadius: 2,
-                      background: photoBg(photo.url),
+                      objectFit: 'contain',
                       filter: 'saturate(0.85) contrast(1.05)',
                     }}
                   />

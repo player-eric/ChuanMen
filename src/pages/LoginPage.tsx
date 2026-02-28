@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router';
 import {
   Alert,
@@ -7,6 +7,7 @@ import {
   Card,
   CardContent,
   Checkbox,
+  Divider,
   FormControlLabel,
   Link,
   Stack,
@@ -14,13 +15,63 @@ import {
   Typography,
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
-import { sendLoginCode, verifyLoginCode } from '@/lib/domainApi';
+import { googleLogin, sendLoginCode, verifyLoginCode } from '@/lib/domainApi';
+import type { GoogleProfile } from '@/lib/domainApi';
 
 type Step = 'email' | 'code' | 'status';
 type StatusInfo = {
   type: 'pending_review' | 'rejected' | 'rejected_can_reapply' | 'banned' | 'not_registered';
   message: string;
 };
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: {
+            client_id: string;
+            callback: (response: { credential: string }) => void;
+            auto_select?: boolean;
+          }) => void;
+          renderButton: (
+            parent: HTMLElement,
+            options: { theme?: string; size?: string; width?: number; text?: string; locale?: string },
+          ) => void;
+        };
+      };
+    };
+  }
+}
+
+function setUserFromResponse(
+  u: Record<string, unknown>,
+  setUser: (user: any, opts?: { remember?: boolean }) => void,
+  remember: boolean,
+) {
+  setUser(
+    {
+      id: u.id as string,
+      name: u.name as string,
+      email: u.email as string,
+      avatar: u.avatar as string | undefined,
+      bio: u.bio as string | undefined,
+      role: u.role as string | undefined,
+      location: u.location as string | undefined,
+      selfAsFriend: u.selfAsFriend as string | undefined,
+      idealFriend: u.idealFriend as string | undefined,
+      participationPlan: u.participationPlan as string | undefined,
+      coverImageUrl: u.coverImageUrl as string | undefined,
+      defaultHouseRules: u.defaultHouseRules as string | undefined,
+      homeAddress: u.homeAddress as string | undefined,
+      hideEmail: u.hideEmail as boolean | undefined,
+      googleId: u.googleId as string | undefined,
+    },
+    { remember },
+  );
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -34,6 +85,8 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [statusInfo, setStatusInfo] = useState<StatusInfo | null>(null);
   const [countdown, setCountdown] = useState(0);
+
+  const googleBtnRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.title = '串门儿 - 登录';
@@ -52,6 +105,80 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
+  // Handle status errors shared between email & Google flows
+  const handleStatusError = useCallback((errorCode: string, message: string, googleProfile?: GoogleProfile) => {
+    const statusTypes: StatusInfo['type'][] = [
+      'pending_review', 'rejected', 'rejected_can_reapply', 'banned',
+    ];
+    if (errorCode === 'not_registered' && googleProfile) {
+      // New user with Google — redirect to /apply with prefilled profile
+      navigate('/apply', { state: { googleProfile } });
+      return true;
+    }
+    if (errorCode === 'not_registered') {
+      setStatusInfo({ type: 'not_registered', message });
+      setStep('status');
+      return true;
+    }
+    if (statusTypes.includes(errorCode as StatusInfo['type'])) {
+      setStatusInfo({ type: errorCode as StatusInfo['type'], message });
+      setStep('status');
+      return true;
+    }
+    return false;
+  }, [navigate]);
+
+  // Google Sign-In callback
+  const handleGoogleResponse = useCallback(async (response: { credential: string }) => {
+    setErrorMessage('');
+    setIsSubmitting(true);
+    try {
+      const result = await googleLogin(response.credential);
+      setUserFromResponse(result.user, setUser, remember);
+      navigate('/', { replace: true });
+    } catch (err: unknown) {
+      const errorCode = (err as any)?.errorCode;
+      const gp = (err as any)?.googleProfile as GoogleProfile | undefined;
+      if (!handleStatusError(errorCode, (err as Error).message, gp)) {
+        setErrorMessage(err instanceof Error ? err.message : 'Google 登录失败');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [handleStatusError, navigate, remember, setUser]);
+
+  // Load Google Identity Services script & render button
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+
+    const initGoogle = () => {
+      if (!window.google || !googleBtnRef.current) return;
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse,
+      });
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: 'outline',
+        size: 'large',
+        width: 400,
+        text: 'continue_with',
+        locale: 'zh-CN',
+      });
+    };
+
+    if (window.google) {
+      initGoogle();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = initGoogle;
+    document.head.appendChild(script);
+  }, [handleGoogleResponse]);
+
   const handleSendCode = async () => {
     const trimmed = email.trim();
     if (!trimmed) {
@@ -68,13 +195,7 @@ export default function LoginPage() {
       setCountdown(60);
     } catch (err: unknown) {
       const errorCode = (err as any)?.errorCode;
-      const statusTypes: StatusInfo['type'][] = [
-        'pending_review', 'rejected', 'rejected_can_reapply', 'banned', 'not_registered',
-      ];
-      if (errorCode && statusTypes.includes(errorCode)) {
-        setStatusInfo({ type: errorCode, message: (err as Error).message });
-        setStep('status');
-      } else {
+      if (!handleStatusError(errorCode, (err as Error).message)) {
         setErrorMessage(err instanceof Error ? err.message : '发送验证码失败');
       }
     } finally {
@@ -93,37 +214,11 @@ export default function LoginPage() {
 
     try {
       const result = await verifyLoginCode(email.trim(), code);
-      const u = result.user;
-      setUser(
-        {
-          id: u.id as string,
-          name: u.name as string,
-          email: u.email as string,
-          avatar: u.avatar as string | undefined,
-          bio: u.bio as string | undefined,
-          role: u.role as string | undefined,
-          location: u.location as string | undefined,
-          selfAsFriend: u.selfAsFriend as string | undefined,
-          idealFriend: u.idealFriend as string | undefined,
-          participationPlan: u.participationPlan as string | undefined,
-          coverImageUrl: u.coverImageUrl as string | undefined,
-          defaultHouseRules: u.defaultHouseRules as string | undefined,
-          homeAddress: u.homeAddress as string | undefined,
-          hideEmail: u.hideEmail as boolean | undefined,
-          googleId: u.googleId as string | undefined,
-        },
-        { remember },
-      );
+      setUserFromResponse(result.user, setUser, remember);
       navigate('/', { replace: true });
     } catch (err: unknown) {
       const errorCode = (err as any)?.errorCode;
-      const statusTypes: StatusInfo['type'][] = [
-        'pending_review', 'rejected', 'rejected_can_reapply', 'banned', 'not_registered',
-      ];
-      if (errorCode && statusTypes.includes(errorCode)) {
-        setStatusInfo({ type: errorCode, message: (err as Error).message });
-        setStep('status');
-      } else {
+      if (!handleStatusError(errorCode, (err as Error).message)) {
         setErrorMessage(err instanceof Error ? err.message : '验证失败');
       }
     } finally {
@@ -232,6 +327,15 @@ export default function LoginPage() {
                 <Button type="submit" variant="contained" disabled={isSubmitting} size="large">
                   {isSubmitting ? '发送中...' : '发送验证码'}
                 </Button>
+
+                {GOOGLE_CLIENT_ID && (
+                  <>
+                    <Divider sx={{ my: 1 }}>或</Divider>
+                    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                      <div ref={googleBtnRef} />
+                    </Box>
+                  </>
+                )}
               </>
             )}
 

@@ -1,13 +1,16 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { OAuth2Client } from 'google-auth-library';
 import { sendEmail } from '../services/emailService.js';
 import { renderEmail } from '../emails/template.js';
+import { env } from '../config/env.js';
 
 /**
- * Auth routes — email verification code login
+ * Auth routes — email verification code login + Google OAuth
  *
  * POST /auth/send-code   → generates & emails a 6-digit code
  * POST /auth/verify-code → validates code, returns user data + status
+ * POST /auth/google      → Google One Tap / Sign-In login
  */
 export const authRoutes: FastifyPluginAsync = async (app) => {
   const prisma = app.prisma;
@@ -210,5 +213,130 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     return { status: user.userStatus };
+  });
+
+  // ── Google OAuth login ──
+  app.post('/auth/google', async (request, reply) => {
+    if (!env.GOOGLE_CLIENT_ID) {
+      return reply.code(501).send({ error: 'Google 登录未配置' });
+    }
+
+    const { credential } = z.object({ credential: z.string().min(1) }).parse(request.body);
+
+    const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
+    let payload;
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch (err) {
+      app.log.error(err, 'Google token verification failed');
+      return reply.code(401).send({ error: 'Google 验证失败' });
+    }
+
+    if (!payload || !payload.sub || !payload.email) {
+      return reply.code(401).send({ error: 'Google 验证失败：缺少必要信息' });
+    }
+
+    const googleId = payload.sub;
+    const googleEmail = payload.email.trim().toLowerCase();
+    const googleName = payload.name || '';
+    const googlePicture = payload.picture || '';
+
+    // 1. Try to find user by googleId
+    let user = await prisma.user.findUnique({
+      where: { googleId },
+      include: { preferences: true },
+    });
+
+    // 2. If not found by googleId, try by email
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { email: googleEmail },
+        include: { preferences: true },
+      });
+
+      // Auto-bind googleId if user found by email
+      if (user && !user.googleId) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { googleId },
+          include: { preferences: true },
+        });
+      }
+    }
+
+    // 3. User not found — return profile for /apply prefill
+    if (!user) {
+      return reply.code(404).send({
+        error: 'not_registered',
+        googleProfile: {
+          googleId,
+          name: googleName,
+          email: googleEmail,
+          picture: googlePicture,
+        },
+      });
+    }
+
+    // 4. Check user status
+    if (user.userStatus === 'applicant') {
+      return reply.code(403).send({
+        error: 'pending_review',
+        message: '你的申请正在审核中，我们会在 3 天内通过 Email 回复你',
+      });
+    }
+
+    if (user.userStatus === 'rejected') {
+      const daysSinceCreation = (Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceCreation >= 30) {
+        return reply.code(403).send({
+          error: 'rejected_can_reapply',
+          message: '你的申请未通过，但你可以重新申请',
+        });
+      }
+      return reply.code(403).send({
+        error: 'rejected',
+        message: '你的申请未通过。30 天后可重新申请。',
+      });
+    }
+
+    if (user.userStatus === 'banned') {
+      return reply.code(403).send({
+        error: 'banned',
+        message: '该账号已被停用',
+      });
+    }
+
+    // 5. Status is 'approved' — login success
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastActiveAt: new Date() },
+    });
+
+    return {
+      ok: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || undefined,
+        bio: user.bio || undefined,
+        role: user.role,
+        location: user.location || undefined,
+        selfAsFriend: user.selfAsFriend || undefined,
+        idealFriend: user.idealFriend || undefined,
+        participationPlan: user.participationPlan || undefined,
+        coverImageUrl: user.coverImageUrl || undefined,
+        defaultHouseRules: user.defaultHouseRules || undefined,
+        homeAddress: user.homeAddress || undefined,
+        hideEmail: user.hideEmail,
+        googleId: user.googleId || undefined,
+        userStatus: user.userStatus,
+        preferences: user.preferences ?? undefined,
+      },
+    };
   });
 };

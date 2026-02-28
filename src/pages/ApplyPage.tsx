@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { submitApplication } from '@/lib/domainApi';
+import type { GoogleProfile } from '@/lib/domainApi';
 import { ImageUpload } from '@/components/ImageUpload';
 import { FeedbackDialog } from '@/components/FeedbackDialog';
 import {
@@ -35,21 +36,27 @@ const welcomeText = `你好，欢迎来串门儿！
 
 export default function ApplyPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Google profile from login page redirect
+  const googleProfile = (location.state as { googleProfile?: GoogleProfile } | null)?.googleProfile;
+
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ displayName?: string; email?: string }>({});
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [subscribeNewsletter, setSubscribeNewsletter] = useState(true);
   const [form, setForm] = useState({
-    displayName: '',
+    displayName: googleProfile?.name ?? '',
     location: '',
     bio: '',
     selfAsFriend: '',
     idealFriend: '',
     participationPlan: [] as string[],
-    email: '',
+    email: googleProfile?.email ?? '',
     wechatId: '',
     referralSource: '',
-    coverImageUrl: '',
+    coverImageUrl: googleProfile?.picture ?? '',
   });
 
   const update = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -66,6 +73,8 @@ export default function ApplyPage() {
       await submitApplication({
         ...form,
         participationPlan: form.participationPlan.join(', '),
+        googleId: googleProfile?.googleId,
+        subscribeNewsletter,
       });
       setSubmitted(true);
     } catch (err: any) {
@@ -191,6 +200,18 @@ export default function ApplyPage() {
         onChange={update('email')}
         helperText={fieldErrors.email || '建议填写 Google 邮箱，方便后续一键登录'}
         error={!!fieldErrors.email}
+        disabled={!!googleProfile?.email}
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={subscribeNewsletter}
+            onChange={(e) => setSubscribeNewsletter(e.target.checked)}
+          />
+        }
+        label="订阅「串门儿来信」（社区周报和活动通知）"
+        sx={{ mt: -1 }}
       />
 
       <TextField

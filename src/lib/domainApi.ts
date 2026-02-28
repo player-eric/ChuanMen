@@ -562,6 +562,34 @@ export async function verifyLoginCode(email: string, code: string) {
   return data as { ok: boolean; user: EntityMap };
 }
 
+/** Google OAuth login */
+export interface GoogleProfile {
+  googleId: string;
+  name: string;
+  email: string;
+  picture: string;
+}
+
+export async function googleLogin(credential: string) {
+  const url = getApiUrl('/api/auth/google');
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ credential }),
+  });
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const err = new Error(data?.message ?? 'Google 登录失败');
+    (err as any).status = response.status;
+    (err as any).errorCode = data?.error;
+    (err as any).googleProfile = data?.googleProfile as GoogleProfile | undefined;
+    throw err;
+  }
+
+  return data as { ok: boolean; user: EntityMap };
+}
+
 /** Check email registration status (before sending code) */
 export async function checkEmailStatus(email: string) {
   return requestJson<{ status: string }>('/api/auth/check-email', {
@@ -586,6 +614,8 @@ export async function submitApplication(payload: {
   wechatId: string;
   referralSource?: string;
   coverImageUrl?: string;
+  googleId?: string;
+  subscribeNewsletter?: boolean;
 }) {
   const base = typeof window === 'undefined' ? 'http://localhost:4000' : '';
   const res = await fetch(`${base}/api/users/apply`, {

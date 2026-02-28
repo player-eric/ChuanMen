@@ -44,6 +44,8 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().default(''),
   RESEND_FROM_EMAIL: z.string().default('noreply@chuanmener.club'),
   RESEND_REPLY_TO: z.string().default('hi@chuanmener.club'),
+  // Google OAuth — optional, Google login degrades gracefully when absent
+  GOOGLE_CLIENT_ID: z.string().default(''),
   // TMDB — optional, external movie search degrades gracefully
   TMDB_API_KEY: z.string().default(''),
 });

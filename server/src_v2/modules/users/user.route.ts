@@ -123,7 +123,7 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     return { ok: true, user: updated };
   });
 
-  // Admin: approve applicant (sends TXN-4 welcome email)
+  // Admin: approve applicant (sends TXN-4 welcome email + creates UserPreference if subscribed)
   app.post('/:id/approve', async (request, reply) => {
     const { id } = request.params as { id: string };
 
@@ -131,6 +131,26 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
       where: { id },
       data: { userStatus: 'approved' },
     });
+
+    // Create UserPreference if user opted into newsletter
+    if (user.subscribeNewsletter) {
+      try {
+        await app.prisma.userPreference.upsert({
+          where: { userId: user.id },
+          create: {
+            userId: user.id,
+            emailState: 'active',
+            notifyEvents: true,
+            notifyCards: true,
+            notifyOps: true,
+            notifyAnnounce: true,
+          },
+          update: {},
+        });
+      } catch (err) {
+        app.log.error(err, 'Failed to create UserPreference on approve');
+      }
+    }
 
     // Send TXN-4 welcome email
     const siteUrl = env.FRONTEND_ORIGIN || 'https://chuanmener.club';

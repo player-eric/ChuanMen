@@ -21,6 +21,8 @@ const applySchema = z.object({
   wechatId: z.string().min(1),
   referralSource: z.string().optional(),
   coverImageUrl: z.string().optional(),
+  googleId: z.string().optional(),
+  subscribeNewsletter: z.boolean().optional(),
 });
 
 // v2.1: Settings update schema

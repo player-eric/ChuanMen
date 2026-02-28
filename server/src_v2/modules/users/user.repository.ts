@@ -111,6 +111,8 @@ export class UserRepository {
     wechatId: string;
     referralSource?: string;
     coverImageUrl?: string;
+    googleId?: string;
+    subscribeNewsletter?: boolean;
   }) {
     return this.prisma.user.create({
       data: {
@@ -124,6 +126,8 @@ export class UserRepository {
         wechatId: input.wechatId,
         referralSource: input.referralSource ?? '',
         coverImageUrl: input.coverImageUrl ?? '',
+        googleId: input.googleId || undefined,
+        subscribeNewsletter: input.subscribeNewsletter ?? true,
         userStatus: 'applicant',
       },
     });

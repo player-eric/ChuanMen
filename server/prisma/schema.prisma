@@ -171,6 +171,7 @@ model User {
   referralSource       String              @default("")
   defaultHouseRules    String              @default("")
   homeAddress          String              @default("")
+  subscribeNewsletter  Boolean             @default(true)
   postcardCredits      Int                 @default(2)
   lastActiveAt         DateTime?
   createdAt            DateTime            @default(now())
