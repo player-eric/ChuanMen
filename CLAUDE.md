@@ -25,8 +25,8 @@ NYC-based Chinese-language social community platform. Features: event management
 - **Member Wall (成员墙)** — Gallery grid with cover photos, titles, host badges. Search by name/title. Member detail page with mutual experience tracking (共同活动, 共同品味, 互寄卡片).
 - **About Page** — Hero section, community stats, 5 entry cards (成员, 串门原则, Host 手册, 串门来信, 关于我们), bottom beliefs, CTA for visitors.
 - **Settings** — Profile editing, avatar/cover upload, host settings (house rules, address), notification preferences (email frequency, per-type toggles), privacy controls (hide email/activity/stats, title display control), card credit balance.
-- **Apply** — Application form for new members with duplicate email/name checks.
-- **Login** — Email verification code flow (send code → verify code). Walkthrough user for demo.
+- **Apply** — Application form for new members with duplicate email/name checks. Google profile prefill (name/email/avatar) via router state. Newsletter subscription checkbox (default on). Submits `googleId` and `subscribeNewsletter` to backend.
+- **Login** — Email verification code flow (send code → verify code) + Google One Tap sign-in. Walkthrough user for demo.
 
 ### Admin Dashboard (12 pages, all connected to real API)
 - **Dashboard** — Community stats overview
@@ -160,14 +160,18 @@ All frontend API calls go through `src/lib/domainApi.ts` (75+ functions). No moc
 | `/api/profile` | Member profile with mutual computation |
 | `/api/media` | Presign, confirm, upload, delete (S3) |
 | `/api/email` | Rule engine, templates, logs, queue, bounces, suppressions |
-| `/api/auth` | Send code, verify code, check email |
+| `/api/auth` | Send code, verify code, check email, Google OAuth login |
 | `/api/agent` | Trigger agent tick |
 | `/api/health` | Health check with DB ping |
 | `/api/admin/stats` | Dashboard statistics |
 
 ## Auth System
 
-- **Login**: Email verification code flow — `POST /api/auth/send-code` → `POST /api/auth/verify-code`
+- **Login (two methods)**:
+  1. **Email verification code** — `POST /api/auth/send-code` → `POST /api/auth/verify-code`
+  2. **Google One Tap** — `POST /api/auth/google` (verifies Google JWT, auto-binds `googleId`)
+- Google login: if user exists (by `googleId` or `email`) and is `approved` → login. If not registered → returns `googleProfile` and frontend redirects to `/apply` with prefilled name/email/avatar.
+- Google button only renders when `VITE_GOOGLE_CLIENT_ID` env var is set. Uses native GIS script (no npm dependency).
 - User state stored in `localStorage` key `chuanmen.auth.user` (or `sessionStorage` if "remember me" is off)
 - `AuthContext` provides `{ user, isRegistered, hydrated, setUser }`
 - `hydrated` flag prevents UI flashing before auth resolves
@@ -267,6 +271,7 @@ Each domain in `server/src_v2/modules/<name>/`:
 | Variable | Default | Notes |
 |----------|---------|-------|
 | `VITE_API_BASE_URL` | `/api` (relative) | Override to point to different API server |
+| `VITE_GOOGLE_CLIENT_ID` | — | Google OAuth client ID; Google button hidden if absent |
 
 ### Backend (server/.env)
 | Variable | Required | Default | Notes |
@@ -280,6 +285,7 @@ Each domain in `server/src_v2/modules/<name>/`:
 | `AWS_ACCESS_KEY_ID` | No | — | S3 credentials |
 | `AWS_SECRET_ACCESS_KEY` | No | — | S3 credentials |
 | `RESEND_API_KEY` | No | — | Email sending; gracefully degrades if absent |
+| `GOOGLE_CLIENT_ID` | No | — | Google OAuth; returns 501 if absent |
 | `TMDB_API_KEY` | No | — | External movie search; gracefully degrades if absent |
 
 ## Database Schema Overview
@@ -288,7 +294,7 @@ Key models (37+ total in `schema.prisma`):
 
 | Model | Purpose |
 |-------|---------|
-| `User` | Member with profile, counters, privacy flags (`hideEmail`, `hideActivity`, `hideStats`, `hiddenTitleIds`) |
+| `User` | Member with profile, counters, privacy flags (`hideEmail`, `hideActivity`, `hideStats`, `hiddenTitleIds`), `googleId` (OAuth), `subscribeNewsletter` |
 | `UserPreference` | Email state, notification toggles |
 | `UserSocialTitle` | Earned titles per user |
 | `UserOperatorRole` | Admin-assigned operator roles |
@@ -322,7 +328,7 @@ Key models (37+ total in `schema.prisma`):
 2. **Discussion/Topic feature** — `Discussion` Prisma model exists but no backend routes/services or frontend UI are implemented.
 3. **Weekly Lottery (小局 PopupHost)** — Frontend has hardcoded mock. No backend draw logic or admin controls.
 4. **Postcard purchase** — Credit system works (earn via events/hosting) but Stripe payment integration for purchasing cards ($5/each) is not built.
-5. **Google OAuth binding** — Google login works but bind/unbind in settings is stubbed ("即将开放").
+5. **Google OAuth bind/unbind in settings** — Google login + auto-binding works, but explicit bind/unbind UI in settings page is stubbed ("即将开放").
 6. **Quiet hours** — Email quiet hours setting noted as "即将上线" in settings page.
 7. **Co-Host auto-pairing** — P3-D email rule describes auto-pairing potential hosts with experienced hosts. Not implemented.
 8. **Mock data cleanup** — `src/mock/data.ts` and `src/mock/api.ts` are dead code (not imported anywhere). Can be safely removed.
