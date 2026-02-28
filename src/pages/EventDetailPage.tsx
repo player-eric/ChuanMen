@@ -29,8 +29,8 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
-import type { EventComment, EventData, EventPhoto, FoodOption, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, addComment as addCommentApi, fetchCommentsApi, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
+import type { EventComment, EventData, EventPhoto, FoodOption, SignupStatus, TaskRole } from '@/types';
+import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, addComment as addCommentApi, fetchCommentsApi, fetchMembersApi, fetchMoviesApi, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
@@ -53,6 +53,78 @@ const phaseLabel: Record<string, { label: string; color: 'warning' | 'success' |
   cancelled: { label: '已取消', color: 'default' },
 };
 
+/** Offer response UI with 24h countdown */
+function OfferResponseUI({ eventId, userId, offeredAt, onDone }: {
+  eventId: string;
+  userId: string;
+  offeredAt: number;
+  onDone: (accepted: boolean) => Promise<void>;
+}) {
+  const deadline = offeredAt + 24 * 60 * 60 * 1000;
+  const [remaining, setRemaining] = useState(Math.max(0, deadline - Date.now()));
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRemaining(Math.max(0, deadline - Date.now()));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [deadline]);
+
+  const hours = Math.floor(remaining / 3600000);
+  const mins = Math.floor((remaining % 3600000) / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+
+  return (
+    <Card variant="outlined" sx={{ borderColor: 'warning.main', borderWidth: 2 }}>
+      <CardContent>
+        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
+          有名额了！
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          24小时内确认是否参加
+        </Typography>
+        <Typography variant="body2" color="warning.main" sx={{ mb: 1.5, fontWeight: 700 }}>
+          {remaining > 0
+            ? `剩余 ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+            : '已过期'}
+        </Typography>
+        <Stack direction="row" spacing={1.5}>
+          <Button
+            variant="contained"
+            color="success"
+            disabled={loading || remaining <= 0}
+            onClick={async () => {
+              setLoading(true);
+              try {
+                await acceptOffer(eventId, userId);
+                await onDone(true);
+              } catch { /* handled by parent */ }
+              setLoading(false);
+            }}
+          >
+            确认参加
+          </Button>
+          <Button
+            variant="outlined"
+            disabled={loading}
+            onClick={async () => {
+              setLoading(true);
+              try {
+                await declineOffer(eventId, userId);
+                await onDone(false);
+              } catch { /* handled by parent */ }
+              setLoading(false);
+            }}
+          >
+            放弃名额
+          </Button>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function EventDetailPage() {
   const navigate = useNavigate();
   const { eventId } = useParams();
@@ -60,12 +132,21 @@ export default function EventDetailPage() {
   const taskPresets = useTaskPresets();
   const loadedEvent = useLoaderData() as EventData | null;
   const [event, setEvent] = useState<EventData | null>(loadedEvent);
-  const [signedUp, setSignedUp] = useState(false);
+  const [myStatus, setMyStatus] = useState<SignupStatus | null>(null);
+
+  // Derive signedUp from myStatus for backward compatibility
+  const signedUp = myStatus === 'accepted' || myStatus === 'invited';
 
   // Re-check signup status when user becomes available (auth loads from localStorage after hydration)
   useEffect(() => {
-    if (user?.id && loadedEvent && Array.isArray((loadedEvent as any).signupUserIds)) {
-      setSignedUp((loadedEvent as any).signupUserIds.includes(user.id));
+    if (user?.id && loadedEvent) {
+      const details = (loadedEvent as any).signupDetails ?? [];
+      const mySignup = details.find((s: any) => s.userId === user.id);
+      if (mySignup) {
+        setMyStatus(mySignup.status as SignupStatus);
+      } else if (Array.isArray((loadedEvent as any).signupUserIds) && (loadedEvent as any).signupUserIds.includes(user.id)) {
+        setMyStatus('accepted');
+      }
     }
   }, [user?.id, loadedEvent]);
 
@@ -97,6 +178,16 @@ export default function EventDetailPage() {
   const [hostInviteOpen, setHostInviteOpen] = useState(false);
   const [hostInviteSearch, setHostInviteSearch] = useState('');
   const [hostInvitedPeople, setHostInvitedPeople] = useState<string[]>([]);
+  // Edit event dialog state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editCapacity, setEditCapacity] = useState(0);
+  const [editStartsAt, setEditStartsAt] = useState('');
+  const [editEndsAt, setEditEndsAt] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [flash, setFlash] = useState<{
     open: boolean;
@@ -197,13 +288,15 @@ export default function EventDetailPage() {
   }
 
   const onSignup = async () => {
-    if (signedUp) {
+    // If already signed up or waitlisted, show cancel dialog
+    if (myStatus === 'accepted' || myStatus === 'invited' || myStatus === 'waitlist') {
+      if (event.phase === 'ended') return;
       setCancelDialogOpen(true);
       return;
     }
 
     if (!eventId) {
-      setSignedUp(true);
+      setMyStatus('accepted');
       return;
     }
     if (!user?.id) {
@@ -211,10 +304,14 @@ export default function EventDetailPage() {
       return;
     }
     try {
-      await signupEvent(eventId, user.id);
-      setSignedUp(true);
-      setFlash({ open: true, severity: 'success', message: '报名参加成功' });
-      // Refresh event data from DB to update people list & spots
+      const result = await signupEvent(eventId, user.id);
+      if (result.wasWaitlisted) {
+        setMyStatus('waitlist');
+        setFlash({ open: true, severity: 'success', message: '已加入等位名单' });
+      } else {
+        setMyStatus('accepted');
+        setFlash({ open: true, severity: 'success', message: event.phase === 'ended' ? '已添加参与记录' : '报名参加成功' });
+      }
       await refreshEvent();
     } catch (error) {
       setFlash({
@@ -232,22 +329,42 @@ export default function EventDetailPage() {
       const raw = await getEventById(eventId);
       if (!raw) return;
       const signups = (raw as any).signups ?? [];
-      const people = signups.map((s: any) => s.user?.name ?? s.userName ?? '?');
+      const occupying = signups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
+      const waitlistSignups = signups.filter((s: any) => s.status === 'waitlist');
+      const people = occupying.map((s: any) => s.user?.name ?? s.userName ?? '?');
       const hostName = typeof (raw as any).host === 'string' ? (raw as any).host : (raw as any).host?.name ?? '?';
-      // Host 默认也是参与者之一
       if (hostName && hostName !== '?' && !people.includes(hostName)) {
         people.unshift(hostName);
       }
+      const signupDetails = signups.map((s: any) => ({
+        userId: s.user?.id ?? s.userId,
+        name: s.user?.name ?? '?',
+        status: s.status,
+        offeredAt: s.offeredAt ?? undefined,
+      }));
       setEvent((prev) => prev ? {
         ...prev,
         people,
         host: hostName,
-        spots: Math.max(0, (prev.total ?? 0) - people.length),
+        spots: Math.max(0, (prev.total ?? 0) - occupying.length),
+        waitlistCount: waitlistSignups.length,
+        signupDetails,
       } : prev);
+      // Update myStatus
+      if (user?.id) {
+        const mySignup = signups.find((s: any) => (s.user?.id ?? s.userId) === user.id);
+        if (mySignup) {
+          setMyStatus(mySignup.status as SignupStatus);
+        } else {
+          setMyStatus(null);
+        }
+      }
     } catch { /* ignore */ }
   };
 
   const phase = phaseLabel[event.phase] ?? phaseLabel.open;
+  const isHost = user?.name === event.host;
+  const hostId: string = (loadedEvent as any)?.hostId ?? '';
 
   /** Convert a photo URL to a CSS background value — handles both gradient strings and real URLs */
   const photoBg = (url: string) =>
@@ -296,14 +413,14 @@ export default function EventDetailPage() {
                     if (eventId && user?.id) {
                       try {
                         await signupEvent(eventId, user.id);
-                        setSignedUp(true);
+                        setMyStatus('accepted');
                         setFlash({ open: true, severity: 'success', message: '已接受邀请' });
                         await refreshEvent();
                       } catch {
                         setFlash({ open: true, severity: 'error', message: '接受邀请失败，请稍后重试' });
                       }
                     } else {
-                      setSignedUp(true);
+                      setMyStatus('accepted');
                     }
                   }}
                 >
@@ -350,6 +467,95 @@ export default function EventDetailPage() {
               <Chip size="small" color={phase.color} label={phase.label} />
               {event.isHomeEvent && <Chip size="small" variant="outlined" label="🏠 在家" />}
             </Stack>
+
+            {/* Host management bar */}
+            {isHost && event.phase !== 'cancelled' && (
+              <Stack direction="row" spacing={1} sx={{ mb: 1.5 }} flexWrap="wrap" useFlexGap>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<EditIcon />}
+                  onClick={() => {
+                    setEditTitle(event.title);
+                    setEditDesc(event.desc);
+                    setEditLocation(event.location);
+                    setEditCapacity(event.total);
+                    setEditStartsAt((loadedEvent as any)?.startsAt ? new Date((loadedEvent as any).startsAt).toISOString().slice(0, 16) : '');
+                    setEditEndsAt((loadedEvent as any)?.endsAt ? new Date((loadedEvent as any).endsAt).toISOString().slice(0, 16) : '');
+                    setEditOpen(true);
+                  }}
+                >
+                  编辑
+                </Button>
+                {event.phase === 'invite' && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="success"
+                    onClick={async () => {
+                      if (!eventId) return;
+                      try {
+                        await updateEvent(eventId, { phase: 'open' });
+                        setEvent((prev) => prev ? { ...prev, phase: 'open' } : prev);
+                        setFlash({ open: true, severity: 'success', message: '已公开报名' });
+                      } catch { setFlash({ open: true, severity: 'error', message: '操作失败' }); }
+                    }}
+                  >
+                    公开报名
+                  </Button>
+                )}
+                {event.phase === 'open' && (
+                  <>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={async () => {
+                        if (!eventId) return;
+                        try {
+                          await updateEvent(eventId, { phase: 'closed' });
+                          setEvent((prev) => prev ? { ...prev, phase: 'closed' } : prev);
+                          setFlash({ open: true, severity: 'success', message: '已关闭报名' });
+                        } catch { setFlash({ open: true, severity: 'error', message: '操作失败' }); }
+                      }}
+                    >
+                      关闭报名
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="warning"
+                      onClick={async () => {
+                        if (!eventId) return;
+                        try {
+                          await updateEvent(eventId, { phase: 'ended' });
+                          setEvent((prev) => prev ? { ...prev, phase: 'ended' } : prev);
+                          setFlash({ open: true, severity: 'success', message: '活动已结束' });
+                        } catch { setFlash({ open: true, severity: 'error', message: '操作失败' }); }
+                      }}
+                    >
+                      结束活动
+                    </Button>
+                  </>
+                )}
+                {event.phase === 'closed' && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="warning"
+                    onClick={async () => {
+                      if (!eventId) return;
+                      try {
+                        await updateEvent(eventId, { phase: 'ended' });
+                        setEvent((prev) => prev ? { ...prev, phase: 'ended' } : prev);
+                        setFlash({ open: true, severity: 'success', message: '活动已结束' });
+                      } catch { setFlash({ open: true, severity: 'error', message: '操作失败' }); }
+                    }}
+                  >
+                    结束活动
+                  </Button>
+                )}
+              </Stack>
+            )}
 
             {/* 3. Description */}
             <Box sx={{ mb: 2 }}>
@@ -592,27 +798,80 @@ export default function EventDetailPage() {
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
               <Typography variant="subtitle1" fontWeight={700}>参与者</Typography>
-              <Typography variant="body2" color={event.spots > 0 ? 'success.main' : 'text.secondary'}>
-                {event.spots > 0 ? `还剩 ${event.spots}/${event.total} 位` : '已满 · 可排队'}
+              {event.phase !== 'ended' && event.phase !== 'cancelled' && (
+                <Typography variant="body2" color={event.spots > 0 ? 'success.main' : 'text.secondary'}>
+                  {event.spots > 0
+                    ? `还剩 ${event.spots}/${event.total} 位`
+                    : (event.waitlistCount ?? 0) > 0
+                      ? `已满 · ${event.waitlistCount}人等位`
+                      : '已满'}
+                </Typography>
+              )}
+              {event.phase === 'ended' && (
+                <Typography variant="body2" color="text.secondary">
+                  共 {event.people.length} 人参与
+                </Typography>
+              )}
+            </Stack>
+            {isHost ? (
+              /* Host view: list with remove buttons */
+              <Stack spacing={0.5}>
+                {event.people.map((name) => {
+                  const memberId = allMembers.find((m) => m.name === name)?.id;
+                  return (
+                    <Stack key={name} direction="row" alignItems="center" spacing={1}>
+                      <Avatar
+                        sx={{ cursor: 'pointer', width: 34, height: 34, ...(name === event.host ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
+                        onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
+                      >
+                        {firstNonEmoji(name)}
+                      </Avatar>
+                      <Typography variant="body2" sx={{ flex: 1 }}>{name}</Typography>
+                      {name === event.host && <Chip size="small" label="Host" variant="outlined" />}
+                      {name !== event.host && memberId && (
+                        <IconButton
+                          size="small"
+                          onClick={async () => {
+                            if (!eventId || !user?.id) return;
+                            try {
+                              await removeParticipant(eventId, memberId, user.id);
+                              setFlash({ open: true, severity: 'success', message: `已移除 ${name}` });
+                              await refreshEvent();
+                            } catch {
+                              setFlash({ open: true, severity: 'error', message: '移除失败' });
+                            }
+                          }}
+                          sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Stack>
+                  );
+                })}
+              </Stack>
+            ) : (
+              /* Normal view: avatar group */
+              <Stack direction="row" spacing={1} alignItems="center">
+                <AvatarGroup max={8}>
+                  {event.people.map((name) => (
+                    <Avatar
+                      key={name}
+                      sx={{ cursor: 'pointer', width: 34, height: 34, ...(name === event.host ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
+                      onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
+                    >
+                      {firstNonEmoji(name)}
+                    </Avatar>
+                  ))}
+                </AvatarGroup>
+              </Stack>
+            )}
+            {!isHost && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                🏠 {event.host} · Host
               </Typography>
-            </Stack>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <AvatarGroup max={8}>
-                {event.people.map((name) => (
-                  <Avatar
-                    key={name}
-                    sx={{ cursor: 'pointer', width: 34, height: 34, ...(name === event.host ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
-                    onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
-                  >
-                    {firstNonEmoji(name)}
-                  </Avatar>
-                ))}
-              </AvatarGroup>
-            </Stack>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-              🏠 {event.host} · Host
-            </Typography>
-            {user?.name === event.host && event.phase === 'invite' && (
+            )}
+            {isHost && event.phase !== 'cancelled' && (
               <Button
                 variant="outlined"
                 size="small"
@@ -620,7 +879,7 @@ export default function EventDetailPage() {
                 onClick={() => setHostInviteOpen(true)}
                 sx={{ mt: 1.5 }}
               >
-                邀请成员
+                {event.phase === 'ended' ? '添加参与者' : '邀请成员'}
               </Button>
             )}
             {event.phase === 'ended' && user && (
@@ -635,6 +894,79 @@ export default function EventDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Host waitlist management panel */}
+        {isHost && event.phase !== 'ended' && event.phase !== 'cancelled' && (() => {
+          const waitlistPeople = (event.signupDetails ?? []).filter((s) => s.status === 'waitlist');
+          const offeredPeople = (event.signupDetails ?? []).filter((s) => s.status === 'offered');
+          if (waitlistPeople.length === 0 && offeredPeople.length === 0) return null;
+          return (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+                  等位名单 ({waitlistPeople.length + offeredPeople.length}人)
+                </Typography>
+                <Stack spacing={1}>
+                  {offeredPeople.map((s) => {
+                    const remaining = s.offeredAt
+                      ? Math.max(0, new Date(s.offeredAt).getTime() + 24 * 60 * 60 * 1000 - Date.now())
+                      : 0;
+                    const hours = Math.floor(remaining / 3600000);
+                    const mins = Math.floor((remaining % 3600000) / 60000);
+                    return (
+                      <Stack key={s.userId} direction="row" alignItems="center" spacing={1}>
+                        <Avatar sx={{ width: 30, height: 30 }}>{firstNonEmoji(s.name)}</Avatar>
+                        <Typography variant="body2" sx={{ flex: 1 }}>{s.name}</Typography>
+                        <Chip size="small" color="warning" label={`已递补 · 剩余${hours}:${String(mins).padStart(2, '0')}`} />
+                      </Stack>
+                    );
+                  })}
+                  {waitlistPeople.map((s) => (
+                    <Stack key={s.userId} direction="row" alignItems="center" spacing={1}>
+                      <Avatar sx={{ width: 30, height: 30 }}>{firstNonEmoji(s.name)}</Avatar>
+                      <Typography variant="body2" sx={{ flex: 1 }}>{s.name}</Typography>
+                      <Chip size="small" variant="outlined" label="等位中" />
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="success"
+                        onClick={async () => {
+                          if (!eventId || !user?.id) return;
+                          try {
+                            await hostApproveWaitlist(eventId, s.userId, user.id);
+                            setFlash({ open: true, severity: 'success', message: `已接纳 ${s.name}` });
+                            await refreshEvent();
+                          } catch {
+                            setFlash({ open: true, severity: 'error', message: '操作失败' });
+                          }
+                        }}
+                      >
+                        接纳
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        onClick={async () => {
+                          if (!eventId || !user?.id) return;
+                          try {
+                            await hostRejectWaitlist(eventId, s.userId, user.id);
+                            setFlash({ open: true, severity: 'success', message: `已拒绝 ${s.name}` });
+                            await refreshEvent();
+                          } catch {
+                            setFlash({ open: true, severity: 'error', message: '操作失败' });
+                          }
+                        }}
+                      >
+                        拒绝
+                      </Button>
+                    </Stack>
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* 8. Unified tasks (分工) */}
         {(tasks.length > 0 || user?.name === event.host) && (
@@ -1188,32 +1520,145 @@ export default function EventDetailPage() {
           </CardContent>
         </Card>
 
-        {/* 10. Action button — only for non-ended events */}
-        {event.phase !== 'ended' && (
+        {/* 10. Action button — offer response or signup */}
+        {event.phase !== 'cancelled' && myStatus === 'offered' && user && (() => {
+          const myDetail = (event.signupDetails ?? []).find((s) => s.userId === user.id);
+          const offeredAt = myDetail?.offeredAt ? new Date(myDetail.offeredAt).getTime() : Date.now();
+          return <OfferResponseUI eventId={eventId!} userId={user.id} offeredAt={offeredAt} onDone={async (accepted) => {
+            if (accepted) {
+              setMyStatus('accepted');
+              setFlash({ open: true, severity: 'success', message: '报名成功！' });
+            } else {
+              setMyStatus('declined');
+              setFlash({ open: true, severity: 'success', message: '已放弃名额' });
+            }
+            await refreshEvent();
+          }} />;
+        })()}
+        {event.phase !== 'cancelled' && myStatus !== 'offered' && (
           <Box>
             <Button
               variant="contained"
               fullWidth
               onClick={onSignup}
-              disabled={!user || event.phase === 'cancelled'}
-              color={signedUp ? 'success' : 'primary'}
+              disabled={!user}
+              color={signedUp ? 'success' : myStatus === 'waitlist' ? 'warning' : 'primary'}
             >
               {!user
                 ? '登录后可报名'
-                : event.phase === 'cancelled'
-                  ? '活动已取消'
-                  : signedUp
-                    ? '✓ 已报名'
-                    : event.phase === 'invite'
-                      ? '接受邀请'
-                      : '报名参加'}
+                : event.phase === 'ended'
+                  ? signedUp
+                    ? '✓ 已参与'
+                    : '我也参加了'
+                  : myStatus === 'waitlist'
+                    ? `等位中 · 第${((event.signupDetails ?? []).filter(s => s.status === 'waitlist').findIndex(s => s.userId === user.id) + 1) || '?'}位`
+                    : signedUp
+                      ? '✓ 已报名'
+                      : event.spots <= 0
+                        ? '加入等位'
+                        : event.phase === 'invite'
+                          ? '接受邀请'
+                          : '报名参加'}
             </Button>
           </Box>
         )}
 
+        {/* Edit event dialog */}
+        <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>编辑活动</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 0.5 }}>
+              <TextField
+                label="名称"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                fullWidth
+              />
+              <TextField
+                label="地点"
+                value={editLocation}
+                onChange={(e) => setEditLocation(e.target.value)}
+                fullWidth
+              />
+              <TextField
+                label="人数上限"
+                type="number"
+                value={editCapacity}
+                onChange={(e) => setEditCapacity(Math.max(2, Number(e.target.value) || 8))}
+                fullWidth
+              />
+              <TextField
+                label="开始时间"
+                type="datetime-local"
+                InputLabelProps={{ shrink: true }}
+                value={editStartsAt}
+                onChange={(e) => setEditStartsAt(e.target.value)}
+                fullWidth
+              />
+              <TextField
+                label="结束时间"
+                type="datetime-local"
+                InputLabelProps={{ shrink: true }}
+                value={editEndsAt}
+                onChange={(e) => setEditEndsAt(e.target.value)}
+                fullWidth
+              />
+              <TextField
+                label="说明"
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                multiline
+                minRows={3}
+                fullWidth
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditOpen(false)}>取消</Button>
+            <Button
+              variant="contained"
+              disabled={editSaving || !editTitle.trim()}
+              onClick={async () => {
+                if (!eventId) return;
+                setEditSaving(true);
+                try {
+                  const payload: Record<string, unknown> = {};
+                  if (editTitle.trim() !== event.title) payload.title = editTitle.trim();
+                  if (editDesc !== event.desc) payload.description = editDesc;
+                  if (editLocation !== event.location) payload.location = editLocation;
+                  if (editCapacity !== event.total) payload.capacity = editCapacity;
+                  if (editStartsAt) payload.startsAt = editStartsAt;
+                  if (editEndsAt) payload.endsAt = editEndsAt;
+                  if (Object.keys(payload).length > 0) {
+                    await updateEvent(eventId, payload as any);
+                    setEvent((prev) => prev ? {
+                      ...prev,
+                      title: editTitle.trim() || prev.title,
+                      desc: editDesc ?? prev.desc,
+                      location: editLocation || prev.location,
+                      total: editCapacity || prev.total,
+                      spots: Math.max(0, (editCapacity || prev.total) - prev.people.length),
+                      date: editStartsAt ? new Date(editStartsAt).toLocaleString('zh-CN') : prev.date,
+                      endDate: editEndsAt ? new Date(editEndsAt).toLocaleString('zh-CN') : prev.endDate,
+                    } : prev);
+                    setFlash({ open: true, severity: 'success', message: '活动已更新' });
+                  }
+                  setEditOpen(false);
+                } catch {
+                  setFlash({ open: true, severity: 'error', message: '更新失败，请重试' });
+                } finally {
+                  setEditSaving(false);
+                }
+              }}
+            >
+              {editSaving ? '保存中…' : '保存'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* Host invite dialog */}
         <Dialog open={hostInviteOpen} onClose={() => { setHostInviteOpen(false); setHostInviteSearch(''); }} maxWidth="xs" fullWidth>
-          <DialogTitle>邀请成员</DialogTitle>
+          <DialogTitle>{event.phase === 'ended' ? '添加参与者' : '邀请成员'}</DialogTitle>
           <DialogContent>
             <TextField
               fullWidth
@@ -1275,12 +1720,20 @@ export default function EventDetailPage() {
                       .map((name) => allMembers.find((m) => m.name === name)?.id)
                       .filter(Boolean) as string[];
                     if (userIds.length > 0) {
-                      await inviteToEvent(eventId, userIds, user.id);
-                      setFlash({ open: true, severity: 'success', message: `已邀请 ${userIds.length} 人` });
+                      if (event.phase === 'ended') {
+                        // For ended events, directly add as participants
+                        for (const uid of userIds) {
+                          await signupEvent(eventId, uid);
+                        }
+                        setFlash({ open: true, severity: 'success', message: `已添加 ${userIds.length} 人` });
+                      } else {
+                        await inviteToEvent(eventId, userIds, user.id);
+                        setFlash({ open: true, severity: 'success', message: `已邀请 ${userIds.length} 人` });
+                      }
                       await refreshEvent();
                     }
                   } catch {
-                    setFlash({ open: true, severity: 'error', message: '邀请失败，请稍后重试' });
+                    setFlash({ open: true, severity: 'error', message: event.phase === 'ended' ? '添加失败，请稍后重试' : '邀请失败，请稍后重试' });
                   }
                 }
                 setHostInviteOpen(false);
@@ -1288,41 +1741,40 @@ export default function EventDetailPage() {
                 setHostInvitedPeople([]);
               }}
             >
-              确认邀请
+              {event.phase === 'ended' ? '确认添加' : '确认邀请'}
             </Button>
           </DialogActions>
         </Dialog>
 
         {/* Cancel signup dialog */}
         <Dialog open={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)}>
-          <DialogTitle>确定要取消报名吗？</DialogTitle>
+          <DialogTitle>{myStatus === 'waitlist' ? '退出等位？' : '确定要取消报名吗？'}</DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary">
-              取消后你的名额将释放给其他人。
+              {myStatus === 'waitlist' ? '退出后你的等位位置将丢失。' : '取消后你的名额将释放给其他人。'}
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setCancelDialogOpen(false)}>保持报名</Button>
+            <Button onClick={() => setCancelDialogOpen(false)}>{myStatus === 'waitlist' ? '继续等位' : '保持报名'}</Button>
             <Button
               color="warning"
               onClick={async () => {
                 if (eventId && user?.id) {
                   try {
                     await cancelSignup(eventId, user.id);
-                    setSignedUp(false);
-                    setFlash({ open: true, severity: 'success', message: '已取消报名' });
-                    // Refresh event data from DB to update people list & spots
+                    setMyStatus(null);
+                    setFlash({ open: true, severity: 'success', message: myStatus === 'waitlist' ? '已退出等位' : '已取消报名' });
                     await refreshEvent();
                   } catch {
                     setFlash({ open: true, severity: 'error', message: '取消报名失败，请稍后重试' });
                   }
                 } else {
-                  setSignedUp(false);
+                  setMyStatus(null);
                 }
                 setCancelDialogOpen(false);
               }}
             >
-              取消报名
+              {myStatus === 'waitlist' ? '退出等位' : '取消报名'}
             </Button>
           </DialogActions>
         </Dialog>

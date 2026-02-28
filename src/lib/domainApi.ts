@@ -131,7 +131,7 @@ export async function createEvent(payload: {
   description?: string;
   tags?: string[];
   isWeeklyLotteryEvent?: boolean;
-  phase?: 'invite' | 'open';
+  phase?: 'invite' | 'open' | 'ended';
   publishAt?: string;
 }) {
   return requestJson<EntityMap>('/api/events', {
@@ -154,10 +154,10 @@ export async function getEventById(id: string) {
 }
 
 export async function signupEvent(eventId: string, userId: string) {
-  return requestJson<EntityMap>(`/api/events/${eventId}/signup`, {
+  return requestJson<EntityMap & { wasWaitlisted?: boolean }>(`/api/events/${eventId}/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, status: 'accepted' }),
+    body: JSON.stringify({ userId }),
   });
 }
 
@@ -251,6 +251,8 @@ export async function updateEvent(eventId: string, payload: {
   status?: string;
   pinned?: boolean;
   phase?: string;
+  startsAt?: string;
+  endsAt?: string;
 }) {
   return requestJson<{ ok: boolean; event: EntityMap }>(`/api/events/${eventId}`, {
     method: 'PATCH',
@@ -657,6 +659,48 @@ export async function cancelSignup(eventId: string, userId: string) {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId }),
+  });
+}
+
+/** Host removes a participant from an event */
+export async function removeParticipant(eventId: string, userId: string, requesterId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/signup/${userId}`, {
+    method: 'DELETE',
+    headers: { 'x-user-id': requesterId },
+  });
+}
+
+/** User accepts a waitlist offer */
+export async function acceptOffer(eventId: string, userId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/offer/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+}
+
+/** User declines a waitlist offer */
+export async function declineOffer(eventId: string, userId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/offer/decline`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+}
+
+/** Host directly approves a waitlisted person */
+export async function hostApproveWaitlist(eventId: string, userId: string, requesterId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/waitlist/${userId}/approve`, {
+    method: 'POST',
+    headers: { 'x-user-id': requesterId },
+  });
+}
+
+/** Host rejects a waitlisted person */
+export async function hostRejectWaitlist(eventId: string, userId: string, requesterId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/waitlist/${userId}/reject`, {
+    method: 'POST',
+    headers: { 'x-user-id': requesterId },
   });
 }
 

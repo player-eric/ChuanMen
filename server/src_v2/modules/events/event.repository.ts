@@ -1,4 +1,7 @@
-import type { PrismaClient, EventStatus, EventPhase } from '@prisma/client';
+import type { PrismaClient, EventStatus, EventPhase, EventSignupStatus } from '@prisma/client';
+
+/** Statuses that "occupy" a seat (count toward capacity). */
+const OCCUPYING_STATUSES: EventSignupStatus[] = ['accepted', 'invited', 'offered'];
 
 export class EventRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -46,7 +49,7 @@ export class EventRepository {
     tags?: ('movie' | 'chuanmen' | 'holiday' | 'hiking' | 'outdoor' | 'small_group' | 'other')[];
     titleImageUrl?: string;
     capacity?: number;
-    phase?: 'invite' | 'open';
+    phase?: 'invite' | 'open' | 'ended';
     publishAt?: Date;
   }) {
     return this.prisma.event.create({
@@ -74,6 +77,8 @@ export class EventRepository {
     status?: EventStatus;
     pinned?: boolean;
     phase?: EventPhase;
+    startsAt?: Date;
+    endsAt?: Date;
   }) {
     return this.prisma.event.update({
       where: { id },
@@ -100,13 +105,37 @@ export class EventRepository {
     });
   }
 
-  signup(eventId: string, userId: string, status: string = 'accepted') {
-    return this.prisma.eventSignup.upsert({
+  /** Count seats occupied (accepted + invited + offered). */
+  private async countOccupying(eventId: string): Promise<number> {
+    return this.prisma.eventSignup.count({
+      where: { eventId, status: { in: OCCUPYING_STATUSES } },
+    });
+  }
+
+  /**
+   * Signup with capacity awareness.
+   * Returns the signup record plus `wasWaitlisted` flag.
+   */
+  async signup(eventId: string, userId: string, _status: string = 'accepted') {
+    const event = await this.prisma.event.findUniqueOrThrow({
+      where: { id: eventId },
+      select: { capacity: true, waitlistEnabled: true },
+    });
+
+    const occupied = await this.countOccupying(eventId);
+    let status: EventSignupStatus = 'accepted';
+    if (occupied >= event.capacity && event.waitlistEnabled) {
+      status = 'waitlist';
+    }
+
+    const signup = await this.prisma.eventSignup.upsert({
       where: { eventId_userId: { eventId, userId } },
-      create: { eventId, userId, status: status as any },
-      update: { status: status as any },
+      create: { eventId, userId, status },
+      update: { status },
       include: { user: { select: { id: true, name: true, avatar: true } } },
     });
+
+    return { ...signup, wasWaitlisted: status === 'waitlist' };
   }
 
   async inviteUsers(eventId: string, userIds: string[], invitedById: string) {
@@ -123,11 +152,94 @@ export class EventRepository {
     return results;
   }
 
-  cancelSignup(eventId: string, userId: string) {
-    return this.prisma.eventSignup.update({
+  /**
+   * Cancel a signup and auto-promote the next waitlisted person if there's room.
+   * Returns { cancelled, promoted } where promoted is the signup that got offered (or null).
+   */
+  async cancelSignup(eventId: string, userId: string) {
+    const cancelled = await this.prisma.eventSignup.update({
       where: { eventId_userId: { eventId, userId } },
       data: { status: 'cancelled' },
     });
+
+    const promoted = await this.promoteNextWaitlisted(eventId);
+    return { cancelled, promoted };
+  }
+
+  /**
+   * If there is room (occupying < capacity), promote the earliest waitlisted signup to `offered`.
+   * Returns the promoted signup or null.
+   */
+  async promoteNextWaitlisted(eventId: string) {
+    const event = await this.prisma.event.findUniqueOrThrow({
+      where: { id: eventId },
+      select: { capacity: true, waitlistEnabled: true },
+    });
+    if (!event.waitlistEnabled) return null;
+
+    const occupied = await this.countOccupying(eventId);
+    if (occupied >= event.capacity) return null;
+
+    const next = await this.prisma.eventSignup.findFirst({
+      where: { eventId, status: 'waitlist' },
+      orderBy: { createdAt: 'asc' },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    if (!next) return null;
+
+    return this.prisma.eventSignup.update({
+      where: { id: next.id },
+      data: { status: 'offered', offeredAt: new Date() },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+  }
+
+  /** User accepts an offer — offered → accepted */
+  async acceptOffer(eventId: string, userId: string) {
+    return this.prisma.eventSignup.update({
+      where: { eventId_userId: { eventId, userId } },
+      data: { status: 'accepted', respondedAt: new Date() },
+    });
+  }
+
+  /**
+   * User declines an offer — offered → declined, then promote next.
+   * Returns { declined, promoted }.
+   */
+  async declineOffer(eventId: string, userId: string) {
+    const declined = await this.prisma.eventSignup.update({
+      where: { eventId_userId: { eventId, userId } },
+      data: { status: 'declined', respondedAt: new Date() },
+    });
+    const promoted = await this.promoteNextWaitlisted(eventId);
+    return { declined, promoted };
+  }
+
+  /** Host directly accepts a waitlisted person (skip 24h offer). */
+  async hostApproveWaitlist(eventId: string, userId: string) {
+    return this.prisma.eventSignup.update({
+      where: { eventId_userId: { eventId, userId } },
+      data: { status: 'accepted', respondedAt: new Date() },
+    });
+  }
+
+  /** Host rejects a waitlisted person. */
+  async hostRejectWaitlist(eventId: string, userId: string) {
+    return this.prisma.eventSignup.update({
+      where: { eventId_userId: { eventId, userId } },
+      data: { status: 'rejected', respondedAt: new Date() },
+    });
+  }
+
+  /** Get waitlist position (1-based) for a user. Returns 0 if not waitlisted. */
+  async getWaitlistPosition(eventId: string, userId: string): Promise<number> {
+    const waitlisted = await this.prisma.eventSignup.findMany({
+      where: { eventId, status: 'waitlist' },
+      orderBy: { createdAt: 'asc' },
+      select: { userId: true },
+    });
+    const idx = waitlisted.findIndex((s) => s.userId === userId);
+    return idx >= 0 ? idx + 1 : 0;
   }
 
   listPast() {

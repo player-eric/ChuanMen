@@ -7,6 +7,7 @@ import {
   sendMilestoneNotif,
   sendHostTributeNotif,
   sendDailyDigest,
+  processWaitlistExpiry,
 } from '../agent/emailAutomation.js';
 
 export async function runAgentCycle(app: FastifyInstance) {
@@ -28,7 +29,14 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: generateHostTribute failed');
   }
 
-  // Phase 2: Email automation (each try/catch, independent)
+  // Phase 2: Waitlist offer expiry (time-sensitive, run before emails)
+  try {
+    await processWaitlistExpiry(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: processWaitlistExpiry failed');
+  }
+
+  // Phase 3: Email automation (each try/catch, independent)
   try {
     await sendChurnRecall(prisma, log);
   } catch (err) {

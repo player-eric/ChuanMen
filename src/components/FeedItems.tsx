@@ -228,9 +228,10 @@ interface FeedActivityProps extends InteractionProps {
   photoCount?: number;
   commentCount?: number;
   hostId?: string;
+  waitlistCount?: number;
 }
 
-export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, houseRules, photoCount, commentCount }: FeedActivityProps) {
+export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, houseRules, photoCount, commentCount, waitlistCount }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -345,7 +346,7 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
               {commentCount != null && commentCount > 0 && <span style={{ fontSize: 12, color: c.text3 }}>💬 {commentCount}</span>}
             </div>
           ) : !isCancelled && (
-            <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `还剩 ${spots} 位` : '已满 · 可排队'}</span>
+            <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `还剩 ${spots} 位` : (waitlistCount ?? 0) > 0 ? `已满 · ${waitlistCount}人等位` : '已满'}</span>
           )}
         </div>
         {/* Social hint + signup (skip for ended/cancelled) */}

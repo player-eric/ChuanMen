@@ -79,7 +79,10 @@ function buildFeedItems(data: any): any[] {
   for (const e of (data.events ?? [])) {
     const d = e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
     const hostName = e.host?.name ?? '';
-    const people = (e.signups ?? []).map((s: any) => s.user?.name).filter(Boolean);
+    const allSignups = (e.signups ?? []) as any[];
+    const feedOccupying = allSignups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
+    const feedWaitlist = allSignups.filter((s: any) => s.status === 'waitlist');
+    const people = feedOccupying.map((s: any) => s.user?.name).filter(Boolean);
     // Host 默认也是参与者之一
     if (hostName && !people.includes(hostName)) {
       people.unshift(hostName);
@@ -90,13 +93,14 @@ function buildFeedItems(data: any): any[] {
       title: e.title,
       date: d,
       location: e.location ?? '',
-      spots: Math.max(0, (e.capacity ?? 8) - people.length),
+      spots: Math.max(0, (e.capacity ?? 8) - feedOccupying.length),
       people,
-      signupUserIds: (e.signups ?? []).map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
+      signupUserIds: allSignups.map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
       film: e.selectedMovie?.title,
       scene: eventTagToScene[e.tags?.[0]] ?? e.tags?.[0] ?? '',
       navTarget: `/events/${e.id}`,
       isHomeEvent: e.isHomeEvent ?? false,
+      waitlistCount: feedWaitlist.length,
     });
   }
 
@@ -184,33 +188,52 @@ async function feedLoader() {
 
 function mapApiEvent(e: any): any {
   const signups = e.signups ?? [];
-  const people = signups.map((s: any) => s.user?.name ?? s.userName ?? '?');
   const hostName = typeof e.host === 'string' ? e.host : e.host?.name ?? '?';
   const hostId = typeof e.host === 'string' ? e.host : e.host?.id ?? '';
+
+  // Split signups by status
+  const occupying = signups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
+  const waitlistSignups = signups.filter((s: any) => s.status === 'waitlist');
+
+  // People list = only occupying signups (not waitlisted)
+  const people = occupying.map((s: any) => s.user?.name ?? s.userName ?? '?');
   // Host 默认也是参与者之一
   if (hostName && hostName !== '?' && !people.includes(hostName)) {
     people.unshift(hostName);
   }
-  // Collect signup user IDs for visibility checks (invite phase)
+
+  // Collect signup user IDs for visibility checks (invite phase) — include all non-removed
   const signupUserIds = signups.map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
   if (hostId && !signupUserIds.includes(hostId)) {
     signupUserIds.unshift(hostId);
   }
+
+  // Signup details for host waitlist management
+  const signupDetails = signups.map((s: any) => ({
+    userId: s.user?.id ?? s.userId,
+    name: s.user?.name ?? '?',
+    status: s.status,
+    offeredAt: s.offeredAt ?? undefined,
+  }));
+
   return {
     id: e.id,
     title: e.title ?? '',
     host: hostName,
     hostId,
     date: e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }) : '',
+    startsAt: e.startsAt,
     endDate: e.endsAt ? new Date(e.endsAt).toLocaleDateString('zh-CN') : undefined,
     location: e.location ?? '',
     isHomeEvent: e.isHomeEvent ?? false,
     scene: e.titleImageUrl || eventTagToScene[e.tags?.[0]] || e.tags?.[0] || '',
     film: e.selectedMovie?.title ?? e.film ?? undefined,
-    spots: Math.max(0, (e.capacity ?? 0) - people.length),
+    spots: Math.max(0, (e.capacity ?? 0) - occupying.length),
     total: e.capacity ?? 0,
     people,
     signupUserIds,
+    signupDetails,
+    waitlistCount: waitlistSignups.length,
     phase: e.phase ?? 'open',
     desc: e.description ?? '',
     houseRules: e.houseRules || undefined,

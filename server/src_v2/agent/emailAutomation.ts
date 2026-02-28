@@ -1,9 +1,10 @@
 import type { PrismaClient } from '@prisma/client';
 import type { FastifyBaseLogger } from 'fastify';
-import { sendTemplatedEmail } from '../services/emailService.js';
+import { sendEmail, sendTemplatedEmail } from '../services/emailService.js';
 import { filterByCooldown, filterByRefId, ELIGIBLE_USER_WHERE } from './helpers.js';
 import type { HostTributeResult } from './contentAutomation.js';
 import { renderDigestBlock, type DigestSection } from '../emails/template.js';
+import { EventRepository } from '../modules/events/event.repository.js';
 
 // ── Shared types ─────────────────────────────────────────────
 
@@ -448,4 +449,78 @@ export async function sendHostTributeNotif(
 
   log.info(`P4-C host tribute notif: ${sent}/${hosts.length} sent`);
   return sent;
+}
+
+// ── Waitlist offer expiry (24h auto-expire) ─────────────────
+
+export async function processWaitlistExpiry(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<{ expired: number; promoted: number }> {
+  const cutoff = new Date();
+  cutoff.setTime(cutoff.getTime() - 24 * 60 * 60 * 1000);
+
+  // Find all offered signups that have not been responded to and offeredAt > 24h ago
+  const expiredOffers = await prisma.eventSignup.findMany({
+    where: {
+      status: 'offered',
+      offeredAt: { lt: cutoff },
+      respondedAt: null,
+    },
+    include: {
+      user: { select: { id: true, name: true, email: true } },
+      event: { select: { id: true, title: true } },
+    },
+  });
+
+  if (expiredOffers.length === 0) {
+    return { expired: 0, promoted: 0 };
+  }
+
+  const repo = new EventRepository(prisma);
+  let expired = 0;
+  let promoted = 0;
+
+  for (const offer of expiredOffers) {
+    try {
+      // Mark as declined (expired)
+      await prisma.eventSignup.update({
+        where: { id: offer.id },
+        data: { status: 'declined', respondedAt: new Date() },
+      });
+      expired++;
+
+      // Send expiry notification
+      if (offer.user?.email) {
+        try {
+          await sendEmail({
+            to: offer.user.email,
+            subject: `${offer.event.title} 的等位机会已过期`,
+            text: `Hi ${offer.user.name}，\n\n${offer.event.title} 的等位名额已超过24小时未确认，机会已过期。希望下次活动能见到你！\n\n— 串门儿`,
+          });
+        } catch { /* best effort */ }
+      }
+
+      // Promote next waitlisted person
+      const promotedSignup = await repo.promoteNextWaitlisted(offer.eventId);
+      if (promotedSignup) {
+        promoted++;
+        // Notify the newly promoted person
+        if ((promotedSignup as any).user?.email) {
+          try {
+            await sendEmail({
+              to: (promotedSignup as any).user.email,
+              subject: `好消息！${offer.event.title} 有名额了`,
+              text: `Hi ${(promotedSignup as any).user.name}，\n\n${offer.event.title} 有一个名额空出了！请在24小时内确认是否参加。\n\n前往活动页面确认：https://chuanmener.club/events/${offer.eventId}\n\n— 串门儿`,
+            });
+          } catch { /* best effort */ }
+        }
+      }
+    } catch (err) {
+      log.error({ err, signupId: offer.id }, 'Waitlist expiry processing failed');
+    }
+  }
+
+  log.info(`Waitlist expiry: ${expired} expired, ${promoted} promoted`);
+  return { expired, promoted };
 }

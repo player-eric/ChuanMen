@@ -112,6 +112,7 @@ export default function EventsPage() {
                     isHomeEvent={evt.isHomeEvent}
                     houseRules={evt.houseRules}
                     hostId={evt.hostId}
+                    waitlistCount={evt.waitlistCount}
                     likes={0} likedBy={[]} comments={[]}
                   />
                 </Grid>

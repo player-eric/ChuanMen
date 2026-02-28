@@ -37,6 +37,15 @@ export type EventPhase = 'invite' | 'open' | 'closed' | 'ended' | 'cancelled';
 
 export type FoodOption = 'potluck' | 'host_cook' | 'eat_out' | 'none';
 
+export type SignupStatus = 'invited' | 'offered' | 'accepted' | 'waitlist' | 'declined' | 'rejected' | 'cancelled';
+
+export interface SignupInfo {
+  userId: string;
+  name: string;
+  status: SignupStatus;
+  offeredAt?: string;
+}
+
 export interface EventData {
   id: string;
   title: string;
@@ -66,6 +75,14 @@ export interface EventData {
   /** Movie IDs nominated for this event (movie night only) */
   nominations?: string[];
   photos?: EventPhoto[];
+  /** Number of people on the waitlist */
+  waitlistCount?: number;
+  /** Current user's signup status */
+  mySignupStatus?: SignupStatus;
+  /** Offered timestamp (for countdown) */
+  myOfferedAt?: string;
+  /** Detailed signup info (for host waitlist management) */
+  signupDetails?: SignupInfo[];
 }
 
 export interface PastEvent {
@@ -187,7 +204,7 @@ export interface FeedInteraction {
 // Feed item discriminated union for the timeline
 export type FeedItem =
   | { type: 'time'; label: string }
-  | { type: 'activity'; name: string; title: string; date: string; location: string; spots: number; people: string[]; film?: string; scene?: string; navTarget?: string } & FeedInteraction
+  | { type: 'activity'; name: string; title: string; date: string; location: string; spots: number; people: string[]; film?: string; scene?: string; navTarget?: string; waitlistCount?: number } & FeedInteraction
   | { type: 'card'; from: string; to: string; message: string; photo?: string; navTarget?: string } & FeedInteraction
   | { type: 'movie'; name: string; title: string; year: string; dir: string; votes: number } & FeedInteraction
   | { type: 'milestone'; text: string; emoji: string } & FeedInteraction
