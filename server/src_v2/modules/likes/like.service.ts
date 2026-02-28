@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { LikeRepository } from './like.repository.js';
 import type { InteractionEntityType } from '@prisma/client';
 
-const entityTypes: [string, ...string[]] = ['event', 'movie', 'proposal', 'postcard', 'seed', 'seed_update', 'discussion', 'comment', 'announcement'];
+const entityTypes: [string, ...string[]] = ['event', 'movie', 'proposal', 'postcard', 'seed', 'seed_update', 'discussion', 'comment', 'announcement', 'user'];
 
 const toggleSchema = z.object({
   entityType: z.enum(entityTypes),

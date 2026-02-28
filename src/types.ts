@@ -260,7 +260,24 @@ export type FeedItem =
       detail?: string;
       photoUrls?: string[];
       navTarget?: string;
-    } & FeedInteraction;
+    } & FeedInteraction
+  | {
+      type: 'newMember';
+      phase: 'introducing' | 'welcomed';
+      id: string;
+      name: string;
+      bio: string;
+      location: string;
+      selfAsFriend: string;
+      idealFriend: string;
+      participationPlan: string;
+      announcedAt: string;
+      announcedEndAt: string;
+      approvedAt?: string;
+      avatar?: string;
+      likes: number;
+      likedBy: string[];
+    };
 
 // Extended movie detail for MovieDetailPage
 export interface MovieDetailData {

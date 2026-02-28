@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { detectMilestones, generateHostTribute } from '../agent/contentAutomation.js';
+import { detectMilestones, generateHostTribute, processAnnouncedUsers } from '../agent/contentAutomation.js';
 import {
   sendChurnRecall,
   sendSilentHostRecall,
@@ -27,6 +27,16 @@ export async function runAgentCycle(app: FastifyInstance) {
     tribute = await generateHostTribute(prisma, log);
   } catch (err) {
     log.error({ err }, 'Agent: generateHostTribute failed');
+  }
+
+  // Phase 1b: Auto-approve announced users whose introduction period has ended
+  try {
+    const autoApproved = await processAnnouncedUsers(prisma, log);
+    if (autoApproved > 0) {
+      log.info(`Agent: auto-approved ${autoApproved} announced user(s)`);
+    }
+  } catch (err) {
+    log.error({ err }, 'Agent: processAnnouncedUsers failed');
   }
 
   // Phase 2: Waitlist offer expiry (time-sensitive, run before emails)

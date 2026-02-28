@@ -650,6 +650,14 @@ export async function adminRejectUser(userId: string) {
   });
 }
 
+export async function adminAnnounceUser(userId: string, days?: number) {
+  return requestJson<{ ok: boolean; publicityEndsAt: string }>(`/api/users/${userId}/announce`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ days }),
+  });
+}
+
 /* ═══════════════════════════════════════════════════════════════
    Event Cancel Signup
    ═══════════════════════════════════════════════════════════════ */

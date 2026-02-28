@@ -123,13 +123,65 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     return { ok: true, user: updated };
   });
 
+  // Admin: announce applicant (start introduction period)
+  app.post('/:id/announce', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { days = 3 } = (request.body ?? {}) as { days?: number };
+
+    const existing = await app.prisma.user.findUnique({ where: { id } });
+    if (!existing) return reply.notFound('用户不存在');
+    if (existing.userStatus !== 'applicant') {
+      return reply.badRequest('只能对待审核的申请人发起介绍');
+    }
+
+    const now = new Date();
+    const announcedEndAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+    const user = await app.prisma.user.update({
+      where: { id },
+      data: {
+        userStatus: 'announced',
+        announcedAt: now,
+        announcedEndAt,
+      },
+    });
+
+    // Send TXN-6 email to applicant (introduction period started)
+    const siteUrl = env.FRONTEND_ORIGIN || 'https://chuanmener.club';
+    try {
+      const rendered = renderEmail({
+        subject: '串门儿 — 我们正在向大家介绍你 👋',
+        body: `${user.name}，你好！\n\n你的申请已通过初审，我们正在向串门儿的小伙伴们介绍你。\n\n${days} 天后你将正式加入串门儿，届时会收到欢迎邮件。`,
+        variables: {},
+        previewText: '你的申请已通过初审',
+        ctaLabel: '了解串门儿',
+        ctaUrl: `${siteUrl}/about`,
+      });
+
+      await sendEmail({
+        to: user.email,
+        subject: rendered.subject,
+        text: rendered.text,
+        html: rendered.html,
+      });
+
+      await app.prisma.emailLog.create({
+        data: { userId: user.id, ruleId: 'TXN-6' },
+      });
+    } catch (err) {
+      app.log.error(err, 'Failed to send TXN-6 announcement email');
+    }
+
+    return { ok: true, publicityEndsAt: announcedEndAt.toISOString() };
+  });
+
   // Admin: approve applicant (sends TXN-4 welcome email + creates UserPreference if subscribed)
   app.post('/:id/approve', async (request, reply) => {
     const { id } = request.params as { id: string };
 
     const user = await app.prisma.user.update({
       where: { id },
-      data: { userStatus: 'approved' },
+      data: { userStatus: 'approved', approvedAt: new Date() },
     });
 
     // Create UserPreference if user opted into newsletter
@@ -184,7 +236,7 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
 
     const user = await app.prisma.user.update({
       where: { id },
-      data: { userStatus: 'rejected' },
+      data: { userStatus: 'rejected', announcedAt: null, announcedEndAt: null },
     });
 
     // Send TXN-5 rejection email

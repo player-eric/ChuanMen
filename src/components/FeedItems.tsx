@@ -987,6 +987,130 @@ export function FeedActionNotice(props: FeedActionNoticeProps) {
   );
 }
 
+/* ═══ FeedNewMember (introducing / welcomed) ═══ */
+interface FeedNewMemberProps {
+  phase: 'introducing' | 'welcomed';
+  id: string;
+  name: string;
+  bio: string;
+  location: string;
+  selfAsFriend: string;
+  idealFriend: string;
+  participationPlan: string;
+  announcedAt: string;
+  announcedEndAt: string;
+  approvedAt?: string;
+  avatar?: string;
+  likes: number;
+  likedBy: string[];
+}
+
+export function FeedNewMember({ phase, id, name, bio, location, selfAsFriend, participationPlan, avatar, likes: initLikes, likedBy: initLikedBy }: FeedNewMemberProps) {
+  const c = useColors();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(initLikes);
+  const [likedNames, setLikedNames] = useState(initLikedBy);
+
+  const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+
+  const handleLike = async () => {
+    if (!user?.id) return;
+    const wasLiked = liked;
+    setLiked(!wasLiked);
+    setLikeCount(prev => wasLiked ? prev - 1 : prev + 1);
+    if (!wasLiked && user.name && !likedNames.includes(user.name)) {
+      setLikedNames(prev => [...prev, user.name]);
+    }
+    try {
+      const { toggleLike } = await import('@/lib/domainApi');
+      await toggleLike('user', id, user.id);
+    } catch { /* optimistic */ }
+  };
+
+  const isIntroducing = phase === 'introducing';
+  const emoji = isIntroducing ? '👋' : '🎉';
+  const headline = isIntroducing
+    ? <><b style={{ cursor: 'pointer' }} onClick={() => goMember(name)}>{name}</b> 即将加入串门儿</>
+    : <>欢迎 <b style={{ cursor: 'pointer' }} onClick={() => goMember(name)}>{name}</b> 加入串门儿！</>;
+
+  return (
+    <Card glow>
+      <div style={{ padding: 16 }}>
+        {/* Header: emoji + headline */}
+        <div style={{ textAlign: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: 28, marginBottom: 6 }}>{emoji}</div>
+          <div style={{ fontSize: 16, fontWeight: 600 }}>{headline}</div>
+          {location && (
+            <div style={{ fontSize: 12, color: c.text3, marginTop: 4 }}>📍 {location}</div>
+          )}
+        </div>
+
+        {/* Avatar (if available) */}
+        {avatar && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            <Ava name={name} src={avatar} size={56} onTap={() => goMember(name)} />
+          </div>
+        )}
+
+        {/* Bio block */}
+        {bio && (
+          <div style={{
+            background: c.s2,
+            borderRadius: 8,
+            padding: 12,
+            marginBottom: 10,
+            fontSize: 14,
+            color: c.text2,
+            lineHeight: 1.6,
+          }}>
+            {bio}
+          </div>
+        )}
+
+        {/* Extra info */}
+        {selfAsFriend && (
+          <div style={{ fontSize: 13, color: c.text2, marginBottom: 6 }}>
+            <span style={{ fontWeight: 600, color: c.text }}>作为朋友：</span>{selfAsFriend}
+          </div>
+        )}
+        {participationPlan && (
+          <div style={{ fontSize: 13, color: c.text2, marginBottom: 6 }}>
+            <span style={{ fontWeight: 600, color: c.text }}>参与计划：</span>{participationPlan}
+          </div>
+        )}
+      </div>
+
+      {/* Like bar (no comments) */}
+      <div>
+        <div style={{ height: 1, background: c.line + '30', margin: '0 14px' }} />
+        <div style={{ display: 'flex', gap: 16, padding: '7px 14px' }}>
+          <button
+            onClick={handleLike}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+              fontSize: 14, color: liked ? c.warm : c.text3,
+            }}
+          >
+            {liked
+              ? <FavoriteRounded sx={{ fontSize: 18 }} />
+              : <FavoriteBorderRounded sx={{ fontSize: 18 }} />
+            }
+            {' '}欢迎{likeCount > 0 ? ` ${likeCount}` : ''}
+          </button>
+        </div>
+        {likedNames.length > 0 && (
+          <div style={{ padding: '0 14px 8px', fontSize: 12, color: c.text3 }}>
+            {likedNames.slice(0, 3).join('、')}{likedNames.length > 3 ? ` 等 ${likedNames.length} 人` : ''} 欢迎
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 export function FeedCommentNotice({ name, text, targetTitle, time, navTarget, likes, likedBy, comments, newComments }: FeedCommentNoticeProps) {
   const c = useColors();
   const navigate = useNavigate();

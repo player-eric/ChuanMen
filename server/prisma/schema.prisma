@@ -32,6 +32,7 @@ enum EventPhase {
 
 enum UserStatus {
   applicant
+  announced
   approved
   rejected
   banned
@@ -140,6 +141,7 @@ enum InteractionEntityType {
   discussion
   comment
   announcement
+  user
 }
 
 model User {
@@ -173,6 +175,9 @@ model User {
   homeAddress          String              @default("")
   subscribeNewsletter  Boolean             @default(true)
   postcardCredits      Int                 @default(2)
+  announcedAt          DateTime?
+  announcedEndAt       DateTime?
+  approvedAt           DateTime?
   lastActiveAt         DateTime?
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt

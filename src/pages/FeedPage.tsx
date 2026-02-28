@@ -30,6 +30,7 @@ import {
   FeedCompactSmallGroup,
   FeedCommentNotice,
   FeedActionNotice,
+  FeedNewMember,
 } from '@/components/FeedItems';
 
 /* ═══ Mock: current small-group draw ═══ */
@@ -80,7 +81,7 @@ const fullWidth = { xs: 12 } as const;
 const halfWidth = { xs: 12, md: 6 } as const;
 
 function gridSizeFor(type: FeedItem['type']) {
-  if (type === 'time' || type === 'milestone') return fullWidth;
+  if (type === 'time' || type === 'milestone' || type === 'newMember') return fullWidth;
   return halfWidth;
 }
 
@@ -227,6 +228,7 @@ function renderFeedItem(item: FeedItem) {
     case 'compactSmallGroup': return <FeedCompactSmallGroup {...props as React.ComponentProps<typeof FeedCompactSmallGroup>} />;
     case 'commentNotice':  return <FeedCommentNotice {...props as React.ComponentProps<typeof FeedCommentNotice>} />;
     case 'actionNotice':   return <FeedActionNotice {...props as React.ComponentProps<typeof FeedActionNotice>} />;
+    case 'newMember':      return <FeedNewMember {...props as React.ComponentProps<typeof FeedNewMember>} />;
   }
 }
 

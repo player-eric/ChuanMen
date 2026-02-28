@@ -9,8 +9,10 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const { userId } = request.query as { userId?: string };
     const prisma = app.prisma;
 
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
     // Fetch in parallel
-    const [events, announcements, recommendations, members, postcards, recentMovies, recentProposals] =
+    const [events, announcements, recommendations, members, postcards, recentMovies, recentProposals, newMembers] =
       await Promise.all([
         // Recent events (upcoming + recently ended)
         prisma.event.findMany({
@@ -90,7 +92,59 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             _count: { select: { votes: true } },
           },
         }),
+
+        // New members: announced (introducing) + recently approved via announcement (welcomed)
+        prisma.user.findMany({
+          where: {
+            OR: [
+              { userStatus: 'announced' },
+              {
+                userStatus: 'approved',
+                announcedAt: { not: null },
+                approvedAt: { gte: sevenDaysAgo },
+              },
+            ],
+          },
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+            bio: true,
+            location: true,
+            selfAsFriend: true,
+            idealFriend: true,
+            participationPlan: true,
+            announcedAt: true,
+            announcedEndAt: true,
+            approvedAt: true,
+            userStatus: true,
+          },
+          orderBy: { announcedAt: 'desc' },
+        }),
       ]);
+
+    // Fetch likes for new members
+    const newMemberIds = newMembers.map((m) => m.id);
+    const newMemberLikes = newMemberIds.length > 0
+      ? await prisma.like.findMany({
+          where: { entityType: 'user', entityId: { in: newMemberIds } },
+          include: { user: { select: { id: true, name: true } } },
+        })
+      : [];
+
+    // Group likes by entityId
+    const likesMap = new Map<string, { count: number; names: string[] }>();
+    for (const like of newMemberLikes) {
+      const entry = likesMap.get(like.entityId) ?? { count: 0, names: [] };
+      entry.count++;
+      entry.names.push(like.user.name);
+      likesMap.set(like.entityId, entry);
+    }
+
+    const newMembersWithLikes = newMembers.map((m) => {
+      const likeData = likesMap.get(m.id);
+      return { ...m, likes: likeData?.count ?? 0, likedBy: likeData?.names ?? [] };
+    });
 
     return {
       events,
@@ -100,6 +154,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       postcards,
       recentMovies,
       recentProposals,
+      newMembers: newMembersWithLikes,
     };
   });
 };

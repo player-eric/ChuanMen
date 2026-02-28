@@ -30,7 +30,7 @@ import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { fetchUsersAdmin, adminUpdateUser, adminApproveUser, adminRejectUser } from '@/lib/domainApi';
+import { fetchUsersAdmin, adminUpdateUser, adminApproveUser, adminRejectUser, adminAnnounceUser } from '@/lib/domainApi';
 
 /* ── PRD 11.1.1 ── Operational identities  ── */
 const OP_IDENTITIES = [
@@ -70,6 +70,8 @@ interface MemberRow {
   opRoles: string[];
   hostCount: number;
   eventCount: number;
+  announcedAt: string;
+  announcedEndAt: string;
 }
 
 function mapUser(u: any): MemberRow {
@@ -90,6 +92,8 @@ function mapUser(u: any): MemberRow {
     opRoles: (u.operatorRoles ?? []).map((r: any) => r.value ?? r.role ?? r),
     hostCount: u._count?.hostedEvents ?? u.hostCount ?? 0,
     eventCount: u._count?.eventSignups ?? u.participationCount ?? 0,
+    announcedAt: u.announcedAt ?? '',
+    announcedEndAt: u.announcedEndAt ?? '',
   };
 }
 
@@ -115,6 +119,7 @@ export default function AdminMembersPage() {
   const [confirmDeny, setConfirmDeny] = useState<MemberRow | null>(null);
   const [confirmToggle, setConfirmToggle] = useState<MemberRow | null>(null);
   const [confirmApprove, setConfirmApprove] = useState<MemberRow | null>(null);
+  const [confirmAnnounce, setConfirmAnnounce] = useState<MemberRow | null>(null);
   const [confirmSaveEdit, setConfirmSaveEdit] = useState(false);
   const [confirmAdmin, setConfirmAdmin] = useState<MemberRow | null>(null);
 
@@ -137,6 +142,7 @@ export default function AdminMembersPage() {
   // Derived lists
   const members = allUsers.filter((m) => m.userStatus === 'approved' || m.userStatus === 'banned');
   const pendingApplicants = allUsers.filter((m) => m.userStatus === 'applicant');
+  const announcedUsers = allUsers.filter((m) => m.userStatus === 'announced');
 
   const filtered = members.filter((m) => {
     if (search && !m.name.toLowerCase().includes(search.toLowerCase()) && !m.email.toLowerCase().includes(search.toLowerCase())) return false;
@@ -163,6 +169,21 @@ export default function AdminMembersPage() {
   };
 
   // ── API actions ──
+  const handleAnnounce = async (m: MemberRow) => {
+    setBusy(true);
+    try {
+      const res = await adminAnnounceUser(m.id);
+      updateUserLocal(m.id, {
+        userStatus: 'announced',
+        announcedAt: new Date().toISOString(),
+        announcedEndAt: res.publicityEndsAt,
+      });
+    } catch { /* ignore */ }
+    setBusy(false);
+    setConfirmAnnounce(null);
+    setApplicantDialog(null);
+  };
+
   const handleApprove = async (m: MemberRow) => {
     setBusy(true);
     try {
@@ -242,6 +263,7 @@ export default function AdminMembersPage() {
       <Tabs value={tab} onChange={(_, v) => setTab(v)}>
         <Tab label={`成员列表 (${members.length})`} />
         <Tab label={`待审核 (${pendingApplicants.length})`} />
+        <Tab label={`介绍中 (${announcedUsers.length})`} />
       </Tabs>
 
       {tab === 0 && (
@@ -378,8 +400,11 @@ export default function AdminMembersPage() {
                       <Typography variant="caption" color={daysPending >= 7 ? 'warning.main' : undefined}>📅 {new Date(a.createdAt).toLocaleDateString('zh-CN')}</Typography>
                     </Stack>
                     <Stack direction="row" spacing={1}>
-                      <Button size="small" variant="contained" color="success" disabled={busy} onClick={() => setConfirmApprove(a)}>
-                        通过
+                      <Button size="small" variant="contained" color="primary" disabled={busy} onClick={() => setConfirmAnnounce(a)}>
+                        发起介绍
+                      </Button>
+                      <Button size="small" variant="outlined" color="success" disabled={busy} onClick={() => setConfirmApprove(a)}>
+                        直接通过
                       </Button>
                       <Button size="small" variant="outlined" color="error" disabled={busy} onClick={() => setConfirmDeny(a)}>
                         拒绝
@@ -392,6 +417,64 @@ export default function AdminMembersPage() {
                 </CardContent>
               </Card>
             </Grid>
+            );
+          })}
+        </Grid>
+      )}
+
+      {tab === 2 && (
+        <Grid container spacing={2}>
+          {announcedUsers.length === 0 && (
+            <Grid size={{ xs: 12 }}>
+              <Card><CardContent><Typography color="text.secondary" textAlign="center">暂无介绍中的申请人</Typography></CardContent></Card>
+            </Grid>
+          )}
+          {announcedUsers.map((a) => {
+            const endDate = a.announcedEndAt ? new Date(a.announcedEndAt) : null;
+            const now = new Date();
+            const isExpired = endDate && endDate <= now;
+            const daysLeft = endDate ? Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / 86400000)) : 0;
+            return (
+              <Grid key={a.id} size={{ xs: 12, md: 6 }}>
+                <Card sx={isExpired ? { border: '2px solid', borderColor: 'success.main' } : undefined}>
+                  <CardContent>
+                    <Stack spacing={1.5}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Avatar sx={{ width: 36, height: 36 }}>{firstNonEmoji(a.name)}</Avatar>
+                          <Box>
+                            <Typography fontWeight={700}>{a.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">{a.email}</Typography>
+                          </Box>
+                        </Stack>
+                        <Chip
+                          label={isExpired ? '已到期，即将自动通过' : `介绍中 · 还剩 ${daysLeft} 天`}
+                          size="small"
+                          color={isExpired ? 'success' : 'info'}
+                          variant="outlined"
+                        />
+                      </Stack>
+                      <Typography variant="body2" color="text.secondary">{a.bio || '未填写自我介绍'}</Typography>
+                      <Stack direction="row" spacing={2} flexWrap="wrap">
+                        {a.location && <Typography variant="caption">📍 {a.location}</Typography>}
+                        {a.announcedAt && <Typography variant="caption">📅 介绍开始：{new Date(a.announcedAt).toLocaleDateString('zh-CN')}</Typography>}
+                        {endDate && <Typography variant="caption">⏰ 到期：{endDate.toLocaleDateString('zh-CN')}</Typography>}
+                      </Stack>
+                      <Stack direction="row" spacing={1}>
+                        <Button size="small" variant="contained" color="success" disabled={busy} onClick={() => setConfirmApprove(a)}>
+                          提前通过
+                        </Button>
+                        <Button size="small" variant="outlined" color="error" disabled={busy} onClick={() => setConfirmDeny(a)}>
+                          拒绝
+                        </Button>
+                        <Button size="small" variant="text" onClick={() => setApplicantDialog(a)}>
+                          详情
+                        </Button>
+                      </Stack>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
             );
           })}
         </Grid>
@@ -453,7 +536,8 @@ export default function AdminMembersPage() {
         </DialogContent>
         <DialogActions>
           <Button color="error" disabled={busy} onClick={() => { setConfirmDeny(applicantDialog); }}>拒绝</Button>
-          <Button variant="contained" color="success" disabled={busy} onClick={() => { setConfirmApprove(applicantDialog); }}>批准</Button>
+          <Button variant="outlined" color="success" disabled={busy} onClick={() => { setConfirmApprove(applicantDialog); }}>直接通过</Button>
+          <Button variant="contained" color="primary" disabled={busy} onClick={() => { setConfirmAnnounce(applicantDialog); }}>发起介绍</Button>
         </DialogActions>
       </Dialog>
 
@@ -477,6 +561,17 @@ export default function AdminMembersPage() {
         confirmColor="success"
         onConfirm={() => confirmApprove && handleApprove(confirmApprove)}
         onCancel={() => setConfirmApprove(null)}
+      />
+
+      {/* ── Confirm: announce applicant (start introduction) ── */}
+      <ConfirmDialog
+        open={!!confirmAnnounce}
+        title="发起介绍"
+        message={`确定要将「${confirmAnnounce?.name ?? ''}」推送到 Feed 进行为期 3 天的介绍吗？介绍期满后将自动通过。`}
+        confirmLabel="发起介绍"
+        confirmColor="primary"
+        onConfirm={() => confirmAnnounce && handleAnnounce(confirmAnnounce)}
+        onCancel={() => setConfirmAnnounce(null)}
       />
 
       {/* ── Confirm: suspend / activate member ── */}

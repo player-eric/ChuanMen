@@ -131,6 +131,31 @@ function buildFeedItems(data: any): any[] {
     });
   }
 
+  // New members → newMember items (introducing + welcomed)
+  for (const m of (data.newMembers ?? [])) {
+    const isAnnounced = m.userStatus === 'announced';
+    const phase = isAnnounced ? 'introducing' : 'welcomed';
+    const dateStr = isAnnounced ? m.announcedAt : m.approvedAt;
+    const d = dateStr ? new Date(dateStr).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    addToDate(d, {
+      type: 'newMember',
+      phase,
+      id: m.id,
+      name: m.name ?? '',
+      bio: m.bio ?? '',
+      location: m.location ?? '',
+      selfAsFriend: m.selfAsFriend ?? '',
+      idealFriend: m.idealFriend ?? '',
+      participationPlan: m.participationPlan ?? '',
+      announcedAt: m.announcedAt ?? '',
+      announcedEndAt: m.announcedEndAt ?? '',
+      approvedAt: m.approvedAt,
+      avatar: m.avatar,
+      likes: m.likes ?? 0,
+      likedBy: m.likedBy ?? [],
+    });
+  }
+
   // Proposals → compactProposal items
   for (const p of (data.recentProposals ?? [])) {
     const d = p.createdAt ? new Date(p.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
