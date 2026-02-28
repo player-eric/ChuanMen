@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   CircularProgress,
   Alert,
@@ -19,6 +19,7 @@ import {
   MenuItem,
   Radio,
   RadioGroup,
+  Snackbar,
   Stack,
   Switch,
   Tab,
@@ -38,12 +39,15 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { useAuth } from '@/auth/AuthContext';
 import {
   fetchEmailTemplates,
   createEmailTemplate,
   updateEmailTemplate,
   deleteEmailTemplate,
   previewEmailTemplate,
+  fetchMembersApi,
+  sendAdminEmail,
   type EmailTemplateRow,
 } from '@/lib/domainApi';
 
@@ -221,27 +225,16 @@ const mockBounces: BounceEventMock[] = [
   { id: 'b3', email: 'user@gmail.com', ruleId: 'DIGEST', type: 'complaint', reason: '标记为垃圾邮件', occurredAt: '2026-02-15 09:00' },
 ];
 
-interface UserEmailStatusMock {
+interface UserEmailStatus {
   id: string;
   name: string;
   email: string;
+  role: string;
   emailState: 'active' | 'weekly' | 'stopped' | 'unsubscribed';
   unopenedStreak: number;
   lastDailySentAt?: string;
+  createdAt?: string;
 }
-
-const mockUserStatuses: UserEmailStatusMock[] = [
-  { id: 'u1', name: 'Yuan', email: 'yuan@cm.app', emailState: 'active', unopenedStreak: 0, lastDailySentAt: '2/20' },
-  { id: 'u2', name: '星星', email: 'xingxing@gmail.com', emailState: 'weekly', unopenedStreak: 3, lastDailySentAt: '2/18' },
-  { id: 'u3', name: '白开水', email: 'bks@gmail.com', emailState: 'active', unopenedStreak: 0, lastDailySentAt: '2/20' },
-  { id: 'u4', name: 'Nicole', email: 'nicole@gmail.com', emailState: 'stopped', unopenedStreak: 6, lastDailySentAt: '2/10' },
-  { id: 'u5', name: '大橙子', email: 'dachengzi@gmail.com', emailState: 'active', unopenedStreak: 1, lastDailySentAt: '2/19' },
-  { id: 'u6', name: '李华', email: 'lihua@gmail.com', emailState: 'unsubscribed', unopenedStreak: 0 },
-  { id: 'u7', name: '小明', email: 'xiaoming@outlook.com', emailState: 'unsubscribed', unopenedStreak: 0 },
-  { id: 'u8', name: '阿花', email: 'ahua@gmail.com', emailState: 'active', unopenedStreak: 0, lastDailySentAt: '2/20' },
-  { id: 'u9', name: '鹿鹿', email: 'lulu@gmail.com', emailState: 'active', unopenedStreak: 2, lastDailySentAt: '2/17' },
-  { id: 'u10', name: '小竹', email: 'xiaozhu@gmail.com', emailState: 'weekly', unopenedStreak: 4, lastDailySentAt: '2/15' },
-];
 
 interface UnsubscribeRecordMock {
   id: string;
@@ -348,6 +341,7 @@ function StatCard({ label, value, color }: { label: string; value: string | numb
    ═══════════════════════════════════════════════ */
 
 export default function AdminEmailPage() {
+  const { user: authUser } = useAuth();
   // Global state
   const [mainTab, setMainTab] = useState(0);
   const [globalConfig, setGlobalConfig] = useState<GlobalEmailConfig>(defaultGlobalConfig);
@@ -361,6 +355,14 @@ export default function AdminEmailPage() {
   const [queuedEmails, setQueuedEmails] = useState<QueuedEmailMock[]>(initialQueuedEmails);
   const [suppressedEmails, setSuppressedEmails] = useState<SuppressedEmailMock[]>(initialSuppressed);
 
+  // Real user data from API
+  const [allUsers, setAllUsers] = useState<UserEmailStatus[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+
+  // Snackbar for send feedback
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
+  const [sending, setSending] = useState(false);
+
   // Dialog states
   const [pauseConfirmOpen, setPauseConfirmOpen] = useState(false);
   const [manualSendOpen, setManualSendOpen] = useState(false);
@@ -372,11 +374,11 @@ export default function AdminEmailPage() {
   const [previewingTemplate, setPreviewingTemplate] = useState<EmailTemplateRow | null>(null);
   const [userPreviewOpen, setUserPreviewOpen] = useState(false);
   const [userPreviewTemplate, setUserPreviewTemplate] = useState<EmailTemplateRow | null>(null);
-  const [userPreviewUser, setUserPreviewUser] = useState<UserEmailStatusMock | null>(null);
+  const [userPreviewUser, setUserPreviewUser] = useState<UserEmailStatus | null>(null);
   const [addSuppressedOpen, setAddSuppressedOpen] = useState(false);
   const [addSuppressedEmail, setAddSuppressedEmail] = useState('');
   const [addSuppressedReason, setAddSuppressedReason] = useState('');
-  const [changeStatusConfirm, setChangeStatusConfirm] = useState<{ user: UserEmailStatusMock; newState: string } | null>(null);
+  const [changeStatusConfirm, setChangeStatusConfirm] = useState<{ user: UserEmailStatus; newState: string } | null>(null);
   const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
 
   // Sub-tab states
@@ -395,7 +397,7 @@ export default function AdminEmailPage() {
 
   // Manual send state
   const [manualSendTarget, setManualSendTarget] = useState('active_all');
-  const [manualSendUsers, setManualSendUsers] = useState<UserEmailStatusMock[]>([]);
+  const [manualSendUsers, setManualSendUsers] = useState<UserEmailStatus[]>([]);
   const [manualSendEvent, setManualSendEvent] = useState('');
   const [manualSendTemplateId, setManualSendTemplateId] = useState('');
   const [manualSendSubject, setManualSendSubject] = useState('');
@@ -417,6 +419,9 @@ export default function AdminEmailPage() {
   const [editRuleThreshold, setEditRuleThreshold] = useState(0);
   const [editRuleMaxRec, setEditRuleMaxRec] = useState(3);
 
+  // Test email rule selector
+  const [testRuleId, setTestRuleId] = useState('TXN-4');
+
   // Load templates from DB
   const loadTemplates = async () => {
     setTemplatesLoading(true);
@@ -430,25 +435,154 @@ export default function AdminEmailPage() {
     }
   };
 
-  useEffect(() => { loadTemplates(); }, []);
+  // Load real users from API
+  const loadUsers = useCallback(async () => {
+    setUsersLoading(true);
+    try {
+      const raw = await fetchMembersApi();
+      const users: UserEmailStatus[] = raw
+        .filter((u: Record<string, unknown>) => u.userStatus === 'approved')
+        .map((u: Record<string, unknown>) => {
+          const prefs = u.preferences as Record<string, unknown> | null;
+          return {
+            id: u.id as string,
+            name: u.name as string,
+            email: u.email as string,
+            role: (u.role as string) || 'member',
+            emailState: (prefs?.emailState as UserEmailStatus['emailState']) || 'active',
+            unopenedStreak: (prefs?.unopenedStreak as number) || 0,
+            lastDailySentAt: prefs?.lastDailySentAt ? new Date(prefs.lastDailySentAt as string).toLocaleDateString() : undefined,
+            createdAt: u.createdAt as string | undefined,
+          };
+        });
+      setAllUsers(users);
+    } catch (e) {
+      console.error('Failed to load users:', e);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
 
-  // Computed values
-  const activeCount = mockUserStatuses.filter(u => u.emailState === 'active').length;
-  const weeklyCount = mockUserStatuses.filter(u => u.emailState === 'weekly').length;
-  const stoppedCount = mockUserStatuses.filter(u => u.emailState === 'stopped').length;
-  const unsubCount = mockUserStatuses.filter(u => u.emailState === 'unsubscribed').length;
+  useEffect(() => { loadTemplates(); loadUsers(); }, [loadUsers]);
+
+  // Computed values from real data
+  const activeCount = allUsers.filter(u => u.emailState === 'active').length;
+  const weeklyCount = allUsers.filter(u => u.emailState === 'weekly').length;
+  const stoppedCount = allUsers.filter(u => u.emailState === 'stopped').length;
+  const unsubCount = allUsers.filter(u => u.emailState === 'unsubscribed').length;
+  const hostCount = allUsers.filter(u => u.role === 'host' || u.role === 'admin').length;
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+  const newMemberCount = allUsers.filter(u => u.createdAt && u.createdAt > thirtyDaysAgo).length;
 
   const manualSendRecipientCount = (() => {
     switch (manualSendTarget) {
       case 'active_all': return activeCount + weeklyCount;
       case 'active_only': return activeCount;
-      case 'hosts': return 5;
-      case 'new_members': return 3;
+      case 'hosts': return hostCount;
+      case 'new_members': return newMemberCount;
       case 'specific_users': return manualSendUsers.length;
       case 'event_participants': return manualSendEvent ? 8 : 0;
       default: return 0;
     }
   })();
+
+  // Get recipients list based on target selection
+  const getRecipients = (): UserEmailStatus[] => {
+    switch (manualSendTarget) {
+      case 'active_all': return allUsers.filter(u => u.emailState === 'active' || u.emailState === 'weekly');
+      case 'active_only': return allUsers.filter(u => u.emailState === 'active');
+      case 'hosts': return allUsers.filter(u => u.role === 'host' || u.role === 'admin');
+      case 'new_members': return allUsers.filter(u => u.createdAt && u.createdAt > thirtyDaysAgo);
+      case 'specific_users': return manualSendUsers;
+      default: return [];
+    }
+  };
+
+  // Handle actual email sending
+  const handleSendEmails = async () => {
+    const recipients = getRecipients();
+    if (recipients.length === 0 || !manualSendSubject || !authUser?.id) return;
+
+    setSending(true);
+    setSendConfirmOpen(false);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const recipient of recipients) {
+      try {
+        await sendAdminEmail(
+          { to: recipient.email, subject: manualSendSubject, text: manualSendBody },
+          authUser.id,
+        );
+        successCount++;
+      } catch (e) {
+        console.error(`Failed to send to ${recipient.email}:`, e);
+        failCount++;
+      }
+    }
+
+    setSending(false);
+    setManualSendOpen(false);
+    setSnackbar({
+      open: true,
+      message: failCount === 0
+        ? `成功发送 ${successCount} 封邮件`
+        : `发送完成：成功 ${successCount}，失败 ${failCount}`,
+      severity: failCount === 0 ? 'success' : 'error',
+    });
+  };
+
+  // Handle test email
+  const handleSendTestEmail = async (type: 'template' | 'digest' | 'plain', ruleId?: string) => {
+    const testAddresses = globalConfig.testEmails.split(',').map(e => e.trim()).filter(Boolean);
+    if (testAddresses.length === 0 || !authUser?.id) {
+      setSnackbar({ open: true, message: '请先设置测试邮箱地址', severity: 'error' });
+      return;
+    }
+
+    setSending(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const addr of testAddresses) {
+      try {
+        if (type === 'plain') {
+          await sendAdminEmail(
+            { to: addr, subject: '串门儿 · 纯文本测试', text: '这是一封来自串门儿邮件系统的纯文本测试邮件。\n\n如果您收到此邮件，说明邮件发送功能正常。' },
+            authUser.id,
+          );
+        } else if (type === 'template' && ruleId) {
+          const tpl = templates.find(t => t.ruleId === ruleId && t.isActive);
+          if (tpl) {
+            const preview = await previewEmailTemplate(tpl.subject, tpl.body, { userName: '测试用户', eventTitle: '测试活动', hostName: 'Admin' });
+            await sendAdminEmail({ to: addr, subject: preview.subject, text: preview.text, html: preview.html }, authUser.id);
+          } else {
+            await sendAdminEmail(
+              { to: addr, subject: `串门儿 · 测试 ${ruleId}`, text: `规则 ${ruleId} 的测试邮件（未找到对应模板，发送纯文本）` },
+              authUser.id,
+            );
+          }
+        } else if (type === 'digest') {
+          const body = `**${digestConfig.headerText.replace('{userName}', '测试用户')}**\n\n• 新活动：电影夜·花样年华\n• 星星 报名了 High Point 徒步\n• 新感谢卡：大橙子 → Yuan\n\n${digestConfig.footerText}`;
+          const preview = await previewEmailTemplate('串门儿每日摘要', body, {});
+          await sendAdminEmail({ to: addr, subject: preview.subject, text: preview.text, html: preview.html }, authUser.id);
+        }
+        successCount++;
+      } catch (e) {
+        console.error(`Failed to send test to ${addr}:`, e);
+        failCount++;
+      }
+    }
+
+    setSending(false);
+    setSnackbar({
+      open: true,
+      message: failCount === 0
+        ? `测试邮件已发送到 ${testAddresses.join(', ')}`
+        : `发送完成：成功 ${successCount}，失败 ${failCount}`,
+      severity: failCount === 0 ? 'success' : 'error',
+    });
+  };
 
   // Handlers
   const handleTogglePause = () => {
@@ -585,7 +719,7 @@ export default function AdminEmailPage() {
     return true;
   });
 
-  const filteredUsers = mockUserStatuses.filter(u => {
+  const filteredUsers = allUsers.filter(u => {
     if (userStatusFilter && u.emailState !== userStatusFilter) return false;
     if (userSearch && !u.name.toLowerCase().includes(userSearch.toLowerCase()) && !u.email.toLowerCase().includes(userSearch.toLowerCase())) return false;
     return true;
@@ -606,7 +740,7 @@ export default function AdminEmailPage() {
   const txnRules = rules.filter(r => r.category === 'txn');
   const dailyRules = rules.filter(r => r.category === 'daily');
 
-  const replaceVars = (text: string, user?: UserEmailStatusMock | null) => {
+  const replaceVars = (text: string, user?: UserEmailStatus | null) => {
     return text
       .replace(/\{userName\}/g, user?.name ?? '小明')
       .replace(/\{eventTitle\}/g, '电影夜·花样年华')
@@ -998,7 +1132,7 @@ export default function AdminEmailPage() {
                   </Button>
                   <Autocomplete
                     size="small"
-                    options={mockUserStatuses.filter(u => u.emailState !== 'unsubscribed')}
+                    options={allUsers.filter(u => u.emailState !== 'unsubscribed')}
                     getOptionLabel={o => `${o.name} (${o.email})`}
                     sx={{ width: 200 }}
                     renderInput={p => <TextField {...p} placeholder="选择用户" />}
@@ -1705,18 +1839,19 @@ export default function AdminEmailPage() {
                 />
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ md: 'center' }}>
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Button variant="outlined" startIcon={<SendRoundedIcon />}>发送测试 · 规则模板</Button>
+                    <Button variant="outlined" startIcon={sending ? <CircularProgress size={18} /> : <SendRoundedIcon />} disabled={sending} onClick={() => handleSendTestEmail('template', testRuleId)}>发送测试 · 规则模板</Button>
                     <TextField
                       select
                       size="small"
-                      defaultValue="TXN-4"
+                      value={testRuleId}
+                      onChange={e => setTestRuleId(e.target.value)}
                       sx={{ width: 130 }}
                     >
                       {allRuleIds.map(id => <MenuItem key={id} value={id}>{id}</MenuItem>)}
                     </TextField>
                   </Stack>
-                  <Button variant="outlined" startIcon={<SendRoundedIcon />}>发送测试 · 每日摘要</Button>
-                  <Button variant="outlined" startIcon={<SendRoundedIcon />}>发送纯文本测试</Button>
+                  <Button variant="outlined" startIcon={sending ? <CircularProgress size={18} /> : <SendRoundedIcon />} disabled={sending} onClick={() => handleSendTestEmail('digest')}>发送测试 · 每日摘要</Button>
+                  <Button variant="outlined" startIcon={sending ? <CircularProgress size={18} /> : <SendRoundedIcon />} disabled={sending} onClick={() => handleSendTestEmail('plain')}>发送纯文本测试</Button>
                 </Stack>
               </Stack>
             </CardContent>
@@ -1960,7 +2095,7 @@ export default function AdminEmailPage() {
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Autocomplete
               size="small"
-              options={mockUserStatuses}
+              options={allUsers}
               getOptionLabel={o => `${o.name} (${o.email})`}
               value={userPreviewUser}
               onChange={async (_, v) => {
@@ -2039,15 +2174,15 @@ export default function AdminEmailPage() {
             <RadioGroup value={manualSendTarget} onChange={e => setManualSendTarget(e.target.value)}>
               <FormControlLabel value="active_all" control={<Radio size="small" />} label={`全部活跃成员 (active + weekly) — ${activeCount + weeklyCount}人`} />
               <FormControlLabel value="active_only" control={<Radio size="small" />} label={`仅 active 成员 — ${activeCount}人`} />
-              <FormControlLabel value="hosts" control={<Radio size="small" />} label="所有 Host — 5人" />
-              <FormControlLabel value="new_members" control={<Radio size="small" />} label="新成员（30 天内）— 3人" />
+              <FormControlLabel value="hosts" control={<Radio size="small" />} label={`所有 Host — ${hostCount}人`} />
+              <FormControlLabel value="new_members" control={<Radio size="small" />} label={`新成员（30 天内）— ${newMemberCount}人`} />
               <FormControlLabel value="specific_users" control={<Radio size="small" />} label="指定用户" />
               {manualSendTarget === 'specific_users' && (
                 <Box sx={{ pl: 4 }}>
                   <Autocomplete
                     multiple
                     size="small"
-                    options={mockUserStatuses}
+                    options={allUsers}
                     getOptionLabel={o => `${o.name} (${o.email})`}
                     value={manualSendUsers}
                     onChange={(_, v) => setManualSendUsers(v)}
@@ -2120,9 +2255,9 @@ export default function AdminEmailPage() {
           <Button variant="outlined" startIcon={<VisibilityRoundedIcon />}>预览</Button>
           <Button
             variant="contained"
-            startIcon={<SendRoundedIcon />}
+            startIcon={sending ? <CircularProgress size={18} color="inherit" /> : <SendRoundedIcon />}
             onClick={() => setSendConfirmOpen(true)}
-            disabled={manualSendRecipientCount === 0 || !manualSendSubject}
+            disabled={manualSendRecipientCount === 0 || !manualSendSubject || sending}
           >
             确认发送
           </Button>
@@ -2136,7 +2271,7 @@ export default function AdminEmailPage() {
         message={`即将向 ${manualSendRecipientCount} 人发送邮件「${manualSendSubject}」，确认发送？`}
         confirmLabel="确认发送"
         confirmColor="primary"
-        onConfirm={() => { setSendConfirmOpen(false); setManualSendOpen(false); }}
+        onConfirm={handleSendEmails}
         onCancel={() => setSendConfirmOpen(false)}
       />
 
@@ -2167,6 +2302,18 @@ export default function AdminEmailPage() {
           <Button variant="contained" onClick={handleAddSuppressed} disabled={!addSuppressedEmail}>添加</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar for send feedback */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={snackbar.severity} variant="filled" onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Stack>
   );
 }

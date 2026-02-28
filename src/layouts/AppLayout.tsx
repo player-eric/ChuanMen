@@ -150,7 +150,7 @@ export default function AppLayout() {
     if (p.id === 'events' && pathname.startsWith('/events')) return true;
     if (p.id === 'discover' && pathname.startsWith('/discover')) return true;
     return pathname === `/${p.id}`;
-  })?.id ?? '';
+  })?.id;
 
   useEffect(() => {
     document.title = `串门儿 - ${title}`;

@@ -1043,3 +1043,12 @@ export async function submitFeedback(payload: { name: string; email?: string; me
     body: JSON.stringify(payload),
   });
 }
+
+/** Admin: send email to a single recipient */
+export async function sendAdminEmail(payload: { to: string; subject: string; text: string; html?: string }, userId: string) {
+  return requestJson<{ ok: boolean; messageId?: string }>('/api/email/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+    body: JSON.stringify(payload),
+  });
+}
