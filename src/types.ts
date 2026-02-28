@@ -138,6 +138,7 @@ export interface BookPool {
   year: string;
   author: string;
   v: number;
+  voterIds: string[];
   status?: string;
   by: string;
 }
@@ -156,6 +157,7 @@ export interface BookDetailData {
   year: string;
   author: string;
   v: number;
+  voterIds: string[];
   by: string;
   status?: string;
   genre?: string;
@@ -338,6 +340,7 @@ export interface RecommendationItem {
   coverUrl?: string;
   sourceUrl?: string;
   voteCount: number;
+  voterIds: string[];
   category: string;
 }
 

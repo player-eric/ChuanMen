@@ -143,6 +143,7 @@ enum InteractionEntityType {
   comment
   announcement
   user
+  recommendation
 }
 
 model User {
@@ -210,6 +211,7 @@ model User {
   experimentPairingsB  ExperimentPairing[] @relation("PairingB")
   mediaAssets          MediaAsset[]
   recommendations      Recommendation[]
+  recommendationVotes  RecommendationVote[]
   postcardPurchases    PostcardPurchase[]
   announcements        Announcement[]       @relation("AnnouncementAuthor")
   emailLogs            EmailLog[]
@@ -372,10 +374,23 @@ model Recommendation {
 
   author      User                   @relation(fields: [authorId], references: [id], onDelete: Restrict)
   tags        RecommendationTag[]
+  votes       RecommendationVote[]
   events      EventRecommendation[]
 
   @@index([category, createdAt(sort: Desc)])
   @@index([title])
+}
+
+model RecommendationVote {
+  id               String         @id @default(cuid())
+  recommendationId String
+  userId           String
+  createdAt        DateTime       @default(now())
+
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([recommendationId, userId])
 }
 
 model RecommendationTag {

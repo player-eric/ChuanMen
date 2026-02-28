@@ -42,6 +42,13 @@ export const recommendationRoutes: FastifyPluginAsync = async (app) => {
     return { ok: true };
   });
 
+  app.post('/:id/vote', async (request) => {
+    const { id } = request.params as { id: string };
+    const { userId } = request.body as { userId: string };
+    const repo = new RecommendationRepository(app.prisma);
+    return repo.toggleVote(id, userId);
+  });
+
   app.patch('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const userId = request.headers['x-user-id'] as string | undefined;

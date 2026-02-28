@@ -19,7 +19,7 @@ import type { EventComment, BookDetailData, BookPool } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
-import { addComment, fetchCommentsApi, updateRecommendation } from '@/lib/domainApi';
+import { addComment, fetchCommentsApi, toggleRecommendationVote, updateRecommendation } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { firstNonEmoji } from '@/components/Atoms';
 
@@ -28,7 +28,11 @@ export default function BookDetailPage() {
   const { user } = useAuth();
   const c = useColors();
   const raw = useLoaderData() as BookDetailData | BookPool | null;
-  const [voted, setVoted] = useState(false);
+  const [voted, setVoted] = useState(() => {
+    if (!user?.id || !raw) return false;
+    const voters = (raw as any).voterIds ?? (raw as any).voters ?? [];
+    return Array.isArray(voters) && voters.includes(user.id);
+  });
   const [comments, setComments] = useState<EventComment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [editingLink, setEditingLink] = useState(false);
@@ -38,7 +42,7 @@ export default function BookDetailPage() {
   useEffect(() => {
     const bookId = raw && 'id' in raw ? (raw as any).id : null;
     if (!bookId) return;
-    fetchCommentsApi('seed', String(bookId)).then((list) => {
+    fetchCommentsApi('recommendation', String(bookId)).then((list) => {
       if (Array.isArray(list)) {
         setComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '' })));
       }
@@ -203,7 +207,12 @@ export default function BookDetailPage() {
               <Button
                 variant={voted ? 'contained' : 'outlined'}
                 size="small"
-                onClick={() => setVoted(!voted)}
+                onClick={async () => {
+                  setVoted(!voted);
+                  if (user?.id && bookId) {
+                    try { await toggleRecommendationVote(bookId, user.id); } catch { /* optimistic */ }
+                  }
+                }}
               >
                 ▲ {voted ? '已投票' : '我想读'}
               </Button>
@@ -298,7 +307,7 @@ export default function BookDetailPage() {
                       setCommentText('');
                       const bookId = raw && 'id' in raw ? (raw as any).id : null;
                       if (bookId && user.id) {
-                        try { await addComment({ entityType: 'seed', entityId: String(bookId), authorId: user.id, content: text }); } catch { /* optimistic */ }
+                        try { await addComment({ entityType: 'recommendation', entityId: String(bookId), authorId: user.id, content: text }); } catch { /* optimistic */ }
                       }
                     }
                   }}
@@ -314,7 +323,7 @@ export default function BookDetailPage() {
                       setCommentText('');
                       const bookId = raw && 'id' in raw ? (raw as any).id : null;
                       if (bookId && user.id) {
-                        try { await addComment({ entityType: 'seed', entityId: String(bookId), authorId: user.id, content: text }); } catch { /* optimistic */ }
+                        try { await addComment({ entityType: 'recommendation', entityId: String(bookId), authorId: user.id, content: text }); } catch { /* optimistic */ }
                       }
                     }
                   }}

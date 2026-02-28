@@ -6,10 +6,12 @@ export class RecommendationRepository {
   list(category?: RecommendationCategory) {
     return this.prisma.recommendation.findMany({
       where: category ? { category } : undefined,
-      orderBy: [{ voteCount: 'desc' }, { createdAt: 'desc' }],
+      orderBy: [{ createdAt: 'desc' }],
       include: {
         author: true,
         tags: true,
+        votes: { select: { userId: true } },
+        _count: { select: { votes: true } },
       },
     });
   }
@@ -17,7 +19,12 @@ export class RecommendationRepository {
   getById(id: string) {
     return this.prisma.recommendation.findUnique({
       where: { id },
-      include: { author: true, tags: true },
+      include: {
+        author: true,
+        tags: true,
+        votes: { select: { userId: true } },
+        _count: { select: { votes: true } },
+      },
     });
   }
 
@@ -30,9 +37,26 @@ export class RecommendationRepository {
           { description: { contains: keyword, mode: 'insensitive' } },
         ],
       },
-      orderBy: [{ voteCount: 'desc' }, { createdAt: 'desc' }],
-      include: { author: true, tags: true },
+      orderBy: [{ createdAt: 'desc' }],
+      include: {
+        author: true,
+        tags: true,
+        votes: { select: { userId: true } },
+        _count: { select: { votes: true } },
+      },
     });
+  }
+
+  async toggleVote(recommendationId: string, userId: string) {
+    const existing = await this.prisma.recommendationVote.findUnique({
+      where: { recommendationId_userId: { recommendationId, userId } },
+    });
+    if (existing) {
+      await this.prisma.recommendationVote.delete({ where: { id: existing.id } });
+      return { voted: false };
+    }
+    await this.prisma.recommendationVote.create({ data: { recommendationId, userId } });
+    return { voted: true };
   }
 
   delete(id: string) {

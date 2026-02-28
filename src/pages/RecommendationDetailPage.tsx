@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Card,
@@ -19,8 +20,10 @@ import {
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useAuth } from '@/auth/AuthContext';
-import { getRecommendationById, deleteRecommendation, updateRecommendation, type RecommendationCategory } from '@/lib/domainApi';
+import { getRecommendationById, deleteRecommendation, updateRecommendation, toggleRecommendationVote, fetchCommentsApi, addComment, type RecommendationCategory } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
+import { firstNonEmoji } from '@/components/Atoms';
+import type { EventComment } from '@/types';
 
 function isCategory(value: string | undefined): value is RecommendationCategory {
   return value === 'movie' || value === 'book' || value === 'recipe' || value === 'music' || value === 'place' || value === 'external_event';
@@ -39,6 +42,10 @@ export default function RecommendationDetailPage() {
   const [editingLink, setEditingLink] = useState(false);
   const [linkDraft, setLinkDraft] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
+  const [voted, setVoted] = useState(false);
+  const [voteCount, setVoteCount] = useState(0);
+  const [comments, setComments] = useState<EventComment[]>([]);
+  const [commentText, setCommentText] = useState('');
 
   useEffect(() => {
     if (!recommendationId) return;
@@ -48,12 +55,28 @@ export default function RecommendationDetailPage() {
         const data = await getRecommendationById(recommendationId);
         setItem(data);
         setSourceUrl((data as any)?.sourceUrl ?? '');
+        const voters: string[] = ((data as any)?.votes ?? []).map((v: any) => v.userId).filter(Boolean);
+        setVoteCount((data as any)?._count?.votes ?? voters.length);
+        if (user?.id) setVoted(voters.includes(user.id));
       } catch (e) {
         setError(e instanceof Error ? e.message : '加载失败');
       }
     };
 
     void run();
+  }, [recommendationId, user?.id]);
+
+  useEffect(() => {
+    if (!recommendationId) return;
+    fetchCommentsApi('recommendation', recommendationId).then((list) => {
+      if (Array.isArray(list)) {
+        setComments(list.map((c: any) => ({
+          name: c.author?.name ?? '匿名',
+          text: c.content ?? '',
+          date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '',
+        })));
+      }
+    }).catch(() => {});
   }, [recommendationId]);
 
   const canModify = user && item && (
@@ -72,6 +95,22 @@ export default function RecommendationDetailPage() {
       setDeleting(false);
       setConfirmDelete(false);
     }
+  };
+
+  const handleVote = async () => {
+    if (!user?.id || !recommendationId) return;
+    const newVoted = !voted;
+    setVoted(newVoted);
+    setVoteCount((c) => c + (newVoted ? 1 : -1));
+    try { await toggleRecommendationVote(recommendationId, user.id); } catch { /* optimistic */ }
+  };
+
+  const handleAddComment = async (text: string) => {
+    if (!user?.id || !recommendationId || !text.trim()) return;
+    const trimmed = text.trim();
+    setComments((prev) => [...prev, { name: user.name ?? '我', text: trimmed, date: '刚刚' }]);
+    setCommentText('');
+    try { await addComment({ entityType: 'recommendation', entityId: recommendationId, authorId: user.id, content: trimmed }); } catch { /* optimistic */ }
   };
 
   if (error) {
@@ -129,6 +168,88 @@ export default function RecommendationDetailPage() {
                 }}>保存</Button>
               <Button size="small" onClick={() => setEditingLink(false)}>取消</Button>
             </Stack>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Vote */}
+      <Card>
+        <CardContent>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="subtitle1" fontWeight={700}>
+              投票 ({voteCount})
+            </Typography>
+            <Button
+              variant={voted ? 'contained' : 'outlined'}
+              size="small"
+              onClick={handleVote}
+              disabled={!user}
+            >
+              ▲ {voted ? '已投票' : '想要'}
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      {/* Comments */}
+      <Card>
+        <CardContent>
+          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+            💬 讨论 ({comments.length})
+          </Typography>
+          {comments.length > 0 && (
+            <Stack spacing={1.5} sx={{ mb: 2 }}>
+              {comments.map((cm, i) => (
+                <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
+                  <Avatar
+                    sx={{ width: 28, height: 28, fontSize: 12, cursor: 'pointer', mt: 0.25 }}
+                    onClick={() => navigate(`/members/${encodeURIComponent(cm.name)}`)}
+                  >
+                    {firstNonEmoji(cm.name)}
+                  </Avatar>
+                  <Box sx={{ flex: 1 }}>
+                    <Stack direction="row" spacing={1} alignItems="baseline">
+                      <Typography variant="body2" fontWeight={700}>{cm.name}</Typography>
+                      <Typography variant="caption" color="text.secondary">{cm.date}</Typography>
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary">{cm.text}</Typography>
+                  </Box>
+                </Stack>
+              ))}
+            </Stack>
+          )}
+          {user ? (
+            <Stack direction="row" spacing={1} alignItems="flex-start">
+              <Avatar sx={{ width: 28, height: 28, fontSize: 12, mt: 0.5 }}>
+                {firstNonEmoji(user.name ?? 'U')}
+              </Avatar>
+              <TextField
+                size="small"
+                fullWidth
+                multiline
+                maxRows={4}
+                placeholder="说点什么..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
+                    e.preventDefault();
+                    handleAddComment(commentText);
+                  }
+                }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                disabled={!commentText.trim()}
+                onClick={() => handleAddComment(commentText)}
+                sx={{ mt: 0.5 }}
+              >
+                发送
+              </Button>
+            </Stack>
+          ) : (
+            <Typography variant="body2" color="text.secondary">登录后可参与讨论</Typography>
           )}
         </CardContent>
       </Card>

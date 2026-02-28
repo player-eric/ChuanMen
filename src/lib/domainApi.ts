@@ -203,6 +203,14 @@ export async function getRecommendationById(id: string) {
   return requestJson<EntityMap>(`/api/recommendations/${id}`);
 }
 
+export async function toggleRecommendationVote(recommendationId: string, userId: string) {
+  return requestJson<{ voted: boolean }>(`/api/recommendations/${recommendationId}/vote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+}
+
 /* ═══════════════════════════════════════════════════════════════
    User Settings API
    ═══════════════════════════════════════════════════════════════ */

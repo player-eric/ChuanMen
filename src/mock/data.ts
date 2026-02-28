@@ -1138,16 +1138,16 @@ export const movieDetailMap: Record<string, MovieDetailData> = {
 
 /** ===== Books ===== */
 export const bookPool: BookPool[] = [
-  { id: 'book-101', title: '活着', year: '1993', author: '余华', v: 11, by: 'Yuan' },
-  { id: 'book-102', title: '百年孤独', year: '1967', author: '马尔克斯', v: 9, by: '星星' },
-  { id: 'book-103', title: '挪威的森林', year: '1987', author: '村上春树', v: 8, by: 'Leo' },
-  { id: 'book-104', title: '小王子', year: '1943', author: '圣埃克苏佩里', v: 10, status: '已读完', by: 'Tiffy' },
-  { id: 'book-105', title: '红楼梦', year: '1791', author: '曹雪芹', v: 7, by: '白开水' },
-  { id: 'book-106', title: '三体', year: '2008', author: '刘慈欣', v: 12, by: '大橙子' },
-  { id: 'book-107', title: '围城', year: '1947', author: '钱钟书', v: 6, status: '已读完', by: 'Yuan' },
-  { id: 'book-108', title: '月亮与六便士', year: '1919', author: '毛姆', v: 8, by: '奶茶' },
-  { id: 'book-109', title: '人间失格', year: '1948', author: '太宰治', v: 5, by: '小樱' },
-  { id: 'book-110', title: '解忧杂货店', year: '2012', author: '东野圭吾', v: 9, status: '已读完', by: '星星' },
+  { id: 'book-101', title: '活着', year: '1993', author: '余华', v: 11, voterIds: [], by: 'Yuan' },
+  { id: 'book-102', title: '百年孤独', year: '1967', author: '马尔克斯', v: 9, voterIds: [], by: '星星' },
+  { id: 'book-103', title: '挪威的森林', year: '1987', author: '村上春树', v: 8, voterIds: [], by: 'Leo' },
+  { id: 'book-104', title: '小王子', year: '1943', author: '圣埃克苏佩里', v: 10, voterIds: [], status: '已读完', by: 'Tiffy' },
+  { id: 'book-105', title: '红楼梦', year: '1791', author: '曹雪芹', v: 7, voterIds: [], by: '白开水' },
+  { id: 'book-106', title: '三体', year: '2008', author: '刘慈欣', v: 12, voterIds: [], by: '大橙子' },
+  { id: 'book-107', title: '围城', year: '1947', author: '钱钟书', v: 6, voterIds: [], status: '已读完', by: 'Yuan' },
+  { id: 'book-108', title: '月亮与六便士', year: '1919', author: '毛姆', v: 8, voterIds: [], by: '奶茶' },
+  { id: 'book-109', title: '人间失格', year: '1948', author: '太宰治', v: 5, voterIds: [], by: '小樱' },
+  { id: 'book-110', title: '解忧杂货店', year: '2012', author: '东野圭吾', v: 9, voterIds: [], status: '已读完', by: '星星' },
 ];
 
 export const bookRead: BookRead[] = [
@@ -1159,7 +1159,7 @@ export const bookRead: BookRead[] = [
 
 export const bookDetailMap: Record<string, BookDetailData> = {
   'book-101': {
-    id: 'book-101', title: '活着', year: '1993', author: '余华', v: 11, by: 'Yuan',
+    id: 'book-101', title: '活着', year: '1993', author: '余华', v: 11, voterIds: [], by: 'Yuan',
     genre: '小说 / 现实主义', pages: '191 页', rating: '9.4',
     synopsis: '地主少爷福贵嗜赌成性，终于赌光了家业。穷困之中，福贵的亲人一个个离他而去，最终只剩老牛与他相依为命。余华用平淡的笔调写出了人生最大的苦难与坚韧。',
     voters: ['Yuan', '白开水', '星星', '大橙子', 'Tiffy', 'Leo', '阿德', '奶茶', 'Derek', '小鱼', '小樱'],
@@ -1173,7 +1173,7 @@ export const bookDetailMap: Record<string, BookDetailData> = {
     ],
   },
   'book-102': {
-    id: 'book-102', title: '百年孤独', year: '1967', author: '马尔克斯', v: 9, by: '星星',
+    id: 'book-102', title: '百年孤独', year: '1967', author: '马尔克斯', v: 9, voterIds: [], by: '星星',
     genre: '小说 / 魔幻现实主义', pages: '360 页', rating: '9.2',
     synopsis: '布恩迪亚家族七代人的传奇故事，发生在虚构的马孔多镇。吉普赛人的魔法、失眠症瘟疫、漫天的黄蝴蝶……马尔克斯用华丽的想象力构建了一个关于孤独与宿命的世界。',
     voters: ['星星', 'Yuan', '白开水', 'Leo', '大橙子', '阿德', '小樱', '奶茶', 'Tiffy'],
@@ -1184,7 +1184,7 @@ export const bookDetailMap: Record<string, BookDetailData> = {
     ],
   },
   'book-103': {
-    id: 'book-103', title: '挪威的森林', year: '1987', author: '村上春树', v: 8, by: 'Leo',
+    id: 'book-103', title: '挪威的森林', year: '1987', author: '村上春树', v: 8, voterIds: [], by: 'Leo',
     genre: '小说 / 爱情', pages: '384 页', rating: '8.0',
     synopsis: '渡边彻在飞机上听到《挪威的森林》，回忆起大学时代与两个女孩的故事：直子安静而忧郁，绿子活泼而热烈。村上春树用淡淡的笔触写出了青春的迷惘与丧失。',
     voters: ['Leo', 'Yuan', '星星', '小樱', '奶茶', 'Tiffy', '大橙子', '白开水'],
@@ -1195,7 +1195,7 @@ export const bookDetailMap: Record<string, BookDetailData> = {
     ],
   },
   'book-104': {
-    id: 'book-104', title: '小王子', year: '1943', author: '圣埃克苏佩里', v: 10, by: 'Tiffy',
+    id: 'book-104', title: '小王子', year: '1943', author: '圣埃克苏佩里', v: 10, voterIds: [], by: 'Tiffy',
     status: '已读完', genre: '童话 / 哲学', pages: '96 页', rating: '9.0',
     synopsis: '飞行员在撒哈拉沙漠遇到来自小行星B612的小王子。小王子讲述了他和玫瑰花的故事，以及在各个星球上遇到的奇怪大人。看似儿童故事，实则写给大人的寓言。',
     voters: ['Tiffy', 'Yuan', '星星', '小鱼', 'Mia', '奶茶', '大橙子', '白开水', '小樱', 'Leo'],
@@ -1209,7 +1209,7 @@ export const bookDetailMap: Record<string, BookDetailData> = {
     ],
   },
   'book-105': {
-    id: 'book-105', title: '红楼梦', year: '1791', author: '曹雪芹', v: 7, by: '白开水',
+    id: 'book-105', title: '红楼梦', year: '1791', author: '曹雪芹', v: 7, voterIds: [], by: '白开水',
     genre: '古典小说', pages: '1200+ 页', rating: '9.6',
     synopsis: '贾宝玉与林黛玉、薛宝钗之间的爱情纠葛，贾府由盛而衰的命运。曹雪芹用百科全书式的笔触描绘了一个封建大家族的兴亡史，被誉为中国古典小说的巅峰之作。',
     voters: ['白开水', 'Yuan', '星星', '大橙子', 'Leo', '阿德', 'Tiffy'],
@@ -1220,7 +1220,7 @@ export const bookDetailMap: Record<string, BookDetailData> = {
     ],
   },
   'book-106': {
-    id: 'book-106', title: '三体', year: '2008', author: '刘慈欣', v: 12, by: '大橙子',
+    id: 'book-106', title: '三体', year: '2008', author: '刘慈欣', v: 12, voterIds: [], by: '大橙子',
     genre: '科幻', pages: '302 页（第一部）', rating: '8.8',
     synopsis: '文革中一次偶然的星际通讯引发了地球文明与三体文明的接触。面对远超人类的外星科技，人类将如何应对？刘慈欣用硬核科幻想象力构建了宏大的宇宙图景。',
     voters: ['大橙子', 'Yuan', '白开水', 'Leo', '星星', '阿德', 'Derek', '小鱼', '奶茶', '小樱', 'Tiffy', 'Mia'],
@@ -1232,7 +1232,7 @@ export const bookDetailMap: Record<string, BookDetailData> = {
     ],
   },
   'book-107': {
-    id: 'book-107', title: '围城', year: '1947', author: '钱钟书', v: 6, by: 'Yuan',
+    id: 'book-107', title: '围城', year: '1947', author: '钱钟书', v: 6, voterIds: [], by: 'Yuan',
     status: '已读完', genre: '小说 / 讽刺', pages: '359 页', rating: '8.9',
     synopsis: '方鸿渐留洋归来，带着一张假文凭闯荡社会。从上海到内地，从恋爱到婚姻，处处碰壁。钱钟书用机智幽默的语言，写出了知识分子的困境——城外的人想进去，城里的人想出来。',
     voters: ['Yuan', '白开水', '星星', 'Leo', '阿德', '大橙子'],
@@ -1245,7 +1245,7 @@ export const bookDetailMap: Record<string, BookDetailData> = {
     ],
   },
   'book-108': {
-    id: 'book-108', title: '月亮与六便士', year: '1919', author: '毛姆', v: 8, by: '奶茶',
+    id: 'book-108', title: '月亮与六便士', year: '1919', author: '毛姆', v: 8, voterIds: [], by: '奶茶',
     genre: '小说', pages: '280 页', rating: '9.0',
     synopsis: '伦敦证券经纪人斯特里克兰德突然抛妻弃子，跑到巴黎画画。他不在乎世俗的评价，不在乎贫困和疾病，只追逐心中的月亮。毛姆以高更为原型，写了一个关于理想与现实的故事。',
     voters: ['奶茶', 'Yuan', '星星', 'Tiffy', '大橙子', '白开水', 'Leo', '小鱼'],
@@ -1256,7 +1256,7 @@ export const bookDetailMap: Record<string, BookDetailData> = {
     ],
   },
   'book-109': {
-    id: 'book-109', title: '人间失格', year: '1948', author: '太宰治', v: 5, by: '小樱',
+    id: 'book-109', title: '人间失格', year: '1948', author: '太宰治', v: 5, voterIds: [], by: '小樱',
     genre: '小说 / 自传', pages: '176 页', rating: '8.3',
     synopsis: '大庭叶藏从小就觉得自己不配做人。他用小丑般的行为隐藏真实的自己，在酒精和女人中沉沦。太宰治半自传式的遗作，写尽了一个灵魂对人世的恐惧与绝望。',
     voters: ['小樱', '星星', 'Leo', '阿德', '奶茶'],
@@ -1267,7 +1267,7 @@ export const bookDetailMap: Record<string, BookDetailData> = {
     ],
   },
   'book-110': {
-    id: 'book-110', title: '解忧杂货店', year: '2012', author: '东野圭吾', v: 9, by: '星星',
+    id: 'book-110', title: '解忧杂货店', year: '2012', author: '东野圭吾', v: 9, voterIds: [], by: '星星',
     status: '已读完', genre: '小说 / 奇幻', pages: '291 页', rating: '8.5',
     synopsis: '三个小偷躲进一家废弃的杂货店，发现这里有一个神奇的时空邮箱——过去的人写来的烦恼信会出现在牛奶箱里，而他们的回信会传回过去。东野圭吾用温暖的笔触编织了一个关于善意与命运的故事。',
     voters: ['星星', 'Yuan', 'Tiffy', '小樱', '奶茶', '小鱼', 'Mia', '白开水', '大橙子'],

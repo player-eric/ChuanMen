@@ -10,7 +10,6 @@ import {
   CircularProgress,
   Grid,
   InputAdornment,
-  Snackbar,
   Stack,
   Tab,
   Tabs,
@@ -22,7 +21,7 @@ import type { DiscoverPageData, RecommendationItem } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { Poster } from '@/components/Poster';
 import { EmptyState } from '@/components/EmptyState';
-import { toggleMovieVote, searchExternalMovies, createMovie } from '@/lib/domainApi';
+import { toggleMovieVote, toggleRecommendationVote, searchExternalMovies, createMovie } from '@/lib/domainApi';
 import type { ExternalMovieResult } from '@/lib/domainApi';
 
 type Category = 'movie' | 'book' | 'recipe' | 'music' | 'place' | 'external_event';
@@ -321,11 +320,20 @@ function BooksSection() {
   const data = useLoaderData() as DiscoverPageData;
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'pool' | 'read'>('pool');
-  const [votes, setVotes] = useState<Record<string, boolean>>({});
-  const [snackMsg, setSnackMsg] = useState('');
-  const toggle = (id: string) => {
+  const [votes, setVotes] = useState<Record<string, boolean>>(() => {
+    if (!user?.id) return {};
+    const init: Record<string, boolean> = {};
+    for (const b of data.bookPool) {
+      if (b.voterIds.includes(user.id)) init[b.id] = true;
+    }
+    return init;
+  });
+
+  const toggle = async (id: string) => {
     setVotes((v) => ({ ...v, [id]: !v[id] }));
-    setSnackMsg('投票功能即将开放');
+    if (user?.id) {
+      try { await toggleRecommendationVote(id, user.id); } catch { /* optimistic */ }
+    }
   };
 
   const q = search.toLowerCase();
@@ -397,7 +405,7 @@ function BooksSection() {
                               size="small"
                               disabled={!user}
                             >
-                              ▲ {b.v + (votes[b.id] ? 1 : 0)}
+                              ▲ {b.v + (votes[b.id] && !b.voterIds.includes(user?.id ?? '') ? 1 : !votes[b.id] && b.voterIds.includes(user?.id ?? '') ? -1 : 0)}
                             </Button>
                           </Stack>
                           {b.status && <Chip sx={{ mt: 1 }} size="small" color="success" label={`✓ ${b.status}`} />}
@@ -440,13 +448,6 @@ function BooksSection() {
           </Grid>
         )
       )}
-
-      <Snackbar
-        open={Boolean(snackMsg)}
-        autoHideDuration={3000}
-        onClose={() => setSnackMsg('')}
-        message={snackMsg}
-      />
     </Box>
   );
 }
@@ -465,6 +466,22 @@ function RecommendationSection({ category }: { category: 'recipe' | 'music' | 'p
     external_event: data.externalEvents,
   };
   const items = dataMap[category] ?? [];
+
+  const [votes, setVotes] = useState<Record<string, boolean>>(() => {
+    if (!user?.id) return {};
+    const init: Record<string, boolean> = {};
+    for (const r of items) {
+      if (r.voterIds.includes(user.id)) init[r.id] = true;
+    }
+    return init;
+  });
+
+  const toggle = async (id: string) => {
+    setVotes((v) => ({ ...v, [id]: !v[id] }));
+    if (user?.id) {
+      try { await toggleRecommendationVote(id, user.id); } catch { /* optimistic */ }
+    }
+  };
 
   const q = search.toLowerCase();
   const filtered = q
@@ -510,28 +527,46 @@ function RecommendationSection({ category }: { category: 'recipe' | 'music' | 'p
           action={user ? { label: categoryAddLabels[category], to: `/discover/${category}/add` } : undefined}
         />
       ) : (
-        <Stack spacing={1.5}>
+        <Grid container spacing={1.5}>
           {filtered.map((r) => (
-            <Card key={r.id}>
-              <CardActionArea onClick={() => navigate(`/discover/${category}/${r.id}`)}>
-                <CardContent>
-                  <Stack direction="row" spacing={1.5} alignItems="center">
-                    {r.coverUrl && (
-                      <img src={r.coverUrl} alt={r.title} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
-                    )}
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography fontWeight={700}>{r.title}</Typography>
-                      {r.description && (
-                        <Typography variant="body2" color="text.secondary" noWrap>{r.description}</Typography>
+            <Grid key={r.id} size={{ xs: 12, md: 6 }}>
+              <Card>
+                <CardActionArea onClick={() => navigate(`/discover/${category}/${r.id}`)}>
+                  <CardContent>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      {r.coverUrl && (
+                        <img src={r.coverUrl} alt={r.title} style={{ width: 40, height: 56, borderRadius: 4, objectFit: 'cover' }} />
                       )}
-                      <Typography variant="caption" color="text.secondary">{r.authorName} 推荐</Typography>
-                    </Box>
-                  </Stack>
-                </CardContent>
-              </CardActionArea>
-            </Card>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography fontWeight={700} noWrap>{r.title}</Typography>
+                            {r.description && (
+                              <Typography variant="body2" color="text.secondary" noWrap>{r.description}</Typography>
+                            )}
+                            <Typography variant="caption" color="text.secondary">{r.authorName} 推荐</Typography>
+                          </Box>
+                          <Button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggle(r.id);
+                            }}
+                            variant={votes[r.id] ? 'contained' : 'outlined'}
+                            size="small"
+                            disabled={!user}
+                            sx={{ ml: 1, flexShrink: 0 }}
+                          >
+                            ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
+                          </Button>
+                        </Stack>
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            </Grid>
           ))}
-        </Stack>
+        </Grid>
       )}
     </Box>
   );

@@ -382,7 +382,8 @@ function mapRecommendation(r: any) {
     authorId: r.author?.id ?? r.authorId ?? '',
     coverUrl: r.coverUrl || undefined,
     sourceUrl: r.sourceUrl || undefined,
-    voteCount: r.voteCount ?? 0,
+    voteCount: r._count?.votes ?? r.voteCount ?? 0,
+    voterIds: (r.votes ?? []).map((v: any) => v.userId ?? v.user?.id).filter(Boolean),
     category: r.category ?? '',
   };
 }
@@ -421,7 +422,8 @@ async function discoverLoader() {
       title: b.title ?? '',
       year: '',
       author: b.author?.name ?? b.description ?? '',
-      v: b.voteCount ?? 0,
+      v: b._count?.votes ?? b.voteCount ?? 0,
+      voterIds: (b.votes ?? []).map((v: any) => v.userId ?? v.user?.id).filter(Boolean),
       by: b.author?.name ?? '',
       status: b.status === 'candidate' ? undefined : b.status,
     }));
@@ -459,7 +461,8 @@ async function bookDetailLoader({ params }: { params: Record<string, string | un
       title: rec.title,
       year: (rec.tags ?? []).find((t: any) => /^\d{4}$/.test(t.value))?.value ?? '',
       author: (rec.tags ?? []).find((t: any) => !(/^\d{4}$/.test(t.value)))?.value ?? rec.author?.name ?? '',
-      v: rec.voteCount ?? 0,
+      v: rec._count?.votes ?? rec.voteCount ?? 0,
+      voterIds: (rec.votes ?? []).map((v: any) => v.userId ?? v.user?.id).filter(Boolean),
       status: rec.status ?? 'candidate',
       by: rec.author?.name ?? '',
       synopsis: rec.description ?? '',
