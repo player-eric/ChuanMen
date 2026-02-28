@@ -145,6 +145,7 @@ export default function EventCreatePage() {
 
   const isMovieNight = tags.includes('电影夜');
   const capMax = 50;
+  const isPastDate = startDate && new Date(combineDT(startDate, startTime || '23:59')) < new Date();
 
   const filteredMembers = useMemo(() => {
     const q = inviteSearch.toLowerCase();
@@ -171,7 +172,7 @@ export default function EventCreatePage() {
         capacity,
         description,
         tags: mappedTags.length > 0 ? mappedTags : undefined,
-        phase: delayPublish ? 'invite' : 'open',
+        phase: isPastDate ? 'ended' : delayPublish ? 'invite' : 'open',
         publishAt: delayPublish && publishDate ? combineDT(publishDate, publishTime || '00:00') : undefined,
       });
       setCreatedId(String((result as any).id ?? ''));
@@ -272,6 +273,11 @@ export default function EventCreatePage() {
                 sx={{ flex: 1 }}
               />
             </Stack>
+            {isPastDate && (
+              <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
+                日期已过，将创建为已结束活动
+              </Typography>
+            )}
           </Box>
 
           <Box>

@@ -849,38 +849,38 @@ export default function EventDetailPage() {
                     </Stack>
                   );
                 })}
+                {event.phase !== 'cancelled' && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => setHostInviteOpen(true)}
+                    sx={{ mt: 1, alignSelf: 'flex-start' }}
+                  >
+                    {event.phase === 'ended' ? '添加参与者' : '邀请成员'}
+                  </Button>
+                )}
               </Stack>
             ) : (
               /* Normal view: avatar group */
-              <Stack direction="row" spacing={1} alignItems="center">
-                <AvatarGroup max={8}>
-                  {event.people.map((name) => (
-                    <Avatar
-                      key={name}
-                      sx={{ cursor: 'pointer', width: 34, height: 34, ...(name === event.host ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
-                      onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
-                    >
-                      {firstNonEmoji(name)}
-                    </Avatar>
-                  ))}
-                </AvatarGroup>
+              <Stack spacing={0.5}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <AvatarGroup max={8}>
+                    {event.people.map((name) => (
+                      <Avatar
+                        key={name}
+                        sx={{ cursor: 'pointer', width: 34, height: 34, ...(name === event.host ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
+                        onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
+                      >
+                        {firstNonEmoji(name)}
+                      </Avatar>
+                    ))}
+                  </AvatarGroup>
+                </Stack>
+                <Typography variant="caption" color="text.secondary">
+                  🏠 {event.host} · Host
+                </Typography>
               </Stack>
-            )}
-            {!isHost && (
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                🏠 {event.host} · Host
-              </Typography>
-            )}
-            {isHost && event.phase !== 'cancelled' && (
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={() => setHostInviteOpen(true)}
-                sx={{ mt: 1.5 }}
-              >
-                {event.phase === 'ended' ? '添加参与者' : '邀请成员'}
-              </Button>
             )}
             {event.phase === 'ended' && user && (
               <Button
@@ -1014,8 +1014,8 @@ export default function EventDetailPage() {
                         sx={{ minWidth: 110 }}
                       >
                         <MenuItem value="">待认领</MenuItem>
-                        {allMembers.map((m) => (
-                          <MenuItem key={m.name} value={m.name}>{m.name}</MenuItem>
+                        {event.people.map((name) => (
+                          <MenuItem key={name} value={name}>{name}</MenuItem>
                         ))}
                       </Select>
                       <IconButton

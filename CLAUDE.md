@@ -340,7 +340,7 @@ Key models (37+ total in `schema.prisma`):
 - Web service: combined SSR frontend + API on single container
 - Cron job: `agentTick.ts` every 10 minutes
 - Database: Render managed PostgreSQL 16
-- Domain: `chuanmen.co`
+- Domain: `chuanmener.club`
 
 ### Deploy workflow
 1. Push to `main` → Render auto-deploys

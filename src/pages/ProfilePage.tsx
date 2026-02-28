@@ -401,7 +401,7 @@ export default function ProfilePage() {
                     size="small"
                     onClick={() => {
                       const recentEnded = data.myEvents[0];
-                      if (recentEnded) navigate(`/events/${recentEnded.id}`);
+                      navigate(recentEnded ? `/events/${recentEnded.id}` : '/events');
                     }}
                   >
                     添加记录 →
