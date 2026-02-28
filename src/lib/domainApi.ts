@@ -1082,3 +1082,245 @@ export async function sendAdminEmail(payload: { to: string; subject: string; tex
     body: JSON.stringify(payload),
   });
 }
+
+// ═══════════════════════════════════════════════
+//  Newsletter API
+// ═══════════════════════════════════════════════
+
+export interface NewsletterRow {
+  id: string;
+  subject: string;
+  body: string;
+  status: string;
+  recipientCount: number;
+  openRate: number;
+  clickRate: number;
+  recipientGroup: string;
+  recipientIds: string[];
+  sentAt: string | null;
+  authorId: string;
+  createdAt: string;
+  updatedAt: string;
+  author: { id: string; name: string; email: string };
+}
+
+export interface SubscriberGroup {
+  label: string;
+  count: number;
+}
+
+export async function fetchNewsletters(status?: string) {
+  const params = status ? `?status=${status}` : '';
+  return requestJson<NewsletterRow[]>(`/api/newsletters${params}`);
+}
+
+export async function fetchNewsletterStats() {
+  return requestJson<SubscriberGroup[]>('/api/newsletters/stats');
+}
+
+export async function createNewsletter(data: { subject: string; body?: string; authorId: string; recipientGroup?: string; recipientIds?: string[] }) {
+  return requestJson<NewsletterRow>('/api/newsletters', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateNewsletter(id: string, data: Partial<Pick<NewsletterRow, 'subject' | 'body' | 'recipientGroup' | 'recipientIds' | 'status'>>) {
+  return requestJson<NewsletterRow>(`/api/newsletters/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function sendNewsletter(id: string) {
+  return requestJson<NewsletterRow>(`/api/newsletters/${id}/send`, {
+    method: 'POST',
+  });
+}
+
+export async function deleteNewsletter(id: string) {
+  return requestJson<{ ok: boolean }>(`/api/newsletters/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  Site Config API
+// ═══════════════════════════════════════════════
+
+export async function fetchSiteConfigs() {
+  return requestJson<Record<string, unknown>>('/api/config');
+}
+
+export async function fetchSiteConfig<T = unknown>(key: string) {
+  const row = await requestJson<{ key: string; value: T }>(`/api/config/${key}`);
+  return row.value;
+}
+
+export async function updateSiteConfig(key: string, value: unknown) {
+  return requestJson<{ key: string; value: unknown }>(`/api/config/${key}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value }),
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  Email Queue / Bounces / Unsubscribes / Suppressions
+// ═══════════════════════════════════════════════
+
+export interface EmailQueueRow {
+  id: string;
+  userId: string;
+  ruleId: string;
+  scheduledAt: string;
+  status: string;
+  payload: unknown;
+  createdAt: string;
+  user: { id: string; name: string; email: string };
+}
+
+export async function fetchEmailQueue(status?: string) {
+  const params = status ? `?status=${status}` : '';
+  return requestJson<EmailQueueRow[]>(`/api/email/queue${params}`);
+}
+
+export async function updateEmailQueueStatus(id: string, status: string) {
+  return requestJson<EmailQueueRow>(`/api/email/queue/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function deleteEmailQueueItem(id: string) {
+  return requestJson<{ ok: boolean }>(`/api/email/queue/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export interface EmailBounceRow {
+  id: string;
+  email: string;
+  ruleId: string;
+  type: string;
+  reason: string;
+  occurredAt: string;
+}
+
+export async function fetchEmailBounces() {
+  return requestJson<EmailBounceRow[]>('/api/email/bounces');
+}
+
+export interface EmailUnsubscribeRow {
+  id: string;
+  userId: string | null;
+  email: string;
+  reason: string;
+  comment: string;
+  unsubscribedAt: string;
+  user: { id: string; name: string; email: string } | null;
+}
+
+export async function fetchEmailUnsubscribes() {
+  return requestJson<EmailUnsubscribeRow[]>('/api/email/unsubscribes');
+}
+
+export interface EmailSuppressionRow {
+  id: string;
+  email: string;
+  reason: string;
+  source: string;
+  addedAt: string;
+}
+
+export async function fetchEmailSuppressions() {
+  return requestJson<EmailSuppressionRow[]>('/api/email/suppressions');
+}
+
+export async function addEmailSuppression(data: { email: string; reason?: string; source?: string }) {
+  return requestJson<EmailSuppressionRow>('/api/email/suppressions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function removeEmailSuppression(id: string) {
+  return requestJson<{ ok: boolean }>(`/api/email/suppressions/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// Global / Digest email config
+export interface GlobalEmailConfig {
+  systemPaused: boolean;
+  fromEmail: string;
+  replyTo: string;
+  dailySendTime: string;
+  timezone: string;
+  maxDailyPerUser: number;
+  weeklyDegradeThreshold: number;
+  stoppedDegradeThreshold: number;
+  weeklySendDay: string;
+  orgName: string;
+  physicalAddress: string;
+  unsubscribeText: string;
+  unsubscribeUrl: string;
+  unsubscribeReasons: string;
+  testEmails: string;
+}
+
+export async function fetchGlobalEmailConfig() {
+  return requestJson<GlobalEmailConfig | null>('/api/email/global-config');
+}
+
+export async function updateGlobalEmailConfig(config: GlobalEmailConfig) {
+  return requestJson<GlobalEmailConfig>('/api/email/global-config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  });
+}
+
+export interface DigestSourceConfig {
+  key: string;
+  label: string;
+  enabled: boolean;
+  sortOrder: number;
+  maxItems: number;
+}
+
+export interface DigestConfig {
+  maxTotalItems: number;
+  sendTime: string;
+  timezone: string;
+  frequency: 'daily' | 'weekdays' | 'custom';
+  customDays: boolean[];
+  skipIfEmpty: boolean;
+  minItems: number;
+  personalized: boolean;
+  dedupeWindowHours: number;
+  subjectTemplate: string;
+  headerText: string;
+  footerText: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  sources: DigestSourceConfig[];
+}
+
+export async function fetchDigestConfig() {
+  return requestJson<DigestConfig | null>('/api/email/digest-config');
+}
+
+export async function updateDigestConfig(config: DigestConfig) {
+  return requestJson<DigestConfig>('/api/email/digest-config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  });
+}
+
+

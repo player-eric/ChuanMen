@@ -17,6 +17,8 @@ import { postcardRoutes } from '../modules/postcards/postcard.route.js';
 import { aboutRoutes } from '../modules/about/about.route.js';
 import { titleRuleRoutes } from '../modules/title-rules/title-rule.route.js';
 import { taskPresetRoutes } from '../modules/task-presets/task-preset.route.js';
+import { newsletterRoutes } from '../modules/newsletters/newsletter.route.js';
+import { siteConfigRoutes } from '../modules/site-config/site-config.route.js';
 
 export const apiRoutes: FastifyPluginAsync = async (app) => {
   app.register(healthRoutes, { prefix: '/health' });
@@ -37,6 +39,8 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
   app.register(agentRoutes, { prefix: '/agent' });
   app.register(titleRuleRoutes, { prefix: '/title-rules' });
   app.register(taskPresetRoutes, { prefix: '/task-presets' });
+  app.register(newsletterRoutes, { prefix: '/newsletters' });
+  app.register(siteConfigRoutes, { prefix: '/config' });
 
   // Admin dashboard stats
   app.get('/admin/stats', async () => {

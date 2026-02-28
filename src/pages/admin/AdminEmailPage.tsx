@@ -52,8 +52,27 @@ import {
   fetchEmailRules,
   updateEmailRule,
   sendAdminEmail,
+  fetchEmailQueue,
+  updateEmailQueueStatus,
+  deleteEmailQueueItem,
+  fetchEmailBounces,
+  fetchEmailUnsubscribes,
+  fetchEmailSuppressions,
+  addEmailSuppression,
+  removeEmailSuppression,
+  fetchGlobalEmailConfig,
+  updateGlobalEmailConfig,
+  fetchDigestConfig,
+  updateDigestConfig,
   type EmailTemplateRow,
   type EmailLogRow,
+  type EmailQueueRow,
+  type EmailBounceRow,
+  type EmailUnsubscribeRow,
+  type EmailSuppressionRow,
+  type GlobalEmailConfig,
+  type DigestConfig,
+  type DigestSourceConfig,
 } from '@/lib/domainApi';
 
 /* ═══════════════════════════════════════════════
@@ -103,31 +122,34 @@ const ruleMetadata: EmailRuleMetadata[] = [
   { id: 'P4-C', name: '月度 Host 感谢', description: '每月 1 日', category: 'daily', enabled: true, cooldownDays: 30, triggerDescription: '每月 1 日', recipientDescription: '当月有举办活动的 Host', userControllable: true, userToggleLabel: '社群公告', disableImpact: 'Host 缺少正向反馈。', config: { cooldownDays: 30 } },
 ];
 
-interface DigestSourceConfig {
-  key: string;
-  label: string;
-  enabled: boolean;
-  sortOrder: number;
-  maxItems: number;
+interface UserEmailStatus {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  emailState: 'active' | 'weekly' | 'stopped' | 'unsubscribed';
+  unopenedStreak: number;
+  lastDailySentAt?: string;
+  createdAt?: string;
 }
 
-interface DigestConfig {
-  maxTotalItems: number;
-  sendTime: string;
-  timezone: string;
-  frequency: 'daily' | 'weekdays' | 'custom';
-  customDays: boolean[];
-  skipIfEmpty: boolean;
-  minItems: number;
-  personalized: boolean;
-  dedupeWindowHours: number;
-  subjectTemplate: string;
-  headerText: string;
-  footerText: string;
-  ctaLabel: string;
-  ctaUrl: string;
-  sources: DigestSourceConfig[];
-}
+const defaultGlobalConfig: GlobalEmailConfig = {
+  systemPaused: false,
+  fromEmail: 'noreply@chuanmen.co',
+  replyTo: 'hi@chuanmen.co',
+  dailySendTime: '09:00',
+  timezone: 'America/New_York',
+  maxDailyPerUser: 1,
+  weeklyDegradeThreshold: 3,
+  stoppedDegradeThreshold: 6,
+  weeklySendDay: '周一',
+  orgName: '串门儿',
+  physicalAddress: '123 Main St, Edison, NJ 08820',
+  unsubscribeText: '不想收到邮件？点此退订',
+  unsubscribeUrl: 'https://chuanmen.co/unsubscribe',
+  unsubscribeReasons: '邮件太频繁, 内容不相关, 不再参与社群, 其他',
+  testEmails: 'admin@chuanmen.co',
+};
 
 const defaultDigestConfig: DigestConfig = {
   maxTotalItems: 10,
@@ -153,115 +175,6 @@ const defaultDigestConfig: DigestConfig = {
     { key: 'proposals', label: '新提案', enabled: true, sortOrder: 5, maxItems: 1 },
     { key: 'new_members', label: '新成员加入', enabled: true, sortOrder: 6, maxItems: 1 },
   ],
-};
-
-interface QueuedEmail {
-  id: string;
-  userName: string;
-  userEmail: string;
-  ruleId: string;
-  scheduledAt: string;
-  status: 'queued' | 'paused';
-}
-
-const initialQueuedEmails: QueuedEmail[] = [
-  { id: 'q1', userName: 'Yuan', userEmail: 'yuan@cm.app', ruleId: 'DIGEST', scheduledAt: '明天 09:00 EST', status: 'queued' },
-  { id: 'q2', userName: '星星', userEmail: 'xingxing@gmail.com', ruleId: 'P0-A', scheduledAt: '明天 09:00 EST', status: 'queued' },
-  { id: 'q3', userName: 'Nicole', userEmail: 'nicole@gmail.com', ruleId: 'DIGEST', scheduledAt: '(已暂停)', status: 'paused' },
-  { id: 'q4', userName: '白开水', userEmail: 'bks@gmail.com', ruleId: 'P0-B', scheduledAt: '明天 09:00 EST', status: 'queued' },
-  { id: 'q5', userName: '大橙子', userEmail: 'dachengzi@gmail.com', ruleId: 'DIGEST', scheduledAt: '明天 09:00 EST', status: 'queued' },
-];
-
-interface BounceEvent {
-  id: string;
-  email: string;
-  ruleId: string;
-  type: 'hard_bounce' | 'soft_bounce' | 'complaint';
-  reason: string;
-  occurredAt: string;
-}
-
-const placeholderBounces: BounceEvent[] = [
-  { id: 'b1', email: 'bad@email.com', ruleId: 'DIGEST', type: 'hard_bounce', reason: '地址不存在', occurredAt: '2026-02-18 09:00' },
-  { id: 'b2', email: 'full@mail.com', ruleId: 'P0-A', type: 'soft_bounce', reason: '邮箱已满', occurredAt: '2026-02-17 09:00' },
-  { id: 'b3', email: 'user@gmail.com', ruleId: 'DIGEST', type: 'complaint', reason: '标记为垃圾邮件', occurredAt: '2026-02-15 09:00' },
-];
-
-interface UserEmailStatus {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  emailState: 'active' | 'weekly' | 'stopped' | 'unsubscribed';
-  unopenedStreak: number;
-  lastDailySentAt?: string;
-  createdAt?: string;
-}
-
-interface UnsubscribeRecord {
-  id: string;
-  userName: string;
-  email: string;
-  reason: string;
-  comment?: string;
-  unsubscribedAt: string;
-}
-
-const placeholderUnsubscribes: UnsubscribeRecord[] = [
-  { id: 'us1', userName: '李华', email: 'lihua@gmail.com', reason: '邮件太频繁', comment: '一天一封太多了', unsubscribedAt: '2026-02-15' },
-  { id: 'us2', userName: '小明', email: 'xiaoming@outlook.com', reason: '内容不相关', unsubscribedAt: '2026-02-10' },
-  { id: 'us3', userName: '张三', email: 'zhangsan@qq.com', reason: '邮件太频繁', unsubscribedAt: '2026-01-28' },
-  { id: 'us4', userName: '王五', email: 'wangwu@163.com', reason: '其他', comment: '暂时不需要', unsubscribedAt: '2026-01-15' },
-  { id: 'us5', userName: '赵六', email: 'zhaoliu@gmail.com', reason: '邮件太频繁', unsubscribedAt: '2026-01-10' },
-];
-
-interface SuppressedEmail {
-  id: string;
-  email: string;
-  reason: string;
-  addedAt: string;
-  source: 'system' | 'admin';
-}
-
-const initialSuppressed: SuppressedEmail[] = [
-  { id: 's1', email: 'bad@email.com', reason: '硬弹回(自动)', addedAt: '2026-02-18', source: 'system' },
-  { id: 's2', email: 'competitor@x.com', reason: '手动添加', addedAt: '2026-02-10', source: 'admin' },
-];
-
-interface GlobalEmailConfig {
-  systemPaused: boolean;
-  fromEmail: string;
-  replyTo: string;
-  dailySendTime: string;
-  timezone: string;
-  maxDailyPerUser: number;
-  weeklyDegradeThreshold: number;
-  stoppedDegradeThreshold: number;
-  weeklySendDay: string;
-  orgName: string;
-  physicalAddress: string;
-  unsubscribeText: string;
-  unsubscribeUrl: string;
-  unsubscribeReasons: string;
-  testEmails: string;
-}
-
-const defaultGlobalConfig: GlobalEmailConfig = {
-  systemPaused: false,
-  fromEmail: 'noreply@chuanmen.co',
-  replyTo: 'hi@chuanmen.co',
-  dailySendTime: '09:00',
-  timezone: 'America/New_York',
-  maxDailyPerUser: 1,
-  weeklyDegradeThreshold: 3,
-  stoppedDegradeThreshold: 6,
-  weeklySendDay: '周一',
-  orgName: '串门儿',
-  physicalAddress: '123 Main St, Edison, NJ 08820',
-  unsubscribeText: '不想收到邮件？点此退订',
-  unsubscribeUrl: 'https://chuanmen.co/unsubscribe',
-  unsubscribeReasons: '邮件太频繁, 内容不相关, 不再参与社群, 其他',
-  testEmails: 'admin@chuanmen.co',
 };
 
 const dayLabels = ['一', '二', '三', '四', '五', '六', '日'];
@@ -313,8 +226,10 @@ export default function AdminEmailPage() {
   const [previewHtml, setPreviewHtml] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [digestConfig, setDigestConfig] = useState<DigestConfig>(defaultDigestConfig);
-  const [queuedEmails, setQueuedEmails] = useState<QueuedEmail[]>(initialQueuedEmails);
-  const [suppressedEmails, setSuppressedEmails] = useState<SuppressedEmail[]>(initialSuppressed);
+  const [queuedEmails, setQueuedEmails] = useState<EmailQueueRow[]>([]);
+  const [suppressedEmails, setSuppressedEmails] = useState<EmailSuppressionRow[]>([]);
+  const [bounces, setBounces] = useState<EmailBounceRow[]>([]);
+  const [unsubscribes, setUnsubscribes] = useState<EmailUnsubscribeRow[]>([]);
 
   // Real data from API
   const [allUsers, setAllUsers] = useState<UserEmailStatus[]>([]);
@@ -442,6 +357,14 @@ export default function AdminEmailPage() {
         return db ? { ...r, enabled: db.enabled, cooldownDays: db.cooldownDays, config: { ...r.config, ...db.config as Record<string, number | string> } } : r;
       }));
     }).catch(() => {});
+    // Load email extras from API
+    fetchEmailQueue().then(setQueuedEmails).catch(() => {});
+    fetchEmailBounces().then(setBounces).catch(() => {});
+    fetchEmailUnsubscribes().then(setUnsubscribes).catch(() => {});
+    fetchEmailSuppressions().then(setSuppressedEmails).catch(() => {});
+    // Load global & digest config from API
+    fetchGlobalEmailConfig().then((cfg) => { if (cfg) setGlobalConfig(cfg); }).catch(() => {});
+    fetchDigestConfig().then((cfg) => { if (cfg) setDigestConfig(cfg); }).catch(() => {});
   }, [loadUsers]);
 
   // Computed values from real data
@@ -664,34 +587,41 @@ export default function AdminEmailPage() {
     }
   };
 
-  const handleQueueAction = (id: string, action: 'pause' | 'resume' | 'cancel') => {
-    if (action === 'cancel') {
-      setQueuedEmails(prev => prev.filter(e => e.id !== id));
-    } else {
-      setQueuedEmails(prev => prev.map(e => e.id !== id ? e : {
-        ...e,
-        status: action === 'pause' ? 'paused' as const : 'queued' as const,
-        scheduledAt: action === 'pause' ? '(已暂停)' : '明天 09:00 EST',
-      }));
+  const handleQueueAction = async (id: string, action: 'pause' | 'resume' | 'cancel') => {
+    try {
+      if (action === 'cancel') {
+        await deleteEmailQueueItem(id);
+        setQueuedEmails(prev => prev.filter(e => e.id !== id));
+      } else {
+        const newStatus = action === 'pause' ? 'paused' : 'queued';
+        const updated = await updateEmailQueueStatus(id, newStatus);
+        setQueuedEmails(prev => prev.map(e => e.id !== id ? e : updated));
+      }
+    } catch (err) {
+      console.error('Queue action failed:', err);
     }
   };
 
-  const handleRemoveSuppressed = (id: string) => {
-    setSuppressedEmails(prev => prev.filter(e => e.id !== id));
+  const handleRemoveSuppressed = async (id: string) => {
+    try {
+      await removeEmailSuppression(id);
+      setSuppressedEmails(prev => prev.filter(e => e.id !== id));
+    } catch (err) {
+      console.error('Failed to remove suppression:', err);
+    }
   };
 
-  const handleAddSuppressed = () => {
+  const handleAddSuppressed = async () => {
     if (!addSuppressedEmail) return;
-    setSuppressedEmails(prev => [...prev, {
-      id: `s${prev.length + 1}`,
-      email: addSuppressedEmail,
-      reason: addSuppressedReason || '手动添加',
-      addedAt: new Date().toISOString().slice(0, 10),
-      source: 'admin',
-    }]);
-    setAddSuppressedEmail('');
-    setAddSuppressedReason('');
-    setAddSuppressedOpen(false);
+    try {
+      const created = await addEmailSuppression({ email: addSuppressedEmail, reason: addSuppressedReason || '手动添加', source: 'admin' });
+      setSuppressedEmails(prev => [...prev, created]);
+      setAddSuppressedEmail('');
+      setAddSuppressedReason('');
+      setAddSuppressedOpen(false);
+    } catch (err) {
+      console.error('Failed to add suppression:', err);
+    }
   };
 
   const filteredLogs = emailLogs.filter(l => {
@@ -702,7 +632,7 @@ export default function AdminEmailPage() {
 
   const filteredQueue = queuedEmails.filter(q => {
     if (queueFilterRuleId && q.ruleId !== queueFilterRuleId) return false;
-    if (queueSearch && !q.userName.toLowerCase().includes(queueSearch.toLowerCase())) return false;
+    if (queueSearch && !q.user?.name?.toLowerCase().includes(queueSearch.toLowerCase())) return false;
     return true;
   });
 
@@ -718,11 +648,11 @@ export default function AdminEmailPage() {
   });
 
   // Unsubscribe reason stats
-  const unsubReasons = placeholderUnsubscribes.reduce<Record<string, number>>((acc, u) => {
+  const unsubReasons = unsubscribes.reduce<Record<string, number>>((acc, u) => {
     acc[u.reason] = (acc[u.reason] || 0) + 1;
     return acc;
   }, {});
-  const totalUnsubs = placeholderUnsubscribes.length;
+  const totalUnsubs = unsubscribes.length;
 
   const txnRules = rules.filter(r => r.category === 'txn');
   const dailyRules = rules.filter(r => r.category === 'daily');
@@ -1318,7 +1248,7 @@ export default function AdminEmailPage() {
                     variant="outlined"
                     sx={{ width: 'fit-content' }}
                   />
-                  <Typography variant="body2">{q.userName}</Typography>
+                  <Typography variant="body2">{q.user?.name ?? '—'}</Typography>
                   <Typography variant="body2">{q.ruleId}</Typography>
                   <Typography variant="body2" color="text.secondary">{q.scheduledAt}</Typography>
                   <Stack direction="row" spacing={0.5}>
@@ -1423,7 +1353,7 @@ export default function AdminEmailPage() {
                 <Typography variant="caption" fontWeight={700}>原因</Typography>
               </Box>
 
-              {placeholderBounces.map(b => (
+              {bounces.map(b => (
                 <Box key={b.id} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '100px 180px 100px 140px 1fr' }, gap: 1, px: 2, py: 1, borderBottom: 1, borderColor: 'divider', alignItems: 'center' }}>
                   <Chip
                     label={b.type === 'hard_bounce' ? '硬弹回' : b.type === 'soft_bounce' ? '软弹回' : '投诉'}
@@ -1564,9 +1494,9 @@ export default function AdminEmailPage() {
                     <Typography variant="caption" fontWeight={700}>原因</Typography>
                     <Typography variant="caption" fontWeight={700}>备注</Typography>
                   </Box>
-                  {placeholderUnsubscribes.map(u => (
+                  {unsubscribes.map(u => (
                     <Box key={u.id} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '100px 120px 120px 1fr' }, gap: 1, px: 1, py: 1, borderBottom: 1, borderColor: 'divider' }}>
-                      <Typography variant="body2">{u.userName}</Typography>
+                      <Typography variant="body2">{u.user?.name ?? u.email}</Typography>
                       <Typography variant="body2" color="text.secondary">{u.unsubscribedAt}</Typography>
                       <Typography variant="body2">{u.reason}</Typography>
                       <Typography variant="body2" color="text.secondary">{u.comment ? `"${u.comment}"` : '—'}</Typography>
@@ -1844,7 +1774,18 @@ export default function AdminEmailPage() {
             </CardContent>
           </Card>
 
-          <Button variant="contained" size="large" sx={{ alignSelf: 'flex-end' }}>
+          <Button variant="contained" size="large" sx={{ alignSelf: 'flex-end' }} onClick={async () => {
+            try {
+              await Promise.all([
+                updateGlobalEmailConfig(globalConfig),
+                updateDigestConfig(digestConfig),
+              ]);
+              alert('配置已保存');
+            } catch (err) {
+              console.error('Failed to save config:', err);
+              alert('保存失败');
+            }
+          }}>
             保存全局配置
           </Button>
         </Stack>

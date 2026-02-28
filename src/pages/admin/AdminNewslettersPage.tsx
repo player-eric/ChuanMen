@@ -27,78 +27,57 @@ import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import PersonAddRoundedIcon from '@mui/icons-material/PersonAddRounded';
 import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
+import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import { RichTextViewer } from '@/components/RichTextEditor';
-import { fetchMembersApi } from '@/lib/domainApi';
+import {
+  fetchMembersApi,
+  fetchNewsletters,
+  fetchNewsletterStats,
+  createNewsletter,
+  updateNewsletter,
+  sendNewsletter,
+  deleteNewsletter,
+  type NewsletterRow,
+  type SubscriberGroup,
+} from '@/lib/domainApi';
+import { useAuth } from '@/auth/AuthContext';
 import { firstNonEmoji } from '@/components/Atoms';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 
-/* ── Placeholder newsletter data (no Newsletter backend model yet) ── */
-const sentNewsletters = [
-  {
-    id: 'nl-12',
-    subject: '串门周报 #12 — 春季招新 & 本周电影夜',
-    sentDate: '2025-02-15',
-    recipients: 28,
-    openRate: 72,
-    clickRate: 34,
-    body: '<p>亲爱的串门成员：</p><p>🎉 春季招新正式开始！欢迎推荐你身边有趣的朋友。</p><p>📅 本周活动：</p><ul><li>2/22 周六 7pm 电影夜 · 花样年华（白开水家）</li><li>2/28 周五 8pm 重庆森林 · 私人邀请（Yuan 家）</li></ul><p>📋 社区公约 v2.0 已更新，请查看。</p><p>— Yuan</p>',
-  },
-  {
-    id: 'nl-11',
-    subject: '串门周报 #11 — 新年回顾 & Host 培训预告',
-    sentDate: '2025-02-08',
-    recipients: 26,
-    openRate: 68,
-    clickRate: 28,
-    body: '<p>亲爱的串门成员：</p><p>回顾 1 月：6 场活动、3 位新 Host、45 张感谢卡！</p><p>🏠 Host 培训会将在 3 月 8 日举办，感兴趣请报名。</p><p>📸 感谢大橙子为我们拍了超多好照片。</p><p>— Yuan</p>',
-  },
-  {
-    id: 'nl-10',
-    subject: '串门周报 #10 — 圣诞回顾 & 新年计划',
-    sentDate: '2025-01-25',
-    recipients: 24,
-    openRate: 75,
-    clickRate: 40,
-    body: '<p>亲爱的串门成员：</p><p>圣诞 Party 超成功！12 人、32 张照片、12 张感谢卡。</p><p>📅 1 月活动预告：</p><ul><li>电影夜 x2</li><li>新年 Potluck</li><li>High Point 徒步</li></ul><p>新年快乐！🎆</p><p>— Yuan</p>',
-  },
-  {
-    id: 'nl-9',
-    subject: '串门周报 #9 — 感恩节特别篇',
-    sentDate: '2025-01-10',
-    recipients: 22,
-    openRate: 70,
-    clickRate: 32,
-    body: '<p>感恩节 Potluck 有 14 个人参加，是我们人数最多的一次活动！</p><p>感谢每一位带菜来的朋友。特别感谢白开水准备了 5 道菜。</p><p>— Yuan</p>',
-  },
-];
-
-const draftNewsletters = [
-  {
-    id: 'draft-1',
-    subject: '串门周报 #13 — 花样年华观影后记',
-    lastEdited: '2025-02-20',
-    body: '<p>亲爱的串门成员：</p><p>本周六的花样年华电影夜...</p><p>（草稿未完成）</p>',
-  },
-];
-
-const subscriberGroups = [
-  { label: '全部成员', count: 28 },
-  { label: '活跃成员', count: 12 },
-  { label: 'Host', count: 5 },
-  { label: '管理员', count: 2 },
-  { label: '新成员（1个月内）', count: 3 },
-];
-
 export default function AdminNewslettersPage() {
+  const { user } = useAuth();
   const [tab, setTab] = useState(0);
   const [composeOpen, setComposeOpen] = useState(false);
-  const [previewNl, setPreviewNl] = useState<(typeof sentNewsletters)[0] | null>(null);
+  const [previewNl, setPreviewNl] = useState<NewsletterRow | null>(null);
   const [draftSubject, setDraftSubject] = useState('');
   const [draftBody, setDraftBody] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  // API data
+  const [sentNewsletters, setSentNewsletters] = useState<NewsletterRow[]>([]);
+  const [draftNewsletters, setDraftNewsletters] = useState<NewsletterRow[]>([]);
+  const [subscriberGroups, setSubscriberGroups] = useState<SubscriberGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [all, stats] = await Promise.all([fetchNewsletters(), fetchNewsletterStats()]);
+      setSentNewsletters(all.filter((n) => n.status === 'sent'));
+      setDraftNewsletters(all.filter((n) => n.status === 'draft'));
+      setSubscriberGroups(stats);
+    } catch (e) {
+      console.error('Failed to load newsletters:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadData(); }, []);
 
   /* ── Recipient mode: 'group' or 'individual' ── */
   const [recipientMode, setRecipientMode] = useState<'group' | 'individual'>('group');
-  const [selectedGroup, setSelectedGroup] = useState(subscriberGroups[0].label);
+  const [selectedGroup, setSelectedGroup] = useState('全部成员');
   const [selectedMembers, setSelectedMembers] = useState<{ id: string; name: string; email?: string }[]>([]);
 
   /* ── Load members when compose opens ── */
@@ -139,7 +118,7 @@ export default function AdminNewslettersPage() {
           <Tab label={`草稿 (${draftNewsletters.length})`} />
           <Tab label="订阅管理" />
         </Tabs>
-        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => { setComposeOpen(true); setDraftSubject(''); setDraftBody(''); setRecipientMode('group'); setSelectedGroup(subscriberGroups[0].label); setSelectedMembers([]); }}>
+        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => { setComposeOpen(true); setEditingId(null); setDraftSubject(''); setDraftBody(''); setRecipientMode('group'); setSelectedGroup('全部成员'); setSelectedMembers([]); }}>
           写通讯
         </Button>
       </Stack>
@@ -154,7 +133,7 @@ export default function AdminNewslettersPage() {
                   <Box sx={{ flex: 1 }}>
                     <Typography fontWeight={700}>{nl.subject}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {nl.sentDate} · {nl.recipients} 收件人
+                      {nl.sentAt?.slice(0, 10)} · {nl.recipientCount} 收件人
                     </Typography>
                   </Box>
                   <Stack direction="row" spacing={1} alignItems="center">
@@ -163,7 +142,7 @@ export default function AdminNewslettersPage() {
                     <IconButton size="small" onClick={() => setPreviewNl(nl)}>
                       <VisibilityRoundedIcon fontSize="small" />
                     </IconButton>
-                    <IconButton size="small" onClick={() => { setDraftSubject(nl.subject + '（副本）'); setDraftBody(nl.body); setComposeOpen(true); }}>
+                    <IconButton size="small" onClick={() => { setEditingId(null); setDraftSubject(nl.subject + '（副本）'); setDraftBody(nl.body); setRecipientMode('group'); setSelectedGroup(nl.recipientGroup); setComposeOpen(true); }}>
                       <ContentCopyRoundedIcon fontSize="small" />
                     </IconButton>
                   </Stack>
@@ -183,11 +162,14 @@ export default function AdminNewslettersPage() {
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Box>
                     <Typography fontWeight={700}>{d.subject}</Typography>
-                    <Typography variant="caption" color="text.secondary">最后编辑：{d.lastEdited}</Typography>
+                    <Typography variant="caption" color="text.secondary">最后编辑：{d.updatedAt?.slice(0, 10)}</Typography>
                   </Box>
                   <Stack direction="row" spacing={0.5}>
-                    <IconButton size="small" onClick={() => { setDraftSubject(d.subject); setDraftBody(d.body); setComposeOpen(true); }}>
+                    <IconButton size="small" onClick={() => { setEditingId(d.id); setDraftSubject(d.subject); setDraftBody(d.body); setRecipientMode(d.recipientIds.length > 0 ? 'individual' : 'group'); setSelectedGroup(d.recipientGroup); setComposeOpen(true); }}>
                       <EditRoundedIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={async () => { await deleteNewsletter(d.id); loadData(); }}>
+                      <DeleteRoundedIcon fontSize="small" />
                     </IconButton>
                   </Stack>
                 </Stack>
@@ -231,18 +213,18 @@ export default function AdminNewslettersPage() {
                   <Stack direction="row" justifyContent="space-between">
                     <Typography variant="body2">平均打开率</Typography>
                     <Typography variant="body2" fontWeight={700} color="success.main">
-                      {Math.round(sentNewsletters.reduce((a, b) => a + b.openRate, 0) / sentNewsletters.length)}%
+                      {sentNewsletters.length > 0 ? Math.round(sentNewsletters.reduce((a, b) => a + b.openRate, 0) / sentNewsletters.length) : 0}%
                     </Typography>
                   </Stack>
                   <Stack direction="row" justifyContent="space-between">
                     <Typography variant="body2">平均点击率</Typography>
                     <Typography variant="body2" fontWeight={700} color="primary.main">
-                      {Math.round(sentNewsletters.reduce((a, b) => a + b.clickRate, 0) / sentNewsletters.length)}%
+                      {sentNewsletters.length > 0 ? Math.round(sentNewsletters.reduce((a, b) => a + b.clickRate, 0) / sentNewsletters.length) : 0}%
                     </Typography>
                   </Stack>
                   <Stack direction="row" justifyContent="space-between">
                     <Typography variant="body2">最新一期</Typography>
-                    <Typography variant="body2">{sentNewsletters[0].sentDate}</Typography>
+                    <Typography variant="body2">{sentNewsletters.length > 0 ? sentNewsletters[0].sentAt?.slice(0, 10) : '—'}</Typography>
                   </Stack>
                 </Stack>
               </CardContent>
@@ -364,8 +346,35 @@ export default function AdminNewslettersPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setComposeOpen(false)}>取消</Button>
-          <Button variant="outlined">保存草稿</Button>
-          <Button variant="contained" startIcon={<SendRoundedIcon />} onClick={() => setComposeOpen(false)}>
+          <Button variant="outlined" onClick={async () => {
+            if (!user?.id || !draftSubject.trim()) return;
+            try {
+              const ids = recipientMode === 'individual' ? selectedMembers.map((m) => m.id) : [];
+              if (editingId) {
+                await updateNewsletter(editingId, { subject: draftSubject, body: draftBody, recipientGroup: selectedGroup, recipientIds: ids });
+              } else {
+                await createNewsletter({ subject: draftSubject, body: draftBody, authorId: user.id, recipientGroup: selectedGroup, recipientIds: ids });
+              }
+              setComposeOpen(false);
+              loadData();
+            } catch (e) { console.error(e); }
+          }}>保存草稿</Button>
+          <Button variant="contained" startIcon={<SendRoundedIcon />} onClick={async () => {
+            if (!user?.id || !draftSubject.trim()) return;
+            try {
+              const ids = recipientMode === 'individual' ? selectedMembers.map((m) => m.id) : [];
+              let nlId = editingId;
+              if (nlId) {
+                await updateNewsletter(nlId, { subject: draftSubject, body: draftBody, recipientGroup: selectedGroup, recipientIds: ids });
+              } else {
+                const created = await createNewsletter({ subject: draftSubject, body: draftBody, authorId: user.id, recipientGroup: selectedGroup, recipientIds: ids });
+                nlId = created.id;
+              }
+              await sendNewsletter(nlId!);
+              setComposeOpen(false);
+              loadData();
+            } catch (e) { console.error(e); }
+          }}>
             发送
           </Button>
         </DialogActions>
@@ -377,7 +386,7 @@ export default function AdminNewslettersPage() {
         <DialogContent>
           <Stack spacing={1} sx={{ mt: 1 }}>
             <Stack direction="row" spacing={2}>
-              <Chip label={`${previewNl?.recipients} 收件人`} size="small" />
+              <Chip label={`${previewNl?.recipientCount} 收件人`} size="small" />
               <Chip label={`打开 ${previewNl?.openRate}%`} size="small" color="success" variant="outlined" />
               <Chip label={`点击 ${previewNl?.clickRate}%`} size="small" color="primary" variant="outlined" />
             </Stack>

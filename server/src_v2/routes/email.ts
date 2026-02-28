@@ -201,4 +201,162 @@ export const emailRoutes: FastifyPluginAsync = async (app) => {
 
     return reply.send({ ok: true });
   });
+
+  // ══════════════════════════════════════════════
+  //  Email Queue
+  // ══════════════════════════════════════════════
+
+  // GET /email/queue — list queued emails
+  app.get('/queue', async (request) => {
+    const { status, limit } = request.query as { status?: string; limit?: string };
+    const take = Math.min(Number(limit) || 100, 500);
+    const where = status ? { status } : {};
+    return app.prisma.emailQueue.findMany({
+      where,
+      take,
+      orderBy: { scheduledAt: 'asc' },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+  });
+
+  // PATCH /email/queue/:id — update status (pause/resume/cancel)
+  app.patch<{ Params: { id: string } }>('/queue/:id', async (request, reply) => {
+    const { id } = request.params;
+    const { status: newStatus } = request.body as { status: string };
+    if (!['queued', 'paused', 'cancelled'].includes(newStatus)) {
+      return reply.badRequest('无效状态');
+    }
+    const existing = await app.prisma.emailQueue.findUnique({ where: { id } });
+    if (!existing) return reply.notFound('队列项不存在');
+
+    const updated = await app.prisma.emailQueue.update({
+      where: { id },
+      data: { status: newStatus },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    return updated;
+  });
+
+  // DELETE /email/queue/:id — remove from queue
+  app.delete<{ Params: { id: string } }>('/queue/:id', async (request, reply) => {
+    const { id } = request.params;
+    const existing = await app.prisma.emailQueue.findUnique({ where: { id } });
+    if (!existing) return reply.notFound('队列项不存在');
+    await app.prisma.emailQueue.delete({ where: { id } });
+    return { ok: true };
+  });
+
+  // ══════════════════════════════════════════════
+  //  Email Bounces
+  // ══════════════════════════════════════════════
+
+  // GET /email/bounces
+  app.get('/bounces', async (request) => {
+    const { limit } = request.query as { limit?: string };
+    const take = Math.min(Number(limit) || 100, 500);
+    return app.prisma.emailBounce.findMany({
+      take,
+      orderBy: { occurredAt: 'desc' },
+    });
+  });
+
+  // ══════════════════════════════════════════════
+  //  Email Unsubscribes
+  // ══════════════════════════════════════════════
+
+  // GET /email/unsubscribes
+  app.get('/unsubscribes', async (request) => {
+    const { limit } = request.query as { limit?: string };
+    const take = Math.min(Number(limit) || 100, 500);
+    return app.prisma.emailUnsubscribe.findMany({
+      take,
+      orderBy: { unsubscribedAt: 'desc' },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+  });
+
+  // POST /email/unsubscribes — record an unsubscribe
+  app.post('/unsubscribes', async (request, reply) => {
+    const data = request.body as { userId?: string; email: string; reason?: string; comment?: string };
+    const record = await app.prisma.emailUnsubscribe.create({
+      data: {
+        userId: data.userId,
+        email: data.email,
+        reason: data.reason ?? '',
+        comment: data.comment ?? '',
+      },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    return reply.code(201).send(record);
+  });
+
+  // ══════════════════════════════════════════════
+  //  Email Suppressions
+  // ══════════════════════════════════════════════
+
+  // GET /email/suppressions
+  app.get('/suppressions', async () => {
+    return app.prisma.emailSuppression.findMany({
+      orderBy: { addedAt: 'desc' },
+    });
+  });
+
+  // POST /email/suppressions — add a suppressed email
+  app.post('/suppressions', async (request, reply) => {
+    const { email, reason, source } = request.body as { email: string; reason?: string; source?: string };
+    // Upsert to avoid unique constraint violation
+    const record = await app.prisma.emailSuppression.upsert({
+      where: { email },
+      update: { reason: reason ?? '', source: source ?? 'admin' },
+      create: { email, reason: reason ?? '', source: source ?? 'admin' },
+    });
+    return reply.code(201).send(record);
+  });
+
+  // DELETE /email/suppressions/:id — remove a suppressed email
+  app.delete<{ Params: { id: string } }>('/suppressions/:id', async (request, reply) => {
+    const { id } = request.params;
+    const existing = await app.prisma.emailSuppression.findUnique({ where: { id } });
+    if (!existing) return reply.notFound('抑制项不存在');
+    await app.prisma.emailSuppression.delete({ where: { id } });
+    return { ok: true };
+  });
+
+  // ══════════════════════════════════════════════
+  //  Global / Digest Config (stored in SiteConfig)
+  // ══════════════════════════════════════════════
+
+  // GET /email/global-config
+  app.get('/global-config', async () => {
+    const row = await app.prisma.siteConfig.findUnique({ where: { key: 'emailConfig.global' } });
+    return row?.value ?? null;
+  });
+
+  // PUT /email/global-config
+  app.put('/global-config', async (request) => {
+    const value = request.body;
+    const config = await app.prisma.siteConfig.upsert({
+      where: { key: 'emailConfig.global' },
+      update: { value: value as any },
+      create: { key: 'emailConfig.global', value: value as any },
+    });
+    return config.value;
+  });
+
+  // GET /email/digest-config
+  app.get('/digest-config', async () => {
+    const row = await app.prisma.siteConfig.findUnique({ where: { key: 'emailConfig.digest' } });
+    return row?.value ?? null;
+  });
+
+  // PUT /email/digest-config
+  app.put('/digest-config', async (request) => {
+    const value = request.body;
+    const config = await app.prisma.siteConfig.upsert({
+      where: { key: 'emailConfig.digest' },
+      update: { value: value as any },
+      create: { key: 'emailConfig.digest', value: value as any },
+    });
+    return config.value;
+  });
 };

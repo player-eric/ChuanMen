@@ -203,6 +203,9 @@ model User {
   postcardPurchases    PostcardPurchase[]
   announcements        Announcement[]       @relation("AnnouncementAuthor")
   emailLogs            EmailLog[]
+  newsletters          Newsletter[]         @relation("NewsletterAuthor")
+  emailQueueItems      EmailQueue[]         @relation("EmailQueueUser")
+  emailUnsubscribes    EmailUnsubscribe[]   @relation("EmailUnsubUser")
 }
 
 model UserOperatorRole {
@@ -741,3 +744,86 @@ model TaskPreset {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// ─── Newsletter ───────────────────────────────────────────
+model Newsletter {
+  id             String    @id @default(cuid())
+  subject        String
+  body           String    @default("")
+  status         String    @default("draft") // draft, scheduled, sent
+  recipientCount Int       @default(0)
+  openRate       Float     @default(0)
+  clickRate      Float     @default(0)
+  recipientGroup String    @default("全部成员")
+  recipientIds   String[]  // individual recipient user IDs (when not group)
+  sentAt         DateTime?
+  authorId       String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  author         User      @relation("NewsletterAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([status, createdAt(sort: Desc)])
+}
+
+// ─── Site Config (key-value store) ────────────────────────
+model SiteConfig {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Email Queue ──────────────────────────────────────────
+model EmailQueue {
+  id          String   @id @default(cuid())
+  userId      String
+  ruleId      String
+  scheduledAt DateTime
+  status      String   @default("queued") // queued, paused, sent, failed, cancelled
+  payload     Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  user        User     @relation("EmailQueueUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledAt])
+  @@index([userId])
+}
+
+// ─── Email Bounce ─────────────────────────────────────────
+model EmailBounce {
+  id         String   @id @default(cuid())
+  email      String
+  ruleId     String
+  type       String   // hard_bounce, soft_bounce, complaint
+  reason     String   @default("")
+  occurredAt DateTime @default(now())
+
+  @@index([email])
+  @@index([occurredAt(sort: Desc)])
+}
+
+// ─── Email Unsubscribe ────────────────────────────────────
+model EmailUnsubscribe {
+  id             String   @id @default(cuid())
+  userId         String?
+  email          String
+  reason         String   @default("")
+  comment        String   @default("")
+  unsubscribedAt DateTime @default(now())
+
+  user           User?    @relation("EmailUnsubUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([unsubscribedAt(sort: Desc)])
+}
+
+// ─── Email Suppression ───────────────────────────────────
+model EmailSuppression {
+  id      String   @id @default(cuid())
+  email   String   @unique
+  reason  String   @default("")
+  source  String   @default("system") // system, admin
+  addedAt DateTime @default(now())
+}
+
+
