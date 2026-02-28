@@ -14,10 +14,12 @@ interface AvaProps {
 }
 
 /** Extract the first non-emoji character from a string for avatar display */
-function firstNonEmoji(str: string): string {
-  // Match characters that are NOT emoji-related Unicode ranges
-  const match = str.match(/[^\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2702}-\u{27B0}\u{FE0F}\u{200B}-\u{200D}\u{2028}\u{2029}\u{20E3}\u{E0020}-\u{E007F}]/u);
-  return match ? match[0] : str[0] ?? '?';
+export function firstNonEmoji(str: string): string {
+  const match = str.match(/[^\p{Extended_Pictographic}\u{FE00}-\u{FE0F}\u{200D}\u{200B}\u{20E3}]/u);
+  if (match) return match[0];
+  // All emoji — return first full character via spread
+  const chars = [...str];
+  return chars.length > 0 ? chars[0] : '?';
 }
 
 export function Ava({ name: rawName, src, size = 28, border, badge, onTap }: AvaProps) {
@@ -183,13 +185,15 @@ interface CardProps {
   children: ReactNode;
   glow?: boolean;
   style?: CSSProperties;
+  onClick?: () => void;
 }
 
-export function Card({ children, glow, style = {} }: CardProps) {
+export function Card({ children, glow, style = {}, onClick }: CardProps) {
   const c = useColors();
   const isLight = useTheme().palette.mode === 'light';
   return (
     <div
+      onClick={onClick}
       style={{
         background: c.s1, borderRadius: 12,
         border: `1px solid ${glow ? c.warm + '25' : c.line}`,

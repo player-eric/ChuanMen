@@ -312,8 +312,10 @@ export default function AppLayout() {
                 <IconButton
                   size="small"
                   onClick={() => {
-                    if (backTarget) navigate(backTarget);
-                    else navigate(-1);
+                    // Always go back in history; fallback to hardcoded target only if no history
+                    if (window.history.length > 1) navigate(-1);
+                    else if (backTarget) navigate(backTarget);
+                    else navigate('/');
                   }}
                 >
                   <ArrowBackIosNewRoundedIcon fontSize="small" />

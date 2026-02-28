@@ -5,6 +5,7 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import type { MemberData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { EmptyState } from '@/components/EmptyState';
+import { firstNonEmoji } from '@/components/Atoms';
 import { photos } from '@/theme';
 
 export default function MembersPage() {
@@ -55,7 +56,7 @@ export default function MembersPage() {
                 })()}
                 <CardContent sx={{ mt: -3.5 }}>
                   <Stack spacing={1.2} alignItems="center" textAlign="center">
-                    <Avatar src={member.avatar} sx={{ width: 52, height: 52, border: '2.5px solid', borderColor: 'background.paper', fontSize: 20 }}>{member.name[0]}</Avatar>
+                    <Avatar src={member.avatar} sx={{ width: 52, height: 52, border: '2.5px solid', borderColor: 'background.paper', fontSize: 20 }}>{firstNonEmoji(member.name)}</Avatar>
                     <Typography fontWeight={700}>{member.name}</Typography>
                     {member.location && (
                       <Typography variant="caption" color="text.secondary">{member.location}</Typography>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { firstNonEmoji } from '@/components/Atoms';
 import {
   Autocomplete,
   Avatar,
@@ -224,7 +225,7 @@ export default function AdminTitlesPage() {
                 <Box key={m.id}>
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 4fr auto' }, gap: 1, px: 2, py: 1.5, alignItems: 'center' }}>
                     <Stack direction="row" spacing={1} alignItems="center">
-                      <Avatar sx={{ width: 28, height: 28, fontSize: 13 }} src={m.avatar}>{m.name[0]}</Avatar>
+                      <Avatar sx={{ width: 28, height: 28, fontSize: 13 }} src={m.avatar}>{firstNonEmoji(m.name)}</Avatar>
                       <Typography variant="body2" fontWeight={600}>{m.name}</Typography>
                     </Stack>
                     <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>

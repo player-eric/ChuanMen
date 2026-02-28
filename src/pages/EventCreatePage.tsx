@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
+import { firstNonEmoji } from '@/components/Atoms';
 import {
   Alert,
   Avatar,
@@ -675,7 +676,7 @@ export default function EventCreatePage() {
             return (
               <Stack direction="row" key={m.name} justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <Avatar sx={{ width: 28, height: 28 }}>{m.name[0]}</Avatar>
+                  <Avatar sx={{ width: 28, height: 28 }}>{firstNonEmoji(m.name)}</Avatar>
                   <Typography variant="body2">{m.name}</Typography>
                 </Stack>
                 <Button size="small" variant={invited ? 'contained' : 'outlined'}

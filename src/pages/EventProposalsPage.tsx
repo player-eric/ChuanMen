@@ -78,23 +78,24 @@ export default function EventProposalsPage() {
       {proposals.map((proposal) => {
         const v = interested[proposal.id] ?? false;
         return (
-          <Card key={proposal.id}>
+          <Card key={proposal.id} style={{ cursor: 'pointer' }}
+            onClick={() => navigate(`/events/proposals/${proposal.id}`)}
+          >
             <div style={{ padding: 14 }}>
               {/* Author header */}
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                 <Ava name={proposal.name} size={32} onTap={() => goMember(proposal.name)} />
                 <div>
                   <div style={{ fontSize: 14 }}>
-                    <b onClick={() => goMember(proposal.name)} style={{ cursor: 'pointer' }}>{proposal.name}</b> 提了一个活动创意
+                    <b onClick={(e) => { e.stopPropagation(); goMember(proposal.name); }} style={{ cursor: 'pointer' }}>{proposal.name}</b> 提了一个活动创意
                   </div>
                   <div style={{ fontSize: 12, color: c.text3 }}>{proposal.time}</div>
                 </div>
               </div>
 
-              {/* Title — clickable to detail */}
+              {/* Title */}
               <div
-                style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, cursor: 'pointer' }}
-                onClick={() => navigate(`/events/proposals/${proposal.id}`)}
+                style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}
               >{'💡'} {proposal.title}</div>
 
               {/* Interested people */}
@@ -104,7 +105,7 @@ export default function EventProposalsPage() {
               </div>
 
               {/* Action buttons */}
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => user && setInterested((prev) => ({ ...prev, [proposal.id]: !prev[proposal.id] }))}
                   style={{
@@ -116,7 +117,7 @@ export default function EventProposalsPage() {
                     opacity: user ? 1 : 0.5,
                   }}
                 >
-                  {v ? '✓ 我也感兴趣' : '我感兴趣'} · {proposal.votes + (v ? 1 : 0)}
+                  {v ? '✓ 取消感兴趣' : '我感兴趣'}
                 </button>
                 <button
                   onClick={() => user && navigate('/events/new', { state: { fromProposal: { title: proposal.title, descriptionHtml: proposal.descriptionHtml ?? '' } } })}

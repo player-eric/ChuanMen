@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { firstNonEmoji } from '@/components/Atoms';
 import {
   Avatar,
   Box,
@@ -288,7 +289,7 @@ export default function AdminMembersPage() {
                 <Box key={m.id}>
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr auto', md: '2fr 2fr 1fr 1fr 1fr 1fr 1fr 100px' }, gap: 1, px: 2, py: 1.5, alignItems: 'center' }}>
                     <Stack direction="row" spacing={1} alignItems="center">
-                      <Avatar sx={{ width: 32, height: 32 }}>{m.name[0]}</Avatar>
+                      <Avatar sx={{ width: 32, height: 32 }}>{firstNonEmoji(m.name)}</Avatar>
                       <Box>
                         <Stack direction="row" spacing={0.5} alignItems="center">
                           <Typography variant="body2" fontWeight={600}>{m.name}</Typography>
@@ -362,7 +363,7 @@ export default function AdminMembersPage() {
                   <Stack spacing={1.5}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Stack direction="row" spacing={1} alignItems="center">
-                        <Avatar sx={{ width: 36, height: 36 }}>{a.name[0]}</Avatar>
+                        <Avatar sx={{ width: 36, height: 36 }}>{firstNonEmoji(a.name)}</Avatar>
                         <Box>
                           <Typography fontWeight={700}>{a.name}</Typography>
                           <Typography variant="caption" color="text.secondary">{a.email}</Typography>

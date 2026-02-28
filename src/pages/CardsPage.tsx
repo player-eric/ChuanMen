@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLoaderData, useLocation, useNavigate, useRevalidator } from 'react-router';
+import { firstNonEmoji } from '@/components/Atoms';
 import {
   Avatar,
   Alert,
@@ -203,7 +204,7 @@ function FullCards() {
                         }}
                         sx={{ p: 1.5, cursor: 'pointer', textAlign: 'center' }}
                       >
-                        <Avatar sx={{ mx: 'auto', mb: 1 }}>{person.name[0]}</Avatar>
+                        <Avatar sx={{ mx: 'auto', mb: 1 }}>{firstNonEmoji(person.name)}</Avatar>
                         <Typography fontWeight={700}>{person.name}</Typography>
                         <Typography variant="caption" color="text.secondary">{person.ctx}</Typography>
                       </Card>

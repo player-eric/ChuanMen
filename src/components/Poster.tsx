@@ -12,7 +12,7 @@ interface PosterProps {
 export function Poster({ title, src, w = 48, h = 66 }: PosterProps) {
   const c = useColors();
   const p = posterData[title] || {
-    bg: `linear-gradient(135deg, ${c.s3}, ${c.s2})`,
+    bg: `linear-gradient(135deg, hsl(${[...title].reduce((a, c) => a + c.charCodeAt(0), 0) % 360}, 30%, 25%), hsl(${([...title].reduce((a, c) => a + c.charCodeAt(0), 0) + 60) % 360}, 25%, 18%))`,
     accent: c.text3,
     sub: '',
   };

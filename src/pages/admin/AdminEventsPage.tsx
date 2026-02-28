@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { firstNonEmoji } from '@/components/Atoms';
 import {
   Avatar,
   Box,
@@ -142,7 +143,7 @@ export default function AdminEventsPage() {
                       <Typography variant="body2" fontWeight={600}>{evt.title}</Typography>
                     </Stack>
                     <Stack direction="row" spacing={0.5} alignItems="center" sx={{ display: { xs: 'none', md: 'flex' } }}>
-                      <Avatar sx={{ width: 24, height: 24, fontSize: 12 }} src={evt.host?.avatar}>{hostName[0]}</Avatar>
+                      <Avatar sx={{ width: 24, height: 24, fontSize: 12 }} src={evt.host?.avatar}>{firstNonEmoji(hostName)}</Avatar>
                       <Typography variant="body2">{hostName}</Typography>
                     </Stack>
                     <Box sx={{ display: { xs: 'none', md: 'block' } }}>

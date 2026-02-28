@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLoaderData, useNavigate, useParams } from 'react-router';
+import { firstNonEmoji } from '@/components/Atoms';
 import {
   Avatar,
   AvatarGroup,
@@ -722,7 +723,7 @@ export default function EventDetailPage() {
                       <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
                         {task.name ? (
                           <>
-                            <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>{task.name[0]}</Avatar>
+                            <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>{firstNonEmoji(task.name)}</Avatar>
                             <Typography variant="body2">{task.name}</Typography>
                           </>
                         ) : (
@@ -1238,7 +1239,7 @@ export default function EventDetailPage() {
                   {filtered.map((m) => (
                     <Stack direction="row" key={m.name} justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
                       <Stack direction="row" spacing={1} alignItems="center">
-                        <Avatar sx={{ width: 28, height: 28 }}>{m.name[0]}</Avatar>
+                        <Avatar sx={{ width: 28, height: 28 }}>{firstNonEmoji(m.name)}</Avatar>
                         <Typography variant="body2">{m.name}</Typography>
                       </Stack>
                       <Button

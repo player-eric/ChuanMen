@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router';
+import { firstNonEmoji } from '@/components/Atoms';
 import {
   AppBar,
   Avatar,
@@ -144,7 +145,7 @@ export default function AdminLayout() {
             </Stack>
             <Stack direction="row" spacing={1} alignItems="center">
               <Typography variant="body2" color="text.secondary">{user.name}</Typography>
-              <Avatar sx={{ width: 28, height: 28 }}>{user.name[0]}</Avatar>
+              <Avatar sx={{ width: 28, height: 28 }}>{firstNonEmoji(user.name)}</Avatar>
             </Stack>
           </Toolbar>
         </AppBar>
