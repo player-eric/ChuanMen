@@ -27,7 +27,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import { useAuth } from '@/auth/AuthContext';
-import { taskPresets } from '@/mock/data';
+import { useTaskPresets } from '@/hooks/useTaskPresets';
 import { createEvent, inviteToEvent, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
 import type { FoodOption, TaskRole } from '@/types';
 import { Poster } from '@/components/Poster';
@@ -49,6 +49,7 @@ export default function EventCreatePage() {
   const navigate = useNavigate();
   const routeLocation = useLocation();
   const { user } = useAuth();
+  const taskPresets = useTaskPresets();
 
   const fromProposal = (routeLocation.state as { fromProposal?: { title: string; descriptionHtml: string } } | null)?.fromProposal;
   const preTag = (routeLocation.state as { preTag?: string } | null)?.preTag;

@@ -35,7 +35,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
 import { RichTextViewer } from '@/components/RichTextEditor';
-import { taskPresets } from '@/mock/data';
+import { useTaskPresets } from '@/hooks/useTaskPresets';
 import { eventTagToChinese } from '@/lib/mappings';
 
 const foodLabel: Record<FoodOption, string> = {
@@ -57,6 +57,7 @@ export default function EventDetailPage() {
   const navigate = useNavigate();
   const { eventId } = useParams();
   const { user } = useAuth();
+  const taskPresets = useTaskPresets();
   const loadedEvent = useLoaderData() as EventData | null;
   const [event, setEvent] = useState<EventData | null>(loadedEvent);
   const [signedUp, setSignedUp] = useState(false);

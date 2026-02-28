@@ -25,7 +25,7 @@ import type { CardsPageData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { PostCard } from '@/components/PostCard';
 import { EmptyState } from '@/components/EmptyState';
-import { titleDefinitions } from '@/mock/data';
+import { useTitleDefs } from '@/hooks/useTitleDefs';
 
 function EmptyCards() {
   const navigate = useNavigate();
@@ -56,6 +56,7 @@ function FullCards() {
   const { user } = useAuth();
   const data = useLoaderData() as CardsPageData;
   const revalidator = useRevalidator();
+  const titleDefs = useTitleDefs();
   const [step, setStep] = useState(0);
   const [who, setWho] = useState<string | null>(null);
   const [whoId, setWhoId] = useState<string | null>(null);
@@ -255,7 +256,7 @@ function FullCards() {
                 <Box>
                   <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>送一个称号（可选）</Typography>
                   <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-                    {titleDefinitions.map((t) => (
+                    {titleDefs.map((t) => (
                       <Chip
                         key={t.id}
                         label={`${t.emoji} ${t.name}`}

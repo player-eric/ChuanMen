@@ -32,7 +32,7 @@ import { fetchMembersApi } from '@/lib/domainApi';
 import { firstNonEmoji } from '@/components/Atoms';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 
-/* ── Mock newsletters ── */
+/* ── Placeholder newsletter data (no Newsletter backend model yet) ── */
 const sentNewsletters = [
   {
     id: 'nl-12',

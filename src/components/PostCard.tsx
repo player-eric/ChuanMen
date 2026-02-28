@@ -1,7 +1,7 @@
 import { Box, Stack, Typography } from '@mui/material';
 import { useColors } from '@/hooks/useColors';
+import { useTitleDefs } from '@/hooks/useTitleDefs';
 import { Ava, Stamp } from './Atoms';
-import { titleDefinitions } from '@/mock/data';
 
 interface PostCardProps {
   from: string;
@@ -24,6 +24,7 @@ const defaultBg = 'linear-gradient(145deg, #1c1814 0%, #2a2018 25%, #3a2a20 50%,
 
 export function PostCard({ from, to, message, stamp = '✉', date, photo, isPrivate = false, showVisibility = false, layout = 'vertical', eventCtx, onToggleVisibility }: PostCardProps) {
   const c = useColors();
+  const titleDefs = useTitleDefs();
   const horiz = layout === 'horizontal';
 
   const bannerDecor = (
@@ -51,7 +52,7 @@ export function PostCard({ from, to, message, stamp = '✉', date, photo, isPriv
   const contentArea = (
     <Box sx={{ p: '12px 14px 14px', position: 'relative', flex: horiz ? 1 : undefined, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: 0 }}>
       <Box>
-        {stamp && <Box sx={{ position: 'absolute', top: 8, right: 10 }}><Stamp emoji={stamp} size={22} tooltip={titleDefinitions.find((t) => t.stampEmoji === stamp)?.name} /></Box>}
+        {stamp && <Box sx={{ position: 'absolute', top: 8, right: 10 }}><Stamp emoji={stamp} size={22} tooltip={titleDefs.find((t: any) => t.stampEmoji === stamp)?.name} /></Box>}
         <Typography variant="overline" sx={{ color: c.inkLight }}>TO: {to}</Typography>
         <Typography variant="body2" sx={{ color: c.ink, fontStyle: 'italic', lineHeight: 1.7, maxWidth: '85%', mt: 0.5 }}>{message}</Typography>
       </Box>

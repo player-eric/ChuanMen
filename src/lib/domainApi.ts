@@ -708,6 +708,36 @@ export async function fetchEmailRules() {
   return requestJson<EmailRuleRow[]>('/api/email/rules');
 }
 
+export async function updateEmailRule(id: string, payload: { enabled?: boolean; cooldownDays?: number; config?: Record<string, unknown> }) {
+  return requestJson<EmailRuleRow>(`/api/email/rules/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface EmailLogRow {
+  id: string;
+  userId: string;
+  ruleId: string;
+  refId?: string;
+  messageId?: string;
+  sentAt: string;
+  openedAt?: string;
+  clickedAt?: string;
+  user: { name: string; email: string };
+}
+
+export async function fetchEmailLogs(params?: { limit?: number; ruleId?: string }) {
+  return requestJson<EmailLogRow[]>(
+    `/api/email/logs${toQueryString({ limit: String(params?.limit ?? 100), ruleId: params?.ruleId ?? '' })}`,
+  );
+}
+
+export async function fetchRecommendationByIdApi(id: string) {
+  return requestJson<EntityMap>(`/api/recommendations/${id}`);
+}
+
 export async function fetchEmailTemplates(ruleId?: string) {
   return requestJson<EmailTemplateRow[]>(
     `/api/email/templates${toQueryString({ ruleId: ruleId ?? '' })}`,

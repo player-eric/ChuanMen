@@ -64,6 +64,44 @@ export const emailRoutes: FastifyPluginAsync = async (app) => {
     return reply.send(rules);
   });
 
+  // ── PATCH /rules/:id — update rule config ───────────────
+  const updateRuleSchema = z.object({
+    enabled: z.boolean().optional(),
+    cooldownDays: z.coerce.number().int().min(0).optional(),
+    config: z.record(z.string(), z.unknown()).optional(),
+  });
+
+  app.patch<{ Params: { id: string } }>('/rules/:id', async (request, reply) => {
+    const { id } = request.params;
+    const data = safeParse(updateRuleSchema, request.body);
+
+    const existing = await app.prisma.emailRule.findUnique({ where: { id } });
+    if (!existing) return reply.code(404).send({ error: '规则不存在' });
+
+    const updated = await app.prisma.emailRule.update({
+      where: { id },
+      data: {
+        ...data,
+        config: data.config ? (data.config as any) : undefined,
+      },
+    });
+    return reply.send(updated);
+  });
+
+  // ── GET /logs — list email send logs ─────────────────────
+  app.get('/logs', async (request, reply) => {
+    const { limit, ruleId } = request.query as { limit?: string; ruleId?: string };
+    const take = Math.min(Number(limit) || 100, 500);
+    const where = ruleId ? { ruleId } : {};
+    const logs = await app.prisma.emailLog.findMany({
+      where,
+      take,
+      orderBy: { sentAt: 'desc' },
+      include: { user: { select: { name: true, email: true } } },
+    });
+    return reply.send(logs);
+  });
+
   // ── GET /templates — list templates, optional ?ruleId= ──
   app.get('/templates', async (request, reply) => {
     const { ruleId } = request.query as { ruleId?: string };

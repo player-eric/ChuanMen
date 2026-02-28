@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Box,
@@ -21,7 +21,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
 import { Ava } from '@/components/Atoms';
 import { useColors } from '@/hooks/useColors';
-import { feedItems } from '@/mock/data';
+import { fetchEventsApi, fetchMoviesApi, fetchMembersApi, fetchRecommendationsApi } from '@/lib/domainApi';
 
 /* ═══ Types ═══ */
 type ObjectType = 'event' | 'member' | 'movie' | 'book';
@@ -36,86 +36,62 @@ interface SelectedObject {
   navTarget?: string;
 }
 
-/* ═══ Data extraction from feedItems ═══ */
+/* ═══ Data fetching from real API ═══ */
+
+interface QuickActionDataResult {
+  recentEvents: SelectedObject[];
+  people: { name: string; ctx: string }[];
+  movies: SelectedObject[];
+  books: SelectedObject[];
+}
+
+const emptyData: QuickActionDataResult = { recentEvents: [], people: [], movies: [], books: [] };
 
 function useQuickActionData() {
-  return useMemo(() => {
-    const events: SelectedObject[] = [];
-    const movieMap = new Map<string, SelectedObject>();
-    const bookMap = new Map<string, SelectedObject>();
-    const peopleBySrc = new Map<string, { name: string; ctx: string }>();
-
-    for (const item of feedItems) {
-      if (item.type === 'activity') {
-        events.push({
-          type: 'event',
-          id: item.navTarget ?? '',
-          title: item.title,
-          subtitle: item.date,
-          icon: '📅',
-          host: item.name,
-          navTarget: item.navTarget,
-        });
-        // collect people from this event (de-dup by name)
-        for (const p of item.people) {
-          if (!peopleBySrc.has(p)) {
-            peopleBySrc.set(p, { name: p, ctx: item.title });
-          }
-        }
-      }
-      if (item.type === 'smallGroup' || item.type === 'compactSmallGroup') {
-        events.push({
-          type: 'event',
-          id: item.navTarget ?? '',
-          title: item.title,
-          subtitle: item.date,
-          icon: '📅',
-          host: item.name,
-          navTarget: item.navTarget,
-        });
-        for (const p of item.people) {
-          if (!peopleBySrc.has(p)) {
-            peopleBySrc.set(p, { name: p, ctx: item.title });
-          }
-        }
-      }
-      if (item.type === 'movie' || item.type === 'compactMovie') {
-        if (!movieMap.has(item.title)) {
-          movieMap.set(item.title, {
-            type: 'movie',
-            id: item.type === 'compactMovie' ? (item.navTarget ?? '') : '',
-            title: item.title,
-            subtitle: `${item.dir} · ${item.year}`,
-            icon: '🎬',
-            navTarget: item.type === 'compactMovie' ? item.navTarget : undefined,
-          });
-        }
-      }
-      if (item.type === 'book' || item.type === 'compactBook') {
-        if (!bookMap.has(item.title)) {
-          bookMap.set(item.title, {
-            type: 'book',
-            id: item.type === 'compactBook' ? (item.navTarget ?? '') : '',
-            title: item.title,
-            subtitle: `${item.author} · ${item.year}`,
-            icon: '📖',
-            navTarget: item.type === 'compactBook' ? item.navTarget : undefined,
-          });
-        }
-      }
-    }
-
-    const recentEvents = events.slice(0, 5);
-    const movies = [...movieMap.values()].slice(0, 3);
-    const books = [...bookMap.values()].slice(0, 3);
-
-    // people: exclude current user placeholder (Yuan), keep first 6
-    const people = [...peopleBySrc.entries()]
-      .map(([, v]) => v)
-      .slice(0, 8);
-
-    return { recentEvents, people, movies, books };
+  const [data, setData] = useState<QuickActionDataResult>(emptyData);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetchEventsApi().catch(() => []),
+      fetchMoviesApi().catch(() => []),
+      fetchMembersApi().catch(() => []),
+      fetchRecommendationsApi('book').catch(() => []),
+    ]).then(([events, movies, members, books]: any[]) => {
+      if (cancelled) return;
+      const recentEvents: SelectedObject[] = events.slice(0, 5).map((e: any) => ({
+        type: 'event' as const,
+        id: e.id ?? '',
+        title: e.title ?? e.name ?? '',
+        subtitle: e.date ? new Date(e.date).toLocaleDateString('zh-CN') : '',
+        icon: '📅',
+        host: e.host?.name ?? e.hostName ?? '',
+        navTarget: `/events/${e.id}`,
+      }));
+      const movieItems: SelectedObject[] = movies.slice(0, 3).map((m: any) => ({
+        type: 'movie' as const,
+        id: m.id ?? '',
+        title: m.title ?? '',
+        subtitle: [m.director, m.year].filter(Boolean).join(' · '),
+        icon: '🎬',
+        navTarget: `/movies/${m.id}`,
+      }));
+      const bookItems: SelectedObject[] = books.slice(0, 3).map((b: any) => ({
+        type: 'book' as const,
+        id: b.id ?? '',
+        title: b.title ?? '',
+        subtitle: [b.author, b.year].filter(Boolean).join(' · '),
+        icon: '📖',
+        navTarget: `/books/${b.id}`,
+      }));
+      const people = members.slice(0, 8).map((m: any) => ({
+        name: m.name ?? '',
+        ctx: m.role ?? 'member',
+      }));
+      setData({ recentEvents, people, movies: movieItems, books: bookItems });
+    });
+    return () => { cancelled = true; };
   }, []);
+  return data;
 }
 
 /* ═══ Action definitions per type ═══ */

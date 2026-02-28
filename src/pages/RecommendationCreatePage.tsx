@@ -28,8 +28,8 @@ function isCategory(value: string | undefined): value is RecommendationCategory 
   return value === 'movie' || value === 'book' || value === 'recipe' || value === 'music' || value === 'place';
 }
 
-/* ── Mock Douban data for demo ── */
-const doubanMock: Record<string, { title: string; year: string; director: string; genre: string; rating: string; synopsis: string }> = {
+/* ── Static Douban metadata for known movie IDs (no Douban API proxy yet) ── */
+const doubanDemoData: Record<string, { title: string; year: string; director: string; genre: string; rating: string; synopsis: string }> = {
   '1291557': { title: '花样年华', year: '2000', director: '王家卫', genre: '剧情,爱情', rating: '8.6', synopsis: '1962年的香港，报社编辑周慕云与苏丽珍成为邻居。当他们发现各自的配偶背着他们有了婚外情后，两人开始互相接近，在克制与暧昧之间徘徊。' },
   '1291999': { title: '重庆森林', year: '1994', director: '王家卫', genre: '剧情,爱情', rating: '8.7', synopsis: '两段发生在重庆大厦和兰桂坊附近的都市爱情故事。失恋警察与神秘女杀手的一夜邂逅，以及另一个警察与快餐店女孩间的错过与重逢。' },
   '27010768': { title: '寄生虫', year: '2019', director: '奉俊昊', genre: '剧情,喜剧,惊悚', rating: '8.8', synopsis: '金家四口全是无业游民，一次偶然的机会让长子基宇进入朴社长的豪宅当家教。随后一家人逐一渗透进这个富裕家庭。' },
@@ -103,7 +103,7 @@ export default function RecommendationCreatePage() {
     setFetching(true);
     setFetched(false);
     fetchTimer.current = setTimeout(() => {
-      const data = doubanMock[doubanId];
+      const data = doubanDemoData[doubanId];
       if (data) {
         setTitle(data.title);
         setDescription(`${data.director} ${data.year}｜${data.synopsis}`);

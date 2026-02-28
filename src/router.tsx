@@ -57,8 +57,8 @@ import {
   fetchAboutStatsApi,
   fetchProposalsApi,
   fetchRecommendationsApi,
+  fetchRecommendationByIdApi,
 } from '@/lib/domainApi';
-import { fetchBookDetail } from '@/mock/api';
 import { eventTagToScene } from '@/lib/mappings';
 
 /* ── Loader helpers (call real backend) ── */
@@ -369,6 +369,29 @@ async function movieDetailLoader({ params }: { params: Record<string, string | u
   }
 }
 
+async function bookDetailLoader({ params }: { params: Record<string, string | undefined> }) {
+  const id = params.bookId;
+  if (!id) return null;
+  try {
+    const rec: any = await fetchRecommendationByIdApi(id);
+    if (!rec) return null;
+    // Transform Recommendation into BookPool shape expected by BookDetailPage
+    return {
+      id: rec.id,
+      title: rec.title,
+      year: (rec.tags ?? []).find((t: any) => /^\d{4}$/.test(t.value))?.value ?? '',
+      author: (rec.tags ?? []).find((t: any) => !(/^\d{4}$/.test(t.value)))?.value ?? rec.author?.name ?? '',
+      v: rec.voteCount ?? 0,
+      status: rec.status ?? 'candidate',
+      by: rec.author?.name ?? '',
+      synopsis: rec.description ?? '',
+      genre: (rec.tags ?? []).map((t: any) => t.value).join(', '),
+    };
+  } catch {
+    return null;
+  }
+}
+
 function getStoredUserId(): string {
   try {
     const raw = localStorage.getItem('chuanmen.auth.user') ?? sessionStorage.getItem('chuanmen.auth.user');
@@ -524,7 +547,7 @@ export const appRoutes: RouteObject[] = [
       {
         path: 'discover/books/:bookId',
         element: <BookDetailPage />,
-        loader: ({ params }) => fetchBookDetail(params.bookId!),
+        loader: bookDetailLoader,
       },
       { path: 'discover/:category', element: <RecommendationListPage /> },
       { path: 'discover/:category/add', element: <RecommendationCreatePage /> },

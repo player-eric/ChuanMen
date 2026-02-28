@@ -47,15 +47,21 @@ import {
   deleteEmailTemplate,
   previewEmailTemplate,
   fetchMembersApi,
+  fetchEventsApi,
+  fetchEmailLogs,
+  fetchEmailRules,
+  updateEmailRule,
   sendAdminEmail,
   type EmailTemplateRow,
+  type EmailLogRow,
 } from '@/lib/domainApi';
 
 /* ═══════════════════════════════════════════════
-   Mock Data
+   Rule Metadata (static UI constants per rule ID)
+   & Placeholder data (no backend models yet)
    ═══════════════════════════════════════════════ */
 
-interface EmailRuleMock {
+interface EmailRuleMetadata {
   id: string;
   name: string;
   description: string;
@@ -70,7 +76,7 @@ interface EmailRuleMock {
   config: Record<string, number | string>;
 }
 
-const mockRules: EmailRuleMock[] = [
+const ruleMetadata: EmailRuleMetadata[] = [
   // TXN
   { id: 'TXN-1', name: '活动取消通知', description: '活动被 Host 或管理员取消时发送', category: 'txn', enabled: true, cooldownDays: 0, triggerDescription: '活动被 Host 或管理员取消时，立即发送', recipientDescription: '该活动所有已报名参与者', userControllable: false, disableImpact: '活动取消后参与者将不会收到任何通知，可能导致参与者在不知情的情况下前往活动地点。', config: {} },
   { id: 'TXN-2', name: '活动变更通知', description: '时间/地点变更时发送', category: 'txn', enabled: true, cooldownDays: 0, triggerDescription: '活动时间或地点发生变更时，立即发送', recipientDescription: '该活动所有已报名参与者', userControllable: false, disableImpact: '参与者不知道活动时间或地点已改变，可能去错时间或地点。', config: {} },
@@ -149,51 +155,7 @@ const defaultDigestConfig: DigestConfig = {
   ],
 };
 
-interface EmailTemplateMock {
-  id: string;
-  ruleId: string;
-  variantKey: string;
-  subject: string;
-  body: string;
-  isActive: boolean;
-}
-
-const mockTemplates: EmailTemplateMock[] = [
-  { id: 't1', ruleId: 'TXN-1', variantKey: 'default', subject: '【串门儿】活动「{eventTitle}」已取消', body: '你好 {userName}，\n\n很抱歉通知你，「{eventTitle}」（原定 {eventDate}）已被取消。\n\n如有疑问，请联系活动 Host {hostName}。\n\n— 串门儿团队', isActive: true },
-  { id: 't2', ruleId: 'TXN-2', variantKey: 'default', subject: '【串门儿】活动「{eventTitle}」信息变更', body: '你好 {userName}，\n\n「{eventTitle}」的信息有更新：\n时间：{eventDate}\n地点：{eventLocation}\n\n请留意最新安排。\n\n— 串门儿团队', isActive: true },
-  { id: 't3', ruleId: 'TXN-3', variantKey: 'default', subject: '【串门儿】恭喜！你已被「{eventTitle}」录取', body: '你好 {userName}，\n\n好消息！你在「{eventTitle}」的候补已转正。\n\n活动时间：{eventDate}\n地点：{eventLocation}\n\n期待见到你！\n\n— 串门儿团队', isActive: true },
-  { id: 't4', ruleId: 'TXN-4', variantKey: 'default', subject: '欢迎加入串门儿，{userName}！', body: '你好 {userName}，\n\n恭喜你通过了串门儿的申请！🎉\n\n你现在可以：\n• 浏览和报名活动\n• 推荐电影\n• 发送感谢卡\n\n开始探索吧：https://chuanmen.co/\n\n— 串门儿团队', isActive: true },
-  { id: 't5', ruleId: 'TXN-5', variantKey: 'default', subject: '【串门儿】申请结果通知', body: '你好，\n\n感谢你对串门儿的兴趣。经过审核，我们暂时未能通过你的申请。\n\n这并不代表永久拒绝，欢迎你在未来再次申请。\n\n— 串门儿团队', isActive: true },
-  { id: 't6', ruleId: 'TXN-6', variantKey: 'default', subject: '【串门儿】恭喜中签！', body: '你好 {userName}，\n\n本周抽签结果出炉，你已中签！🎊\n\n请尽快确认你的参加意愿。\n\n— 串门儿团队', isActive: true },
-  { id: 't7', ruleId: 'P0-A', variantKey: 'default', subject: '【串门儿】你被邀请参加「{eventTitle}」', body: '你好 {userName}，\n\n{hostName} 邀请你参加「{eventTitle}」！\n\n时间：{eventDate}\n地点：{eventLocation}\n\n快来报名吧！\n\n— 串门儿团队', isActive: true },
-  { id: 't8', ruleId: 'P3-F', variantKey: 'default', subject: '【串门儿】好久不见，{userName}！', body: '你好 {userName}，\n\n我们发现你已经有一段时间没参加串门儿的活动了。\n\n最近有这些活动可能适合你：\n\n想你了，期待再次见到你！\n\n— 串门儿团队', isActive: true },
-  { id: 't9', ruleId: 'P3-F', variantKey: 'social', subject: '【串门儿】{userName}，朋友们想你了', body: '你好 {userName}，\n\n社群里的朋友们都在问你最近怎么样。\n\n不如找个活动见见面？\n\n— 串门儿团队', isActive: true },
-  { id: 't10', ruleId: 'DIGEST', variantKey: 'default', subject: '{date} · 串门儿社区动态', body: '{headerText}\n\n{digestContent}\n\n{footerText}', isActive: true },
-];
-
-interface EmailLogMock {
-  id: string;
-  userName: string;
-  userEmail: string;
-  ruleId: string;
-  eventName?: string;
-  sentAt: string;
-  openedAt?: string;
-  clickedAt?: string;
-}
-
-const mockLogs: EmailLogMock[] = [
-  { id: 'l1', userName: 'Yuan', userEmail: 'yuan@cm.app', ruleId: 'P0-A', eventName: '电影夜·花样年华', sentAt: '2026-02-20 09:00', openedAt: '2026-02-20 09:15', clickedAt: '2026-02-20 09:20' },
-  { id: 'l2', userName: '星星', userEmail: 'xingxing@gmail.com', ruleId: 'DIGEST', sentAt: '2026-02-20 09:00', openedAt: '2026-02-20 10:30' },
-  { id: 'l3', userName: '白开水', userEmail: 'bks@gmail.com', ruleId: 'TXN-1', eventName: '新年Potluck', sentAt: '2026-02-19 14:30' },
-  { id: 'l4', userName: 'Nicole', userEmail: 'nicole@gmail.com', ruleId: 'P0-B', eventName: '电影夜·花样年华', sentAt: '2026-02-19 09:00', openedAt: '2026-02-19 09:45' },
-  { id: 'l5', userName: '大橙子', userEmail: 'dachengzi@gmail.com', ruleId: 'P3-D', sentAt: '2026-02-18 09:00' },
-  { id: 'l6', userName: 'Yuan', userEmail: 'yuan@cm.app', ruleId: 'DIGEST', sentAt: '2026-02-18 09:00', openedAt: '2026-02-18 09:10', clickedAt: '2026-02-18 09:12' },
-  { id: 'l7', userName: '星星', userEmail: 'xingxing@gmail.com', ruleId: 'TXN-4', sentAt: '2026-02-17 11:00', openedAt: '2026-02-17 11:20' },
-  { id: 'l8', userName: '白开水', userEmail: 'bks@gmail.com', ruleId: 'P2-A', sentAt: '2026-02-17 09:00', openedAt: '2026-02-17 12:00', clickedAt: '2026-02-17 12:05' },
-];
-
-interface QueuedEmailMock {
+interface QueuedEmail {
   id: string;
   userName: string;
   userEmail: string;
@@ -202,7 +164,7 @@ interface QueuedEmailMock {
   status: 'queued' | 'paused';
 }
 
-const initialQueuedEmails: QueuedEmailMock[] = [
+const initialQueuedEmails: QueuedEmail[] = [
   { id: 'q1', userName: 'Yuan', userEmail: 'yuan@cm.app', ruleId: 'DIGEST', scheduledAt: '明天 09:00 EST', status: 'queued' },
   { id: 'q2', userName: '星星', userEmail: 'xingxing@gmail.com', ruleId: 'P0-A', scheduledAt: '明天 09:00 EST', status: 'queued' },
   { id: 'q3', userName: 'Nicole', userEmail: 'nicole@gmail.com', ruleId: 'DIGEST', scheduledAt: '(已暂停)', status: 'paused' },
@@ -210,7 +172,7 @@ const initialQueuedEmails: QueuedEmailMock[] = [
   { id: 'q5', userName: '大橙子', userEmail: 'dachengzi@gmail.com', ruleId: 'DIGEST', scheduledAt: '明天 09:00 EST', status: 'queued' },
 ];
 
-interface BounceEventMock {
+interface BounceEvent {
   id: string;
   email: string;
   ruleId: string;
@@ -219,7 +181,7 @@ interface BounceEventMock {
   occurredAt: string;
 }
 
-const mockBounces: BounceEventMock[] = [
+const placeholderBounces: BounceEvent[] = [
   { id: 'b1', email: 'bad@email.com', ruleId: 'DIGEST', type: 'hard_bounce', reason: '地址不存在', occurredAt: '2026-02-18 09:00' },
   { id: 'b2', email: 'full@mail.com', ruleId: 'P0-A', type: 'soft_bounce', reason: '邮箱已满', occurredAt: '2026-02-17 09:00' },
   { id: 'b3', email: 'user@gmail.com', ruleId: 'DIGEST', type: 'complaint', reason: '标记为垃圾邮件', occurredAt: '2026-02-15 09:00' },
@@ -236,7 +198,7 @@ interface UserEmailStatus {
   createdAt?: string;
 }
 
-interface UnsubscribeRecordMock {
+interface UnsubscribeRecord {
   id: string;
   userName: string;
   email: string;
@@ -245,7 +207,7 @@ interface UnsubscribeRecordMock {
   unsubscribedAt: string;
 }
 
-const mockUnsubscribes: UnsubscribeRecordMock[] = [
+const placeholderUnsubscribes: UnsubscribeRecord[] = [
   { id: 'us1', userName: '李华', email: 'lihua@gmail.com', reason: '邮件太频繁', comment: '一天一封太多了', unsubscribedAt: '2026-02-15' },
   { id: 'us2', userName: '小明', email: 'xiaoming@outlook.com', reason: '内容不相关', unsubscribedAt: '2026-02-10' },
   { id: 'us3', userName: '张三', email: 'zhangsan@qq.com', reason: '邮件太频繁', unsubscribedAt: '2026-01-28' },
@@ -253,7 +215,7 @@ const mockUnsubscribes: UnsubscribeRecordMock[] = [
   { id: 'us5', userName: '赵六', email: 'zhaoliu@gmail.com', reason: '邮件太频繁', unsubscribedAt: '2026-01-10' },
 ];
 
-interface SuppressedEmailMock {
+interface SuppressedEmail {
   id: string;
   email: string;
   reason: string;
@@ -261,7 +223,7 @@ interface SuppressedEmailMock {
   source: 'system' | 'admin';
 }
 
-const initialSuppressed: SuppressedEmailMock[] = [
+const initialSuppressed: SuppressedEmail[] = [
   { id: 's1', email: 'bad@email.com', reason: '硬弹回(自动)', addedAt: '2026-02-18', source: 'system' },
   { id: 's2', email: 'competitor@x.com', reason: '手动添加', addedAt: '2026-02-10', source: 'admin' },
 ];
@@ -306,7 +268,6 @@ const dayLabels = ['一', '二', '三', '四', '五', '六', '日'];
 const timezoneOptions = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Asia/Shanghai', 'UTC'];
 const weekdayOptions = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 const allRuleIds = ['TXN-1', 'TXN-2', 'TXN-3', 'TXN-4', 'TXN-5', 'TXN-6', 'P0-A', 'P0-B', 'P0-C', 'P0-D', 'P1', 'P2-A', 'P2-B', 'P3-A', 'P3-B', 'P3-C', 'P3-D', 'P3-E', 'P3-F', 'P4-A', 'P4-B', 'P4-C', 'DIGEST'];
-const mockEvents = ['电影夜·花样年华', '新年Potluck', 'High Point 徒步', '春季招新', '重庆森林·私人邀请'];
 
 const emailStateColors: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
   active: 'success',
@@ -345,19 +306,21 @@ export default function AdminEmailPage() {
   // Global state
   const [mainTab, setMainTab] = useState(0);
   const [globalConfig, setGlobalConfig] = useState<GlobalEmailConfig>(defaultGlobalConfig);
-  const [rules, setRules] = useState<EmailRuleMock[]>(mockRules);
+  const [rules, setRules] = useState<EmailRuleMetadata[]>(ruleMetadata);
   const [templates, setTemplates] = useState<EmailTemplateRow[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<EmailTemplateRow | null>(null);
   const [previewHtml, setPreviewHtml] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [digestConfig, setDigestConfig] = useState<DigestConfig>(defaultDigestConfig);
-  const [queuedEmails, setQueuedEmails] = useState<QueuedEmailMock[]>(initialQueuedEmails);
-  const [suppressedEmails, setSuppressedEmails] = useState<SuppressedEmailMock[]>(initialSuppressed);
+  const [queuedEmails, setQueuedEmails] = useState<QueuedEmail[]>(initialQueuedEmails);
+  const [suppressedEmails, setSuppressedEmails] = useState<SuppressedEmail[]>(initialSuppressed);
 
-  // Real user data from API
+  // Real data from API
   const [allUsers, setAllUsers] = useState<UserEmailStatus[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [emailLogs, setEmailLogs] = useState<EmailLogRow[]>([]);
+  const [eventNames, setEventNames] = useState<string[]>([]);
 
   // Snackbar for send feedback
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
@@ -367,7 +330,7 @@ export default function AdminEmailPage() {
   const [pauseConfirmOpen, setPauseConfirmOpen] = useState(false);
   const [manualSendOpen, setManualSendOpen] = useState(false);
   const [editRuleOpen, setEditRuleOpen] = useState(false);
-  const [editingRule, setEditingRule] = useState<EmailRuleMock | null>(null);
+  const [editingRule, setEditingRule] = useState<EmailRuleMetadata | null>(null);
   const [editTemplateOpen, setEditTemplateOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplateRow | null>(null);
   const [previewTemplateOpen, setPreviewTemplateOpen] = useState(false);
@@ -463,7 +426,23 @@ export default function AdminEmailPage() {
     }
   }, []);
 
-  useEffect(() => { loadTemplates(); loadUsers(); }, [loadUsers]);
+  useEffect(() => {
+    loadTemplates();
+    loadUsers();
+    // Load email logs from API
+    fetchEmailLogs().then(setEmailLogs).catch(() => {});
+    // Load event names from API
+    fetchEventsApi().then((events: any[]) => {
+      setEventNames(events.map((e: any) => e.title ?? e.name ?? '').filter(Boolean));
+    }).catch(() => {});
+    // Merge real DB rule state into UI metadata
+    fetchEmailRules().then((dbRules) => {
+      setRules(prev => prev.map(r => {
+        const db = dbRules.find((d: any) => d.id === r.id);
+        return db ? { ...r, enabled: db.enabled, cooldownDays: db.cooldownDays, config: { ...r.config, ...db.config as Record<string, number | string> } } : r;
+      }));
+    }).catch(() => {});
+  }, [loadUsers]);
 
   // Computed values from real data
   const activeCount = allUsers.filter(u => u.emailState === 'active').length;
@@ -599,10 +578,17 @@ export default function AdminEmailPage() {
   };
 
   const handleToggleRule = (ruleId: string) => {
-    setRules(prev => prev.map(r => r.id === ruleId ? { ...r, enabled: !r.enabled } : r));
+    const rule = rules.find(r => r.id === ruleId);
+    if (!rule) return;
+    const newEnabled = !rule.enabled;
+    setRules(prev => prev.map(r => r.id === ruleId ? { ...r, enabled: newEnabled } : r));
+    updateEmailRule(ruleId, { enabled: newEnabled }).catch(() => {
+      // Revert on failure
+      setRules(prev => prev.map(r => r.id === ruleId ? { ...r, enabled: !newEnabled } : r));
+    });
   };
 
-  const handleOpenEditRule = (rule: EmailRuleMock) => {
+  const handleOpenEditRule = (rule: EmailRuleMetadata) => {
     setEditingRule(rule);
     setEditRuleEnabled(rule.enabled);
     setEditRuleCooldown(rule.cooldownDays);
@@ -613,20 +599,22 @@ export default function AdminEmailPage() {
 
   const handleSaveRule = () => {
     if (!editingRule) return;
+    const newConfig = {
+      ...editingRule.config,
+      ...(editRuleThreshold > 0 ? { thresholdDays: editRuleThreshold } : {}),
+      ...(editRuleMaxRec > 0 ? { maxRecommendations: editRuleMaxRec } : {}),
+      cooldownDays: editRuleCooldown,
+    };
     setRules(prev => prev.map(r => {
       if (r.id !== editingRule.id) return r;
-      return {
-        ...r,
-        enabled: editRuleEnabled,
-        cooldownDays: editRuleCooldown,
-        config: {
-          ...r.config,
-          ...(editRuleThreshold > 0 ? { thresholdDays: editRuleThreshold } : {}),
-          ...(editRuleMaxRec > 0 ? { maxRecommendations: editRuleMaxRec } : {}),
-          cooldownDays: editRuleCooldown,
-        },
-      };
+      return { ...r, enabled: editRuleEnabled, cooldownDays: editRuleCooldown, config: newConfig };
     }));
+    // Persist to DB
+    updateEmailRule(editingRule.id, {
+      enabled: editRuleEnabled,
+      cooldownDays: editRuleCooldown,
+      config: newConfig as Record<string, unknown>,
+    }).catch(console.error);
     setEditRuleOpen(false);
   };
 
@@ -706,10 +694,9 @@ export default function AdminEmailPage() {
     setAddSuppressedOpen(false);
   };
 
-  const filteredLogs = mockLogs.filter(l => {
+  const filteredLogs = emailLogs.filter(l => {
     if (logFilterRuleId && l.ruleId !== logFilterRuleId) return false;
-    if (logFilterEvent && l.eventName !== logFilterEvent) return false;
-    if (logSearch && !l.userName.toLowerCase().includes(logSearch.toLowerCase()) && !l.userEmail.toLowerCase().includes(logSearch.toLowerCase())) return false;
+    if (logSearch && !l.user.name.toLowerCase().includes(logSearch.toLowerCase()) && !l.user.email.toLowerCase().includes(logSearch.toLowerCase())) return false;
     return true;
   });
 
@@ -731,11 +718,11 @@ export default function AdminEmailPage() {
   });
 
   // Unsubscribe reason stats
-  const unsubReasons = mockUnsubscribes.reduce<Record<string, number>>((acc, u) => {
+  const unsubReasons = placeholderUnsubscribes.reduce<Record<string, number>>((acc, u) => {
     acc[u.reason] = (acc[u.reason] || 0) + 1;
     return acc;
   }, {});
-  const totalUnsubs = mockUnsubscribes.length;
+  const totalUnsubs = placeholderUnsubscribes.length;
 
   const txnRules = rules.filter(r => r.category === 'txn');
   const dailyRules = rules.filter(r => r.category === 'daily');
@@ -759,7 +746,7 @@ export default function AdminEmailPage() {
   /* ═══════════════════════════════════════════════
      Render: Rule Card
      ═══════════════════════════════════════════════ */
-  const renderRuleCard = (rule: EmailRuleMock) => (
+  const renderRuleCard = (rule: EmailRuleMetadata) => (
     <Card key={rule.id} variant="outlined" sx={{ opacity: rule.enabled ? 1 : 0.6 }}>
       <CardContent sx={{ py: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
@@ -1383,7 +1370,7 @@ export default function AdminEmailPage() {
                   sx={{ minWidth: 160 }}
                 >
                   <MenuItem value="">全部活动</MenuItem>
-                  {mockEvents.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
+                  {eventNames.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
                 </TextField>
                 <TextField
                   size="small"
@@ -1406,12 +1393,12 @@ export default function AdminEmailPage() {
 
               {filteredLogs.map(log => (
                 <Box key={log.id} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '100px 100px 160px 140px 80px 80px' }, gap: 1, px: 2, py: 1, borderBottom: 1, borderColor: 'divider', alignItems: 'center' }}>
-                  <Typography variant="body2">{log.userName}</Typography>
+                  <Typography variant="body2">{log.user.name}</Typography>
                   <Chip label={log.ruleId} size="small" variant="outlined" />
-                  <Typography variant="body2" color="text.secondary">{log.eventName || '—'}</Typography>
-                  <Typography variant="body2">{log.sentAt}</Typography>
-                  <Typography variant="body2">{log.openedAt ? `✅ ${log.openedAt.split(' ')[1]}` : '❌'}</Typography>
-                  <Typography variant="body2">{log.clickedAt ? `✅ ${log.clickedAt.split(' ')[1]}` : '❌'}</Typography>
+                  <Typography variant="body2" color="text.secondary">{log.refId || '—'}</Typography>
+                  <Typography variant="body2">{new Date(log.sentAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}</Typography>
+                  <Typography variant="body2">{log.openedAt ? '✅' : '❌'}</Typography>
+                  <Typography variant="body2">{log.clickedAt ? '✅' : '❌'}</Typography>
                 </Box>
               ))}
             </Stack>
@@ -1436,7 +1423,7 @@ export default function AdminEmailPage() {
                 <Typography variant="caption" fontWeight={700}>原因</Typography>
               </Box>
 
-              {mockBounces.map(b => (
+              {placeholderBounces.map(b => (
                 <Box key={b.id} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '100px 180px 100px 140px 1fr' }, gap: 1, px: 2, py: 1, borderBottom: 1, borderColor: 'divider', alignItems: 'center' }}>
                   <Chip
                     label={b.type === 'hard_bounce' ? '硬弹回' : b.type === 'soft_bounce' ? '软弹回' : '投诉'}
@@ -1577,7 +1564,7 @@ export default function AdminEmailPage() {
                     <Typography variant="caption" fontWeight={700}>原因</Typography>
                     <Typography variant="caption" fontWeight={700}>备注</Typography>
                   </Box>
-                  {mockUnsubscribes.map(u => (
+                  {placeholderUnsubscribes.map(u => (
                     <Box key={u.id} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '100px 120px 120px 1fr' }, gap: 1, px: 1, py: 1, borderBottom: 1, borderColor: 'divider' }}>
                       <Typography variant="body2">{u.userName}</Typography>
                       <Typography variant="body2" color="text.secondary">{u.unsubscribedAt}</Typography>
@@ -2195,7 +2182,7 @@ export default function AdminEmailPage() {
                 <Box sx={{ pl: 4 }}>
                   <Autocomplete
                     size="small"
-                    options={mockEvents}
+                    options={eventNames}
                     value={manualSendEvent || null}
                     onChange={(_, v) => setManualSendEvent(v || '')}
                     renderInput={p => <TextField {...p} placeholder="搜索活动" />}
