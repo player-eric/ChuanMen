@@ -145,6 +145,9 @@ export class UserRepository {
       defaultHouseRules?: string;
       homeAddress?: string;
       hideEmail?: boolean;
+      hideActivity?: boolean;
+      hideStats?: boolean;
+      hiddenTitleIds?: string[];
     },
   ) {
     return this.prisma.user.update({

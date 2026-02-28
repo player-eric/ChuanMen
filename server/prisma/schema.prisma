@@ -160,6 +160,9 @@ model User {
   googleId             String?             @unique
   wechatId             String              @default("")
   hideEmail            Boolean             @default(false)
+  hideActivity         Boolean             @default(false)
+  hideStats            Boolean             @default(false)
+  hiddenTitleIds       String[]            @default([])
   location             String              @default("")
   selfAsFriend         String              @default("")
   idealFriend          String              @default("")

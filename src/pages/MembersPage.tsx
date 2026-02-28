@@ -56,7 +56,12 @@ export default function MembersPage() {
                 })()}
                 <CardContent sx={{ mt: -3.5 }}>
                   <Stack spacing={1.2} alignItems="center" textAlign="center">
-                    <Avatar src={member.avatar} sx={{ width: 52, height: 52, border: '2.5px solid', borderColor: 'background.paper', fontSize: 20 }}>{firstNonEmoji(member.name)}</Avatar>
+                    <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                      <Avatar src={member.avatar} sx={{ width: 52, height: 52, border: '2.5px solid', borderColor: 'background.paper', fontSize: 20 }}>{firstNonEmoji(member.name)}</Avatar>
+                      {member.badge && (
+                        <Box sx={{ position: 'absolute', bottom: -1, right: -1, fontSize: 16, lineHeight: 1 }}>{member.badge}</Box>
+                      )}
+                    </Box>
                     <Typography fontWeight={700}>{member.name}</Typography>
                     {member.location && (
                       <Typography variant="caption" color="text.secondary">{member.location}</Typography>

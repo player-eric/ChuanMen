@@ -50,6 +50,11 @@ export default function MemberDetailPage() {
   const member = raw.user;
   const mutual = raw.mutual;
   const hasMutual = mutual && (mutual.evtCount > 0 || mutual.movies.length > 0 || mutual.cards > 0);
+  const hostCount = raw.stats?.hostCount ?? member.hostCount ?? 0;
+  const memberBadge = hostCount >= 20 ? '👑' : hostCount >= 10 ? '🔥' : hostCount >= 5 ? '⭐' : hostCount >= 1 ? '🏠' : undefined;
+  const isOwnProfile = user?.id === member.id;
+  const statsHidden = !isOwnProfile && member.hideStats;
+  const activityHidden = !isOwnProfile && member.hideActivity;
 
   // Map API shape → ProfilePageData (same as ProfilePage)
   const data: ProfilePageData = {
@@ -151,12 +156,17 @@ export default function MemberDetailPage() {
             alignItems="flex-end"
             sx={{ position: 'absolute', bottom: 12, left: 16, right: 16 }}
           >
-            <Avatar
-              src={member.avatar}
-              sx={{ width: 64, height: 64, border: '3px solid rgba(255,255,255,0.8)', fontSize: 24 }}
-            >
-              {member.name?.[0]}
-            </Avatar>
+            <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+              <Avatar
+                src={member.avatar}
+                sx={{ width: 64, height: 64, border: '3px solid rgba(255,255,255,0.8)', fontSize: 24 }}
+              >
+                {member.name?.[0]}
+              </Avatar>
+              {memberBadge && (
+                <Box sx={{ position: 'absolute', bottom: -2, right: -2, fontSize: 18, lineHeight: 1 }}>{memberBadge}</Box>
+              )}
+            </Box>
             <Box sx={{ flex: 1, pb: 0.5 }}>
               <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, lineHeight: 1.2 }}>
                 {member.name}
@@ -188,6 +198,7 @@ export default function MemberDetailPage() {
       </Box>
 
       {/* ══════ Stats Card ══════ */}
+      {!statsHidden && (
       <Card sx={{ mb: 2 }}>
         <CardContent sx={{ pb: '12px !important' }}>
           <Stack
@@ -242,6 +253,7 @@ export default function MemberDetailPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* ══════ Tabs ══════ */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>

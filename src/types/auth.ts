@@ -21,6 +21,9 @@ export interface AuthUser {
   defaultHouseRules?: string;
   homeAddress?: string;
   hideEmail?: boolean;
+  hideActivity?: boolean;
+  hideStats?: boolean;
+  hiddenTitleIds?: string[];
   googleId?: string;
   preferences?: UserPreferences;
 }

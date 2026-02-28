@@ -37,6 +37,9 @@ const updateSettingsSchema = z.object({
   defaultHouseRules: z.string().optional(),
   homeAddress: z.string().optional(),
   hideEmail: z.boolean().optional(),
+  hideActivity: z.boolean().optional(),
+  hideStats: z.boolean().optional(),
+  hiddenTitleIds: z.array(z.string()).optional(),
   // Notification preferences (persisted to UserPreference)
   emailState: z.enum(['active', 'weekly', 'stopped', 'unsubscribed']).optional(),
   notifyEvents: z.boolean().optional(),

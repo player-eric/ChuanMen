@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "hideActivity" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN "hideStats" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN "hiddenTitleIds" TEXT[] DEFAULT ARRAY[]::TEXT[];

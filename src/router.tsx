@@ -450,8 +450,18 @@ async function profileLoader() {
   }
 }
 
+/** Host milestone badge based on host count */
+function hostMilestoneBadge(count: number): string | undefined {
+  if (count >= 20) return '👑';
+  if (count >= 10) return '🔥';
+  if (count >= 5) return '⭐';
+  if (count >= 1) return '🏠';
+  return undefined;
+}
+
 function mapApiMember(m: any) {
   const raw = m.mutual ?? {};
+  const hostCount = m.host ?? m.hostCount ?? 0;
   return {
     ...m,
     titles: Array.isArray(m.titles)
@@ -459,7 +469,8 @@ function mapApiMember(m: any) {
       : Array.isArray(m.socialTitles)
         ? m.socialTitles.map((t: any) => (typeof t === 'string' ? t : t.value))
         : [],
-    host: m.host ?? m.hostCount ?? 0,
+    host: hostCount,
+    badge: m.badge ?? hostMilestoneBadge(hostCount),
     mutual: {
       evtCount: raw.evtCount ?? 0,
       cards: raw.cards ?? raw.cardCount ?? 0,

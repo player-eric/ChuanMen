@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
   Divider,
   FormControlLabel,
@@ -19,7 +20,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { ImageUpload } from '@/components/ImageUpload';
-import { updateUserSettings, fetchPostcardsApi } from '@/lib/domainApi';
+import { updateUserSettings, fetchPostcardsApi, fetchTitleRules, fetchMembersWithTitles } from '@/lib/domainApi';
 import type { AuthUser } from '@/types/auth';
 
 export default function SettingsPage() {
@@ -43,8 +44,26 @@ export default function SettingsPage() {
 
   // Privacy
   const [hideEmail, setHideEmail] = useState(user?.hideEmail ?? false);
-  const [hideActivity, setHideActivity] = useState(false);
-  const [hideStats, setHideStats] = useState(false);
+  const [hideActivity, setHideActivity] = useState(user?.hideActivity ?? false);
+  const [hideStats, setHideStats] = useState(user?.hideStats ?? false);
+  const [hiddenTitleIds, setHiddenTitleIds] = useState<string[]>(user?.hiddenTitleIds ?? []);
+
+  // Earned titles for display control
+  const [earnedTitles, setEarnedTitles] = useState<{ id: string; value: string }[]>([]);
+  useEffect(() => {
+    if (!user?.id) return;
+    // Fetch member's titles from the members-with-titles endpoint
+    fetchMembersWithTitles()
+      .then((members: any[]) => {
+        const me = members.find((m: any) => m.id === user.id);
+        if (me?.titles) {
+          setEarnedTitles(
+            me.titles.map((t: any) => typeof t === 'string' ? { id: t, value: t } : { id: t.id ?? t.value, value: t.value ?? t }),
+          );
+        }
+      })
+      .catch(() => {});
+  }, [user?.id]);
 
   // Notification (read from persisted preferences)
   const prefs = user?.preferences;
@@ -105,6 +124,9 @@ export default function SettingsPage() {
         defaultHouseRules: defaultHouseRules || undefined,
         homeAddress: homeAddress || undefined,
         hideEmail,
+        hideActivity,
+        hideStats,
+        hiddenTitleIds,
         // Notification preferences
         emailState: freqToEmailState(emailFreq),
         notifyEvents,
@@ -264,22 +286,52 @@ export default function SettingsPage() {
               control={<Switch checked={hideEmail} onChange={() => setHideEmail(!hideEmail)} />}
               label="隐藏 Email（关闭后对其他成员不可见）"
             />
-            <Tooltip title="即将开放" arrow placement="right">
-              <FormControlLabel
-                control={<Switch checked={hideActivity} onChange={() => setHideActivity(!hideActivity)} disabled />}
-                label="隐藏参与记录"
-              />
-            </Tooltip>
-            <Tooltip title="即将开放" arrow placement="right">
-              <FormControlLabel
-                control={<Switch checked={hideStats} onChange={() => setHideStats(!hideStats)} disabled />}
-                label="隐藏贡献统计"
-              />
-            </Tooltip>
-            {/* TODO: 称号显示控制 - list all earned titles with individual toggles */}
+            <FormControlLabel
+              control={<Switch checked={hideActivity} onChange={() => setHideActivity(!hideActivity)} />}
+              label="隐藏参与记录"
+            />
+            <FormControlLabel
+              control={<Switch checked={hideStats} onChange={() => setHideStats(!hideStats)} />}
+              label="隐藏贡献统计"
+            />
           </Stack>
         </CardContent>
       </Card>
+
+      {/* ── 称号显示控制 ── */}
+      {earnedTitles.length > 0 && (
+        <>
+          <Typography variant="h6" fontWeight={700}>称号显示</Typography>
+          <Card>
+            <CardContent>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                选择要在个人页面展示的称号，隐藏不影响获取记录
+              </Typography>
+              <Stack spacing={1}>
+                {earnedTitles.map((t) => {
+                  const isHidden = hiddenTitleIds.includes(t.id);
+                  return (
+                    <FormControlLabel
+                      key={t.id}
+                      control={
+                        <Switch
+                          checked={!isHidden}
+                          onChange={() => {
+                            setHiddenTitleIds((prev) =>
+                              isHidden ? prev.filter((id) => id !== t.id) : [...prev, t.id],
+                            );
+                          }}
+                        />
+                      }
+                      label={<Chip label={t.value} size="small" color="warning" variant={isHidden ? 'outlined' : 'filled'} />}
+                    />
+                  );
+                })}
+              </Stack>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* ── 感谢卡余额 ── */}
       <Typography variant="h6" fontWeight={700}>感谢卡额度</Typography>
