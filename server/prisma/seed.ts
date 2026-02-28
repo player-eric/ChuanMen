@@ -203,6 +203,22 @@ const ADMIN_ACCOUNTS = [
     city: 'Edison, NJ',
     wechatId: '',
   },
+  {
+    name: 'AA',
+    email: 'yanshiqin1998@gmail.com',
+    role: 'admin',
+    bio: '',
+    city: 'Edison, NJ',
+    wechatId: '',
+  },
+  {
+    name: '大橙子',
+    email: 'seewhymoon@gmail.com',
+    role: 'admin',
+    bio: '',
+    city: '',
+    wechatId: '',
+  },
 ];
 
 /* Known admin/host roles from Notion member data */
@@ -228,6 +244,7 @@ async function main() {
   if (!DRY_RUN) {
     console.log('══ Step 0: Wiping all tables ══');
     // Delete in reverse-FK order
+    await prisma.loginCode.deleteMany();
     await prisma.emailLog.deleteMany();
     await prisma.emailTemplate.deleteMany();
     await prisma.emailRule.deleteMany();
@@ -305,8 +322,8 @@ async function main() {
     const email = row['Email']?.trim();
     if (!name || !email) continue;
 
-    // Skip if this email or name was already seeded as admin
-    if (ADMIN_ACCOUNTS.some(a => a.email === email || a.name === name)) {
+    // Skip if this email was already seeded as admin
+    if (ADMIN_ACCOUNTS.some(a => a.email === email)) {
       console.log(`  ⏭  Admin already seeded: ${name} <${email}>`);
       continue;
     }

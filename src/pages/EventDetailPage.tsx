@@ -1149,7 +1149,10 @@ export default function EventDetailPage() {
                       setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
                       try {
                         await addCommentApi({ entityType: 'event', entityId: eventId!, authorId: user.id, content: text });
-                      } catch { /* optimistic UI */ }
+                      } catch {
+                        setComments((prev) => prev.slice(0, -1));
+                        setFlash({ open: true, severity: 'error', message: '评论失败，请重新登录后再试' });
+                      }
                     }
                   }}
                 />
@@ -1164,7 +1167,10 @@ export default function EventDetailPage() {
                       setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
                       try {
                         await addCommentApi({ entityType: 'event', entityId: eventId!, authorId: user.id, content: text });
-                      } catch { /* optimistic UI */ }
+                      } catch {
+                        setComments((prev) => prev.slice(0, -1));
+                        setFlash({ open: true, severity: 'error', message: '评论失败，请重新登录后再试' });
+                      }
                     }
                   }}
                   sx={{ mt: 0.5 }}

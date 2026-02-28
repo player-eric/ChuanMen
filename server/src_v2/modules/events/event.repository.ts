@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient, EventStatus, EventPhase } from '@prisma/client';
 
 export class EventRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -71,6 +71,9 @@ export class EventRepository {
     titleImageUrl?: string;
     location?: string;
     capacity?: number;
+    status?: EventStatus;
+    pinned?: boolean;
+    phase?: EventPhase;
   }) {
     return this.prisma.event.update({
       where: { id },

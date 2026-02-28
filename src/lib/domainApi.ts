@@ -289,6 +289,9 @@ export async function updateEvent(eventId: string, payload: {
   titleImageUrl?: string;
   location?: string;
   capacity?: number;
+  status?: string;
+  pinned?: boolean;
+  phase?: string;
 }) {
   return requestJson<{ ok: boolean; event: EntityMap }>(`/api/events/${eventId}`, {
     method: 'PATCH',

@@ -72,6 +72,7 @@ export default function EventCreatePage() {
 
   // Invite dialog state — stores created event ID (empty string = not yet created)
   const [createdId, setCreatedId] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [inviteSearch, setInviteSearch] = useState('');
   const [invitedPeople, setInvitedPeople] = useState<string[]>([]);
 
@@ -152,10 +153,12 @@ export default function EventCreatePage() {
   const selectedFilmData = selectedFilm ? allMovies.find((m) => m.id === selectedFilm) : null;
 
   const onSubmit = async () => {
+    if (submitting) return;
     if (!name.trim() || !startDate || (!isHome && !location.trim())) {
       setError(isHome ? '请填写名称和日期' : '请填写名称、日期和地点');
       return;
     }
+    setSubmitting(true);
     try {
       const mappedTags = tags.map((t) => chineseTagToEventTag[t]).filter(Boolean);
       const result = await createEvent({
@@ -172,6 +175,8 @@ export default function EventCreatePage() {
       setCreatedId(String((result as any).id ?? ''));
     } catch (err: any) {
       setError(err?.message ?? '创建失败，请重试');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -650,8 +655,8 @@ export default function EventCreatePage() {
           </Box>
 
           <Box>
-            <Button variant="contained" onClick={onSubmit} size="large">
-              发布活动
+            <Button variant="contained" onClick={onSubmit} size="large" disabled={submitting}>
+              {submitting ? '发布中…' : '发布活动'}
             </Button>
           </Box>
         </Stack>

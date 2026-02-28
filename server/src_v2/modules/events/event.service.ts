@@ -25,6 +25,9 @@ const updateEventSchema = z.object({
   titleImageUrl: z.string().optional(),
   location: z.string().optional(),
   capacity: z.number().int().positive().optional(),
+  status: z.enum(['scheduled', 'completed', 'cancelled']).optional(),
+  pinned: z.boolean().optional(),
+  phase: z.enum(['invite', 'open', 'closed']).optional(),
 });
 
 const addRecapPhotoSchema = z.object({

@@ -382,8 +382,10 @@ function FullCards() {
                           tags: stamp ? [stamp] : [],
                         });
                         revalidator.revalidate();
-                      } catch { /* still show sent UI */ }
-                      setSent(true);
+                        setSent(true);
+                      } catch {
+                        alert('寄出失败，请重新登录后再试');
+                      }
                     }}
                     variant="contained"
                     fullWidth

@@ -48,7 +48,8 @@ export default function ProfilePage() {
     return (
       <Stack spacing={2} alignItems="center" sx={{ py: 8, textAlign: 'center' }}>
         <Typography variant="h6" fontWeight={700}>无法加载个人页面</Typography>
-        <Typography variant="body2" color="text.secondary">请稍后再试</Typography>
+        <Typography variant="body2" color="text.secondary">可能需要重新登录</Typography>
+        <Button variant="contained" onClick={() => navigate('/login')}>重新登录</Button>
         <Button variant="outlined" onClick={() => navigate('/')}>返回首页</Button>
       </Stack>
     );

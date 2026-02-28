@@ -121,8 +121,9 @@ export default function ProposalDetailPage() {
               <button
                 onClick={async () => {
                   if (!user?.id) return;
+                  const wasInterested = interested;
                   setInterested((v) => !v);
-                  try { await toggleProposalVote(String(raw.id), user.id); } catch { /* optimistic */ }
+                  try { await toggleProposalVote(String(raw.id), user.id); } catch { setInterested(wasInterested); }
                 }}
                 style={{
                   padding: '8px 20px',

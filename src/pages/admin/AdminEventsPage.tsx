@@ -95,13 +95,13 @@ export default function AdminEventsPage() {
 
   const handleCancel = async () => {
     if (!confirmCancel) return;
-    try { await updateEvent(confirmCancel.id, {} as any); setConfirmCancel(null); setDetailEvent(null); loadData(); }
+    try { await updateEvent(confirmCancel.id, { status: 'cancelled' } as any); setConfirmCancel(null); setDetailEvent(null); loadData(); }
     catch (e) { console.error('Cancel event failed', e); }
   };
 
   const handlePin = async () => {
     if (!confirmPin) return;
-    try { await updateEvent(confirmPin.id, {} as any); setConfirmPin(null); loadData(); }
+    try { await updateEvent(confirmPin.id, { pinned: !confirmPin.pinned } as any); setConfirmPin(null); loadData(); }
     catch (e) { console.error('Pin/unpin event failed', e); }
   };
 

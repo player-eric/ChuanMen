@@ -242,6 +242,7 @@ export default function MovieDetailPage() {
                     } else {
                       setVoters((prev) => prev.filter((v) => v.id !== user.id));
                     }
+                    setFlash({ open: true, severity: 'error', message: '投票失败，请重新登录后再试' });
                   }
                 }}
               >
@@ -403,7 +404,10 @@ export default function MovieDetailPage() {
                       setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
                       try {
                         await addComment({ entityType: 'movie', entityId: String(raw.id ?? (raw as any).id), authorId: user.id, content: text });
-                      } catch { /* optimistic update already done */ }
+                      } catch {
+                        setComments((prev) => prev.filter((_, i) => i !== prev.length - 1));
+                        setFlash({ open: true, severity: 'error', message: '评论失败，请重新登录后再试' });
+                      }
                     }
                   }}
                 />
@@ -418,7 +422,10 @@ export default function MovieDetailPage() {
                       setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
                       try {
                         await addComment({ entityType: 'movie', entityId: String(raw.id ?? (raw as any).id), authorId: user.id, content: text });
-                      } catch { /* optimistic update already done */ }
+                      } catch {
+                        setComments((prev) => prev.filter((_, i) => i !== prev.length - 1));
+                        setFlash({ open: true, severity: 'error', message: '评论失败，请重新登录后再试' });
+                      }
                     }
                   }}
                   sx={{ mt: 0.5 }}
