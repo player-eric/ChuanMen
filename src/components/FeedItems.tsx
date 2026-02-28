@@ -53,11 +53,13 @@ interface InteractionProps {
 }
 
 /* ═══ FeedActions (shared like + comment bar) ═══ */
-export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, newComments, entityType, entityId, defaultExpanded }: InteractionProps & { compact?: boolean; newComments?: number; entityType?: string; entityId?: string; defaultExpanded?: boolean }) {
+export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, newComments, entityType, entityId, defaultExpanded, liked: likedProp, onLike }: InteractionProps & { compact?: boolean; newComments?: number; entityType?: string; entityId?: string; defaultExpanded?: boolean; liked?: boolean; onLike?: () => void }) {
   const c = useColors();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [liked, setLiked] = useState(false);
+  const [likedLocal, setLikedLocal] = useState(false);
+  const liked = likedProp ?? likedLocal;
+  const setLiked = onLike ?? (() => setLikedLocal((v) => !v));
   const [expanded, setExpanded] = useState(defaultExpanded ?? false);
   const [localComments, setLocalComments] = useState(comments ?? []);
   const [input, setInput] = useState('');
@@ -114,7 +116,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
       {/* Action bar */}
       <div style={{ display: 'flex', gap: 16, padding: `7px ${px}px` }}>
         <button
-          onClick={() => setLiked(!liked)}
+          onClick={() => setLiked()}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
             background: 'none', border: 'none', padding: 0, cursor: 'pointer',

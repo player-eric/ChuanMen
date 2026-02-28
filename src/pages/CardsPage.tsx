@@ -77,6 +77,12 @@ function FullCards() {
   useEffect(() => {
     const state = location.state as { recipientName?: string; recipientId?: string } | null;
     if (state?.recipientName) {
+      // Cannot send postcard to yourself
+      if (state.recipientId === user?.id) {
+        setSnackMsg('不能给自己寄感谢卡哦');
+        window.history.replaceState({}, '');
+        return;
+      }
       const match = people.find((p) => (p.id ?? p.name) === (state.recipientId ?? state.recipientName));
       if (match) {
         setWho(state.recipientName);

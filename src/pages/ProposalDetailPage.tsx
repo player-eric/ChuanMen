@@ -15,7 +15,10 @@ export default function ProposalDetailPage() {
   const c = useColors();
   const raw = useLoaderData() as Proposal | null;
 
-  const [interested, setInterested] = useState(false);
+  const interestedList = raw?.interested ?? [];
+  const [interested, setInterested] = useState(
+    () => !!user?.name && interestedList.includes(user.name)
+  );
   const [editing, setEditing] = useState(false);
   const [descHtml, setDescHtml] = useState(raw?.descriptionHtml ?? '');
 
@@ -32,7 +35,13 @@ export default function ProposalDetailPage() {
 
   const isAuthor = user?.name === raw.name;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
-  const interestedList = raw.interested ?? [];
+
+  const handleToggleInterest = async () => {
+    if (!user?.id) return;
+    const wasInterested = interested;
+    setInterested((v) => !v);
+    try { await toggleProposalVote(String(raw.id), user.id); } catch { setInterested(wasInterested); }
+  };
 
   return (
     <Box sx={{ maxWidth: 680, mx: 'auto' }}>
@@ -119,12 +128,7 @@ export default function ProposalDetailPage() {
 
             <Stack direction="row" spacing={1} justifyContent="flex-end">
               <button
-                onClick={async () => {
-                  if (!user?.id) return;
-                  const wasInterested = interested;
-                  setInterested((v) => !v);
-                  try { await toggleProposalVote(String(raw.id), user.id); } catch { setInterested(wasInterested); }
-                }}
+                onClick={handleToggleInterest}
                 style={{
                   padding: '8px 20px',
                   borderRadius: 8,
@@ -137,7 +141,7 @@ export default function ProposalDetailPage() {
                   opacity: user ? 1 : 0.5,
                 }}
               >
-                {interested ? '✓ 我也感兴趣' : '我感兴趣'} · {raw.votes + (interested ? 1 : 0)}
+                {interested ? '✓ 取消感兴趣' : '我感兴趣'} · {raw.votes + (interested ? 1 : 0)}
               </button>
               <button
                 onClick={() => user && navigate('/events/new', { state: { fromProposal: { title: raw.title, descriptionHtml: descHtml } } })}
@@ -168,6 +172,8 @@ export default function ProposalDetailPage() {
             entityType="proposal"
             entityId={String(raw.id)}
             defaultExpanded
+            liked={interested}
+            onLike={handleToggleInterest}
           />
         </Card>
       </Stack>

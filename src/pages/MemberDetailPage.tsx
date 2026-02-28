@@ -228,7 +228,7 @@ export default function MemberDetailPage() {
           </Stack>
 
           {/* Send card CTA */}
-          {user && (
+          {user && user.id !== member.id && (
             <>
               <Divider sx={{ mb: 1.5 }} />
               <Button

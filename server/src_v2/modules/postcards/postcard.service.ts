@@ -25,6 +25,9 @@ export class PostcardService {
 
   async create(input: unknown) {
     const data = createPostcardSchema.parse(input);
+    if (data.fromId === data.toId) {
+      throw new Error('不能给自己寄感谢卡');
+    }
     // Decrement credits
     const creditInfo = await this.repository.getCredits(data.fromId);
     if (!creditInfo || creditInfo.postcardCredits <= 0) {
