@@ -50,7 +50,7 @@ docker run --rm \
   --network "$NETWORK_NAME" \
   -v "$MC_CONFIG_DIR:/mc" \
   minio/mc:latest \
-  --config-dir /mc mb -p local/chuanmen-media-dev >/dev/null 2>&1 || true
+  --config-dir /mc mb -p local/chuanmen-media >/dev/null 2>&1 || true
 
 echo "[6/8] Build server image"
 docker build -t "$SERVER_IMAGE" . >/dev/null
@@ -71,10 +71,10 @@ docker run -d \
   -e AWS_REGION=ap-southeast-1 \
   -e AWS_ACCESS_KEY_ID=minioadmin \
   -e AWS_SECRET_ACCESS_KEY=minioadmin \
-  -e AWS_S3_BUCKET=chuanmen-media-dev \
+  -e AWS_S3_BUCKET=chuanmen-media \
   -e AWS_S3_ENDPOINT=http://host.docker.internal:9000 \
   -e AWS_S3_FORCE_PATH_STYLE=true \
-  -e AWS_S3_PUBLIC_BASE_URL=http://localhost:9000/chuanmen-media-dev \
+  -e AWS_S3_PUBLIC_BASE_URL=http://localhost:9000/chuanmen-media \
   -e S3_PRESIGN_EXPIRES_SECONDS=900 \
   -e RESEND_API_KEY='' \
   -e RESEND_FROM_EMAIL=noreply@chuanmen.local \

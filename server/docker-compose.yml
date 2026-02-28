@@ -45,8 +45,8 @@ services:
     entrypoint: >
       /bin/sh -c "
       until curl -sf http://minio:9000/minio/health/ready; do sleep 2; done;
-      aws --endpoint-url http://minio:9000 s3 mb s3://chuanmen-media-dev 2>/dev/null || true;
-      aws --endpoint-url http://minio:9000 s3api put-bucket-policy --bucket chuanmen-media-dev --policy file:///tmp/policy.json;
+      aws --endpoint-url http://minio:9000 s3 mb s3://chuanmen-media 2>/dev/null || true;
+      aws --endpoint-url http://minio:9000 s3api put-bucket-policy --bucket chuanmen-media --policy file:///tmp/policy.json;
       echo 'MinIO bucket ready (public-read policy applied)';
       "
     volumes:

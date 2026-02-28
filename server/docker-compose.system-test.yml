@@ -40,8 +40,8 @@ services:
     entrypoint: >
       /bin/sh -c "
       until curl -sf http://minio:9000/minio/health/ready; do sleep 2; done;
-      aws --endpoint-url http://minio:9000 s3 mb s3://chuanmen-media-dev 2>/dev/null || true;
-      aws --endpoint-url http://minio:9000 s3api put-bucket-policy --bucket chuanmen-media-dev --policy file:///tmp/policy.json;
+      aws --endpoint-url http://minio:9000 s3 mb s3://chuanmen-media 2>/dev/null || true;
+      aws --endpoint-url http://minio:9000 s3api put-bucket-policy --bucket chuanmen-media --policy file:///tmp/policy.json;
       echo 'minio init done';
       "
     volumes:
@@ -67,10 +67,10 @@ services:
       AWS_REGION: ap-southeast-1
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
-      AWS_S3_BUCKET: chuanmen-media-dev
+      AWS_S3_BUCKET: chuanmen-media
       AWS_S3_ENDPOINT: http://host.docker.internal:9000
       AWS_S3_FORCE_PATH_STYLE: 'true'
-      AWS_S3_PUBLIC_BASE_URL: http://localhost:9000/chuanmen-media-dev
+      AWS_S3_PUBLIC_BASE_URL: http://localhost:9000/chuanmen-media
       S3_PRESIGN_EXPIRES_SECONDS: 900
       RESEND_API_KEY: ''
       RESEND_FROM_EMAIL: noreply@chuanmen.local
