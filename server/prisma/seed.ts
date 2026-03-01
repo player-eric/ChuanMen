@@ -774,18 +774,18 @@ async function main() {
   // ─── Step 10b: Title Rules ──────────────────────────────
   console.log('══ Step 10b: Title Rules ══');
   const titleRuleSeeds = [
-    { emoji: '❤️', name: '暖心达人', stampEmoji: '❤️', threshold: 3, description: '累积获得 3 次 ❤️ 邮票' },
-    { emoji: '🎬', name: '影迷之星', stampEmoji: '🎬', threshold: 3, description: '累积获得 3 次 🎬 邮票' },
-    { emoji: '🍳', name: '美食家', stampEmoji: '🍳', threshold: 3, description: '累积获得 3 次 🍳 邮票' },
-    { emoji: '🏠', name: '好客之家', stampEmoji: '🏠', threshold: 3, description: '累积获得 3 次 🏠 邮票' },
-    { emoji: '📸', name: '记录者', stampEmoji: '📸', threshold: 3, description: '累积获得 3 次 📸 邮票' },
-    { emoji: '💬', name: '话题王', stampEmoji: '💬', threshold: 3, description: '累积获得 3 次 💬 邮票' },
-    { emoji: '🥾', name: '户外达人', stampEmoji: '🥾', threshold: 3, description: '累积获得 3 次 🥾 邮票' },
-    { emoji: '🧁', name: '甜蜜使者', stampEmoji: '🧁', threshold: 3, description: '累积获得 3 次 🧁 邮票' },
-    { emoji: '🎉', name: '气氛组长', stampEmoji: '🎉', threshold: 3, description: '累积获得 3 次 🎉 邮票' },
-    { emoji: '☕', name: '咖啡伴侣', stampEmoji: '☕', threshold: 3, description: '累积获得 3 次 ☕ 邮票' },
-    { emoji: '🧹', name: '贴心管家', stampEmoji: '🧹', threshold: 3, description: '累积获得 3 次 🧹 邮票' },
+    { emoji: '🎬', name: '选片大神', stampEmoji: '🎬', threshold: 3, description: '累积获得 3 次 🎬 邮票' },
+    { emoji: '🍳', name: '掌勺大拿', stampEmoji: '🍳', threshold: 3, description: '累积获得 3 次 🍳 邮票' },
+    { emoji: '🏠', name: '待客扛把子', stampEmoji: '🏠', threshold: 3, description: '累积获得 3 次 🏠 邮票' },
+    { emoji: '❤️', name: '暖心担当', stampEmoji: '❤️', threshold: 3, description: '累积获得 3 次 ❤️ 邮票' },
+    { emoji: '💬', name: '气氛大师', stampEmoji: '💬', threshold: 3, description: '累积获得 3 次 💬 邮票' },
+    { emoji: '📸', name: '镜头担当', stampEmoji: '📸', threshold: 3, description: '累积获得 3 次 📸 邮票' },
+    { emoji: '🥾', name: '探路先锋', stampEmoji: '🥾', threshold: 3, description: '累积获得 3 次 🥾 邮票' },
+    { emoji: '🎉', name: '搞事大王', stampEmoji: '🎉', threshold: 3, description: '累积获得 3 次 🎉 邮票' },
+    { emoji: '☕', name: '咖啡大拿', stampEmoji: '☕', threshold: 3, description: '累积获得 3 次 ☕ 邮票' },
+    { emoji: '🧹', name: '收纳大神', stampEmoji: '🧹', threshold: 3, description: '累积获得 3 次 🧹 邮票' },
     { emoji: '🎸', name: '才艺担当', stampEmoji: '🎸', threshold: 3, description: '累积获得 3 次 🎸 邮票' },
+    { emoji: '🧁', name: '甜品大师', stampEmoji: '🧁', threshold: 3, description: '累积获得 3 次 🧁 邮票' },
   ];
   for (const tr of titleRuleSeeds) {
     if (DRY_RUN) {
@@ -834,9 +834,9 @@ async function main() {
   // ─── Step 14: Grant sample social titles ─────────────────
   console.log('══ Step 14: Grant Sample Titles ══');
   const titleGrants: { userName: string; titles: string[] }[] = [
-    { userName: 'AA', titles: ['影迷之星', '话题王'] },
-    { userName: '大橙子', titles: ['影迷之星', '暖心达人'] },
-    { userName: 'CM', titles: ['话题王'] },
+    { userName: 'AA', titles: ['选片大神', '气氛大师'] },
+    { userName: '大橙子', titles: ['选片大神', '暖心担当'] },
+    { userName: 'CM', titles: ['气氛大师'] },
   ];
   for (const g of titleGrants) {
     const uid = nameToId[g.userName];
