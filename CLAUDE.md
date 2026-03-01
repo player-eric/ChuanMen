@@ -17,8 +17,8 @@ NYC-based Chinese-language social community platform. Features: event management
 
 ### User-Facing
 - **Feed (动态流)** — Aggregated timeline of events, postcards, movies, proposals, milestones, announcements. Time-based grouping. SpeedDial-style quick action buttons (发起活动, 提创意, 寄感谢卡, 推荐电影).
-- **Events (活动)** — Three-tab layout (即将到来 / 创意孵化中 / 过往活动). Two-phase invite system (invite → open → closed → ended). Waitlist with 24h offer mechanism. Contribution roles (host, co-host, recorder, equipment). Host can manage invites, signups, movie selection, task assignment. Per-event photo gallery.
-- **Recommendations (推荐)** — Multi-category pool (movies, books, recipes, places). Browse, search, vote, recommend. External movie search via TMDB API. Movie detail with screening history links.
+- **Events (活动)** — Three-tab layout (即将到来 / 创意孵化中 / 过往活动). Two-phase invite system (invite → open → closed → ended). Waitlist with 24h offer mechanism (auto-expire via cron). Contribution roles (host, co-host, recorder, equipment). Host can manage invites, signups, movie selection, task assignment, recommendation linking. Per-event photo gallery.
+- **Recommendations (推荐)** — Multi-category pool (movies, books, recipes, places, 演出和其他). Browse, search, vote (unified `RecommendationVote`), recommend, edit/delete own. External movie search via TMDB API. Movie detail with screening history links. Recommendations can be linked to events.
 - **Proposals (活动提案)** — Submit and vote on activity ideas. Status lifecycle: discussing → scheduled → completed → cancelled. "我来组织" converts a proposal into an event.
 - **Postcards (感谢卡)** — Three-step send flow (选人 → 写话 → 预览寄出). Privacy modes (public/private). Credit-based system: earn by attending/hosting events, initial credit on registration. Preset tag selection for quick messages.
 - **Profile (我的页面)** — Participation stats, timeline, hosted events, movies, postcards sent/received.
@@ -30,7 +30,7 @@ NYC-based Chinese-language social community platform. Features: event management
 
 ### Admin Dashboard (12 pages, all connected to real API)
 - **Dashboard** — Community stats overview
-- **Members** — Application review queue (approve/reject), full member table with filtering/search, operator role assignment, admin promotion
+- **Members** — Three-tab layout (成员列表 / 待审核 / 介绍中). Application review with 3-day introduction period (内部公示期). Auto-approve via cron after announcement period. Full member table with filtering/search, operator role assignment, admin promotion
 - **Events** — Event management with status filtering, bulk operations
 - **Content** — Comment/postcard moderation
 - **Cards** — Postcard management and admin deletion
@@ -46,7 +46,9 @@ NYC-based Chinese-language social community platform. Features: event management
 - **Host Milestone Badges** — Auto-computed from host count: 🏠 (1+), ⭐ (5+), 🔥 (10+), 👑 (20+). Displayed on member avatars.
 - **Title System** — Admin-defined titles (emoji + stamp tag + threshold). Awarded based on postcard tag accumulation. Users can hide individual titles.
 - **Email Engine** — Rule-based notification system with priority tiers, cooldown, templates, queue, bounce handling, suppression lists.
-- **Agent/Cron** — `agentTick.ts` runs every 10 minutes for automated tasks (content automation, milestones, host tributes).
+- **Agent/Cron** — `agentTick.ts` runs every 10 minutes for automated tasks (content automation, milestones, host tributes, waitlist offer expiry, announced user auto-approval).
+- **Member Introduction Period (内部公示期)** — Admin moves applicant to "announced" status → 3-day introduction period → auto-approved by cron (or manual approve). Feed shows introducing/welcomed cards.
+- **Waitlist System (等位机制)** — When event is full, new signups go to waitlist (FIFO). When a spot opens, next waitlisted user gets a 24h offer. Auto-expires via cron, promotes next in queue.
 - **Media Upload** — Images routed through backend (`POST /api/media/upload`) to avoid S3 CORS issues. Supports avatar, cover, event photos.
 
 ## Project Structure
@@ -56,13 +58,13 @@ NYC-based Chinese-language social community platform. Features: event management
 ├── src/
 │   ├── pages/           # 26 user-facing pages
 │   ├── pages/admin/     # 12 admin pages (AdminXxxPage.tsx)
-│   ├── components/      # Shared: PostCard, ScenePhoto, FeedItems, Atoms, RichTextEditor, etc.
+│   ├── components/      # Shared: PostCard, ScenePhoto, FeedItems, Atoms, RichTextEditor, EmptyState, FeedbackDialog, QuickActionDialog, etc.
 │   ├── lib/
 │   │   ├── domainApi.ts # ALL frontend→backend API calls (75+ functions)
 │   │   ├── authApi.ts   # Auth API (walkthrough user bootstrap)
 │   │   └── mappings.ts  # Shared enum↔label mappings (single source of truth)
 │   ├── auth/AuthContext.tsx  # React context for user state (localStorage-based)
-│   ├── hooks/           # useColors (theme-aware), useMediaUpload
+│   ├── hooks/           # useColors (theme-aware), useMediaUpload, useTaskPresets, useTitleDefs
 │   ├── mock/            # Mock data (dead code — no longer imported by any page)
 │   ├── layouts/         # AppLayout (user), AdminLayout (admin)
 │   ├── router.tsx       # All routes + loader functions (data fetching + mapping)
@@ -134,17 +136,17 @@ cd .. && npm run dev
 
 ## API Architecture
 
-All frontend API calls go through `src/lib/domainApi.ts` (75+ functions). No mock data is used — all pages connect to real backend endpoints.
+All frontend API calls go through `src/lib/domainApi.ts` (90+ functions). No mock data is used — all pages connect to real backend endpoints.
 
 ### Backend Modules
 | Module | Prefix | Key Endpoints |
 |--------|--------|---------------|
-| Users | `/api/users` | CRUD, apply, settings, admin list, approve/reject, operator roles |
-| Events | `/api/events` | CRUD, past/cancelled, photos, invite, signup |
+| Users | `/api/users` | CRUD, apply, settings, admin list, approve/reject, announce (内部公示期), operator roles |
+| Events | `/api/events` | CRUD, past/cancelled, photos, invite, signup, waitlist (approve/reject/offer/accept/decline), recommendation linking |
 | Movies | `/api/movies` | CRUD, vote, search, external search (TMDB) |
 | Proposals | `/api/proposals` | CRUD, vote, search |
 | Postcards | `/api/postcards` | CRUD, admin list/delete |
-| Recommendations | `/api/recommendations` | List, search, create (books/recipes/places) |
+| Recommendations | `/api/recommendations` | List, search, create, edit, delete, vote (all categories) |
 | Comments | `/api/comments` | CRUD, admin list (polymorphic: movie/event/proposal) |
 | Likes | `/api/likes` | Toggle, list (polymorphic) |
 | About | `/api/about` | Stats, content CRUD, announcements CRUD |
@@ -258,10 +260,12 @@ Each domain in `server/src_v2/modules/<name>/`:
 ### Shared Components
 - `Atoms.tsx` — `Ava` (avatar with emoji badge, hue from `name.charCodeAt(0)*37%360`) and `AvaStack` (overlapping row)
 - `ScenePhoto` / `Poster` — render gradient backgrounds from `theme.ts` lookups
-- `FeedItems.tsx` — all feed card variants (FeedActivity, FeedCard, FeedMovie, FeedMilestone, etc.)
+- `FeedItems.tsx` — all feed card variants (FeedActivity, FeedCard, FeedMovie, FeedMilestone, FeedNewMember, etc.)
 - `PostCard.tsx` — thank-you card component (props: `message`, `isPrivate`)
 - `ImageUpload.tsx` — reusable image upload with crop/preview
 - `EmptyState.tsx` — consistent empty state placeholder across pages
+- `FeedbackDialog.tsx` — user feedback/suggestion submission dialog
+- `QuickActionDialog.tsx` — search dialog for quick actions (postcards, events, etc.)
 - `ConfirmDialog.tsx` — confirmation modal
 - `RichTextEditor.tsx` — TipTap-based rich text editor/viewer
 
@@ -294,21 +298,23 @@ Key models (37+ total in `schema.prisma`):
 
 | Model | Purpose |
 |-------|---------|
-| `User` | Member with profile, counters, privacy flags (`hideEmail`, `hideActivity`, `hideStats`, `hiddenTitleIds`), `googleId` (OAuth), `subscribeNewsletter` |
+| `User` | Member with profile, counters, privacy flags (`hideEmail`, `hideActivity`, `hideStats`, `hiddenTitleIds`), `googleId` (OAuth), `subscribeNewsletter`, `announcedAt`/`announcedEndAt` (introduction period) |
 | `UserPreference` | Email state, notification toggles |
 | `UserSocialTitle` | Earned titles per user |
 | `UserOperatorRole` | Admin-assigned operator roles |
 | `Event` | Activity with phases (invite/open/closed/live/ended/cancelled), tags, capacity |
-| `EventSignup` | Signup status lifecycle (invited/accepted/waitlist/offered/rejected/declined/cancelled) |
+| `EventSignup` | Signup status lifecycle (invited/accepted/waitlist/offered/rejected/declined/cancelled). 24h offer auto-expiry via cron |
 | `EventCoHost` | Co-host assignment |
 | `EventVisibilityExclusion` | Host "invisible list" for events |
 | `Movie` | Movie pool entry (candidate/screened) |
 | `MovieVote` / `MovieScreening` | Votes and screening linkage to events |
 | `Proposal` / `ProposalVote` | Activity proposals with voting |
 | `Postcard` / `PostcardTag` | Thank-you cards with tags and event context |
-| `Recommendation` / `RecommendationTag` | Multi-category recommendations |
-| `Comment` | Polymorphic comments (movie/event/proposal/discussion) |
-| `Like` | Polymorphic likes |
+| `Recommendation` / `RecommendationTag` | Multi-category recommendations (movies, books, recipes, places, music, external_event) |
+| `RecommendationVote` | Voting on recommendations (unique per user+recommendation) |
+| `EventRecommendation` | Join model linking recommendations to events |
+| `Comment` | Polymorphic comments (movie/event/proposal/discussion/user) |
+| `Like` | Polymorphic likes (movie/event/proposal/user) |
 | `Announcement` | Milestones, host tributes, community announcements |
 | `TitleRule` | Title definitions with emoji, stamp, threshold |
 | `TaskPreset` | Per-event-type task templates |
