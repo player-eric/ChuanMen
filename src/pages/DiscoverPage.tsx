@@ -29,8 +29,8 @@ type Category = 'movie' | 'book' | 'recipe' | 'music' | 'place' | 'external_even
 const categoryTabs: { key: Category; label: string }[] = [
   { key: 'movie', label: '🎬 电影' },
   { key: 'book', label: '📖 读书' },
-  { key: 'recipe', label: '🍜 菜谱' },
   { key: 'music', label: '🎵 音乐' },
+  { key: 'recipe', label: '🍜 菜谱' },
   { key: 'place', label: '📍 好店' },
   { key: 'external_event', label: '🎭 演出和其他' },
 ];
