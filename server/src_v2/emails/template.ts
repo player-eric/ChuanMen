@@ -10,8 +10,8 @@ const CLR_BRAND  = '#D4A574';
 const CLR_LINK   = '#D4A574';
 const CLR_BORDER = '#2A2A2F';
 
-// SVG noise overlay (feTurbulence, same as AppLayout)
-const NOISE_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
+// Hosted noise texture for grain overlay (SVG feTurbulence doesn't work in email clients)
+const NOISE_URL = 'https://chuanmener.club/noise.png';
 
 const FONT_STACK =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif";
@@ -119,8 +119,7 @@ export function renderEmail(options: RenderEmailOptions): RenderedEmail {
 </head>
 <body style="margin:0;padding:0;background-color:${BG_OUTER};font-family:${FONT_STACK};">
   ${previewHidden}
-  <!--[if !mso]><!--><div style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;opacity:0.12;background-image:${NOISE_SVG};background-repeat:repeat;background-size:200px 200px;"></div><!--<![endif]-->
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BG_OUTER};" bgcolor="${BG_OUTER}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BG_OUTER};background-image:url('${NOISE_URL}');background-repeat:repeat;background-size:128px 128px;" bgcolor="${BG_OUTER}" background="${NOISE_URL}">
     <tr><td align="center" style="padding:0;">
 
       <!-- Main container -->
@@ -185,40 +184,29 @@ export interface PostcardBlockOptions {
   message: string;
   date: string;
   eventCtx?: string;
-  /** Stamp emoji (default ✉) */
   stamp?: string;
-  /** Stamp label text shown beside the emoji, e.g. "气氛组长" */
   stampLabel?: string;
-  /** Photo URL for banner background (replaces default gradient) */
   photo?: string;
 }
 
 /**
  * Render a visual postcard card matching the frontend PostCard horizontal layout.
- * Pure table-based HTML — no flex/aspect-ratio (Gmail strips those).
+ * Pure table-based HTML — works in all major email clients (Gmail, Apple Mail, Outlook).
  */
 export function renderPostcardBlock(opts: PostcardBlockOptions): string {
   const { fromName, toName, message, date, eventCtx, stamp = '✉', stampLabel, photo } = opts;
   const initial = fromName.charAt(0);
   const hue = fromName.charCodeAt(0) * 37 % 360;
-  const CARD_H = 320; // 480px width × 2/3 = 320px (aspect-ratio 3:2)
+  const POSTCARD_BG_URL = 'https://chuanmener.club/postcard-bg.png';
 
-  // Left banner background
-  const leftBgStyle = photo
-    ? `background-image:url('${escapeAttr(photo)}');background-size:cover;background-position:center;`
-    : 'background:linear-gradient(135deg,#D4A574 0%,#C4915A 40%,#B07D48 100%);';
+  const photoUrl = photo ? escapeAttr(photo) : POSTCARD_BG_URL;
+  const leftBgStyle = `background-image:url('${photoUrl}');background-size:cover;background-position:center;`;
+  const leftBgColor = photo ? '' : ' bgcolor="#C4915A"';
 
-  // "Thank You" centered in left banner (only when no photo)
   const thankYouHtml = !photo
     ? `<div style="font-size:20px;font-style:italic;font-weight:600;color:rgba(255,255,255,0.55);letter-spacing:0.05em;font-family:Georgia,'Noto Serif SC',serif;">Thank You</div>`
     : '';
 
-  // Event context line
-  const eventLineHtml = eventCtx
-    ? `<tr><td style="font-size:10px;color:#ffffff;font-family:${FONT_STACK};padding:0 10px 8px;">&#x1F4CD; ${escapeHtml(eventCtx)}</td></tr>`
-    : '';
-
-  // Watermark
   const watermarkHtml = !photo
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="opacity:0.25;" align="right">
         <tr>
@@ -229,33 +217,33 @@ export function renderPostcardBlock(opts: PostcardBlockOptions): string {
       </table>`
     : '';
 
-  return `<table role="presentation" width="480" cellpadding="0" cellspacing="0" align="center" style="max-width:100%;border-radius:16px;overflow:hidden;border-collapse:separate;border:1px solid rgba(212,165,116,0.15);" bgcolor="#1E1C1A">
+  const eventLineHtml = eventCtx
+    ? `<div style="font-size:10px;color:#ffffff;font-family:${FONT_STACK};margin-top:6px;">&#x1F4CD; ${escapeHtml(eventCtx)}</div>`
+    : '';
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" align="center" style="max-width:480px;border-radius:16px;overflow:hidden;border-collapse:separate;border:1px solid rgba(212,165,116,0.15);" bgcolor="#1E1C1A">
   <tr>
-    <!-- Left: banner (45%) -->
-    <td width="45%" height="${CARD_H}" valign="middle" align="center" style="${leftBgStyle}">
-      <table role="presentation" width="100%" height="${CARD_H}" cellpadding="0" cellspacing="0">
-        <tr><td valign="middle" align="center" height="${CARD_H - 40}">${thankYouHtml}</td></tr>
-        <tr><td valign="bottom" height="40" style="padding:0 8px 8px;">${watermarkHtml}</td></tr>
-        ${eventLineHtml}
+    <td width="45%" height="320" valign="top" align="center"${leftBgColor} background="${photoUrl}" style="${leftBgStyle}">
+      <table role="presentation" width="100%" height="320" cellpadding="0" cellspacing="0">
+        <tr><td height="140" style="line-height:0;font-size:0;">&nbsp;</td></tr>
+        <tr><td align="center" valign="middle">${thankYouHtml}${eventLineHtml}</td></tr>
+        <tr><td height="140" valign="bottom" style="padding:0 8px 10px;">${watermarkHtml}</td></tr>
       </table>
     </td>
-    <!-- Right: content (55%) — mimics flex space-between -->
-    <td width="55%" height="${CARD_H}" valign="top" bgcolor="#1E1C1A" style="background:linear-gradient(165deg,#1E1C1A,#161412);">
-      <table role="presentation" width="100%" height="${CARD_H}" cellpadding="0" cellspacing="0">
-        <!-- Top section: TO + stamp + message -->
-        <tr><td valign="top" style="padding:12px 14px 0;">
+    <td height="320" valign="top" bgcolor="#1E1C1A" style="background:linear-gradient(165deg,#1E1C1A,#161412);">
+      <table role="presentation" width="100%" height="320" cellpadding="0" cellspacing="0">
+        <tr><td valign="top" style="padding:14px 14px 0;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td valign="top" style="font-size:10px;letter-spacing:0.08em;color:#9A9088;text-transform:uppercase;font-family:${FONT_STACK};">TO: ${escapeHtml(toName)}</td>
+              <td valign="top" style="font-size:11px;letter-spacing:0.08em;color:#9A9088;text-transform:uppercase;font-family:${FONT_STACK};">TO: ${escapeHtml(toName)}</td>
               <td valign="top" align="right" style="white-space:nowrap;">
                 <div style="display:inline-block;width:22px;height:27px;border-radius:2px;border:1.5px solid #D4A574;background:linear-gradient(160deg,#0C0C0E,rgba(212,165,116,0.21));text-align:center;line-height:27px;font-size:12px;">${escapeHtml(stamp)}</div>${stampLabel ? `<span style="font-size:10px;font-weight:600;color:#D4A574;margin-left:4px;font-family:${FONT_STACK};">${escapeHtml(stampLabel)}</span>` : ''}
               </td>
             </tr>
           </table>
-          <p style="margin:4px 0 0;font-size:14px;font-style:italic;line-height:1.7;color:#E0D8CE;font-family:Georgia,'Noto Serif SC',serif;">${escapeHtml(message)}</p>
+          <p style="margin:6px 0 0;font-size:14px;font-style:italic;line-height:1.7;color:#E0D8CE;font-family:${FONT_STACK};">${escapeHtml(message)}</p>
         </td></tr>
-        <!-- Bottom section: sender + date (pushed to bottom by valign) -->
-        <tr><td valign="bottom" style="padding:0 14px 14px;">
+        <tr><td valign="bottom" style="padding:14px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td valign="middle" style="font-size:14px;font-weight:600;color:#E0D8CE;font-family:${FONT_STACK};">
