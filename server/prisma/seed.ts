@@ -771,6 +771,32 @@ async function main() {
   }
   console.log('');
 
+  // ─── Step 10b: Title Rules ──────────────────────────────
+  console.log('══ Step 10b: Title Rules ══');
+  const titleRuleSeeds = [
+    { emoji: '❤️', name: '暖心达人', stampEmoji: '❤️', threshold: 3, description: '累积获得 3 次 ❤️ 邮票' },
+    { emoji: '🎬', name: '影迷之星', stampEmoji: '🎬', threshold: 3, description: '累积获得 3 次 🎬 邮票' },
+    { emoji: '🍳', name: '美食家', stampEmoji: '🍳', threshold: 3, description: '累积获得 3 次 🍳 邮票' },
+    { emoji: '🏠', name: '好客之家', stampEmoji: '🏠', threshold: 3, description: '累积获得 3 次 🏠 邮票' },
+    { emoji: '📸', name: '记录者', stampEmoji: '📸', threshold: 3, description: '累积获得 3 次 📸 邮票' },
+    { emoji: '💬', name: '话题王', stampEmoji: '💬', threshold: 3, description: '累积获得 3 次 💬 邮票' },
+    { emoji: '🥾', name: '户外达人', stampEmoji: '🥾', threshold: 3, description: '累积获得 3 次 🥾 邮票' },
+    { emoji: '🧁', name: '甜蜜使者', stampEmoji: '🧁', threshold: 3, description: '累积获得 3 次 🧁 邮票' },
+    { emoji: '🎉', name: '气氛组长', stampEmoji: '🎉', threshold: 3, description: '累积获得 3 次 🎉 邮票' },
+    { emoji: '☕', name: '咖啡伴侣', stampEmoji: '☕', threshold: 3, description: '累积获得 3 次 ☕ 邮票' },
+    { emoji: '🧹', name: '贴心管家', stampEmoji: '🧹', threshold: 3, description: '累积获得 3 次 🧹 邮票' },
+    { emoji: '🎸', name: '才艺担当', stampEmoji: '🎸', threshold: 3, description: '累积获得 3 次 🎸 邮票' },
+  ];
+  for (const tr of titleRuleSeeds) {
+    if (DRY_RUN) {
+      console.log(`  [DRY] TitleRule: ${tr.emoji} ${tr.name}`);
+      continue;
+    }
+    await prisma.titleRule.create({ data: tr });
+    console.log(`  ✅ ${tr.emoji} ${tr.name}`);
+  }
+  console.log('');
+
   // ─── Step 11: Email Rules & Templates ────────────────────
   console.log('══ Step 11: Email Rules & Templates ══');
   await seedEmailRulesAndTemplates();
@@ -802,6 +828,26 @@ async function main() {
       update: { roles: tp.roles },
     });
     console.log(`  ✅ ${tp.tag}: ${tp.roles.join(', ')}`);
+  }
+  console.log('');
+
+  // ─── Step 14: Grant sample social titles ─────────────────
+  console.log('══ Step 14: Grant Sample Titles ══');
+  const titleGrants: { userName: string; titles: string[] }[] = [
+    { userName: 'AA', titles: ['影迷之星', '话题王'] },
+    { userName: '大橙子', titles: ['影迷之星', '暖心达人'] },
+    { userName: 'CM', titles: ['话题王'] },
+  ];
+  for (const g of titleGrants) {
+    const uid = nameToId[g.userName];
+    if (!uid || DRY_RUN) {
+      if (DRY_RUN) console.log(`  [DRY] Grant: ${g.userName} → ${g.titles.join(', ')}`);
+      continue;
+    }
+    for (const t of g.titles) {
+      await prisma.userSocialTitle.create({ data: { userId: uid, value: t } });
+    }
+    console.log(`  ✅ ${g.userName} → ${g.titles.join(', ')}`);
   }
   console.log('');
 
