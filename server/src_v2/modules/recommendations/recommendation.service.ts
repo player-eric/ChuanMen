@@ -55,4 +55,24 @@ export class RecommendationService {
     }).parse(input);
     return this.repository.update(id, data);
   }
+
+  async searchExternalBooks(query: string) {
+    const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=10`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return { items: [], source: 'openlibrary', error: `Open Library ${res.status}` };
+
+    const data = await res.json() as { docs?: any[] };
+    const items = (data.docs ?? []).map((b: any) => ({
+      openLibraryKey: b.key ?? '',
+      title: b.title ?? '',
+      authors: (b.author_name ?? []).join(', '),
+      year: b.first_publish_year ? String(b.first_publish_year) : '',
+      description: '',
+      cover: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg` : '',
+      pageCount: b.number_of_pages_median ?? null,
+      rating: b.ratings_average ? Number(b.ratings_average.toFixed(1)) : null,
+      infoLink: b.key ? `https://openlibrary.org${b.key}` : '',
+    }));
+    return { items, source: 'openlibrary' };
+  }
 }

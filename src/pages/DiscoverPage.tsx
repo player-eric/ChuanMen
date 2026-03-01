@@ -21,8 +21,8 @@ import type { DiscoverPageData, RecommendationItem } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { Poster } from '@/components/Poster';
 import { EmptyState } from '@/components/EmptyState';
-import { toggleMovieVote, toggleRecommendationVote, searchExternalMovies, createMovie } from '@/lib/domainApi';
-import type { ExternalMovieResult } from '@/lib/domainApi';
+import { toggleMovieVote, toggleRecommendationVote, searchExternalMovies, searchExternalBooks, createMovie, createRecommendation } from '@/lib/domainApi';
+import type { ExternalMovieResult, ExternalBookResult } from '@/lib/domainApi';
 
 type Category = 'movie' | 'book' | 'recipe' | 'music' | 'place' | 'external_event';
 
@@ -318,8 +318,14 @@ function BooksSection() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const data = useLoaderData() as DiscoverPageData;
+  const revalidator = useRevalidator();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'pool' | 'read'>('pool');
+  const [extResults, setExtResults] = useState<ExternalBookResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [addedTitle, setAddedTitle] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [votes, setVotes] = useState<Record<string, boolean>>(() => {
     if (!user?.id) return {};
     const init: Record<string, boolean> = {};
@@ -344,12 +350,50 @@ function BooksSection() {
     ? data.bookRead.filter((b) => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q))
     : data.bookRead;
 
+  // Debounced external search
+  const handleSearch = useCallback((value: string) => {
+    setSearch(value);
+    setAddedTitle(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.length < 2) { setExtResults([]); setSearching(false); return; }
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await searchExternalBooks(value);
+        setExtResults(res.items ?? []);
+      } catch { setExtResults([]); }
+      setSearching(false);
+    }, 400);
+  }, []);
+
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  const handleRecommendBook = async (ext: ExternalBookResult) => {
+    if (!user?.id) return;
+    try {
+      const tags = [ext.authors, ext.year].filter(Boolean);
+      await createRecommendation({
+        category: 'book',
+        title: ext.title,
+        description: ext.description,
+        sourceUrl: ext.infoLink,
+        coverUrl: ext.cover || undefined,
+        tags,
+        authorId: user.id,
+      });
+      setAddedTitle(ext.title);
+      setExtResults([]);
+      setSearch('');
+      revalidator.revalidate();
+    } catch { /* ignore */ }
+  };
+
   return (
     <Box>
       <TextField
         fullWidth
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => handleSearch(e.target.value)}
         placeholder="搜书名、作者..."
         autoComplete="off"
         sx={{ mb: 2 }}
@@ -359,6 +403,11 @@ function BooksSection() {
               <SearchRoundedIcon fontSize="small" />
             </InputAdornment>
           ),
+          endAdornment: searching ? (
+            <InputAdornment position="end">
+              <CircularProgress size={18} />
+            </InputAdornment>
+          ) : undefined,
         }}
       />
       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
@@ -366,6 +415,52 @@ function BooksSection() {
           {user ? '添加图书' : '登录后可添加图书'}
         </Button>
       </Stack>
+
+      {/* External search results from Open Library */}
+      {extResults.length > 0 && !addedTitle && (
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography variant="caption" color="text.secondary">搜索结果（来自 Open Library）</Typography>
+            <Stack spacing={1.2} sx={{ mt: 1 }}>
+              {extResults.map((b) => (
+                <Stack key={b.openLibraryKey} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+                    {b.cover ? (
+                      <img src={b.cover} alt={b.title} style={{ width: 36, height: 52, borderRadius: 4, objectFit: 'cover' }} />
+                    ) : (
+                      <Poster title={b.title} w={36} h={52} />
+                    )}
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography fontWeight={700} noWrap>{b.title}</Typography>
+                      <Typography variant="body2" color="text.secondary" noWrap>
+                        {b.authors}{b.year ? ` · ${b.year}` : ''}{b.rating != null ? ` · ${b.rating}` : ''}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  <Button
+                    onClick={() => handleRecommendBook(b)}
+                    variant="contained"
+                    size="small"
+                    disabled={!user}
+                    sx={{ ml: 1, flexShrink: 0 }}
+                  >
+                    {user ? '推荐' : '登录'}
+                  </Button>
+                </Stack>
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
+      {addedTitle && (
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography color="success.main" fontWeight={700}>已推荐「{addedTitle}」</Typography>
+            <Typography variant="body2" color="text.secondary">图书已添加到候选列表</Typography>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 1.5 }}>
         <Tab value="pool" label="候选中" />

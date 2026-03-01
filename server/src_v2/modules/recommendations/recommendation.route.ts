@@ -12,6 +12,13 @@ export const recommendationRoutes: FastifyPluginAsync = async (app) => {
     return { items };
   });
 
+  app.get('/search-external', async (request) => {
+    const { q, category } = request.query as { q?: string; category?: string };
+    if (!q) return { items: [], source: 'none' };
+    if (category === 'book') return service.searchExternalBooks(q);
+    return { items: [], source: 'none', error: `No external search for category: ${category}` };
+  });
+
   app.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const item = await service.getById(id);

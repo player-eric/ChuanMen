@@ -80,8 +80,13 @@ export default function BookDetailPage() {
     setSourceUrl((raw as any).sourceUrl ?? '');
   }, [raw]);
 
-  // Poster gradient data
-  const poster = posters[title] || { bg: `linear-gradient(135deg, ${c.s3}, ${c.s2})`, accent: c.text3, sub: '' };
+  // Poster: prefer cover image, fall back to gradient
+  const coverUrl = (raw as any).coverUrl as string | undefined;
+  const posterGradient = posters[title] || { bg: `linear-gradient(135deg, ${c.s3}, ${c.s2})`, accent: c.text3, sub: '' };
+  const poster = {
+    ...posterGradient,
+    bg: coverUrl ? `url(${coverUrl}) center/cover no-repeat` : posterGradient.bg,
+  };
 
   return (
     <Box sx={{ maxWidth: 680, mx: 'auto' }}>

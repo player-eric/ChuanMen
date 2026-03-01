@@ -203,6 +203,22 @@ export async function getRecommendationById(id: string) {
   return requestJson<EntityMap>(`/api/recommendations/${id}`);
 }
 
+export interface ExternalBookResult {
+  openLibraryKey: string;
+  title: string;
+  authors: string;
+  year: string;
+  description: string;
+  cover: string;
+  pageCount: number | null;
+  rating: number | null;
+  infoLink: string;
+}
+
+export async function searchExternalBooks(query: string) {
+  return requestJson<{ items: ExternalBookResult[]; source: string }>(`/api/recommendations/search-external${toQueryString({ q: query, category: 'book' })}`);
+}
+
 export async function toggleRecommendationVote(recommendationId: string, userId: string) {
   return requestJson<{ voted: boolean }>(`/api/recommendations/${recommendationId}/vote`, {
     method: 'POST',
@@ -285,11 +301,11 @@ export async function removeEventRecapPhoto(eventId: string, photoUrl: string) {
   });
 }
 
-export async function linkEventRecommendation(eventId: string, recommendationId: string) {
+export async function linkEventRecommendation(eventId: string, recommendationId: string, linkedById?: string) {
   return requestJson<{ ok: boolean }>(`/api/events/${eventId}/recommendations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ recommendationId }),
+    body: JSON.stringify({ recommendationId, linkedById }),
   });
 }
 

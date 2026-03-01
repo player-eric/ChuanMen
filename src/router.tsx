@@ -257,6 +257,7 @@ function mapApiEvent(e: any): any {
       title: er.recommendation?.title,
       category: er.recommendation?.category,
       coverUrl: er.recommendation?.coverUrl || undefined,
+      linkedById: er.linkedById || undefined,
     })),
     spots: Math.max(0, (e.capacity ?? 0) - occupying.length),
     total: e.capacity ?? 0,
@@ -468,6 +469,7 @@ async function bookDetailLoader({ params }: { params: Record<string, string | un
       synopsis: rec.description ?? '',
       genre: (rec.tags ?? []).map((t: any) => t.value).join(', '),
       sourceUrl: rec.sourceUrl ?? '',
+      coverUrl: rec.coverUrl ?? '',
       authorId: rec.authorId ?? rec.author?.id ?? '',
     };
   } catch {
