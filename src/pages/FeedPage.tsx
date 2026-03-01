@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLoaderData } from 'react-router';
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -87,6 +88,118 @@ function gridSizeFor(type: FeedItem['type']) {
   return halfWidth;
 }
 
+/* ═══ Recap Banner for recently ended events ═══ */
+function RecapBanner({ items }: { items: FeedItem[] }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const raw = localStorage.getItem('chuanmen.feed.recapDismissed');
+    if (raw) {
+      try { setDismissed(new Set(JSON.parse(raw))); } catch {}
+    }
+  }, []);
+
+  if (!user) return null;
+
+  // Find ended activities the user participated in
+  const endedMine = items.filter(
+    (it): it is Extract<FeedItem, { type: 'activity' }> =>
+      it.type === 'activity' &&
+      (it as any).phase === 'ended' &&
+      Array.isArray((it as any).signupUserIds) &&
+      (it as any).signupUserIds.includes(user.id),
+  );
+
+  // Show the most recent one that hasn't been dismissed
+  const target = endedMine.find((e) => !dismissed.has(e.navTarget ?? ''));
+  if (!target || !target.navTarget) return null;
+
+  const dismiss = () => {
+    const next = new Set(dismissed);
+    next.add(target.navTarget!);
+    setDismissed(next);
+    localStorage.setItem('chuanmen.feed.recapDismissed', JSON.stringify([...next]));
+  };
+
+  return (
+    <Alert
+      severity="info"
+      sx={{ mb: 2, '& .MuiAlert-message': { width: '100%' } }}
+      onClose={dismiss}
+    >
+      <Typography variant="body2" fontWeight={700} sx={{ mb: 0.5 }}>
+        「{target.title}」已结束
+      </Typography>
+      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+        留下你的回忆吧！
+      </Typography>
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Button size="small" variant="outlined" onClick={() => navigate(target.navTarget!)}>
+          📷 上传照片
+        </Button>
+        <Button size="small" variant="outlined" onClick={() => navigate(target.navTarget!)}>
+          💬 写评论
+        </Button>
+        <Button size="small" variant="outlined" onClick={() => navigate('/cards')}>
+          ✉ 寄感谢卡
+        </Button>
+      </Stack>
+    </Alert>
+  );
+}
+
+/* ═══ Welcome Banner for new members ═══ */
+function WelcomeBanner() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  // useEffect to avoid SSR hydration mismatch (localStorage not available on server)
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    const key = `chuanmen.feed.welcomed.${user.id}`;
+    if (!localStorage.getItem(key)) setShow(true);
+  }, [user]);
+
+  if (!show || !user) return null;
+  const dismiss = () => {
+    localStorage.setItem(`chuanmen.feed.welcomed.${user.id}`, '1');
+    setShow(false);
+  };
+
+  return (
+    <Card sx={{ mb: 2, border: '1px solid', borderColor: 'primary.main', opacity: 0.9 }}>
+      <CardContent>
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+          <Typography fontWeight={700}>👋 欢迎来到串门儿！</Typography>
+          <Button size="small" onClick={dismiss} sx={{ minWidth: 'auto', p: 0 }}>✕</Button>
+        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          动态流里会出现社区的活动、推荐和感谢卡。先看看下面这些：
+        </Typography>
+        <Grid container spacing={1}>
+          {[
+            { icon: '⚙️', label: '完善资料', page: '/settings' },
+            { icon: '📅', label: '看看活动', page: '/events' },
+            { icon: '🎬', label: '发现推荐', page: '/discover' },
+            { icon: '👥', label: '认识成员', page: '/members' },
+          ].map((a, i) => (
+            <Grid key={i} size={{ xs: 6 }}>
+              <Button variant="outlined" fullWidth size="small"
+                onClick={() => navigate(a.page)}
+                sx={{ justifyContent: 'flex-start', textTransform: 'none' }}>
+                {a.icon} {a.label}
+              </Button>
+            </Grid>
+          ))}
+        </Grid>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ═══ Full Feed (Timeline) ═══ */
 const PAGE_SIZE = 8;
 
@@ -125,6 +238,8 @@ function FullFeed() {
 
   return (
     <Box>
+      <RecapBanner items={items} />
+      <WelcomeBanner />
       {isDrawnPerson && (
         <Card sx={{ mb: 2, border: '1px solid', borderColor: 'primary.light', bgcolor: 'primary.50' }}>
           <CardContent>

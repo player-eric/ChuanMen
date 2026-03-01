@@ -101,6 +101,7 @@ function buildFeedItems(data: any): any[] {
       film: e.screenedMovies?.[0]?.movie?.title,
       scene: eventTagToScene[e.tags?.[0]] ?? e.tags?.[0] ?? '',
       navTarget: `/events/${e.id}`,
+      phase: e.phase ?? 'open',
       isHomeEvent: e.isHomeEvent ?? false,
       isPrivate: e.isPrivate ?? false,
       waitlistCount: feedWaitlist.length,
@@ -108,6 +109,7 @@ function buildFeedItems(data: any): any[] {
       likedBy: e.likedBy ?? [],
       comments: [],
       commentCount: e.commentCount ?? 0,
+      photoCount: e.photoCount ?? 0,
     });
   }
 

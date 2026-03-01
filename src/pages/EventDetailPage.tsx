@@ -664,7 +664,8 @@ export default function EventDetailPage() {
               const catModes = event.recCategoryModes ?? {};
               const defaultMode = event.recSelectionMode ?? 'nominate';
               const hasRecs = recs.length > 0;
-              const showSection = hasRecs || cats.length > 0 || isHost || signedUp;
+              const isEnded = event.phase === 'ended' || event.phase === 'cancelled';
+              const showSection = hasRecs || cats.length > 0 || ((!isEnded) && (isHost || signedUp));
               if (!showSection) return null;
 
               const catIcon: Record<string, string> = { movie: '🍿', book: '📚', recipe: '🍳', place: '📍', music: '🎵', external_event: '🎭' };
@@ -993,6 +994,35 @@ export default function EventDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Next-step guidance for ended events */}
+        {event.phase === 'ended' && user && signedUp && (
+          <Card>
+            <CardContent>
+              <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                🚀 下一步
+              </Typography>
+              <Stack spacing={1}>
+                {(event.linkedRecommendations ?? []).length > 0 && (
+                  <Button variant="outlined" size="small" fullWidth
+                    onClick={() => navigate('/discover')}>
+                    🔍 发现更多推荐
+                  </Button>
+                )}
+                {event.host !== user?.name && (
+                  <Button variant="outlined" size="small" fullWidth
+                    onClick={() => navigate('/events/new')}>
+                    🏠 试试当 Host
+                  </Button>
+                )}
+                <Button variant="outlined" size="small" fullWidth
+                  onClick={() => navigate('/events/proposals/new')}>
+                  💡 提一个活动创意
+                </Button>
+              </Stack>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Host waitlist management panel */}
         {isHost && event.phase !== 'ended' && event.phase !== 'cancelled' && (() => {

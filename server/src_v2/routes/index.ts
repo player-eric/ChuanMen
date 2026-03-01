@@ -21,6 +21,25 @@ import { newsletterRoutes } from '../modules/newsletters/newsletter.route.js';
 import { siteConfigRoutes } from '../modules/site-config/site-config.route.js';
 
 export const apiRoutes: FastifyPluginAsync = async (app) => {
+  // Touch lastActiveAt on meaningful API activity (throttled per user, fire-and-forget)
+  const activeCache = new Map<string, number>();
+  const TOUCH_INTERVAL = 5 * 60 * 1000;
+
+  app.addHook('onRequest', async (request) => {
+    const userId =
+      (request.headers['x-user-id'] as string) ||
+      (request.method !== 'GET' && (request.body as any)?.userId);
+    if (!userId || typeof userId !== 'string') return;
+    if (userId.length < 20 || userId.startsWith('walkthrough-')) return;
+    const now = Date.now();
+    if (now - (activeCache.get(userId) ?? 0) < TOUCH_INTERVAL) return;
+    activeCache.set(userId, now);
+    app.prisma.user.update({
+      where: { id: userId },
+      data: { lastActiveAt: new Date() },
+    }).catch(() => {});
+  });
+
   app.register(healthRoutes, { prefix: '/health' });
   app.register(authRoutes);
   app.register(userRoutes, { prefix: '/users' });

@@ -240,7 +240,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     };
 
     return {
-      events: events.map(withInteraction),
+      events: events.map((e) => ({ ...withInteraction(e), photoCount: e.recapPhotoUrls?.length ?? 0 })),
       announcements,
       recommendations,
       members,
