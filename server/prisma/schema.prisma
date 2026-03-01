@@ -212,6 +212,7 @@ model User {
   mediaAssets          MediaAsset[]
   recommendations      Recommendation[]
   recommendationVotes  RecommendationVote[]
+  linkedEventRecs      EventRecommendation[]
   postcardPurchases    PostcardPurchase[]
   announcements        Announcement[]       @relation("AnnouncementAuthor")
   emailLogs            EmailLog[]
@@ -407,10 +408,12 @@ model EventRecommendation {
   id               String          @id @default(cuid())
   eventId          String
   recommendationId String
+  linkedById       String?
   createdAt        DateTime        @default(now())
 
   event            Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
   recommendation   Recommendation  @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  linkedBy         User?           @relation(fields: [linkedById], references: [id], onDelete: SetNull)
 
   @@unique([eventId, recommendationId])
   @@index([eventId])

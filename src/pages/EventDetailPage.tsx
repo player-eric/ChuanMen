@@ -206,6 +206,7 @@ export default function EventDetailPage() {
   const [allRecs, setAllRecs] = useState<any[]>([]);
   const [recLinkOpen, setRecLinkOpen] = useState(false);
   const [recSearch, setRecSearch] = useState('');
+  const [recCategory, setRecCategory] = useState<string>('all');
   useEffect(() => {
     fetchMoviesApi().then((m: any[]) => setAllMovies(m)).catch(() => {});
     fetchMembersApi().then((m: any[]) => setAllMembers(m)).catch(() => {});
@@ -636,47 +637,58 @@ export default function EventDetailPage() {
             )}
 
             {/* 6b. Linked recommendations */}
-            {((event as any).linkedRecommendations?.length > 0 || isHost) && (
+            {((event as any).linkedRecommendations?.length > 0 || isHost || signedUp) && (
               <Card variant="outlined" sx={{ mb: 2 }}>
                 <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
                   <Typography variant="caption" fontWeight={700} sx={{ mb: 1, display: 'block' }}>
                     📋 相关推荐
                   </Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    {((event as any).linkedRecommendations ?? []).map((rec: any) => (
+                    {((event as any).linkedRecommendations ?? []).map((rec: any) => {
+                      const canDelete = isHost || (user && rec.linkedById === user.id);
+                      return (
+                        <Chip
+                          key={rec.id}
+                          label={rec.title}
+                          variant="outlined"
+                          size="small"
+                          clickable
+                          onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}
+                          onDelete={canDelete ? async () => {
+                            if (!eventId) return;
+                            try {
+                              await unlinkEventRecommendation(eventId, rec.id);
+                              setEvent((prev) => {
+                                if (!prev) return prev;
+                                const linked = ((prev as any).linkedRecommendations ?? []).filter((r: any) => r.id !== rec.id);
+                                return { ...prev, linkedRecommendations: linked } as any;
+                              });
+                              setFlash({ open: true, severity: 'success', message: `已取消关联「${rec.title}」` });
+                            } catch {
+                              setFlash({ open: true, severity: 'error', message: '取消关联失败' });
+                            }
+                          } : undefined}
+                        />
+                      );
+                    })}
+                    {(isHost || signedUp) && [
+                      { key: 'all', label: '+ 全部' },
+                      { key: 'movie', label: '🍿 电影' },
+                      { key: 'book', label: '📚 书' },
+                      { key: 'recipe', label: '🍳 食谱' },
+                      { key: 'place', label: '📍 地方' },
+                      { key: 'music', label: '🎵 音乐' },
+                      { key: 'external_event', label: '🎭 演出' },
+                    ].map((cat) => (
                       <Chip
-                        key={rec.id}
-                        label={rec.title}
-                        variant="outlined"
+                        key={cat.key}
+                        label={cat.label}
                         size="small"
+                        variant="outlined"
                         clickable
-                        onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}
-                        onDelete={isHost ? async () => {
-                          if (!eventId) return;
-                          try {
-                            await unlinkEventRecommendation(eventId, rec.id);
-                            setEvent((prev) => {
-                              if (!prev) return prev;
-                              const linked = ((prev as any).linkedRecommendations ?? []).filter((r: any) => r.id !== rec.id);
-                              return { ...prev, linkedRecommendations: linked } as any;
-                            });
-                            setFlash({ open: true, severity: 'success', message: `已取消关联「${rec.title}」` });
-                          } catch {
-                            setFlash({ open: true, severity: 'error', message: '取消关联失败' });
-                          }
-                        } : undefined}
+                        onClick={() => { setRecCategory(cat.key); setRecLinkOpen(true); }}
                       />
                     ))}
-                    {isHost && (
-                      <Chip
-                        label="+ 关联推荐"
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                        clickable
-                        onClick={() => setRecLinkOpen(true)}
-                      />
-                    )}
                   </Stack>
                 </CardContent>
               </Card>
@@ -847,8 +859,8 @@ export default function EventDetailPage() {
         </Dialog>
 
         {/* Link Recommendation dialog */}
-        <Dialog open={recLinkOpen} onClose={() => { setRecLinkOpen(false); setRecSearch(''); }} maxWidth="xs" fullWidth>
-          <DialogTitle>关联推荐</DialogTitle>
+        <Dialog open={recLinkOpen} onClose={() => { setRecLinkOpen(false); setRecSearch(''); setRecCategory('all'); }} maxWidth="xs" fullWidth>
+          <DialogTitle>关联推荐{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' }[recCategory] ?? ''}` : ''}</DialogTitle>
           <DialogContent>
             <TextField
               size="small"
@@ -864,10 +876,11 @@ export default function EventDetailPage() {
               const linkedIds = new Set(((event as any).linkedRecommendations ?? []).map((r: any) => r.id));
               const filtered = allRecs.filter((r: any) => {
                 if (linkedIds.has(r.id)) return false;
+                if (recCategory !== 'all' && r.category !== recCategory) return false;
                 if (rq && !(r.title ?? '').toLowerCase().includes(rq) && !(r.description ?? '').toLowerCase().includes(rq)) return false;
                 return true;
               });
-              const categoryLabel: Record<string, string> = { books: '书', recipes: '食谱', places: '地方', movies: '电影', shows: '演出' };
+              const categoryLabel: Record<string, string> = { book: '书', recipe: '食谱', place: '地方', movie: '电影', music: '音乐', external_event: '演出' };
               return filtered.length > 0 ? (
                 <Stack spacing={1}>
                   {filtered.slice(0, 20).map((r: any) => (
@@ -875,14 +888,15 @@ export default function EventDetailPage() {
                       <CardActionArea onClick={async () => {
                         if (!eventId) return;
                         try {
-                          await linkEventRecommendation(eventId, r.id);
+                          await linkEventRecommendation(eventId, r.id, user?.id);
                           setEvent((prev) => {
                             if (!prev) return prev;
-                            const linked = [...((prev as any).linkedRecommendations ?? []), { id: r.id, title: r.title, category: r.category }];
+                            const linked = [...((prev as any).linkedRecommendations ?? []), { id: r.id, title: r.title, category: r.category, linkedById: user?.id }];
                             return { ...prev, linkedRecommendations: linked } as any;
                           });
                           setRecLinkOpen(false);
                           setRecSearch('');
+                          setRecCategory('all');
                           setFlash({ open: true, severity: 'success', message: `已关联「${r.title}」` });
                         } catch {
                           setFlash({ open: true, severity: 'error', message: '关联失败' });
@@ -910,6 +924,7 @@ export default function EventDetailPage() {
                       onClick={() => {
                         setRecLinkOpen(false);
                         setRecSearch('');
+                        setRecCategory('all');
                         navigate('/discover');
                       }}
                     >
@@ -921,7 +936,7 @@ export default function EventDetailPage() {
             })()}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => { setRecLinkOpen(false); setRecSearch(''); }}>取消</Button>
+            <Button onClick={() => { setRecLinkOpen(false); setRecSearch(''); setRecCategory('all'); }}>取消</Button>
           </DialogActions>
         </Dialog>
 

@@ -29,7 +29,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
 import { useTaskPresets } from '@/hooks/useTaskPresets';
-import { createEvent, inviteToEvent, fetchMembersApi, fetchMoviesApi } from '@/lib/domainApi';
+import { createEvent, inviteToEvent, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation } from '@/lib/domainApi';
 import type { FoodOption, TaskRole } from '@/types';
 import { Poster } from '@/components/Poster';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -96,6 +96,13 @@ export default function EventCreatePage() {
   // Title image
   const [titleImageUrl, setTitleImageUrl] = useState('');
 
+  // Recommendation state
+  const [allRecs, setAllRecs] = useState<any[]>([]);
+  const [selectedRecs, setSelectedRecs] = useState<any[]>([]);
+  const [recPickerOpen, setRecPickerOpen] = useState(false);
+  const [recSearch, setRecSearch] = useState('');
+  const [recCategory, setRecCategory] = useState<string>('all');
+
   // API-loaded data for members & movies
   const [allMembers, setAllMembers] = useState<{ id: string; name: string; avatar?: string }[]>([]);
   const [allMovies, setAllMovies] = useState<any[]>([]);
@@ -103,6 +110,7 @@ export default function EventCreatePage() {
   useEffect(() => {
     fetchMembersApi().then((m: any[]) => setAllMembers(m)).catch(() => {});
     fetchMoviesApi().then((m: any[]) => setAllMovies(m)).catch(() => {});
+    fetchRecommendationsApi().then((r: any[]) => setAllRecs(r)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -176,7 +184,12 @@ export default function EventCreatePage() {
         phase: isPastDate ? 'ended' : delayPublish ? 'invite' : 'open',
         publishAt: delayPublish && publishDate ? combineDT(publishDate, publishTime || '00:00') : undefined,
       });
-      setCreatedId(String((result as any).id ?? ''));
+      const newEventId = String((result as any).id ?? '');
+      // Link selected recommendations (best effort)
+      for (const rec of selectedRecs) {
+        try { await linkEventRecommendation(newEventId, rec.id, user.id); } catch { /* best effort */ }
+      }
+      setCreatedId(newEventId);
     } catch (err: any) {
       setError(err?.message ?? '创建失败，请重试');
     } finally {
@@ -448,6 +461,120 @@ export default function EventCreatePage() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* 关联推荐（可选） */}
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
+                📋 关联推荐（可选）
+              </Typography>
+              {selectedRecs.length > 0 && (
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
+                  {selectedRecs.map((rec) => {
+                    const icon = { movie: '🍿', place: '📍', book: '📚', recipe: '🍳' }[rec.category as string] ?? '📋';
+                    return (
+                      <Chip
+                        key={rec.id}
+                        label={`${icon} ${rec.title}`}
+                        variant="outlined"
+                        size="small"
+                        onDelete={() => setSelectedRecs((prev) => prev.filter((r) => r.id !== rec.id))}
+                      />
+                    );
+                  })}
+                </Stack>
+              )}
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                {[
+                  { key: 'all', label: '全部' },
+                  { key: 'movie', label: '🍿 电影' },
+                  { key: 'book', label: '📚 书' },
+                  { key: 'recipe', label: '🍳 食谱' },
+                  { key: 'place', label: '📍 地方' },
+                  { key: 'music', label: '🎵 音乐' },
+                  { key: 'external_event', label: '🎭 演出' },
+                ].map((cat) => (
+                  <Chip
+                    key={cat.key}
+                    label={cat.key === 'all' ? '+ 全部' : cat.label}
+                    size="small"
+                    variant="outlined"
+                    clickable
+                    onClick={() => { setRecCategory(cat.key); setRecPickerOpen(true); }}
+                  />
+                ))}
+              </Stack>
+            </CardContent>
+          </Card>
+
+          {/* Recommendation picker dialog */}
+          <Dialog open={recPickerOpen} onClose={() => { setRecPickerOpen(false); setRecSearch(''); setRecCategory('all'); }} maxWidth="xs" fullWidth>
+            <DialogTitle>关联推荐{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' }[recCategory] ?? ''}` : ''}</DialogTitle>
+            <DialogContent>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="搜索推荐名称..."
+                value={recSearch}
+                onChange={(e) => setRecSearch(e.target.value)}
+                autoFocus
+                sx={{ mb: 1.5, mt: 0.5 }}
+              />
+              {(() => {
+                const rq = recSearch.toLowerCase();
+                const selectedIds = new Set(selectedRecs.map((r) => r.id));
+                const filtered = allRecs.filter((r: any) => {
+                  if (selectedIds.has(r.id)) return false;
+                  if (recCategory !== 'all' && r.category !== recCategory) return false;
+                  if (rq && !(r.title ?? '').toLowerCase().includes(rq) && !(r.description ?? '').toLowerCase().includes(rq)) return false;
+                  return true;
+                });
+                const categoryLabel: Record<string, string> = { book: '书', recipe: '食谱', place: '地方', movie: '电影', music: '音乐', external_event: '演出' };
+                return filtered.length > 0 ? (
+                  <Stack spacing={1}>
+                    {filtered.slice(0, 20).map((r: any) => (
+                      <Card key={r.id} variant="outlined">
+                        <CardActionArea onClick={() => {
+                          setSelectedRecs((prev) => [...prev, { id: r.id, title: r.title, category: r.category }]);
+                          setRecPickerOpen(false);
+                          setRecSearch('');
+                          setRecCategory('all');
+                        }}>
+                          <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+                            <Typography variant="body2" fontWeight={600}>{r.title}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {categoryLabel[r.category] ?? r.category}{r.author?.name ? ` · ${r.author.name} 推荐` : ''}
+                            </Typography>
+                          </CardContent>
+                        </CardActionArea>
+                      </Card>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Stack spacing={1.5} alignItems="center" sx={{ py: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {recSearch ? `没有找到「${recSearch}」` : '没有更多推荐'}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => {
+                        setRecPickerOpen(false);
+                        setRecSearch('');
+                        setRecCategory('all');
+                        navigate('/discover');
+                      }}
+                    >
+                      去添加推荐
+                    </Button>
+                  </Stack>
+                );
+              })()}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => { setRecPickerOpen(false); setRecSearch(''); setRecCategory('all'); }}>取消</Button>
+            </DialogActions>
+          </Dialog>
 
           {/* Movie night — film selection */}
           {isMovieNight && (

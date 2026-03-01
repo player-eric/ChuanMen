@@ -123,11 +123,11 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
 
   app.post('/:id/recommendations', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const { recommendationId } = request.body as { recommendationId: string };
+    const { recommendationId, linkedById } = request.body as { recommendationId: string; linkedById?: string };
     if (!recommendationId) return reply.badRequest('缺少 recommendationId');
     const link = await app.prisma.eventRecommendation.upsert({
       where: { eventId_recommendationId: { eventId: id, recommendationId } },
-      create: { eventId: id, recommendationId },
+      create: { eventId: id, recommendationId, linkedById: linkedById || null },
       update: {},
       include: { recommendation: { select: { id: true, title: true, category: true } } },
     });
