@@ -18,6 +18,7 @@ export class UserRepository {
       where: { id },
       include: {
         preferences: true,
+        socialTitles: true,
       },
     });
   }

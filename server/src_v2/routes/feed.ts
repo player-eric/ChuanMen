@@ -71,6 +71,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             city: true,
             birthday: true,
             hideBirthday: true,
+            socialTitles: true,
           },
           orderBy: { lastActiveAt: 'desc' },
         }),
