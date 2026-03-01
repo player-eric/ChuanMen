@@ -5,10 +5,23 @@ import { EventService } from './event.service.js';
 export const eventRoutes: FastifyPluginAsync = async (app) => {
   const service = new EventService(new EventRepository(app.prisma), app.prisma);
 
-  app.get('/', async () => service.listEvents());
+  /** Batch-attach like + comment counts to a list of events */
+  async function withInteractionCounts<T extends { id: string }>(events: T[]) {
+    if (events.length === 0) return events;
+    const ids = events.map((e) => e.id);
+    const [likes, comments] = await Promise.all([
+      app.prisma.like.groupBy({ by: ['entityId'], where: { entityType: 'event', entityId: { in: ids } }, _count: true }),
+      app.prisma.comment.groupBy({ by: ['entityId'], where: { entityType: 'event', entityId: { in: ids } }, _count: true }),
+    ]);
+    const likeMap = new Map(likes.map((l) => [l.entityId, l._count]));
+    const commentMap = new Map(comments.map((c) => [c.entityId, c._count]));
+    return events.map((e) => ({ ...e, likeCount: likeMap.get(e.id) ?? 0, commentCount: commentMap.get(e.id) ?? 0 }));
+  }
+
+  app.get('/', async () => withInteractionCounts(await service.listEvents()));
 
   // Past/completed events - must come before /:id
-  app.get('/past', async () => service.listPast());
+  app.get('/past', async () => withInteractionCounts(await service.listPast()));
 
   app.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };

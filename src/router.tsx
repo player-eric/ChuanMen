@@ -100,6 +100,10 @@ function buildFeedItems(data: any): any[] {
       navTarget: `/events/${e.id}`,
       isHomeEvent: e.isHomeEvent ?? false,
       waitlistCount: feedWaitlist.length,
+      likes: e.likes ?? 0,
+      likedBy: e.likedBy ?? [],
+      comments: [],
+      commentCount: e.commentCount ?? 0,
     });
   }
 
@@ -111,6 +115,10 @@ function buildFeedItems(data: any): any[] {
       from: p.from?.name ?? '',
       to: p.to?.name ?? '',
       message: p.message ?? '',
+      likes: p.likes ?? 0,
+      likedBy: p.likedBy ?? [],
+      comments: [],
+      commentCount: p.commentCount ?? 0,
     });
   }
 
@@ -127,6 +135,10 @@ function buildFeedItems(data: any): any[] {
       votes: m._count?.votes ?? 0,
       time,
       navTarget: `/discover/movies/${m.id}`,
+      likes: m.likes ?? 0,
+      likedBy: m.likedBy ?? [],
+      comments: [],
+      commentCount: m.commentCount ?? 0,
     });
   }
 
@@ -152,6 +164,8 @@ function buildFeedItems(data: any): any[] {
       avatar: m.avatar,
       likes: m.likes ?? 0,
       likedBy: m.likedBy ?? [],
+      comments: [],
+      commentCount: m.commentCount ?? 0,
     });
   }
 
@@ -167,6 +181,10 @@ function buildFeedItems(data: any): any[] {
       interested: [],
       time,
       navTarget: `/events/proposals/${p.id}`,
+      likes: p.likes ?? 0,
+      likedBy: p.likedBy ?? [],
+      comments: [],
+      commentCount: p.commentCount ?? 0,
     });
   }
 
@@ -269,6 +287,8 @@ function mapApiEvent(e: any): any {
     desc: e.description ?? '',
     houseRules: e.houseRules || undefined,
     photoCount: e.recapPhotoUrls?.length || undefined,
+    commentCount: e.commentCount ?? 0,
+    likeCount: e.likeCount ?? 0,
     tags: e.tags ?? [],
   };
 }
@@ -304,6 +324,8 @@ async function eventsLoader() {
         scene: e.titleImageUrl || eventTagToScene[e.tags?.[0]] || e.tags?.[0] || '',
         film: e.screenedMovies?.[0]?.movie?.title ?? e.film ?? undefined,
         photoCount: e.recapPhotoUrls?.length || undefined,
+        commentCount: e.commentCount ?? 0,
+        likeCount: e.likeCount ?? 0,
       };
       }),
     };

@@ -131,38 +131,66 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         }),
       ]);
 
-    // Fetch likes for new members
+    // Collect all entity IDs by type for batch like/comment fetching
+    const eventIds = events.map((e) => e.id);
+    const postcardIds = postcards.map((p) => p.id);
+    const movieIds = recentMovies.map((m) => m.id);
+    const proposalIds = recentProposals.map((p) => p.id);
     const newMemberIds = newMembers.map((m) => m.id);
-    const newMemberLikes = newMemberIds.length > 0
-      ? await prisma.like.findMany({
-          where: { entityType: 'user', entityId: { in: newMemberIds } },
-          include: { user: { select: { id: true, name: true } } },
-        })
-      : [];
+    const allEntityIds = [...eventIds, ...postcardIds, ...movieIds, ...proposalIds, ...newMemberIds];
+
+    // Batch fetch likes and comment counts for all entities
+    const [allLikes, commentCounts] = await Promise.all([
+      allEntityIds.length > 0
+        ? prisma.like.findMany({
+            where: { entityId: { in: allEntityIds } },
+            include: { user: { select: { id: true, name: true } } },
+          })
+        : [],
+      allEntityIds.length > 0
+        ? prisma.comment.groupBy({
+            by: ['entityType', 'entityId'],
+            where: { entityId: { in: allEntityIds } },
+            _count: true,
+          })
+        : [],
+    ]);
 
     // Group likes by entityId
     const likesMap = new Map<string, { count: number; names: string[] }>();
-    for (const like of newMemberLikes) {
+    for (const like of allLikes) {
       const entry = likesMap.get(like.entityId) ?? { count: 0, names: [] };
       entry.count++;
       entry.names.push(like.user.name);
       likesMap.set(like.entityId, entry);
     }
 
-    const newMembersWithLikes = newMembers.map((m) => {
-      const likeData = likesMap.get(m.id);
-      return { ...m, likes: likeData?.count ?? 0, likedBy: likeData?.names ?? [] };
-    });
+    // Group comment counts by entityId
+    const commentCountMap = new Map<string, number>();
+    for (const row of commentCounts) {
+      commentCountMap.set(row.entityId, row._count);
+    }
+
+    // Helper to attach likes + commentCount to an entity
+    const withInteraction = <T extends { id: string }>(entity: T) => {
+      const likeData = likesMap.get(entity.id);
+      return {
+        ...entity,
+        likes: likeData?.count ?? 0,
+        likedBy: likeData?.names ?? [],
+        commentCount: commentCountMap.get(entity.id) ?? 0,
+      };
+    };
 
     return {
-      events,
+      events: events.map(withInteraction),
       announcements,
       recommendations,
       members,
-      postcards,
-      recentMovies,
-      recentProposals,
-      newMembers: newMembersWithLikes,
+      postcards: postcards.map(withInteraction),
+      recentMovies: recentMovies.map(withInteraction),
+      recentProposals: recentProposals.map(withInteraction),
+      newMembers: newMembers.map(withInteraction),
     };
   });
 };

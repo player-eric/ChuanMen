@@ -113,7 +113,8 @@ export default function EventsPage() {
                     houseRules={evt.houseRules}
                     hostId={evt.hostId}
                     waitlistCount={evt.waitlistCount}
-                    likes={0} likedBy={[]} comments={[]}
+                    commentCount={evt.commentCount}
+                    likes={evt.likeCount ?? 0} likedBy={[]} comments={[]}
                   />
                 </Grid>
               ))}
@@ -275,7 +276,7 @@ export default function EventsPage() {
                   phase="ended"
                   photoCount={evt.photoCount}
                   commentCount={evt.commentCount}
-                  likes={0} likedBy={[]} comments={[]}
+                  likes={evt.likeCount ?? 0} likedBy={[]} comments={[]}
                 />
               </Grid>
             ))}
@@ -296,7 +297,7 @@ export default function EventsPage() {
                   phase="ended"
                   photoCount={evt.photoCount}
                   commentCount={evt.commentCount}
-                  likes={0} likedBy={[]} comments={[]}
+                  likes={evt.likeCount ?? 0} likedBy={[]} comments={[]}
                 />
               </Grid>
             ))}

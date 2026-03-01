@@ -50,10 +50,11 @@ interface InteractionProps {
   likedBy: string[];
   comments: FeedComment[];
   newComments?: number;
+  commentCount?: number;
 }
 
 /* ═══ FeedActions (shared like + comment bar) ═══ */
-export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, newComments, entityType, entityId, defaultExpanded, liked: likedProp, onLike }: InteractionProps & { compact?: boolean; newComments?: number; entityType?: string; entityId?: string; defaultExpanded?: boolean; liked?: boolean; onLike?: () => void }) {
+export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, newComments, commentCount: commentCountProp, entityType, entityId, defaultExpanded, liked: likedProp, onLike }: InteractionProps & { compact?: boolean; newComments?: number; commentCount?: number; entityType?: string; entityId?: string; defaultExpanded?: boolean; liked?: boolean; onLike?: () => void }) {
   const c = useColors();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -138,7 +139,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
           }}
         >
           <ChatBubbleOutlineRounded sx={{ fontSize: compact ? 16 : 18 }} />
-          {localComments.length > 0 ? ` ${localComments.length}` : ''}
+          {Math.max(commentCountProp ?? 0, localComments.length) > 0 ? ` ${Math.max(commentCountProp ?? 0, localComments.length)}` : ''}
         </button>
       </div>
 
@@ -256,7 +257,7 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
       return;
     }
     if (joined) {
-      setCancelOpen(true);
+      if (!isEnded) setCancelOpen(true);
       return;
     }
     try {
@@ -349,6 +350,21 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
             <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `还剩 ${spots} 位` : (waitlistCount ?? 0) > 0 ? `已满 · ${waitlistCount}人等位` : '已满'}</span>
           )}
         </div>
+        {/* Ended event: "我也参加了" button */}
+        {isEnded && !isCancelled && user && (
+          <button
+            onClick={handleSignup}
+            style={{
+              width: '100%', padding: '9px 0', borderRadius: 8,
+              background: joined ? c.s2 : 'transparent',
+              border: joined ? `1px solid ${c.green}30` : `1px solid ${c.warm}50`,
+              color: joined ? c.green : c.warm,
+              fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            {joined ? '✓ 已参与' : '我也参加了'}
+          </button>
+        )}
         {/* Social hint + signup (skip for ended/cancelled) */}
         {!isEnded && !isCancelled && (
           <>
@@ -371,7 +387,7 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
         )}
       </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} {...extractEntity(navTarget)} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
       <ConfirmDialog
         open={cancelOpen}
         title="取消报名"
@@ -391,7 +407,7 @@ interface FeedCardProps extends InteractionProps {
   from: string; to: string; message: string; photo?: string; navTarget?: string;
 }
 
-export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, comments, newComments }: FeedCardProps) {
+export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCardProps) {
   const c = useColors();
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -412,7 +428,7 @@ export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, 
         </div>
         <PostCard from={from} to={to} message={message} stamp="🎬" photo={photo} layout="horizontal" />
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} {...extractEntity(navTarget)} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
     </Card>
   );
 }
@@ -423,7 +439,7 @@ interface FeedMovieProps extends InteractionProps {
   navTarget?: string;
 }
 
-export function FeedMovie({ name, title, year, dir, votes: initV, navTarget, likes, likedBy, comments, newComments }: FeedMovieProps) {
+export function FeedMovie({ name, title, year, dir, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedMovieProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -463,7 +479,7 @@ export function FeedMovie({ name, title, year, dir, votes: initV, navTarget, lik
           </div>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
     </Card>
   );
 }
@@ -473,14 +489,14 @@ interface FeedMilestoneProps extends InteractionProps {
   text: string; emoji: string;
 }
 
-export function FeedMilestone({ text, emoji, likes, likedBy, comments, newComments }: FeedMilestoneProps) {
+export function FeedMilestone({ text, emoji, likes, likedBy, comments, newComments, commentCount }: FeedMilestoneProps) {
   return (
     <Card glow>
       <div style={{ padding: 16, textAlign: 'center' }}>
         <div style={{ fontSize: 28, marginBottom: 6 }}>{emoji}</div>
         <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{text}</div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
     </Card>
   );
 }
@@ -491,7 +507,7 @@ interface FeedProposalProps extends InteractionProps {
   navTarget?: string;
 }
 
-export function FeedProposal({ name, title, votes: initV, interested, navTarget, likes, likedBy, comments, newComments }: FeedProposalProps) {
+export function FeedProposal({ name, title, votes: initV, interested, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedProposalProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -526,7 +542,7 @@ export function FeedProposal({ name, title, votes: initV, interested, navTarget,
           {v ? '✓ 我也感兴趣' : '我感兴趣'} · {initV + (v ? 1 : 0)}
         </button>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
     </Card>
   );
 }
@@ -537,7 +553,7 @@ interface FeedCompactMovieProps extends InteractionProps {
   votes: number; time: string; navTarget?: string;
 }
 
-export function FeedCompactMovie({ name, title, year, dir, votes: initV, time, navTarget, likes, likedBy, comments, newComments }: FeedCompactMovieProps) {
+export function FeedCompactMovie({ name, title, year, dir, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactMovieProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -567,7 +583,7 @@ export function FeedCompactMovie({ name, title, year, dir, votes: initV, time, n
           ▲ {initV + (v ? 1 : 0)}
         </button>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact {...extractEntity(navTarget)} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact {...extractEntity(navTarget)} />
     </div>
   );
 }
@@ -578,7 +594,7 @@ interface FeedCompactProposalProps extends InteractionProps {
   interested: string[]; time: string; navTarget?: string;
 }
 
-export function FeedCompactProposal({ name, title, votes: initV, interested, time, navTarget, likes, likedBy, comments, newComments }: FeedCompactProposalProps) {
+export function FeedCompactProposal({ name, title, votes: initV, interested, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactProposalProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -611,7 +627,7 @@ export function FeedCompactProposal({ name, title, votes: initV, interested, tim
           </button>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact {...extractEntity(navTarget)} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact {...extractEntity(navTarget)} />
     </div>
   );
 }
@@ -622,7 +638,7 @@ interface FeedBookProps extends InteractionProps {
   navTarget?: string;
 }
 
-export function FeedBook({ name, title, year, author, votes: initV, navTarget, likes, likedBy, comments, newComments }: FeedBookProps) {
+export function FeedBook({ name, title, year, author, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedBookProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -662,7 +678,7 @@ export function FeedBook({ name, title, year, author, votes: initV, navTarget, l
           </div>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
     </Card>
   );
 }
@@ -674,7 +690,7 @@ interface FeedSmallGroupProps extends InteractionProps {
   description?: string; isHome?: boolean; isPrivate?: boolean; navTarget?: string;
 }
 
-export function FeedSmallGroup({ name, title, date, location, weekNumber, people, signupUserIds, capacity, isPrivate, navTarget, likes, likedBy, comments, newComments }: FeedSmallGroupProps) {
+export function FeedSmallGroup({ name, title, date, location, weekNumber, people, signupUserIds, capacity, isPrivate, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedSmallGroupProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -719,7 +735,7 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
             </div>
           </div>
         </div>
-        <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} {...extractEntity(navTarget)} />
+        <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
       </Card>
     );
   }
@@ -759,7 +775,7 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
           {joined ? '✓ 已报名' : '🎲 我要参加'}
         </button>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} {...extractEntity(navTarget)} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
       <ConfirmDialog
         open={cancelOpen}
         title="取消报名"
@@ -781,7 +797,7 @@ interface FeedCompactSmallGroupProps extends InteractionProps {
   time: string; isPrivate?: boolean; navTarget?: string;
 }
 
-export function FeedCompactSmallGroup({ name, title, date, location, weekNumber, people, signupUserIds, capacity, time, isPrivate, navTarget, likes, likedBy, comments, newComments }: FeedCompactSmallGroupProps) {
+export function FeedCompactSmallGroup({ name, title, date, location, weekNumber, people, signupUserIds, capacity, time, isPrivate, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactSmallGroupProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(false);
@@ -822,7 +838,7 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
             <span onClick={() => goMember(name)} style={{ cursor: 'pointer', fontWeight: 600 }}>{name}</span> 发起了私密局 · {time}
           </div>
         </div>
-        <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact {...extractEntity(navTarget)} />
+        <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact {...extractEntity(navTarget)} />
       </div>
     );
   }
@@ -859,7 +875,7 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
           </button>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact {...extractEntity(navTarget)} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact {...extractEntity(navTarget)} />
       <ConfirmDialog
         open={cancelOpen}
         title="取消报名"
@@ -880,7 +896,7 @@ interface FeedCompactBookProps extends InteractionProps {
   votes: number; time: string; navTarget?: string;
 }
 
-export function FeedCompactBook({ name, title, year, author, votes: initV, time, navTarget, likes, likedBy, comments, newComments }: FeedCompactBookProps) {
+export function FeedCompactBook({ name, title, year, author, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactBookProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -910,7 +926,7 @@ export function FeedCompactBook({ name, title, year, author, votes: initV, time,
           ▲ {initV + (v ? 1 : 0)}
         </button>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
     </div>
   );
 }
@@ -948,7 +964,7 @@ const actionConfig: Record<ActionNoticeAction, { emoji: string; text: (p: FeedAc
 };
 
 export function FeedActionNotice(props: FeedActionNoticeProps) {
-  const { action, name, time, photoUrls, navTarget, likes, likedBy, comments, newComments } = props;
+  const { action, name, time, photoUrls, navTarget, likes, likedBy, comments, newComments, commentCount } = props;
   const c = useColors();
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -982,7 +998,7 @@ export function FeedActionNotice(props: FeedActionNoticeProps) {
           )}
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
     </div>
   );
 }
@@ -1111,7 +1127,7 @@ export function FeedNewMember({ phase, id, name, bio, location, selfAsFriend, pa
   );
 }
 
-export function FeedCommentNotice({ name, text, targetTitle, time, navTarget, likes, likedBy, comments, newComments }: FeedCommentNoticeProps) {
+export function FeedCommentNotice({ name, text, targetTitle, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCommentNoticeProps) {
   const c = useColors();
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -1136,7 +1152,7 @@ export function FeedCommentNotice({ name, text, targetTitle, time, navTarget, li
           </div>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} compact />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
     </div>
   );
 }
