@@ -110,6 +110,7 @@ export default function EventsPage() {
                     navTarget={`/events/${evt.id}`}
                     phase={evt.phase}
                     isHomeEvent={evt.isHomeEvent}
+                    isPrivate={evt.isPrivate}
                     houseRules={evt.houseRules}
                     hostId={evt.hostId}
                     waitlistCount={evt.waitlistCount}
@@ -274,6 +275,7 @@ export default function EventsPage() {
                   scene={evt.scene}
                   navTarget={`/events/${evt.id}`}
                   phase="ended"
+                  isPrivate={evt.isPrivate}
                   photoCount={evt.photoCount}
                   commentCount={evt.commentCount}
                   likes={evt.likeCount ?? 0} likedBy={[]} comments={[]}

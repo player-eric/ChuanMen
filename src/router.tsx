@@ -100,6 +100,7 @@ function buildFeedItems(data: any): any[] {
       scene: eventTagToScene[e.tags?.[0]] ?? e.tags?.[0] ?? '',
       navTarget: `/events/${e.id}`,
       isHomeEvent: e.isHomeEvent ?? false,
+      isPrivate: e.isPrivate ?? false,
       waitlistCount: feedWaitlist.length,
       likes: e.likes ?? 0,
       likedBy: e.likedBy ?? [],
@@ -327,6 +328,7 @@ function mapApiEvent(e: any): any {
     houseRules: e.houseRules || undefined,
     photoCount: e.recapPhotoUrls?.length || undefined,
     commentCount: e.commentCount ?? 0,
+    isPrivate: e.isPrivate ?? false,
     likeCount: e.likeCount ?? 0,
     tags: e.tags ?? [],
   };

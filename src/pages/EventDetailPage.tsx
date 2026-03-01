@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLoaderData, useNavigate, useParams } from 'react-router';
 import { firstNonEmoji } from '@/components/Atoms';
 import {
@@ -36,6 +36,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
 import { RichTextViewer } from '@/components/RichTextEditor';
+const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 import { useTaskPresets } from '@/hooks/useTaskPresets';
 import { eventTagToChinese } from '@/lib/mappings';
 
@@ -467,10 +468,20 @@ export default function EventDetailPage() {
           </Box>
 
           <CardContent>
-            {/* 2. Phase badge */}
-            <Stack direction="row" spacing={1} sx={{ mb: 1.5 }} flexWrap="wrap">
-              <Chip size="small" color={phase.color} label={phase.label} />
-              {event.isHomeEvent && <Chip size="small" variant="outlined" label="🏠 在家" />}
+            {/* 2. Phase badge + date & location — single row */}
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1.5 }} flexWrap="wrap" useFlexGap rowGap={1}>
+              <Stack direction="row" spacing={1} flexWrap="wrap">
+                <Chip size="small" color={phase.color} label={phase.label} />
+                {event.isHomeEvent && <Chip size="small" variant="outlined" label="🏠 在家" />}
+                {event.isPrivate && <Chip size="small" variant="outlined" color="warning" label="🔒 私密活动" />}
+              </Stack>
+              <Stack alignItems="flex-end" spacing={0.25}>
+                <Typography variant="body2" color="text.secondary">📅 {event.date}{event.endDate ? ` — ${event.endDate}` : ''}</Typography>
+                <Typography variant="body2" color="text.secondary">📍 {event.location}</Typography>
+                {event.isHomeEvent && !signedUp && (
+                  <Typography variant="caption" color="text.secondary">🔒 报名后可见完整地址</Typography>
+                )}
+              </Stack>
             </Stack>
 
             {/* Host management bar */}
@@ -491,6 +502,22 @@ export default function EventDetailPage() {
                   }}
                 >
                   编辑
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color={event.isPrivate ? 'warning' : 'default'}
+                  onClick={async () => {
+                    if (!eventId) return;
+                    const next = !event.isPrivate;
+                    try {
+                      await updateEvent(eventId, { isPrivate: next });
+                      setEvent((prev) => prev ? { ...prev, isPrivate: next } : prev);
+                      setFlash({ open: true, severity: 'success', message: next ? '已设为私密' : '已设为公开' });
+                    } catch { setFlash({ open: true, severity: 'error', message: '操作失败' }); }
+                  }}
+                >
+                  {event.isPrivate ? '🔒 设为公开' : '🔓 设为私密'}
                 </Button>
                 {event.phase === 'invite' && (
                   <Button
@@ -563,19 +590,15 @@ export default function EventDetailPage() {
             )}
 
             {/* 3. Description */}
-            <Box sx={{ mb: 2 }}>
-              <RichTextViewer html={event.desc} />
-            </Box>
+            {event.desc && (
+              <Box sx={{ mt: 1, mb: 2, p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.75 }}>活动说明</Typography>
+                <RichTextViewer html={event.desc} />
+              </Box>
+            )}
 
-            {/* 4. Date & location */}
+            {/* 4. Additional info */}
             <Stack spacing={0.75} sx={{ mb: 2 }}>
-              <Typography variant="body2">📅 {event.date}{event.endDate ? ` — ${event.endDate}` : ''}</Typography>
-              <Typography variant="body2">📍 {event.location}</Typography>
-              {event.isHomeEvent && !signedUp && (
-                <Typography variant="caption" color="text.secondary">
-                  🔒 报名后可见完整地址
-                </Typography>
-              )}
               {event.isHomeEvent && signedUp && event.locationPrivate && (
                 <Typography variant="caption" color="success.main">
                   📍 {event.locationPrivate}
@@ -1679,14 +1702,12 @@ export default function EventDetailPage() {
                 onChange={(e) => setEditEndsAt(e.target.value)}
                 fullWidth
               />
-              <TextField
-                label="说明"
-                value={editDesc}
-                onChange={(e) => setEditDesc(e.target.value)}
-                multiline
-                minRows={3}
-                fullWidth
-              />
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>说明</Typography>
+                <Suspense fallback={<div style={{ minHeight: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>加载编辑器...</div>}>
+                  <RichTextEditorLazy content={editDesc} onChange={setEditDesc} placeholder="活动说明..." />
+                </Suspense>
+              </Box>
             </Stack>
           </DialogContent>
           <DialogActions>

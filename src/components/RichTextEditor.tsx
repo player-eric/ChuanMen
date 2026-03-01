@@ -161,10 +161,11 @@ export function RichTextViewer({ html }: { html: string }) {
           line-height: 1.7;
           color: ${c.text};
         }
-        .rich-text-viewer h2 { font-size: 18px; font-weight: 700; margin: 12px 0 6px; }
-        .rich-text-viewer h3 { font-size: 16px; font-weight: 700; margin: 10px 0 4px; }
-        .rich-text-viewer ul, .rich-text-viewer ol { padding-left: 20px; margin: 6px 0; }
-        .rich-text-viewer li { margin: 2px 0; }
+        .rich-text-viewer h2 { font-size: 18px; font-weight: 700; margin: 16px 0 6px; padding-bottom: 4px; border-bottom: 2px solid ${c.warm}50; }
+        .rich-text-viewer h3 { font-size: 16px; font-weight: 700; margin: 14px 0 4px; color: ${c.warm}; }
+        .rich-text-viewer ul { padding-left: 20px; margin: 6px 0; list-style: disc; }
+        .rich-text-viewer ol { padding-left: 20px; margin: 6px 0; list-style: decimal; }
+        .rich-text-viewer li { margin: 2px 0; display: list-item; }
         .rich-text-viewer blockquote {
           border-left: 3px solid ${c.warm};
           padding-left: 12px;

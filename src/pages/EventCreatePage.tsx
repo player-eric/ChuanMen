@@ -29,7 +29,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
 import { useTaskPresets } from '@/hooks/useTaskPresets';
-import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, linkEventRecommendation } from '@/lib/domainApi';
+import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, fetchMoviesApi, linkEventRecommendation } from '@/lib/domainApi';
 import type { FoodOption, TaskRole } from '@/types';
 import { ImageUpload } from '@/components/ImageUpload';
 import { chineseTagToEventTag } from '@/lib/mappings';
@@ -102,7 +102,23 @@ export default function EventCreatePage() {
 
   useEffect(() => {
     fetchMembersApi().then((m: any[]) => setAllMembers(m)).catch(() => {});
-    fetchRecommendationsApi().then((r: any[]) => setAllRecs(r)).catch(() => {});
+    // Load both recommendations and movies (movies are in a separate table)
+    Promise.all([
+      fetchRecommendationsApi().catch(() => []),
+      fetchMoviesApi().catch(() => []),
+    ]).then(([recs, movies]: [any[], any[]]) => {
+      // Normalize movies to match recommendation shape for the picker
+      const movieRecs = movies.map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        category: 'movie',
+        description: [m.year, m.director].filter(Boolean).join(' · '),
+        voteCount: m.votes?.length ?? m._count?.votes ?? 0,
+        author: m.recommendedBy ?? m.author,
+        _fromMovieTable: true,
+      }));
+      setAllRecs([...recs, ...movieRecs]);
+    });
   }, []);
 
   useEffect(() => {
@@ -166,6 +182,7 @@ export default function EventCreatePage() {
         recCategories: recCategories.length > 0
           ? Object.entries(recCatModes).map(([c, m]) => `${c}:${m}`)
           : undefined,
+        isPrivate: isPrivate || undefined,
       });
       const newEventId = String((result as any).id ?? '');
       // Link selected recommendations (best effort)

@@ -3,7 +3,7 @@ import type { RecommendationCategory } from '@prisma/client';
 import type { RecommendationRepository } from './recommendation.repository.js';
 
 const listSchema = z.object({
-  category: z.enum(['movie', 'recipe', 'music', 'place', 'book', 'external_event']).optional(),
+  category: z.enum(['movie', 'recipe', 'music', 'place', 'book', 'external_event']).or(z.literal('')).optional().transform(v => v || undefined),
 });
 
 const createSchema = z.object({

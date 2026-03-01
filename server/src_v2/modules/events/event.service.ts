@@ -16,6 +16,7 @@ const createEventSchema = z.object({
   publishAt: z.coerce.date().optional(),
   recSelectionMode: z.enum(['nominate', 'pick']).optional(),
   recCategories: z.array(z.string()).optional(),
+  isPrivate: z.boolean().optional(),
 });
 
 const inviteUsersSchema = z.object({
@@ -36,6 +37,7 @@ const updateEventSchema = z.object({
   endsAt: z.coerce.date().optional(),
   recSelectionMode: z.enum(['nominate', 'pick']).optional(),
   recCategories: z.array(z.string()).optional(),
+  isPrivate: z.boolean().optional(),
 });
 
 const addRecapPhotoSchema = z.object({

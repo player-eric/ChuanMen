@@ -225,6 +225,7 @@ interface FeedActivityProps extends InteractionProps {
   mode?: 'feed' | 'list';
   phase?: string;
   isHomeEvent?: boolean;
+  isPrivate?: boolean;
   houseRules?: string;
   photoCount?: number;
   commentCount?: number;
@@ -232,7 +233,7 @@ interface FeedActivityProps extends InteractionProps {
   waitlistCount?: number;
 }
 
-export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, houseRules, photoCount, commentCount, waitlistCount }: FeedActivityProps) {
+export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -296,6 +297,9 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
                 <div style={{ padding: '3px 8px', background: `${pc.bg}`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, fontWeight: 600, color: pc.fg }}>{pc.label}</div>
               ) : (
                 <div style={{ padding: '3px 8px', background: `${c.s2}cc`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, color: c.text2 }}>{date}</div>
+              )}
+              {isPrivate && (
+                <div style={{ padding: '3px 8px', background: `${c.warm}25`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, fontWeight: 600, color: c.warm }}>🔒 私密</div>
               )}
             </div>
             {film && <div style={{ position: 'absolute', bottom: 8, left: 10 }}><Poster title={film} w={32} h={44} /></div>}

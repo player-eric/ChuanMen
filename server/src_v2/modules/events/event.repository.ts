@@ -72,6 +72,7 @@ export class EventRepository {
     publishAt?: Date;
     recSelectionMode?: string;
     recCategories?: string[];
+    isPrivate?: boolean;
   }) {
     return this.prisma.event.create({
       data: {
@@ -87,6 +88,7 @@ export class EventRepository {
         publishAt: input.publishAt,
         recSelectionMode: input.recSelectionMode,
         recCategories: input.recCategories,
+        isPrivate: input.isPrivate ?? false,
       },
     });
   }
@@ -104,6 +106,7 @@ export class EventRepository {
     endsAt?: Date;
     recSelectionMode?: string;
     recCategories?: string[];
+    isPrivate?: boolean;
   }) {
     return this.prisma.event.update({
       where: { id },

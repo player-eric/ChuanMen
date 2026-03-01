@@ -135,6 +135,7 @@ export async function createEvent(payload: {
   publishAt?: string;
   recSelectionMode?: string;
   recCategories?: string[];
+  isPrivate?: boolean;
 }) {
   return requestJson<EntityMap>('/api/events', {
     method: 'POST',
@@ -298,6 +299,7 @@ export async function updateEvent(eventId: string, payload: {
   endsAt?: string;
   recSelectionMode?: string;
   recCategories?: string[];
+  isPrivate?: boolean;
 }) {
   return requestJson<{ ok: boolean; event: EntityMap }>(`/api/events/${eventId}`, {
     method: 'PATCH',

@@ -301,6 +301,7 @@ model Event {
   recCategories          String[]                  @default([])
   isHomeEvent            Boolean                   @default(false)
   locationPrivate        Boolean                   @default(false)
+  isPrivate              Boolean                   @default(false)
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt
 
