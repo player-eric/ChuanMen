@@ -21,8 +21,8 @@ import type { DiscoverPageData, RecommendationItem } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { Poster } from '@/components/Poster';
 import { EmptyState } from '@/components/EmptyState';
-import { toggleMovieVote, toggleRecommendationVote, searchExternalMovies, searchExternalBooks, createMovie, createRecommendation } from '@/lib/domainApi';
-import type { ExternalMovieResult, ExternalBookResult } from '@/lib/domainApi';
+import { toggleMovieVote, toggleRecommendationVote, searchExternalMovies, searchExternalBooks, searchExternalMusic, createMovie, createRecommendation } from '@/lib/domainApi';
+import type { ExternalMovieResult, ExternalBookResult, ExternalMusicResult } from '@/lib/domainApi';
 
 type Category = 'movie' | 'book' | 'recipe' | 'music' | 'place' | 'external_event';
 
@@ -64,7 +64,8 @@ export default function DiscoverPage() {
       </Stack>
       {activeCategory === 'movie' && <MoviesSection />}
       {activeCategory === 'book' && <BooksSection />}
-      {(activeCategory === 'recipe' || activeCategory === 'music' || activeCategory === 'place' || activeCategory === 'external_event') && (
+      {activeCategory === 'music' && <MusicSection />}
+      {(activeCategory === 'recipe' || activeCategory === 'place' || activeCategory === 'external_event') && (
         <RecommendationSection category={activeCategory} />
       )}
     </Box>
@@ -547,7 +548,206 @@ function BooksSection() {
   );
 }
 
-/** Generic section for recipe / music / place / external_event recommendations */
+function MusicSection() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const data = useLoaderData() as DiscoverPageData;
+  const revalidator = useRevalidator();
+  const [search, setSearch] = useState('');
+  const [extResults, setExtResults] = useState<ExternalMusicResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [addedTitle, setAddedTitle] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const items = data.music;
+  const [votes, setVotes] = useState<Record<string, boolean>>(() => {
+    if (!user?.id) return {};
+    const init: Record<string, boolean> = {};
+    for (const r of items) {
+      if (r.voterIds.includes(user.id)) init[r.id] = true;
+    }
+    return init;
+  });
+
+  const toggle = async (id: string) => {
+    setVotes((v) => ({ ...v, [id]: !v[id] }));
+    if (user?.id) {
+      try { await toggleRecommendationVote(id, user.id); } catch { /* optimistic */ }
+    }
+  };
+
+  const q = search.toLowerCase();
+  const filtered = q
+    ? items.filter((r) => r.title.toLowerCase().includes(q) || r.description.toLowerCase().includes(q))
+    : items;
+
+  const handleSearch = useCallback((value: string) => {
+    setSearch(value);
+    setAddedTitle(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.length < 2) { setExtResults([]); setSearching(false); return; }
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await searchExternalMusic(value);
+        setExtResults(res.items ?? []);
+      } catch { setExtResults([]); }
+      setSearching(false);
+    }, 400);
+  }, []);
+
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  const handleRecommendMusic = async (ext: ExternalMusicResult) => {
+    if (!user?.id) return;
+    try {
+      const tags = [ext.artist, ext.year].filter(Boolean);
+      await createRecommendation({
+        category: 'music',
+        title: `${ext.title} - ${ext.artist}`,
+        description: ext.album ? `专辑：${ext.album}` : '',
+        sourceUrl: ext.infoLink,
+        coverUrl: ext.cover || undefined,
+        tags,
+        authorId: user.id,
+      });
+      setAddedTitle(ext.title);
+      setExtResults([]);
+      setSearch('');
+      revalidator.revalidate();
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <Box>
+      <TextField
+        fullWidth
+        value={search}
+        onChange={(e) => handleSearch(e.target.value)}
+        placeholder="搜歌名、歌手..."
+        autoComplete="off"
+        sx={{ mb: 2 }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchRoundedIcon fontSize="small" />
+            </InputAdornment>
+          ),
+          endAdornment: searching ? (
+            <InputAdornment position="end">
+              <CircularProgress size={18} />
+            </InputAdornment>
+          ) : undefined,
+        }}
+      />
+      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+        <Button variant="contained" onClick={() => navigate('/discover/music/add')} disabled={!user}>
+          {user ? '添加音乐' : '登录后可添加音乐'}
+        </Button>
+      </Stack>
+
+      {/* External search results from iTunes */}
+      {extResults.length > 0 && !addedTitle && (
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography variant="caption" color="text.secondary">搜索结果（来自 Apple Music）</Typography>
+            <Stack spacing={1.2} sx={{ mt: 1 }}>
+              {extResults.map((m) => (
+                <Stack key={m.itunesId} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+                    {m.cover ? (
+                      <img src={m.cover} alt={m.title} style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }} />
+                    ) : (
+                      <Box sx={{ width: 44, height: 44, borderRadius: 1.5, bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎵</Box>
+                    )}
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography fontWeight={700} noWrap>{m.title}</Typography>
+                      <Typography variant="body2" color="text.secondary" noWrap>
+                        {m.artist}{m.year ? ` · ${m.year}` : ''}
+                      </Typography>
+                      {m.album && (
+                        <Typography variant="caption" color="text.secondary" noWrap>{m.album}</Typography>
+                      )}
+                    </Box>
+                  </Stack>
+                  <Button
+                    onClick={() => handleRecommendMusic(m)}
+                    variant="contained"
+                    size="small"
+                    disabled={!user}
+                    sx={{ ml: 1, flexShrink: 0 }}
+                  >
+                    {user ? '推荐' : '登录'}
+                  </Button>
+                </Stack>
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
+      {addedTitle && (
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography color="success.main" fontWeight={700}>已推荐「{addedTitle}」</Typography>
+            <Typography variant="body2" color="text.secondary">音乐已添加到推荐列表</Typography>
+          </CardContent>
+        </Card>
+      )}
+
+      {filtered.length === 0 && !addedTitle ? (
+        <EmptyState
+          icon="🎵"
+          title="还没有推荐音乐"
+          description="搜索你喜欢的歌曲，推荐给大家。"
+          action={user ? { label: '添加音乐', to: '/discover/music/add' } : undefined}
+        />
+      ) : (
+        <Grid container spacing={1.5}>
+          {filtered.map((r) => (
+            <Grid key={r.id} size={{ xs: 12, md: 6 }}>
+              <Card>
+                <CardActionArea onClick={() => navigate(`/discover/music/${r.id}`)}>
+                  <CardContent>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      {r.coverUrl ? (
+                        <img src={r.coverUrl} alt={r.title} style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }} />
+                      ) : (
+                        <Box sx={{ width: 44, height: 44, borderRadius: 1.5, bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎵</Box>
+                      )}
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography fontWeight={700} noWrap>{r.title}</Typography>
+                            <Typography variant="caption" color="text.secondary">{r.authorName} 推荐</Typography>
+                          </Box>
+                          <Button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggle(r.id);
+                            }}
+                            variant={votes[r.id] ? 'contained' : 'outlined'}
+                            size="small"
+                            disabled={!user}
+                            sx={{ ml: 1, flexShrink: 0 }}
+                          >
+                            ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
+                          </Button>
+                        </Stack>
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+    </Box>
+  );
+}
+
+/** Generic section for recipe / place / external_event recommendations */
 function RecommendationSection({ category }: { category: 'recipe' | 'music' | 'place' | 'external_event' }) {
   const navigate = useNavigate();
   const { user } = useAuth();

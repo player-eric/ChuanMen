@@ -3,9 +3,11 @@ import { useNavigate, useParams } from 'react-router';
 import {
   Alert,
   Avatar,
+  AvatarGroup,
   Box,
   Button,
   Card,
+  CardActionArea,
   CardContent,
   Chip,
   Dialog,
@@ -20,6 +22,7 @@ import {
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useAuth } from '@/auth/AuthContext';
+import { useColors } from '@/hooks/useColors';
 import { getRecommendationById, deleteRecommendation, updateRecommendation, toggleRecommendationVote, fetchCommentsApi, addComment, type RecommendationCategory } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { firstNonEmoji } from '@/components/Atoms';
@@ -32,6 +35,7 @@ function isCategory(value: string | undefined): value is RecommendationCategory 
 export default function RecommendationDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const c = useColors();
   const { category, recommendationId } = useParams();
   const currentCategory = isCategory(category) ? category : 'book';
 
@@ -44,6 +48,7 @@ export default function RecommendationDetailPage() {
   const [sourceUrl, setSourceUrl] = useState('');
   const [voted, setVoted] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
+  const [voters, setVoters] = useState<{ id: string; name: string }[]>([]);
   const [comments, setComments] = useState<EventComment[]>([]);
   const [commentText, setCommentText] = useState('');
 
@@ -55,9 +60,14 @@ export default function RecommendationDetailPage() {
         const data = await getRecommendationById(recommendationId);
         setItem(data);
         setSourceUrl((data as any)?.sourceUrl ?? '');
-        const voters: string[] = ((data as any)?.votes ?? []).map((v: any) => v.userId).filter(Boolean);
-        setVoteCount((data as any)?._count?.votes ?? voters.length);
-        if (user?.id) setVoted(voters.includes(user.id));
+        const voteList: any[] = (data as any)?.votes ?? [];
+        const voterList = voteList.map((v: any) => ({
+          id: v.userId ?? v.user?.id ?? '',
+          name: v.user?.name ?? '?',
+        })).filter((v) => v.id);
+        setVoters(voterList);
+        setVoteCount((data as any)?._count?.votes ?? voterList.length);
+        if (user?.id) setVoted(voterList.some((v) => v.id === user.id));
       } catch (e) {
         setError(e instanceof Error ? e.message : '加载失败');
       }
@@ -82,7 +92,6 @@ export default function RecommendationDetailPage() {
   const canModify = user && item && (
     (item.authorId && item.authorId === user.id) || user.role === 'admin'
   );
-  const canDelete = canModify;
 
   const handleDelete = async () => {
     if (!recommendationId || !user?.id) return;
@@ -102,6 +111,11 @@ export default function RecommendationDetailPage() {
     const newVoted = !voted;
     setVoted(newVoted);
     setVoteCount((c) => c + (newVoted ? 1 : -1));
+    if (newVoted) {
+      setVoters((prev) => [...prev, { id: user.id, name: user.name }]);
+    } else {
+      setVoters((prev) => prev.filter((v) => v.id !== user.id));
+    }
     try { await toggleRecommendationVote(recommendationId, user.id); } catch { /* optimistic */ }
   };
 
@@ -121,149 +135,216 @@ export default function RecommendationDetailPage() {
     return <Typography color="text.secondary">加载中...</Typography>;
   }
 
+  const title = String(item.title ?? '');
+  const description = String(item.description ?? '');
   const authorName = (item.author as any)?.name ?? '';
+  const coverUrl = (item.coverUrl as string) || '';
+  const tags: string[] = ((item.tags as any[]) ?? []).map((t: any) => t.value ?? t).filter(Boolean);
+
+  // Hero background
+  const heroBg = coverUrl
+    ? `url(${coverUrl}) center/cover no-repeat`
+    : `linear-gradient(135deg, ${c.s3}, ${c.s2})`;
 
   return (
-    <Stack spacing={2}>
-      <Card>
-        <CardContent>
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-            <Typography variant="h5" fontWeight={700}>{String(item.title ?? '')}</Typography>
-            {canDelete && (
-              <IconButton size="small" color="error" onClick={() => setConfirmDelete(true)}>
-                <DeleteOutlineIcon />
-              </IconButton>
-            )}
-          </Stack>
-          {authorName && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{authorName} 推荐</Typography>
-          )}
-          <Box sx={{ mt: 1.5 }}>
-            <RichTextViewer html={String(item.description ?? '')} />
+    <Box sx={{ maxWidth: 680, mx: 'auto' }}>
+      <Stack spacing={2}>
+        <IconButton onClick={() => navigate('/discover')} size="small" sx={{ alignSelf: 'flex-start' }}><ArrowBackRoundedIcon /></IconButton>
+
+        {/* 1. Hero Header */}
+        <Card sx={{ overflow: 'hidden' }}>
+          <Box sx={{ position: 'relative', height: 240, background: heroBg }}>
+            <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 30%, rgba(0,0,0,0.7) 100%)' }} />
+            <Box sx={{ position: 'absolute', bottom: 20, left: 20, right: 20, zIndex: 1 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
+                <Box>
+                  <Typography variant="h4" fontWeight={800} sx={{ color: '#fff', textShadow: '0 2px 12px rgba(0,0,0,0.6)', lineHeight: 1.2 }}>
+                    {title}
+                  </Typography>
+                  {tags.length > 0 && (
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mt: 0.5, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                      {tags.join(' · ')}
+                    </Typography>
+                  )}
+                </Box>
+                {canModify && (
+                  <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => setConfirmDelete(true)}>
+                    <DeleteOutlineIcon />
+                  </IconButton>
+                )}
+              </Stack>
+            </Box>
           </Box>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1.5 }}>
-            {sourceUrl && !editingLink && (
-              <Chip size="small" variant="outlined" label="🔗 查看链接" clickable
-                component="a" href={sourceUrl} target="_blank" rel="noreferrer" />
-            )}
-            {canModify && !editingLink && (
-              <Chip size="small" variant="outlined"
-                label={sourceUrl ? '编辑链接' : '+ 添加链接'}
-                onClick={() => { setLinkDraft(sourceUrl); setEditingLink(true); }}
-              />
-            )}
-          </Stack>
-          {editingLink && (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-              <TextField size="small" fullWidth placeholder="https://..." value={linkDraft}
-                onChange={(e) => setLinkDraft(e.target.value)} />
-              <Button size="small" variant="contained" disabled={linkDraft === sourceUrl}
-                onClick={async () => {
-                  if (!user?.id || !recommendationId) return;
-                  try {
-                    await updateRecommendation(recommendationId, user.id, { sourceUrl: linkDraft });
-                    setSourceUrl(linkDraft);
-                    setEditingLink(false);
-                  } catch { /* ignore */ }
-                }}>保存</Button>
-              <Button size="small" onClick={() => setEditingLink(false)}>取消</Button>
+
+          {/* Chips bar */}
+          <CardContent sx={{ pt: 1.5, pb: 1.5 }}>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {sourceUrl && !editingLink && (
+                <Chip size="small" variant="outlined" label="🔗 查看链接" clickable
+                  component="a" href={sourceUrl} target="_blank" rel="noreferrer" />
+              )}
+              {canModify && !editingLink && (
+                <Chip size="small" variant="outlined"
+                  label={sourceUrl ? '编辑链接' : '+ 添加链接'}
+                  onClick={() => { setLinkDraft(sourceUrl); setEditingLink(true); }}
+                />
+              )}
             </Stack>
-          )}
-        </CardContent>
-      </Card>
+            {editingLink && (
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                <TextField size="small" fullWidth placeholder="https://..." value={linkDraft}
+                  onChange={(e) => setLinkDraft(e.target.value)} />
+                <Button size="small" variant="contained" disabled={linkDraft === sourceUrl}
+                  onClick={async () => {
+                    if (!user?.id || !recommendationId) return;
+                    try {
+                      await updateRecommendation(recommendationId, user.id, { sourceUrl: linkDraft });
+                      setSourceUrl(linkDraft);
+                      setEditingLink(false);
+                    } catch { /* ignore */ }
+                  }}>保存</Button>
+                <Button size="small" onClick={() => setEditingLink(false)}>取消</Button>
+              </Stack>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Vote */}
-      <Card>
-        <CardContent>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="subtitle1" fontWeight={700}>
-              投票 ({voteCount})
-            </Typography>
-            <Button
-              variant={voted ? 'contained' : 'outlined'}
-              size="small"
-              onClick={handleVote}
-              disabled={!user}
-            >
-              ▲ {voted ? '已投票' : '想要'}
-            </Button>
-          </Stack>
-        </CardContent>
-      </Card>
+        {/* 2. Description */}
+        {description && (
+          <Card>
+            <CardContent>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>简介</Typography>
+              <RichTextViewer html={description} />
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Comments */}
-      <Card>
-        <CardContent>
-          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
-            💬 讨论 ({comments.length})
-          </Typography>
-          {comments.length > 0 && (
-            <Stack spacing={1.5} sx={{ mb: 2 }}>
-              {comments.map((cm, i) => (
-                <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
-                  <Avatar
-                    sx={{ width: 28, height: 28, fontSize: 12, cursor: 'pointer', mt: 0.25 }}
-                    onClick={() => navigate(`/members/${encodeURIComponent(cm.name)}`)}
-                  >
-                    {firstNonEmoji(cm.name)}
-                  </Avatar>
-                  <Box sx={{ flex: 1 }}>
-                    <Stack direction="row" spacing={1} alignItems="baseline">
-                      <Typography variant="body2" fontWeight={700}>{cm.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">{cm.date}</Typography>
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary">{cm.text}</Typography>
-                  </Box>
+        {/* 3. Recommender */}
+        {authorName && (
+          <Card>
+            <CardActionArea onClick={() => navigate(`/members/${encodeURIComponent(authorName)}`)}>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>推荐人</Typography>
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Avatar sx={{ width: 36, height: 36 }}>{firstNonEmoji(authorName)}</Avatar>
+                  <Typography variant="body1">{authorName}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto !important' }}>查看主页 →</Typography>
                 </Stack>
-              ))}
-            </Stack>
-          )}
-          {user ? (
-            <Stack direction="row" spacing={1} alignItems="flex-start">
-              <Avatar sx={{ width: 28, height: 28, fontSize: 12, mt: 0.5 }}>
-                {firstNonEmoji(user.name ?? 'U')}
-              </Avatar>
-              <TextField
-                size="small"
-                fullWidth
-                multiline
-                maxRows={4}
-                placeholder="说点什么..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={async (e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
-                    e.preventDefault();
-                    handleAddComment(commentText);
-                  }
-                }}
-              />
+              </CardContent>
+            </CardActionArea>
+          </Card>
+        )}
+
+        {/* 4. Vote + Voters */}
+        <Card>
+          <CardContent>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+              <Typography variant="subtitle1" fontWeight={700}>
+                投票 ({voteCount})
+              </Typography>
               <Button
-                variant="contained"
+                variant={voted ? 'contained' : 'outlined'}
                 size="small"
-                disabled={!commentText.trim()}
-                onClick={() => handleAddComment(commentText)}
-                sx={{ mt: 0.5 }}
+                onClick={handleVote}
+                disabled={!user}
               >
-                发送
+                ▲ {voted ? '已投票' : '想要'}
               </Button>
             </Stack>
-          ) : (
-            <Typography variant="body2" color="text.secondary">登录后可参与讨论</Typography>
-          )}
-        </CardContent>
-      </Card>
+            {voters.length > 0 && (
+              <AvatarGroup max={10} sx={{ justifyContent: 'flex-start' }}>
+                {voters.map((voter) => (
+                  <Avatar
+                    key={voter.id}
+                    sx={{ width: 32, height: 32, cursor: 'pointer' }}
+                    onClick={() => navigate(`/members/${encodeURIComponent(voter.name)}`)}
+                  >
+                    {firstNonEmoji(voter.name)}
+                  </Avatar>
+                ))}
+              </AvatarGroup>
+            )}
+          </CardContent>
+        </Card>
 
-      <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
-        <DialogTitle>确认删除</DialogTitle>
-        <DialogContent>确定要删除「{String(item.title ?? '')}」吗？此操作不可撤销。</DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDelete(false)}>取消</Button>
-          <Button color="error" onClick={handleDelete} disabled={deleting}>
-            {deleting ? '删除中...' : '确认删除'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Stack>
+        {/* 5. Comments */}
+        <Card>
+          <CardContent>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+              💬 讨论 ({comments.length})
+            </Typography>
+            {comments.length > 0 ? (
+              <Stack spacing={1.5} sx={{ mb: 2 }}>
+                {comments.map((cm, i) => (
+                  <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
+                    <Avatar
+                      sx={{ width: 28, height: 28, fontSize: 12, cursor: 'pointer', mt: 0.25 }}
+                      onClick={() => navigate(`/members/${encodeURIComponent(cm.name)}`)}
+                    >
+                      {firstNonEmoji(cm.name)}
+                    </Avatar>
+                    <Box sx={{ flex: 1 }}>
+                      <Stack direction="row" spacing={1} alignItems="baseline">
+                        <Typography variant="body2" fontWeight={700}>{cm.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">{cm.date}</Typography>
+                      </Stack>
+                      <Typography variant="body2" color="text.secondary">{cm.text}</Typography>
+                    </Box>
+                  </Stack>
+                ))}
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                暂无讨论，来说点什么吧！
+              </Typography>
+            )}
+            {user ? (
+              <Stack direction="row" spacing={1} alignItems="flex-start">
+                <Avatar sx={{ width: 28, height: 28, fontSize: 12, mt: 0.5 }}>
+                  {firstNonEmoji(user.name ?? 'U')}
+                </Avatar>
+                <TextField
+                  size="small"
+                  fullWidth
+                  multiline
+                  maxRows={4}
+                  placeholder="说点什么..."
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
+                      e.preventDefault();
+                      handleAddComment(commentText);
+                    }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  size="small"
+                  disabled={!commentText.trim()}
+                  onClick={() => handleAddComment(commentText)}
+                  sx={{ mt: 0.5 }}
+                >
+                  发送
+                </Button>
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary">登录后可参与讨论</Typography>
+            )}
+          </CardContent>
+        </Card>
+
+        <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
+          <DialogTitle>确认删除</DialogTitle>
+          <DialogContent>确定要删除「{title}」吗？此操作不可撤销。</DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmDelete(false)}>取消</Button>
+            <Button color="error" onClick={handleDelete} disabled={deleting}>
+              {deleting ? '删除中...' : '确认删除'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Stack>
+    </Box>
   );
 }

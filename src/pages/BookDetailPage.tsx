@@ -9,17 +9,22 @@ import {
   CardActionArea,
   CardContent,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import type { EventComment, BookDetailData, BookPool } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
-import { addComment, fetchCommentsApi, toggleRecommendationVote, updateRecommendation } from '@/lib/domainApi';
+import { addComment, fetchCommentsApi, toggleRecommendationVote, updateRecommendation, deleteRecommendation } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { firstNonEmoji } from '@/components/Atoms';
 
@@ -38,6 +43,8 @@ export default function BookDetailPage() {
   const [editingLink, setEditingLink] = useState(false);
   const [linkDraft, setLinkDraft] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const bookId = raw && 'id' in raw ? (raw as any).id : null;
@@ -109,6 +116,8 @@ export default function BookDetailPage() {
               }}
             />
             <Box sx={{ position: 'absolute', bottom: 20, left: 20, right: 20, zIndex: 1 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
+              <Box>
               <Typography
                 variant="h4"
                 fontWeight={800}
@@ -138,6 +147,13 @@ export default function BookDetailPage() {
                   {poster.sub}
                 </Typography>
               )}
+              </Box>
+              {canEditLink && (
+                <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => setConfirmDelete(true)}>
+                  <DeleteOutlineIcon />
+                </IconButton>
+              )}
+              </Stack>
             </Box>
           </Box>
 
@@ -342,6 +358,27 @@ export default function BookDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
+          <DialogTitle>确认删除</DialogTitle>
+          <DialogContent>确定要删除「{title}」吗？此操作不可撤销。</DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmDelete(false)}>取消</Button>
+            <Button color="error" onClick={async () => {
+              if (!user?.id || !bookId) return;
+              setDeleting(true);
+              try {
+                await deleteRecommendation(bookId, user.id);
+                navigate('/discover', { replace: true });
+              } catch {
+                setDeleting(false);
+                setConfirmDelete(false);
+              }
+            }} disabled={deleting}>
+              {deleting ? '删除中...' : '确认删除'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Stack>
     </Box>
   );

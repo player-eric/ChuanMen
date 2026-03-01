@@ -22,7 +22,7 @@ export class RecommendationRepository {
       include: {
         author: true,
         tags: true,
-        votes: { select: { userId: true } },
+        votes: { select: { userId: true, user: { select: { id: true, name: true } } } },
         _count: { select: { votes: true } },
       },
     });

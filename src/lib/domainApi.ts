@@ -219,6 +219,21 @@ export async function searchExternalBooks(query: string) {
   return requestJson<{ items: ExternalBookResult[]; source: string }>(`/api/recommendations/search-external${toQueryString({ q: query, category: 'book' })}`);
 }
 
+export interface ExternalMusicResult {
+  itunesId: number;
+  title: string;
+  artist: string;
+  album: string;
+  year: string;
+  cover: string;
+  previewUrl: string;
+  infoLink: string;
+}
+
+export async function searchExternalMusic(query: string) {
+  return requestJson<{ items: ExternalMusicResult[]; source: string }>(`/api/recommendations/search-external${toQueryString({ q: query, category: 'music' })}`);
+}
+
 export async function toggleRecommendationVote(recommendationId: string, userId: string) {
   return requestJson<{ voted: boolean }>(`/api/recommendations/${recommendationId}/vote`, {
     method: 'POST',

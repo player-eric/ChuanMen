@@ -75,4 +75,31 @@ export class RecommendationService {
     }));
     return { items, source: 'openlibrary' };
   }
+
+  async searchExternalMusic(query: string) {
+    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=10`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return { items: [], source: 'itunes', error: `iTunes ${res.status}` };
+
+    const data = await res.json() as { results?: any[] };
+    // Deduplicate by collectionId (album) to avoid showing same album multiple times
+    const seen = new Set<number>();
+    const items: any[] = [];
+    for (const t of (data.results ?? [])) {
+      const key = t.collectionId ?? t.trackId;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push({
+        itunesId: t.trackId ?? t.collectionId ?? 0,
+        title: t.trackName ?? t.collectionName ?? '',
+        artist: t.artistName ?? '',
+        album: t.collectionName ?? '',
+        year: t.releaseDate ? t.releaseDate.slice(0, 4) : '',
+        cover: t.artworkUrl100?.replace('100x100', '200x200') ?? '',
+        previewUrl: t.previewUrl ?? '',
+        infoLink: t.trackViewUrl ?? t.collectionViewUrl ?? '',
+      });
+    }
+    return { items, source: 'itunes' };
+  }
 }
