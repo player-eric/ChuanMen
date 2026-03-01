@@ -2,6 +2,7 @@ import { useLoaderData, useNavigate } from 'react-router';
 import { Box, Button, Card, CardActionArea, CardContent, Grid, Stack, Typography } from '@mui/material';
 import type { AboutPageData } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
+import MilestoneTimeline from '@/components/MilestoneTimeline';
 
 export default function AboutPage() {
   const data = useLoaderData() as AboutPageData;
@@ -72,6 +73,14 @@ export default function AboutPage() {
           </Stack>
         </CardContent>
       </Card>
+
+      {data.milestones?.length > 0 && (
+        <Card>
+          <CardContent>
+            <MilestoneTimeline items={data.milestones} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* v2.1 §4.7: bottom CTA for non-logged-in users */}
       {!user && (

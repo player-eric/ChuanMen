@@ -253,6 +253,7 @@ export async function fetchAboutData(): Promise<AboutPageData> {
     hostCount: membersData.filter((m) => m.host > 0).length,
     eventCount: pastEvents.length + upcomingEvents.length + endedEvents.length,
     months: 8,
+    milestones: [],
   };
 }
 

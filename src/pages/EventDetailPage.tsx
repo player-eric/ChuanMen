@@ -634,160 +634,133 @@ export default function EventDetailPage() {
               </Card>
             )}
 
-            {/* 6b. Unified recommendations section */}
+            {/* 6b. Unified recommendations section — per-category */}
             {(() => {
               const recs = (event.linkedRecommendations ?? []) as NonNullable<typeof event.linkedRecommendations>;
-              const recMode = event.recSelectionMode ?? 'nominate';
               const cats = event.recCategories ?? [];
+              const catModes = event.recCategoryModes ?? {};
+              const defaultMode = event.recSelectionMode ?? 'nominate';
               const hasRecs = recs.length > 0;
               const showSection = hasRecs || cats.length > 0 || isHost || signedUp;
               if (!showSection) return null;
 
-              const selectedRecs = recs.filter((r) => r.isSelected);
-              const nominations = recs.filter((r) => !r.isSelected);
               const catIcon: Record<string, string> = { movie: '🍿', book: '📚', recipe: '🍳', place: '📍', music: '🎵', external_event: '🎭' };
               const catLabel: Record<string, string> = { movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' };
-              const categoryText = cats.map((c) => catLabel[c] ?? c).join(' / ');
+
+              // Determine which categories to show: configured cats, or unique cats from linked recs
+              const displayCats = cats.length > 0 ? cats : [...new Set(recs.map((r) => r.category))];
 
               return (
                 <Card variant="outlined" sx={{ mb: 2 }}>
                   <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                    <Typography variant="caption" fontWeight={700} sx={{ mb: 1, display: 'block' }}>
-                      📋 {cats.length > 0 ? `推荐 · ${categoryText}` : '相关推荐'}
-                      {recMode === 'nominate' && cats.length > 0 && (
-                        <Typography component="span" variant="caption" color="text.secondary"> · 开放提名</Typography>
-                      )}
+                    <Typography variant="caption" fontWeight={700} sx={{ mb: 1.5, display: 'block' }}>
+                      📋 推荐
                     </Typography>
 
-                    {/* Selected recommendations */}
-                    {selectedRecs.length > 0 && (
-                      <Stack spacing={1} sx={{ mb: 1.5 }}>
-                        {selectedRecs.map((rec) => (
-                          <Card key={rec.id} variant="outlined" sx={{ borderColor: 'success.main', borderWidth: 2 }}>
-                            <CardActionArea onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}>
-                              <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                  <Typography variant="body2" fontWeight={700} sx={{ flex: 1 }}>
-                                    {catIcon[rec.category] ?? '📋'} {rec.title}
-                                  </Typography>
-                                  <Chip size="small" color="success" label="✓ 已选" />
-                                </Stack>
-                                <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    🌐 {rec.globalVotes ?? 0}票
-                                  </Typography>
-                                  <Typography variant="caption" fontWeight={700} color="primary">
-                                    👥 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal ?? 0}人投票
-                                  </Typography>
-                                </Stack>
-                              </CardContent>
-                            </CardActionArea>
-                          </Card>
-                        ))}
-                      </Stack>
-                    )}
+                    {displayCats.map((cat) => {
+                      const mode = catModes[cat] ?? defaultMode;
+                      const catRecs = recs.filter((r) => r.category === cat);
+                      const selected = catRecs.filter((r) => r.isSelected);
+                      const unselected = catRecs.filter((r) => !r.isSelected);
+                      const canNominate = (isHost || (signedUp && mode === 'nominate')) && event.phase !== 'ended' && event.phase !== 'cancelled';
 
-                    {/* Nomination list */}
-                    {nominations.length > 0 && (
-                      <Stack spacing={1} sx={{ mb: 1.5 }}>
-                        {nominations.map((rec) => {
-                          const canDelete = isHost || (user && rec.linkedById === user.id);
-                          const canSelect = isHost && (event.phase === 'invite' || event.phase === 'open');
-                          return (
-                            <Card key={rec.id} variant="outlined">
-                              <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                  <Box
-                                    sx={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
-                                    onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}
-                                  >
-                                    <Typography variant="body2" fontWeight={600}>
-                                      {catIcon[rec.category] ?? '📋'} {rec.title}
-                                    </Typography>
-                                    <Stack direction="row" spacing={2} sx={{ mt: 0.25 }}>
-                                      <Typography variant="caption" color="text.secondary">
-                                        🌐 {rec.globalVotes ?? 0}票
-                                      </Typography>
-                                      <Typography variant="caption" fontWeight={700} color="primary">
-                                        👥 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal ?? 0}人投票
-                                      </Typography>
-                                      {rec.linkedByName && (
-                                        <Typography variant="caption" color="text.secondary">
-                                          {rec.linkedByName} 提名
-                                        </Typography>
-                                      )}
-                                    </Stack>
-                                  </Box>
-                                  {canSelect && (
-                                    <Button
-                                      variant="outlined"
-                                      size="small"
-                                      color="success"
-                                      onClick={async () => {
+                      return (
+                        <Box key={cat} sx={{ mb: 2 }}>
+                          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.75 }}>
+                            <Typography variant="body2" fontWeight={700}>
+                              {catIcon[cat] ?? '📋'} {catLabel[cat] ?? cat}
+                            </Typography>
+                            <Chip size="small" variant="outlined" label={mode === 'nominate' ? '开放提名' : '已选定'} />
+                          </Stack>
+
+                          {/* Selected */}
+                          {selected.map((rec) => (
+                            <Card key={rec.id} variant="outlined" sx={{ borderColor: 'success.main', borderWidth: 2, mb: 1 }}>
+                              <CardActionArea onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}>
+                                <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+                                  <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="body2" fontWeight={700} sx={{ flex: 1 }}>{rec.title}</Typography>
+                                    <Chip size="small" color="success" label="✓ 已选" />
+                                  </Stack>
+                                  <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary">🌐 {rec.globalVotes ?? 0}票</Typography>
+                                    <Typography variant="caption" fontWeight={700} color="primary">👥 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal ?? 0}人投票</Typography>
+                                  </Stack>
+                                </CardContent>
+                              </CardActionArea>
+                            </Card>
+                          ))}
+
+                          {/* Unselected / nominations */}
+                          {unselected.map((rec) => {
+                            const canDelete = isHost || (user && rec.linkedById === user.id);
+                            const canSelect = isHost && (event.phase === 'invite' || event.phase === 'open');
+                            return (
+                              <Card key={rec.id} variant="outlined" sx={{ mb: 1 }}>
+                                <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+                                  <Stack direction="row" spacing={1} alignItems="center">
+                                    <Box sx={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}>
+                                      <Typography variant="body2" fontWeight={600}>{rec.title}</Typography>
+                                      <Stack direction="row" spacing={2} sx={{ mt: 0.25 }}>
+                                        <Typography variant="caption" color="text.secondary">🌐 {rec.globalVotes ?? 0}票</Typography>
+                                        <Typography variant="caption" fontWeight={700} color="primary">👥 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal ?? 0}人投票</Typography>
+                                        {rec.linkedByName && <Typography variant="caption" color="text.secondary">{rec.linkedByName} 提名</Typography>}
+                                      </Stack>
+                                    </Box>
+                                    {canSelect && (
+                                      <Button variant="outlined" size="small" color="success" onClick={async () => {
                                         if (!eventId) return;
                                         try {
                                           await selectEventRecommendation(eventId, rec.id);
                                           setEvent((prev) => {
                                             if (!prev) return prev;
                                             const updated = (prev.linkedRecommendations ?? []).map((r) => ({
-                                              ...r,
-                                              isSelected: r.category === rec.category ? r.id === rec.id : r.isSelected,
+                                              ...r, isSelected: r.category === rec.category ? r.id === rec.id : r.isSelected,
                                             }));
                                             return { ...prev, linkedRecommendations: updated };
                                           });
                                           setFlash({ open: true, severity: 'success', message: `已选定「${rec.title}」` });
-                                        } catch {
-                                          setFlash({ open: true, severity: 'error', message: '选定失败' });
-                                        }
-                                      }}
-                                      sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
-                                    >
-                                      选为本场
-                                    </Button>
-                                  )}
-                                  {canDelete && (
-                                    <IconButton
-                                      size="small"
-                                      onClick={async () => {
+                                        } catch { setFlash({ open: true, severity: 'error', message: '选定失败' }); }
+                                      }} sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}>选为本场</Button>
+                                    )}
+                                    {canDelete && (
+                                      <IconButton size="small" onClick={async () => {
                                         if (!eventId) return;
                                         try {
                                           await unlinkEventRecommendation(eventId, rec.id);
                                           setEvent((prev) => {
                                             if (!prev) return prev;
-                                            const linked = (prev.linkedRecommendations ?? []).filter((r) => r.id !== rec.id);
-                                            return { ...prev, linkedRecommendations: linked };
+                                            return { ...prev, linkedRecommendations: (prev.linkedRecommendations ?? []).filter((r) => r.id !== rec.id) };
                                           });
                                           setFlash({ open: true, severity: 'success', message: `已移除「${rec.title}」` });
-                                        } catch {
-                                          setFlash({ open: true, severity: 'error', message: '移除失败' });
-                                        }
-                                      }}
-                                      sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}
-                                    >
-                                      <CloseIcon fontSize="small" />
-                                    </IconButton>
-                                  )}
-                                </Stack>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </Stack>
-                    )}
+                                        } catch { setFlash({ open: true, severity: 'error', message: '移除失败' }); }
+                                      }} sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}><CloseIcon fontSize="small" /></IconButton>
+                                    )}
+                                  </Stack>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
 
-                    {/* Nominate / link button */}
-                    {(isHost || (signedUp && recMode === 'nominate')) && event.phase !== 'ended' && event.phase !== 'cancelled' && (
+                          {catRecs.length === 0 && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                              {mode === 'nominate' ? '还没有提名' : '暂无推荐'}
+                            </Typography>
+                          )}
+
+                          {canNominate && (
+                            <Button variant="outlined" size="small" fullWidth onClick={() => { setRecCategory(cat); setRecLinkOpen(true); }}>
+                              {mode === 'nominate' ? '提名' : '添加'}
+                            </Button>
+                          )}
+                        </Box>
+                      );
+                    })}
+
+                    {/* Fallback: no configured categories, show generic add buttons */}
+                    {displayCats.length === 0 && (isHost || signedUp) && event.phase !== 'ended' && event.phase !== 'cancelled' && (
                       <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-                        {cats.length > 0 ? cats.map((cat) => (
-                          <Chip
-                            key={cat}
-                            label={`+ ${catIcon[cat] ?? ''} ${catLabel[cat] ?? cat}`}
-                            size="small"
-                            variant="outlined"
-                            clickable
-                            onClick={() => { setRecCategory(cat); setRecLinkOpen(true); }}
-                          />
-                        )) : [
+                        {[
                           { key: 'all', label: '+ 全部' },
                           { key: 'movie', label: '🍿 电影' },
                           { key: 'book', label: '📚 书' },
@@ -796,22 +769,10 @@ export default function EventDetailPage() {
                           { key: 'music', label: '🎵 音乐' },
                           { key: 'external_event', label: '🎭 演出' },
                         ].map((cat) => (
-                          <Chip
-                            key={cat.key}
-                            label={cat.label}
-                            size="small"
-                            variant="outlined"
-                            clickable
-                            onClick={() => { setRecCategory(cat.key); setRecLinkOpen(true); }}
-                          />
+                          <Chip key={cat.key} label={cat.label} size="small" variant="outlined" clickable
+                            onClick={() => { setRecCategory(cat.key); setRecLinkOpen(true); }} />
                         ))}
                       </Stack>
-                    )}
-
-                    {!hasRecs && (
-                      <Typography variant="body2" color="text.secondary">
-                        {recMode === 'nominate' ? '还没有提名，快来推荐吧' : '暂无推荐'}
-                      </Typography>
                     )}
                   </CardContent>
                 </Card>

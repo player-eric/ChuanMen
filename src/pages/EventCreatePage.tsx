@@ -93,8 +93,9 @@ export default function EventCreatePage() {
   const [recPickerOpen, setRecPickerOpen] = useState(false);
   const [recSearch, setRecSearch] = useState('');
   const [recCategory, setRecCategory] = useState<string>('all');
-  const [recSelectionMode, setRecSelectionMode] = useState<'nominate' | 'pick'>('nominate');
-  const [recCategories, setRecCategories] = useState<string[]>([]);
+  // Per-category mode: { movie: 'nominate', recipe: 'pick', ... }
+  const [recCatModes, setRecCatModes] = useState<Record<string, 'nominate' | 'pick'>>({});
+  const recCategories = Object.keys(recCatModes);
 
   // API-loaded data for members
   const [allMembers, setAllMembers] = useState<{ id: string; name: string; avatar?: string }[]>([]);
@@ -162,14 +163,15 @@ export default function EventCreatePage() {
         tags: mappedTags.length > 0 ? mappedTags : undefined,
         phase: isPastDate ? 'ended' : delayPublish ? 'invite' : 'open',
         publishAt: delayPublish && publishDate ? combineDT(publishDate, publishTime || '00:00') : undefined,
-        recSelectionMode: recCategories.length > 0 ? recSelectionMode : undefined,
-        recCategories: recCategories.length > 0 ? recCategories : undefined,
+        recCategories: recCategories.length > 0
+          ? Object.entries(recCatModes).map(([c, m]) => `${c}:${m}`)
+          : undefined,
       });
       const newEventId = String((result as any).id ?? '');
       // Link selected recommendations (best effort)
-      const isNom = recSelectionMode === 'nominate';
       for (const rec of selectedRecs) {
-        try { await linkEventRecommendation(newEventId, rec.id, user.id, !isNom); } catch { /* best effort */ }
+        const isNom = recCatModes[rec.category] === 'nominate';
+        try { await linkEventRecommendation(newEventId, rec.id, user.id, isNom); } catch { /* best effort */ }
       }
       setCreatedId(newEventId);
     } catch (err: any) {
@@ -445,92 +447,94 @@ export default function EventCreatePage() {
                     key={cat.key}
                     label={cat.label}
                     size="small"
-                    color={recCategories.includes(cat.key) ? 'primary' : 'default'}
-                    variant={recCategories.includes(cat.key) ? 'filled' : 'outlined'}
-                    onClick={() => setRecCategories((prev) =>
-                      prev.includes(cat.key) ? prev.filter((c) => c !== cat.key) : [...prev, cat.key]
-                    )}
+                    color={cat.key in recCatModes ? 'primary' : 'default'}
+                    variant={cat.key in recCatModes ? 'filled' : 'outlined'}
+                    onClick={() => setRecCatModes((prev) => {
+                      if (cat.key in prev) {
+                        const { [cat.key]: _, ...rest } = prev;
+                        setSelectedRecs((sr) => sr.filter((r) => r.category !== cat.key));
+                        return rest;
+                      }
+                      return { ...prev, [cat.key]: 'nominate' };
+                    })}
                   />
                 ))}
               </Stack>
 
-              {recCategories.length > 0 && (
-                <>
-                  {/* Mode selection */}
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>模式</Typography>
-                  <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                    <Chip
-                      label="先开放提名"
-                      onClick={() => setRecSelectionMode('nominate')}
-                      color={recSelectionMode === 'nominate' ? 'primary' : 'default'}
-                      variant={recSelectionMode === 'nominate' ? 'filled' : 'outlined'}
-                    />
-                    <Chip
-                      label="直接选定"
-                      onClick={() => setRecSelectionMode('pick')}
-                      color={recSelectionMode === 'pick' ? 'primary' : 'default'}
-                      variant={recSelectionMode === 'pick' ? 'filled' : 'outlined'}
-                    />
-                  </Stack>
+              {/* Per-category sections — each with its own mode toggle + list */}
+              {recCategories.map((cat) => {
+                const catLabel = recCategoryOptions.find((o) => o.key === cat)?.label ?? cat;
+                const catRecs = selectedRecs.filter((r) => r.category === cat);
+                const mode = recCatModes[cat];
+                const isPick = mode === 'pick';
+                return (
+                  <Card key={cat} variant="outlined" sx={{ mb: 1.5 }}>
+                    <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                      <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                        {catLabel}
+                      </Typography>
 
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    {recSelectionMode === 'pick'
-                      ? '直接选好推荐，活动发布后即可展示。'
-                      : '活动发布后，报名成员可提名推荐，你可以在活动页选定。'}
-                  </Typography>
-
-                  {/* Per-category lists */}
-                  {recCategories.map((cat) => {
-                    const catIcon = recCategoryOptions.find((o) => o.key === cat)?.label ?? cat;
-                    const catRecs = selectedRecs.filter((r) => r.category === cat);
-                    const isPick = recSelectionMode === 'pick';
-                    return (
-                      <Box key={cat} sx={{ mb: 2 }}>
-                        <Typography variant="caption" fontWeight={700} sx={{ mb: 0.75, display: 'block' }}>
-                          {catIcon}{catRecs.length > 0 ? ` (${catRecs.length})` : ''}
-                        </Typography>
-                        {catRecs.length > 0 && (
-                          <Stack spacing={1} sx={{ mb: 1 }}>
-                            {catRecs.map((rec) => (
-                              <Card key={rec.id} variant="outlined" sx={isPick ? { borderColor: 'success.main', borderWidth: 2 } : undefined}>
-                                <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-                                  <Stack direction="row" spacing={1} alignItems="center">
-                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                      <Typography variant="body2" fontWeight={600}>{rec.title}</Typography>
-                                      <Stack direction="row" spacing={1.5} sx={{ mt: 0.25 }}>
-                                        <Typography variant="caption" color="text.secondary">
-                                          🌐 {rec.voteCount ?? 0}票
-                                        </Typography>
-                                        {rec.authorName && (
-                                          <Typography variant="caption" color="text.secondary">
-                                            {rec.authorName} 推荐
-                                          </Typography>
-                                        )}
-                                      </Stack>
-                                    </Box>
-                                    {isPick && <Chip size="small" color="success" label="✓ 已选" />}
-                                    <IconButton size="small" onClick={() => setSelectedRecs((prev) => prev.filter((r) => r.id !== rec.id))}>
-                                      <CloseIcon fontSize="small" />
-                                    </IconButton>
-                                  </Stack>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </Stack>
-                        )}
-                        <Button
-                          variant="outlined"
+                      {/* Per-category mode toggle */}
+                      <Stack direction="row" spacing={0.75} sx={{ mb: 1.5 }}>
+                        <Chip
+                          label="先开放提名"
                           size="small"
-                          fullWidth
-                          onClick={() => { setRecCategory(cat); setRecPickerOpen(true); }}
-                        >
-                          {isPick ? `选择${catIcon}` : `添加${catIcon}提名`}
-                        </Button>
-                      </Box>
-                    );
-                  })}
-                </>
-              )}
+                          onClick={() => setRecCatModes((prev) => ({ ...prev, [cat]: 'nominate' }))}
+                          color={mode === 'nominate' ? 'primary' : 'default'}
+                          variant={mode === 'nominate' ? 'filled' : 'outlined'}
+                        />
+                        <Chip
+                          label="直接选定"
+                          size="small"
+                          onClick={() => setRecCatModes((prev) => ({ ...prev, [cat]: 'pick' }))}
+                          color={mode === 'pick' ? 'primary' : 'default'}
+                          variant={mode === 'pick' ? 'filled' : 'outlined'}
+                        />
+                      </Stack>
+
+                      {/* Recommendation cards */}
+                      {catRecs.length > 0 && (
+                        <Stack spacing={1} sx={{ mb: 1 }}>
+                          {catRecs.map((rec) => (
+                            <Card key={rec.id} variant="outlined" sx={isPick ? { borderColor: 'success.main', borderWidth: 2 } : undefined}>
+                              <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography variant="body2" fontWeight={600}>{rec.title}</Typography>
+                                    <Stack direction="row" spacing={1.5} sx={{ mt: 0.25 }}>
+                                      <Typography variant="caption" color="text.secondary">
+                                        🌐 {rec.voteCount ?? 0}票
+                                      </Typography>
+                                      {rec.authorName && (
+                                        <Typography variant="caption" color="text.secondary">
+                                          {rec.authorName} 推荐
+                                        </Typography>
+                                      )}
+                                    </Stack>
+                                  </Box>
+                                  {isPick && <Chip size="small" color="success" label="✓ 已选" />}
+                                  <IconButton size="small" onClick={() => setSelectedRecs((prev) => prev.filter((r) => r.id !== rec.id))}>
+                                    <CloseIcon fontSize="small" />
+                                  </IconButton>
+                                </Stack>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </Stack>
+                      )}
+
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                        onClick={() => { setRecCategory(cat); setRecPickerOpen(true); }}
+                      >
+                        {isPick ? '选择' : '添加提名'}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </CardContent>
           </Card>
 

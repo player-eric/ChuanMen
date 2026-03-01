@@ -63,6 +63,7 @@ export interface EventData {
   linkedRecommendations?: { id: string; title: string; category: string; coverUrl?: string; linkedById?: string; isSelected?: boolean; isNomination?: boolean; globalVotes?: number; attendeeVotes?: number; attendeeTotal?: number; linkedByName?: string }[];
   recSelectionMode?: string;
   recCategories?: string[];
+  recCategoryModes?: Record<string, string>;
   spots: number;
   total: number;
   people: string[];
@@ -420,9 +421,18 @@ export interface MemberDetailData {
   member: MemberData;
 }
 
+export interface MilestoneItem {
+  id: string;
+  title: string;
+  body: string;
+  type: string;
+  createdAt: string;
+}
+
 export interface AboutPageData {
   memberCount: number;
   hostCount: number;
   eventCount: number;
   months: number;
+  milestones: MilestoneItem[];
 }

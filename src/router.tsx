@@ -57,6 +57,7 @@ import {
   fetchProposalsApi,
   fetchRecommendationsApi,
   fetchRecommendationByIdApi,
+  fetchAnnouncementsApi,
 } from '@/lib/domainApi';
 import { eventTagToScene } from '@/lib/mappings';
 
@@ -300,7 +301,13 @@ function mapApiEvent(e: any): any {
       attendeeTotal: er.attendeeTotal ?? 0,
     })),
     recSelectionMode: e.recSelectionMode ?? 'nominate',
-    recCategories: e.recCategories ?? [],
+    recCategories: (e.recCategories ?? []).map((entry: string) => entry.includes(':') ? entry.split(':')[0] : entry),
+    recCategoryModes: Object.fromEntries(
+      (e.recCategories ?? []).map((entry: string) => {
+        const [cat, mode] = entry.includes(':') ? entry.split(':') : [entry, e.recSelectionMode ?? 'nominate'];
+        return [cat, mode];
+      }),
+    ),
     spots: Math.max(0, (e.capacity ?? 0) - occupying.length),
     total: e.capacity ?? 0,
     people,
@@ -664,9 +671,17 @@ async function memberDetailLoader({ params }: { params: Record<string, string | 
 
 async function aboutLoader() {
   try {
-    return await fetchAboutStatsApi();
+    const [stats, announcements] = await Promise.all([
+      fetchAboutStatsApi(),
+      fetchAnnouncementsApi().catch(() => []),
+    ]);
+    const milestones = (announcements as any[])
+      .filter((a: any) => a.type === 'milestone' || a.type === 'host_tribute')
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map((a: any) => ({ id: a.id, title: a.title, body: a.body ?? '', type: a.type, createdAt: a.createdAt }));
+    return { ...stats, milestones };
   } catch {
-    return { memberCount: 0, hostCount: 0, eventCount: 0, months: 1 };
+    return { memberCount: 0, hostCount: 0, eventCount: 0, months: 1, milestones: [] };
   }
 }
 
