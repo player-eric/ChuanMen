@@ -98,6 +98,7 @@ export interface PastEvent {
   film?: string;
   photoCount?: number;
   commentCount?: number;
+  likeCount?: number;
 }
 
 export interface Proposal {
