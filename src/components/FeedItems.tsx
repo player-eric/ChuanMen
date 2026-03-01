@@ -232,9 +232,10 @@ interface FeedActivityProps extends InteractionProps {
   hostId?: string;
   waitlistCount?: number;
   socialHint?: { name: string; count: number };
+  time?: string;
 }
 
-export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount, socialHint }: FeedActivityProps) {
+export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount, socialHint, time }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -313,7 +314,7 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
             <span onClick={(e) => { e.stopPropagation(); goMember(name); }}><Ava name={name} size={32} badge="🏠" /></span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14 }}><b onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</b> 发起了活动</div>
-              <div style={{ fontSize: 12, color: c.text3 }}>2 小时前</div>
+              {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}</div>}
             </div>
           </div>
         )}
@@ -412,9 +413,10 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
 /* ═══ FeedCard ═══ */
 interface FeedCardProps extends InteractionProps {
   from: string; to: string; message: string; photo?: string; navTarget?: string;
+  time?: string; visibility?: string;
 }
 
-export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCardProps) {
+export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, comments, newComments, commentCount, time, visibility }: FeedCardProps) {
   const c = useColors();
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -430,7 +432,7 @@ export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, 
               <b onClick={(e) => { e.stopPropagation(); goMember(from); }} style={{ cursor: 'pointer' }}>{from}</b> 给{' '}
               <b onClick={(e) => { e.stopPropagation(); goMember(to); }} style={{ cursor: 'pointer' }}>{to}</b> 寄了一张感谢卡
             </div>
-            <div style={{ fontSize: 12, color: c.text3 }}>5 小时前 · 🌐 公开</div>
+            {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}{visibility === 'public' ? ' · 🌐 公开' : visibility === 'private' ? ' · 🔒 私密' : ''}</div>}
           </div>
         </div>
         <PostCard from={from} to={to} message={message} stamp="🎬" photo={photo} layout="horizontal" />
@@ -443,10 +445,10 @@ export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, 
 /* ═══ FeedMovie ═══ */
 interface FeedMovieProps extends InteractionProps {
   name: string; title: string; year: string; dir: string; votes: number;
-  navTarget?: string;
+  navTarget?: string; time?: string;
 }
 
-export function FeedMovie({ name, title, year, dir, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedMovieProps) {
+export function FeedMovie({ name, title, year, dir, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedMovieProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -460,7 +462,7 @@ export function FeedMovie({ name, title, year, dir, votes: initV, navTarget, lik
           <Ava name={name} size={32} onTap={() => goMember(name)} />
           <div>
             <div style={{ fontSize: 14 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 推荐了一部电影</div>
-            <div style={{ fontSize: 12, color: c.text3 }}>昨天</div>
+            {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}</div>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -511,10 +513,10 @@ export function FeedMilestone({ text, emoji, likes, likedBy, comments, newCommen
 /* ═══ FeedProposal ═══ */
 interface FeedProposalProps extends InteractionProps {
   name: string; title: string; votes: number; interested: string[];
-  navTarget?: string;
+  navTarget?: string; time?: string;
 }
 
-export function FeedProposal({ name, title, votes: initV, interested, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedProposalProps) {
+export function FeedProposal({ name, title, votes: initV, interested, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedProposalProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -528,7 +530,7 @@ export function FeedProposal({ name, title, votes: initV, interested, navTarget,
           <Ava name={name} size={32} onTap={() => goMember(name)} />
           <div>
             <div style={{ fontSize: 14 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 提了一个活动创意</div>
-            <div style={{ fontSize: 12, color: c.text3 }}>3 天前</div>
+            {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}</div>}
           </div>
         </div>
         <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{'💡'} {title}</div>
@@ -684,10 +686,10 @@ export function FeedRecommendation({ name, title, category, categoryIcon, votes:
 /* ═══ FeedBook ═══ */
 interface FeedBookProps extends InteractionProps {
   name: string; title: string; year: string; author: string; votes: number;
-  navTarget?: string;
+  navTarget?: string; time?: string;
 }
 
-export function FeedBook({ name, title, year, author, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedBookProps) {
+export function FeedBook({ name, title, year, author, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedBookProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -701,7 +703,7 @@ export function FeedBook({ name, title, year, author, votes: initV, navTarget, l
           <Ava name={name} size={32} onTap={() => goMember(name)} />
           <div>
             <div style={{ fontSize: 14 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 推荐了一本书</div>
-            <div style={{ fontSize: 12, color: c.text3 }}>昨天</div>
+            {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}</div>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
