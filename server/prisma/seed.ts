@@ -781,6 +781,30 @@ async function main() {
   await seedSiteConfig();
   console.log('');
 
+  // ─── Step 13: Task Presets ─────────────────
+  console.log('══ Step 13: Task Presets ══');
+  const taskPresetSeeds = [
+    { tag: '电影夜', roles: ['选片', '活动记录', '修图上传'] },
+    { tag: '茶话会/分享会', roles: ['分享人', '活动记录', '修图上传'] },
+    { tag: '徒步', roles: ['路线规划', '开车', '活动记录', '修图上传'] },
+    { tag: '户外', roles: ['活动记录', '修图上传'] },
+    { tag: '小聚', roles: ['活动记录', '修图上传'] },
+    { tag: '其他', roles: ['活动记录', '修图上传'] },
+  ];
+  for (const tp of taskPresetSeeds) {
+    if (DRY_RUN) {
+      console.log(`  [DRY] TaskPreset: ${tp.tag} → [${tp.roles.join(', ')}]`);
+      continue;
+    }
+    await prisma.taskPreset.upsert({
+      where: { tag: tp.tag },
+      create: tp,
+      update: { roles: tp.roles },
+    });
+    console.log(`  ✅ ${tp.tag}: ${tp.roles.join(', ')}`);
+  }
+  console.log('');
+
   console.log('🌱 Seed complete!\n');
 }
 
