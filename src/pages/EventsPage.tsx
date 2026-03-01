@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
 import {
   Alert,
@@ -28,8 +28,17 @@ export default function EventsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const c = useColors();
-  const data = useLoaderData() as EventsPageData;
+  const data = useLoaderData() as EventsPageData & { coAttendees?: { userId: string; name: string; count: number }[] };
   const [tab, setTab] = useState<'upcoming' | 'ideas' | 'past'>('upcoming');
+
+  // Build co-attendee map for social hints
+  const coAttendeeMap = useMemo(() => {
+    const map = new Map<string, { name: string; count: number }>();
+    for (const c of (data.coAttendees ?? [])) {
+      map.set(c.userId, { name: c.name, count: c.count });
+    }
+    return map;
+  }, [data.coAttendees]);
   const [snackMsg, setSnackMsg] = useState('');
   const canInteract = Boolean(user);
 
@@ -115,6 +124,15 @@ export default function EventsPage() {
                     hostId={evt.hostId}
                     waitlistCount={evt.waitlistCount}
                     commentCount={evt.commentCount}
+                    socialHint={user?.id ? (() => {
+                      let best: { name: string; count: number } | undefined;
+                      for (const uid of (evt.signupUserIds ?? [])) {
+                        if (uid === user.id) continue;
+                        const entry = coAttendeeMap.get(uid);
+                        if (entry && (!best || entry.count > best.count)) best = entry;
+                      }
+                      return best;
+                    })() : undefined}
                     likes={evt.likeCount ?? 0} likedBy={[]} comments={[]}
                   />
                 </Grid>

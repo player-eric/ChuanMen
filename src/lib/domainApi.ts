@@ -464,6 +464,10 @@ export async function fetchUserByIdApi(id: string) {
   return requestJson<EntityMap>(`/api/users/${id}`);
 }
 
+export async function fetchCoAttendees(userId: string) {
+  return requestJson<{ userId: string; name: string; count: number }[]>(`/api/users/${userId}/co-attendees`);
+}
+
 /* ═══════════════════════════════════════════════════════════════
    Postcard / Cards API
    ═══════════════════════════════════════════════════════════════ */

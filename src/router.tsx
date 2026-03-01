@@ -58,6 +58,7 @@ import {
   fetchRecommendationsApi,
   fetchRecommendationByIdApi,
   fetchAnnouncementsApi,
+  fetchCoAttendees,
 } from '@/lib/domainApi';
 import { eventTagToScene } from '@/lib/mappings';
 
@@ -187,6 +188,45 @@ function buildFeedItems(data: any): any[] {
     });
   }
 
+  // Recommendations → compactRecommendation items
+  const categoryIcons: Record<string, string> = {
+    book: '📖', recipe: '🍽️', place: '📍', music: '🎵', external_event: '🎭', movie: '🎬',
+  };
+  for (const r of (data.recommendations ?? [])) {
+    const d = r.createdAt ? new Date(r.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    const time = r.createdAt ? timeAgo(r.createdAt) : '';
+    const cat = r.category ?? 'book';
+    addToDate(d, {
+      type: 'compactRecommendation',
+      name: r.author?.name ?? '',
+      title: r.title,
+      category: cat,
+      categoryIcon: categoryIcons[cat] ?? '📖',
+      votes: r.voteCount ?? r._count?.votes ?? 0,
+      time,
+      navTarget: `/discover/recommendations/${r.id}`,
+      likes: r.likes ?? 0,
+      likedBy: r.likedBy ?? [],
+      comments: [],
+      commentCount: r.commentCount ?? 0,
+    });
+  }
+
+  // Announcements → milestone items
+  for (const a of (data.announcements ?? [])) {
+    const d = a.createdAt ? new Date(a.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    const emojiMap: Record<string, string> = { milestone: '🎉', host_tribute: '🏆', announcement: '📣' };
+    addToDate(d, {
+      type: 'milestone',
+      text: a.title ?? '',
+      emoji: emojiMap[a.type] ?? '📣',
+      likes: a.likes ?? 0,
+      likedBy: a.likedBy ?? [],
+      comments: [],
+      commentCount: a.commentCount ?? 0,
+    });
+  }
+
   // Proposals → compactProposal items
   for (const p of (data.recentProposals ?? [])) {
     const d = p.createdAt ? new Date(p.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
@@ -245,9 +285,23 @@ function timeAgo(dateStr: string): string {
 async function feedLoader() {
   try {
     const userId = getStoredUserId();
-    const data = await fetchFeedApi(userId || undefined);
+    const [data, coAttendees] = await Promise.all([
+      fetchFeedApi(userId || undefined),
+      userId ? fetchCoAttendees(userId).catch(() => []) : Promise.resolve([]),
+    ]);
     const items = buildFeedItems(data);
     const members = (data as any).members ?? [];
+
+    // Inject socialHint into activity items
+    if (userId && coAttendees.length > 0) {
+      const coMap = new Map(coAttendees.map((c) => [c.userId, { name: c.name, count: c.count }]));
+      for (const item of items) {
+        if (item.type === 'activity') {
+          item.socialHint = computeSocialHint(item.signupUserIds, coMap, userId);
+        }
+      }
+    }
+
     return { items, members };
   } catch {
     return { items: [], members: [] };
@@ -336,12 +390,15 @@ function mapApiEvent(e: any): any {
 
 async function eventsLoader() {
   try {
-    const [events, proposals, past] = await Promise.all([
+    const userId = getStoredUserId();
+    const [events, proposals, past, coAttendees] = await Promise.all([
       fetchEventsApi(),
       fetchProposalsApi(),
       fetchPastEventsApi(),
+      userId ? fetchCoAttendees(userId).catch(() => []) : Promise.resolve([]),
     ]);
     return {
+      coAttendees: coAttendees as { userId: string; name: string; count: number }[],
       upcoming: (events ?? []).map(mapApiEvent),
       proposals: (proposals ?? []).map((p: any) => ({
         id: p.id,
@@ -549,6 +606,24 @@ function getStoredUserId(): string {
   } catch {
     return '';
   }
+}
+
+/** Pick the best co-attendee who is also signed up for an event */
+function computeSocialHint(
+  signupUserIds: string[] | undefined,
+  coAttendeeMap: Map<string, { name: string; count: number }>,
+  myUserId: string,
+): { name: string; count: number } | undefined {
+  if (!signupUserIds || coAttendeeMap.size === 0) return undefined;
+  let best: { name: string; count: number } | undefined;
+  for (const uid of signupUserIds) {
+    if (uid === myUserId) continue;
+    const entry = coAttendeeMap.get(uid);
+    if (entry && (!best || entry.count > best.count)) {
+      best = entry;
+    }
+  }
+  return best;
 }
 
 function mapApiCard(c: any): any {

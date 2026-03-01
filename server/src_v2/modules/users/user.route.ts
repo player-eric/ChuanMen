@@ -278,4 +278,55 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.params as { id: string };
     return service.setOperatorRoles(id, request.body);
   });
+
+  // Co-attendees: users who have attended events together with this user
+  app.get('/:id/co-attendees', async (request) => {
+    const { id } = request.params as { id: string };
+
+    // 1. Find all events where the user participated (accepted signup or host)
+    const [signedUpEvents, hostedEvents] = await Promise.all([
+      app.prisma.eventSignup.findMany({
+        where: { userId: id, status: 'accepted' },
+        select: { eventId: true },
+      }),
+      app.prisma.event.findMany({
+        where: { hostId: id },
+        select: { id: true },
+      }),
+    ]);
+
+    const eventIds = [...new Set([
+      ...signedUpEvents.map((s) => s.eventId),
+      ...hostedEvents.map((e) => e.id),
+    ])];
+
+    if (eventIds.length === 0) return [];
+
+    // 2. Find all other participants in those events
+    const [coSignups, coHosts] = await Promise.all([
+      app.prisma.eventSignup.findMany({
+        where: { eventId: { in: eventIds }, status: 'accepted', userId: { not: id } },
+        select: { userId: true, user: { select: { name: true } } },
+      }),
+      app.prisma.event.findMany({
+        where: { id: { in: eventIds }, hostId: { not: id } },
+        select: { hostId: true, host: { select: { name: true } } },
+      }),
+    ]);
+
+    // 3. Aggregate counts
+    const counts = new Map<string, { name: string; count: number }>();
+    for (const s of coSignups) {
+      const entry = counts.get(s.userId);
+      if (entry) { entry.count++; } else { counts.set(s.userId, { name: s.user.name, count: 1 }); }
+    }
+    for (const h of coHosts) {
+      const entry = counts.get(h.hostId);
+      if (entry) { entry.count++; } else { counts.set(h.hostId, { name: h.host.name, count: 1 }); }
+    }
+
+    return [...counts.entries()]
+      .map(([userId, { name, count }]) => ({ userId, name, count }))
+      .sort((a, b) => b.count - a.count);
+  });
 };

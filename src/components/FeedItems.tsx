@@ -231,9 +231,10 @@ interface FeedActivityProps extends InteractionProps {
   commentCount?: number;
   hostId?: string;
   waitlistCount?: number;
+  socialHint?: { name: string; count: number };
 }
 
-export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount }: FeedActivityProps) {
+export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount, socialHint }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -372,9 +373,11 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
         {/* Social hint + signup (skip for ended/cancelled) */}
         {!isEnded && !isCancelled && (
           <>
-            <div style={{ background: c.warmDim, borderRadius: 6, padding: '5px 10px', marginBottom: 10, fontSize: 12, color: c.warm }}>
-              {'💡'} 星星也报名了（你们一起参加过 2 次活动）
-            </div>
+            {socialHint && (
+              <div style={{ background: c.warmDim, borderRadius: 6, padding: '5px 10px', marginBottom: 10, fontSize: 12, color: c.warm }}>
+                {'💡'} {socialHint.name}也报名了（你们一起参加过 {socialHint.count} 次活动）
+              </div>
+            )}
             <button
               onClick={handleSignup}
               style={{
@@ -632,6 +635,48 @@ export function FeedCompactProposal({ name, title, votes: initV, interested, tim
         </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact {...extractEntity(navTarget)} />
+    </div>
+  );
+}
+
+/* ═══ FeedRecommendation (compact) ═══ */
+interface FeedRecommendationProps extends InteractionProps {
+  name: string; title: string; category: string; categoryIcon: string;
+  votes: number; time: string; navTarget?: string;
+}
+
+export function FeedRecommendation({ name, title, category, categoryIcon, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedRecommendationProps) {
+  const c = useColors();
+  const [v, setV] = useState(false);
+  const navigate = useNavigate();
+  const goNav = navTarget ? () => navigate(navTarget) : undefined;
+  const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+
+  return (
+    <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
+      <div onClick={goNav} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: goNav ? 'pointer' : 'default' }}>
+        <div style={{ width: 36, height: 36, borderRadius: 8, background: c.s2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+          {categoryIcon}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+          <div style={{ fontSize: 11, color: c.text3, marginTop: 2 }}>
+            <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</span> 推荐 · {time}
+          </div>
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); setV(!v); }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 6, flexShrink: 0,
+            background: v ? c.warm + '15' : c.s2,
+            border: `1px solid ${v ? c.warm + '40' : c.line}`,
+            color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          ▲ {initV + (v ? 1 : 0)}
+        </button>
+      </div>
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
     </div>
   );
 }
