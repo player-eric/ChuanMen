@@ -82,7 +82,7 @@ const fullWidth = { xs: 12 } as const;
 const halfWidth = { xs: 12, md: 6 } as const;
 
 function gridSizeFor(type: FeedItem['type']) {
-  if (type === 'time' || type === 'milestone' || type === 'newMember' || type === 'birthday') return fullWidth;
+  if (type === 'time' || type === 'milestone' || type === 'newMember') return fullWidth;
   return halfWidth;
 }
 

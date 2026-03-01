@@ -170,10 +170,10 @@ function buildFeedItems(data: any): any[] {
     });
   }
 
-  // Birthday users → birthday items
-  const todayStr = new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+  // Birthday users → collected separately to pin at top
+  const birthdayItems: any[] = [];
   for (const bu of (data.birthdayUsers ?? [])) {
-    addToDate(todayStr, {
+    birthdayItems.push({
       type: 'birthday',
       id: bu.id,
       name: bu.name,
@@ -211,6 +211,13 @@ function buildFeedItems(data: any): any[] {
     return b.localeCompare(a);
   });
 
+  // Pin birthday items at top
+  if (birthdayItems.length > 0) {
+    const todayStr = new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+    items.push({ type: 'time', label: todayStr });
+    items.push(...birthdayItems);
+  }
+
   for (const dateKey of sortedDates) {
     items.push({ type: 'time', label: dateKey });
     items.push(...dateGroups.get(dateKey)!);
@@ -236,7 +243,8 @@ function timeAgo(dateStr: string): string {
 
 async function feedLoader() {
   try {
-    const data = await fetchFeedApi();
+    const userId = getStoredUserId();
+    const data = await fetchFeedApi(userId || undefined);
     const items = buildFeedItems(data);
     const members = (data as any).members ?? [];
     return { items, members };
@@ -601,10 +609,10 @@ function hostMilestoneBadge(count: number): string | undefined {
 function isBirthdayWeek(birthday: string): boolean {
   const bd = new Date(birthday);
   const today = new Date();
-  const todayMonth = today.getMonth() + 1;
-  const todayDay = today.getDate();
-  const bdMonth = bd.getMonth() + 1;
-  const bdDay = bd.getDate();
+  const todayMonth = today.getUTCMonth() + 1;
+  const todayDay = today.getUTCDate();
+  const bdMonth = bd.getUTCMonth() + 1;
+  const bdDay = bd.getUTCDate();
   const todayDOY = todayMonth * 31 + todayDay;
   const bdDOY = bdMonth * 31 + bdDay;
   const diff = Math.abs(todayDOY - bdDOY);

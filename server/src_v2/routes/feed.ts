@@ -13,8 +13,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
 
     // Birthday week helper: check if a birthday falls within ±3 days of today
     const today = new Date();
-    const todayMonth = today.getMonth() + 1;
-    const todayDay = today.getDate();
+    const todayMonth = today.getUTCMonth() + 1;
+    const todayDay = today.getUTCDate();
 
     // Fetch in parallel
     const [events, announcements, recommendations, members, postcards, recentMovies, recentProposals, newMembers] =
@@ -145,8 +145,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       const candidateBirthday = members.filter((m) => {
         if (!m.birthday || m.hideBirthday) return false;
         const bd = new Date(m.birthday);
-        const bdMonth = bd.getMonth() + 1;
-        const bdDay = bd.getDate();
+        const bdMonth = bd.getUTCMonth() + 1;
+        const bdDay = bd.getUTCDate();
         // Check if within ±3 days (simplified: compare day-of-year distance)
         const todayDOY = todayMonth * 31 + todayDay;
         const bdDOY = bdMonth * 31 + bdDay;
