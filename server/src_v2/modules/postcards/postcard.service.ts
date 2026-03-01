@@ -31,7 +31,7 @@ export class PostcardService {
     // Decrement credits
     const creditInfo = await this.repository.getCredits(data.fromId);
     if (!creditInfo || creditInfo.postcardCredits <= 0) {
-      throw new Error('明信片额度不足');
+      throw new Error('感谢卡额度不足');
     }
     const postcard = await this.repository.create(data);
     await this.repository.decrementCredits(data.fromId);
