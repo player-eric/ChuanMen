@@ -20,10 +20,12 @@ import {
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import type { EventComment, BookDetailData, BookPool } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
+import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { addComment, fetchCommentsApi, toggleRecommendationVote, updateRecommendation, deleteRecommendation } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { firstNonEmoji } from '@/components/Atoms';
@@ -45,6 +47,19 @@ export default function BookDetailPage() {
   const [sourceUrl, setSourceUrl] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [coverUrl, setCoverUrl] = useState<string>(() => (raw as any)?.coverUrl ?? '');
+
+  const bookIdForUpload = raw && 'id' in raw ? String((raw as any).id) : '';
+  const { pickFile: pickCover, isUploading: coverUploading } = useMediaUpload({
+    category: 'cover',
+    ownerId: user?.id,
+    onSuccess: async (url) => {
+      setCoverUrl(url);
+      if (bookIdForUpload && user?.id) {
+        try { await updateRecommendation(bookIdForUpload, user.id, { coverUrl: url }); } catch { /* ignore */ }
+      }
+    },
+  });
 
   useEffect(() => {
     const bookId = raw && 'id' in raw ? (raw as any).id : null;
@@ -88,7 +103,6 @@ export default function BookDetailPage() {
   }, [raw]);
 
   // Poster: prefer cover image, fall back to gradient
-  const coverUrl = (raw as any).coverUrl as string | undefined;
   const posterGradient = posters[title] || { bg: `linear-gradient(135deg, ${c.s3}, ${c.s2})`, accent: c.text3, sub: '' };
   const poster = {
     ...posterGradient,
@@ -115,6 +129,16 @@ export default function BookDetailPage() {
                 background: 'linear-gradient(transparent 30%, rgba(0,0,0,0.7) 100%)',
               }}
             />
+            {canEditLink && (
+              <IconButton
+                size="small"
+                sx={{ position: 'absolute', top: 12, right: 12, zIndex: 2, color: 'rgba(255,255,255,0.7)', bgcolor: 'rgba(0,0,0,0.3)', '&:hover': { bgcolor: 'rgba(0,0,0,0.5)' } }}
+                onClick={pickCover}
+                disabled={coverUploading}
+              >
+                <AddPhotoAlternateIcon fontSize="small" />
+              </IconButton>
+            )}
             <Box sx={{ position: 'absolute', bottom: 20, left: 20, right: 20, zIndex: 1 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
               <Box>

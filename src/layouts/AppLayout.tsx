@@ -377,7 +377,7 @@ export default function AppLayout() {
           sx={{
             px: { xs: 2, sm: 3, md: 4 },
             py: 2,
-            pb: { xs: 10, md: 3 },
+            pb: { xs: 'calc(80px + env(safe-area-inset-bottom))', md: 3 },
             maxWidth: 1100,
             mx: 'auto',
           }}
@@ -400,7 +400,7 @@ export default function AppLayout() {
 
         {/* Bottom Tab Bar — 5 tabs, hidden when not logged in (v2.1 §4.0) */}
         {!isDesktop && visibleTabs.length > 0 && (
-          <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, borderTop: 1, borderColor: 'divider' }} elevation={6}>
+          <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, borderTop: 1, borderColor: 'divider', pb: 'env(safe-area-inset-bottom)' }} elevation={6}>
             <BottomNavigation
               showLabels
               value={activeTab}

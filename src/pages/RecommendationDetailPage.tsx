@@ -21,8 +21,10 @@ import {
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import { useAuth } from '@/auth/AuthContext';
 import { useColors } from '@/hooks/useColors';
+import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { getRecommendationById, deleteRecommendation, updateRecommendation, toggleRecommendationVote, fetchCommentsApi, addComment, type RecommendationCategory } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { firstNonEmoji } from '@/components/Atoms';
@@ -51,6 +53,18 @@ export default function RecommendationDetailPage() {
   const [voters, setVoters] = useState<{ id: string; name: string }[]>([]);
   const [comments, setComments] = useState<EventComment[]>([]);
   const [commentText, setCommentText] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
+
+  const { pickFile, isUploading: coverUploading } = useMediaUpload({
+    category: 'cover',
+    ownerId: user?.id,
+    onSuccess: async (url) => {
+      setCoverUrl(url);
+      if (recommendationId && user?.id) {
+        try { await updateRecommendation(recommendationId, user.id, { coverUrl: url }); } catch { /* ignore */ }
+      }
+    },
+  });
 
   useEffect(() => {
     if (!recommendationId) return;
@@ -60,6 +74,7 @@ export default function RecommendationDetailPage() {
         const data = await getRecommendationById(recommendationId);
         setItem(data);
         setSourceUrl((data as any)?.sourceUrl ?? '');
+        setCoverUrl((data as any)?.coverUrl ?? '');
         const voteList: any[] = (data as any)?.votes ?? [];
         const voterList = voteList.map((v: any) => ({
           id: v.userId ?? v.user?.id ?? '',
@@ -138,7 +153,6 @@ export default function RecommendationDetailPage() {
   const title = String(item.title ?? '');
   const description = String(item.description ?? '');
   const authorName = (item.author as any)?.name ?? '';
-  const coverUrl = (item.coverUrl as string) || '';
   const tags: string[] = ((item.tags as any[]) ?? []).map((t: any) => t.value ?? t).filter(Boolean);
 
   // Hero background
@@ -155,6 +169,17 @@ export default function RecommendationDetailPage() {
         <Card sx={{ overflow: 'hidden' }}>
           <Box sx={{ position: 'relative', height: 240, background: heroBg }}>
             <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 30%, rgba(0,0,0,0.7) 100%)' }} />
+            {/* Upload cover image button */}
+            {canModify && (
+              <IconButton
+                size="small"
+                sx={{ position: 'absolute', top: 12, right: 12, zIndex: 2, color: 'rgba(255,255,255,0.7)', bgcolor: 'rgba(0,0,0,0.3)', '&:hover': { bgcolor: 'rgba(0,0,0,0.5)' } }}
+                onClick={pickFile}
+                disabled={coverUploading}
+              >
+                <AddPhotoAlternateIcon fontSize="small" />
+              </IconButton>
+            )}
             <Box sx={{ position: 'absolute', bottom: 20, left: 20, right: 20, zIndex: 1 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
                 <Box>

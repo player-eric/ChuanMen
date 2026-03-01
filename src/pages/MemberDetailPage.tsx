@@ -178,6 +178,19 @@ export default function MemberDetailPage() {
                 </Typography>
               )}
               <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+                {memberBadge && (
+                  <Chip
+                    size="small"
+                    label={`${memberBadge} ${hostCount >= 20 ? 'Host 传奇' : hostCount >= 10 ? 'Host 大神' : hostCount >= 5 ? 'Host 之星' : 'Host'}`}
+                    sx={{
+                      height: 22,
+                      fontSize: 11,
+                      bgcolor: 'rgba(212,165,116,0.3)',
+                      color: '#fff',
+                      backdropFilter: 'blur(4px)',
+                    }}
+                  />
+                )}
                 {data.titles.map((title) => (
                   <Chip
                     key={title}

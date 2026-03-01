@@ -27,6 +27,8 @@ import { PostCard } from '@/components/PostCard';
 import { EmptyState } from '@/components/EmptyState';
 import { useTitleDefs } from '@/hooks/useTitleDefs';
 import MailRoundedIcon from '@mui/icons-material/MailRounded';
+import LockRoundedIcon from '@mui/icons-material/LockRounded';
+import PublicRoundedIcon from '@mui/icons-material/PublicRounded';
 
 function EmptyCards({ credits }: { credits?: number }) {
   const navigate = useNavigate();
@@ -348,8 +350,8 @@ function FullCards() {
                 </Box>
 
                 <RadioGroup row value={isPrivate ? 'private' : 'public'} onChange={(event) => setIsPrivate(event.target.value === 'private')}>
-                  <FormControlLabel value="private" control={<Radio size="small" />} label="🔒 仅彼此可见" />
-                  <FormControlLabel value="public" control={<Radio size="small" />} label="🌐 公开到动态流" />
+                  <FormControlLabel value="private" control={<Radio size="small" />} label={<Stack direction="row" spacing={0.5} alignItems="center"><LockRoundedIcon sx={{ fontSize: 16 }} /><span>仅彼此可见</span></Stack>} />
+                  <FormControlLabel value="public" control={<Radio size="small" />} label={<Stack direction="row" spacing={0.5} alignItems="center"><PublicRoundedIcon sx={{ fontSize: 16 }} /><span>公开到动态流</span></Stack>} />
                 </RadioGroup>
 
                 <Stack direction="row" spacing={1}>

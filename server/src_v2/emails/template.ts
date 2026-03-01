@@ -208,12 +208,12 @@ export function renderPostcardBlock(opts: PostcardBlockOptions): string {
   <tr>
     <!-- Left: banner 45% -->
     <td width="45%" valign="top" bgcolor="#2a2018" style="${photo ? `background-image:url('${escapeAttr(photo)}');background-size:cover;background-position:center;` : 'background:linear-gradient(145deg,#1c1814 0%,#2a2018 25%,#3a2a20 50%,#2a2218 75%,#1c1814 100%);'}">
-      <div style="height:240px;position:relative;overflow:hidden;">
-        <div style="position:absolute;top:10%;left:25%;width:50%;height:50%;border-radius:50%;background:radial-gradient(circle,rgba(212,165,116,0.15),transparent 70%);"></div>
-        <div style="position:absolute;bottom:0;left:15%;width:20px;height:35px;border-radius:8px 8px 0 0;background:rgba(0,0,0,0.2);"></div>
-        <div style="position:absolute;bottom:0;left:25%;width:18px;height:30px;border-radius:8px 8px 0 0;background:rgba(0,0,0,0.15);"></div>
-        <div style="position:absolute;bottom:0;left:60%;width:22px;height:38px;border-radius:8px 8px 0 0;background:rgba(0,0,0,0.18);"></div>
-        <div style="position:absolute;top:5%;right:12%;width:30%;height:45%;border-radius:3px;background:rgba(180,200,220,0.06);box-shadow:0 0 20px rgba(180,200,220,0.08);"></div>
+      <div style="height:240px;position:relative;overflow:hidden;">${!photo ? `
+        <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#D4A574 0%,#C4915A 40%,#B07D48 100%);"></div>
+        <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:0.4;background-image:url('data:image/svg+xml,%3Csvg viewBox=%270 0 200 200%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%271.2%27 numOctaves=%275%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23n)%27/%3E%3C/svg%3E');background-repeat:repeat;background-size:100px 100px;"></div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+          <div style="font-size:20px;font-style:italic;font-weight:600;color:rgba(255,255,255,0.55);letter-spacing:0.05em;font-family:Georgia,'Noto Serif SC',serif;">Thank You</div>
+        </div>` : ''}
         <table role="presentation" cellpadding="0" cellspacing="0" style="position:absolute;bottom:${wmBottom};right:8px;opacity:0.25;">
           <tr>
             <td style="width:14px;height:14px;border-radius:3px;background:rgba(224,216,206,0.09);text-align:center;vertical-align:middle;font-size:7px;font-weight:800;color:rgba(224,216,206,0.38);line-height:14px;">串</td>
