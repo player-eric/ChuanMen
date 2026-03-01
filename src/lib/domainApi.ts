@@ -136,6 +136,7 @@ export async function createEvent(payload: {
   recSelectionMode?: string;
   recCategories?: string[];
   isPrivate?: boolean;
+  proposalId?: string;
 }) {
   return requestJson<EntityMap>('/api/events', {
     method: 'POST',
@@ -238,7 +239,7 @@ export async function searchExternalMusic(query: string) {
 }
 
 export async function toggleRecommendationVote(recommendationId: string, userId: string) {
-  return requestJson<{ voted: boolean }>(`/api/recommendations/${recommendationId}/vote`, {
+  return requestJson<{ voted: boolean; voteCount?: number }>(`/api/recommendations/${recommendationId}/vote`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId }),

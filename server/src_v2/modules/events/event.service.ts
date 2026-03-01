@@ -17,6 +17,7 @@ const createEventSchema = z.object({
   recSelectionMode: z.enum(['nominate', 'pick']).optional(),
   recCategories: z.array(z.string()).optional(),
   isPrivate: z.boolean().optional(),
+  proposalId: z.string().optional(),
 });
 
 const inviteUsersSchema = z.object({
@@ -62,7 +63,8 @@ export class EventService {
 
   createEvent(input: unknown) {
     const data = createEventSchema.parse(input);
-    return this.repository.create(data);
+    const { proposalId, ...eventData } = data;
+    return this.repository.create(eventData).then((created) => ({ ...created, proposalId }));
   }
 
   updateEvent(id: string, input: unknown) {

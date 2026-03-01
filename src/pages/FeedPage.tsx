@@ -6,15 +6,23 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
   Skeleton,
   Snackbar,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import type { FeedPageData, FeedItem } from '@/types';
+import { sendPostcard } from '@/lib/domainApi';
+import { Ava } from '@/components/Atoms';
 import QuickActionDialog from '@/components/QuickActionDialog';
 import {
   FeedTime,
@@ -88,11 +96,115 @@ function gridSizeFor(type: FeedItem['type']) {
   return halfWidth;
 }
 
+/* ═══ Quick Postcard Dialog ═══ */
+const quickMessages = ['谢谢你的款待！', '一起很开心！', '下次再约！', '认识你真好！'];
+
+function QuickPostcardDialog({
+  open, onClose, participants, eventId, eventTitle, onSent,
+}: {
+  open: boolean;
+  onClose: () => void;
+  participants: { id: string; name: string }[];
+  eventId: string;
+  eventTitle: string;
+  onSent: (msg: string) => void;
+}) {
+  const { user } = useAuth();
+  const [toId, setToId] = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) { setToId(''); setMessage(''); }
+  }, [open]);
+
+  const handleSend = async () => {
+    if (!user?.id || !toId || !message.trim()) return;
+    setSending(true);
+    try {
+      await sendPostcard({
+        fromId: user.id,
+        toId,
+        message: message.trim(),
+        eventId,
+        eventCtx: eventTitle,
+        visibility: 'public',
+      });
+      onSent('感谢卡已寄出！');
+      onClose();
+    } catch {
+      onSent('发送失败，请重试');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const others = participants.filter((p) => p.id !== user?.id);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>寄感谢卡</DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          感谢「{eventTitle}」的小伙伴
+        </Typography>
+
+        {/* Step 1: pick recipient */}
+        <Typography variant="caption" color="text.secondary">选择收件人</Typography>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 2, mt: 0.5 }}>
+          {others.map((p) => (
+            <Chip
+              key={p.id}
+              avatar={<Ava name={p.name} size={24} />}
+              label={p.name}
+              onClick={() => setToId(p.id)}
+              color={toId === p.id ? 'primary' : 'default'}
+              variant={toId === p.id ? 'filled' : 'outlined'}
+            />
+          ))}
+        </Stack>
+
+        {/* Step 2: pick or write message */}
+        <Typography variant="caption" color="text.secondary">选择或输入留言</Typography>
+        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mt: 0.5, mb: 1.5 }}>
+          {quickMessages.map((m) => (
+            <Chip
+              key={m}
+              label={m}
+              size="small"
+              onClick={() => setMessage(m)}
+              color={message === m ? 'primary' : 'default'}
+              variant={message === m ? 'filled' : 'outlined'}
+            />
+          ))}
+        </Stack>
+        <TextField
+          fullWidth
+          size="small"
+          multiline
+          minRows={2}
+          placeholder="写点什么..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>取消</Button>
+        <Button variant="contained" onClick={handleSend} disabled={!toId || !message.trim() || sending}>
+          {sending ? '发送中…' : '寄出'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 /* ═══ Recap Banner for recently ended events ═══ */
-function RecapBanner({ items }: { items: FeedItem[] }) {
+function RecapBanner({ items, onSnack }: { items: FeedItem[]; onSnack: (msg: string) => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [quickCardOpen, setQuickCardOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -124,30 +236,48 @@ function RecapBanner({ items }: { items: FeedItem[] }) {
     localStorage.setItem('chuanmen.feed.recapDismissed', JSON.stringify([...next]));
   };
 
+  // Build participants list by zipping signupUserIds and people names
+  const signupUserIds: string[] = (target as any).signupUserIds ?? [];
+  const peopleNames: string[] = target.people ?? [];
+  const participants = signupUserIds.map((id, i) => ({ id, name: peopleNames[i] ?? '?' }));
+
+  // Extract eventId from navTarget (e.g. "/events/abc123" → "abc123")
+  const eventId = target.navTarget.split('/').pop() ?? '';
+
   return (
-    <Alert
-      severity="info"
-      sx={{ mb: 2, '& .MuiAlert-message': { width: '100%' } }}
-      onClose={dismiss}
-    >
-      <Typography variant="body2" fontWeight={700} sx={{ mb: 0.5 }}>
-        「{target.title}」已结束
-      </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-        留下你的回忆吧！
-      </Typography>
-      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-        <Button size="small" variant="outlined" onClick={() => navigate(target.navTarget!)}>
-          📷 上传照片
-        </Button>
-        <Button size="small" variant="outlined" onClick={() => navigate(target.navTarget!)}>
-          💬 写评论
-        </Button>
-        <Button size="small" variant="outlined" onClick={() => navigate('/cards')}>
-          ✉ 寄感谢卡
-        </Button>
-      </Stack>
-    </Alert>
+    <>
+      <Alert
+        severity="info"
+        sx={{ mb: 2, '& .MuiAlert-message': { width: '100%' } }}
+        onClose={dismiss}
+      >
+        <Typography variant="body2" fontWeight={700} sx={{ mb: 0.5 }}>
+          「{target.title}」已结束
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+          留下你的回忆吧！
+        </Typography>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Button size="small" variant="outlined" onClick={() => navigate(target.navTarget!)}>
+            📷 上传照片
+          </Button>
+          <Button size="small" variant="outlined" onClick={() => navigate(target.navTarget!)}>
+            💬 写评论
+          </Button>
+          <Button size="small" variant="outlined" onClick={() => setQuickCardOpen(true)}>
+            ✉ 寄感谢卡
+          </Button>
+        </Stack>
+      </Alert>
+      <QuickPostcardDialog
+        open={quickCardOpen}
+        onClose={() => setQuickCardOpen(false)}
+        participants={participants}
+        eventId={eventId}
+        eventTitle={target.title}
+        onSent={(msg) => { onSnack(msg); }}
+      />
+    </>
   );
 }
 
@@ -200,6 +330,43 @@ function WelcomeBanner() {
   );
 }
 
+/* ═══ Profile Nudge Banner ═══ */
+function ProfileNudgeBanner() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    if (!user || user.id.startsWith('walkthrough-')) return;
+    const key = `chuanmen.feed.profileNudge.${user.id}`;
+    const last = localStorage.getItem(key);
+    if (last && Date.now() - Number(last) < 7 * 86400000) return;
+    const fields = [user.avatar, user.bio, user.location, user.coverImageUrl,
+                    user.selfAsFriend, user.idealFriend, user.participationPlan, user.birthday];
+    if (fields.filter(Boolean).length < 5) setShow(true);
+  }, [user]);
+
+  if (!show || !user) return null;
+
+  const suggestions: [unknown, string][] = [
+    [user.avatar, '上传头像'], [user.bio, '写一句自我介绍'],
+    [user.location, '填写所在城市'], [user.coverImageUrl, '上传封面图'],
+  ];
+  const hint = suggestions.find(([v]) => !v)?.[1] ?? '完善资料';
+
+  return (
+    <Alert severity="info" sx={{ mb: 2 }} onClose={() => {
+      localStorage.setItem(`chuanmen.feed.profileNudge.${user.id}`, String(Date.now()));
+      setShow(false);
+    }}>
+      <Typography variant="body2" fontWeight={700}>
+        {hint}，让朋友更容易认识你
+      </Typography>
+      <Button size="small" onClick={() => navigate('/settings')} sx={{ mt: 0.5 }}>去完善</Button>
+    </Alert>
+  );
+}
+
 /* ═══ Full Feed (Timeline) ═══ */
 const PAGE_SIZE = 8;
 
@@ -238,8 +405,9 @@ function FullFeed() {
 
   return (
     <Box>
-      <RecapBanner items={items} />
+      <RecapBanner items={items} onSnack={setSnackMsg} />
       <WelcomeBanner />
+      <ProfileNudgeBanner />
       {isDrawnPerson && (
         <Card sx={{ mb: 2, border: '1px solid', borderColor: 'primary.light', bgcolor: 'primary.50' }}>
           <CardContent>

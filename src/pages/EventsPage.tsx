@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Card,
+  Chip,
   Grid,
   InputAdornment,
   Snackbar,
@@ -81,6 +82,25 @@ export default function EventsPage() {
   });
   const pastEvents = data.upcoming.filter((e) => e.phase === 'ended');
 
+  // Smart sorting for upcoming events
+  const [sortMode, setSortMode] = useState<'smart' | 'time'>('smart');
+
+  const sortedUpcoming = useMemo(() => {
+    if (sortMode === 'time' || !user?.id) return upcomingEvents;
+    return [...upcomingEvents].sort((a: any, b: any) => {
+      const score = (evt: any) => {
+        let s = 0;
+        for (const uid of (evt.signupUserIds ?? [])) {
+          if (uid !== user?.id && coAttendeeMap.has(uid)) s += 10;
+        }
+        if (evt.spots > 0) s += 5;
+        if (evt.phase === 'cancelled') s -= 50;
+        return s;
+      };
+      return score(b) - score(a) || new Date(a.startsAt ?? a.date).getTime() - new Date(b.startsAt ?? b.date).getTime();
+    });
+  }, [upcomingEvents, sortMode, user?.id, coAttendeeMap]);
+
   return (
     <Box>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ mb: 2 }}>
@@ -102,8 +122,21 @@ export default function EventsPage() {
               }
             />
           ) : (
+            <>
+              {user && upcomingEvents.length > 1 && (
+                <Stack direction="row" spacing={0.75} sx={{ mb: -0.5 }}>
+                  <Chip label="智能排序" size="small"
+                    color={sortMode === 'smart' ? 'primary' : 'default'}
+                    variant={sortMode === 'smart' ? 'filled' : 'outlined'}
+                    onClick={() => setSortMode('smart')} />
+                  <Chip label="按时间" size="small"
+                    color={sortMode === 'time' ? 'primary' : 'default'}
+                    variant={sortMode === 'time' ? 'filled' : 'outlined'}
+                    onClick={() => setSortMode('time')} />
+                </Stack>
+              )}
             <Grid container spacing={2}>
-              {upcomingEvents.map((evt: any) => (
+              {sortedUpcoming.map((evt: any) => (
                 <Grid key={evt.id} size={{ xs: 12, md: 6 }}>
                   <FeedActivity
                     mode="list"
@@ -138,6 +171,7 @@ export default function EventsPage() {
                 </Grid>
               ))}
             </Grid>
+            </>
           )}
         </Stack>
       )}
@@ -238,7 +272,7 @@ export default function EventsPage() {
                         {v ? '✓ 感兴趣' : '感兴趣'} · {proposal.votes + (v ? 1 : 0)}
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); user && navigate('/events/new', { state: { fromProposal: { title: proposal.title, descriptionHtml: proposal.descriptionHtml ?? '' } } }); }}
+                        onClick={(e) => { e.stopPropagation(); user && navigate('/events/new', { state: { fromProposal: { id: String(proposal.id), title: proposal.title, descriptionHtml: proposal.descriptionHtml ?? '' } } }); }}
                         style={{
                           padding: '4px 12px', borderRadius: 6,
                           background: c.warm,

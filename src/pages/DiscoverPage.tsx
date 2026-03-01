@@ -10,6 +10,7 @@ import {
   CircularProgress,
   Grid,
   InputAdornment,
+  Snackbar,
   Stack,
   Tab,
   Tabs,
@@ -54,6 +55,7 @@ const mineEmptyLabel: Record<string, string> = {
 /* ═══ DiscoverPage ═══ */
 export default function DiscoverPage() {
   const [activeCategory, setActiveCategory] = useState<Category>('movie');
+  const [snackMsg, setSnackMsg] = useState('');
 
   return (
     <Box>
@@ -70,11 +72,12 @@ export default function DiscoverPage() {
         ))}
       </Stack>
       {activeCategory === 'movie' && <MoviesSection />}
-      {activeCategory === 'book' && <BooksSection />}
-      {activeCategory === 'music' && <MusicSection />}
+      {activeCategory === 'book' && <BooksSection onVoteSnack={setSnackMsg} />}
+      {activeCategory === 'music' && <MusicSection onVoteSnack={setSnackMsg} />}
       {(activeCategory === 'recipe' || activeCategory === 'place' || activeCategory === 'external_event') && (
-        <RecommendationSection category={activeCategory} />
+        <RecommendationSection category={activeCategory} onVoteSnack={setSnackMsg} />
       )}
+      <Snackbar open={!!snackMsg} autoHideDuration={2000} onClose={() => setSnackMsg('')} message={snackMsg} />
     </Box>
   );
 }
@@ -340,7 +343,7 @@ function MoviesSection() {
   );
 }
 
-function BooksSection() {
+function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const data = useLoaderData() as DiscoverPageData;
@@ -363,9 +366,13 @@ function BooksSection() {
   });
 
   const toggle = async (id: string) => {
-    setVotes((v) => ({ ...v, [id]: !v[id] }));
+    const next = !votes[id];
+    setVotes((v) => ({ ...v, [id]: next }));
     if (user?.id) {
-      try { await toggleRecommendationVote(id, user.id); } catch { /* optimistic */ }
+      try {
+        const res = await toggleRecommendationVote(id, user.id);
+        onVoteSnack(res.voted ? `已投票（${res.voteCount}人）` : '已取消投票');
+      } catch { /* optimistic */ }
     }
   };
 
@@ -591,7 +598,7 @@ function BooksSection() {
   );
 }
 
-function MusicSection() {
+function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const data = useLoaderData() as DiscoverPageData;
@@ -614,9 +621,13 @@ function MusicSection() {
   });
 
   const toggle = async (id: string) => {
-    setVotes((v) => ({ ...v, [id]: !v[id] }));
+    const next = !votes[id];
+    setVotes((v) => ({ ...v, [id]: next }));
     if (user?.id) {
-      try { await toggleRecommendationVote(id, user.id); } catch { /* optimistic */ }
+      try {
+        const res = await toggleRecommendationVote(id, user.id);
+        onVoteSnack(res.voted ? `已投票（${res.voteCount}人）` : '已取消投票');
+      } catch { /* optimistic */ }
     }
   };
 
@@ -809,7 +820,7 @@ function MusicSection() {
 }
 
 /** Generic section for recipe / place / external_event recommendations */
-function RecommendationSection({ category }: { category: 'recipe' | 'place' | 'external_event' }) {
+function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' | 'place' | 'external_event'; onVoteSnack: (msg: string) => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const data = useLoaderData() as DiscoverPageData;
@@ -833,9 +844,13 @@ function RecommendationSection({ category }: { category: 'recipe' | 'place' | 'e
   });
 
   const toggle = async (id: string) => {
-    setVotes((v) => ({ ...v, [id]: !v[id] }));
+    const next = !votes[id];
+    setVotes((v) => ({ ...v, [id]: next }));
     if (user?.id) {
-      try { await toggleRecommendationVote(id, user.id); } catch { /* optimistic */ }
+      try {
+        const res = await toggleRecommendationVote(id, user.id);
+        onVoteSnack(res.voted ? `已投票（${res.voteCount}人）` : '已取消投票');
+      } catch { /* optimistic */ }
     }
   };
 

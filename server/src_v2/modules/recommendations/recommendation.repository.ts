@@ -53,10 +53,12 @@ export class RecommendationRepository {
     });
     if (existing) {
       await this.prisma.recommendationVote.delete({ where: { id: existing.id } });
-      return { voted: false };
+      const voteCount = await this.prisma.recommendationVote.count({ where: { recommendationId } });
+      return { voted: false, voteCount };
     }
     await this.prisma.recommendationVote.create({ data: { recommendationId, userId } });
-    return { voted: true };
+    const voteCount = await this.prisma.recommendationVote.count({ where: { recommendationId } });
+    return { voted: true, voteCount };
   }
 
   delete(id: string) {

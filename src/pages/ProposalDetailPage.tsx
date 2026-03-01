@@ -153,7 +153,7 @@ export default function ProposalDetailPage() {
                 {interested ? '✓ 取消感兴趣' : '我感兴趣'}
               </button>
               <button
-                onClick={() => user && navigate('/events/new', { state: { fromProposal: { title: raw.title, descriptionHtml: descHtml } } })}
+                onClick={() => user && navigate('/events/new', { state: { fromProposal: { id: String(raw.id), title: raw.title, descriptionHtml: descHtml } } })}
                 style={{
                   padding: '8px 20px',
                   borderRadius: 8,

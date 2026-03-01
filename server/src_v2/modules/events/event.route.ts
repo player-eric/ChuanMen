@@ -60,7 +60,38 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
 
   app.post('/', async (request, reply) => {
     const created = await service.createEvent(request.body);
-    return reply.code(201).send(created);
+    const { proposalId, ...eventResponse } = created as typeof created & { proposalId?: string };
+
+    // Fire-and-forget: notify proposal voters when proposal becomes an event
+    if (proposalId) {
+      app.prisma.proposal.update({
+        where: { id: proposalId },
+        data: { status: 'scheduled' },
+      }).catch(() => {});
+
+      app.prisma.proposalVote.findMany({
+        where: { proposalId },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      }).then(async (votes) => {
+        for (const vote of votes) {
+          if (!vote.user.email || vote.user.id === eventResponse.hostId) continue;
+          sendTemplatedEmail(app.prisma, {
+            to: vote.user.email,
+            ruleId: 'P0-B',
+            variables: {
+              userName: vote.user.name,
+              eventTitle: eventResponse.title,
+            },
+            ctaLabel: '查看活动并报名',
+            ctaUrl: `https://chuanmener.club/events/${eventResponse.id}`,
+          }).catch((err) => {
+            app.log.error({ err, userId: vote.user.id }, 'Proposal→event notification failed');
+          });
+        }
+      }).catch(() => {});
+    }
+
+    return reply.code(201).send(eventResponse);
   });
 
   app.patch('/:id', async (request, reply) => {

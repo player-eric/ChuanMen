@@ -51,7 +51,7 @@ export default function EventCreatePage() {
   const { user } = useAuth();
   const taskPresets = useTaskPresets();
 
-  const fromProposal = (routeLocation.state as { fromProposal?: { title: string; descriptionHtml: string } } | null)?.fromProposal;
+  const fromProposal = (routeLocation.state as { fromProposal?: { id?: string; title: string; descriptionHtml: string } } | null)?.fromProposal;
   const preTag = (routeLocation.state as { preTag?: string } | null)?.preTag;
 
   const [name, setName] = useState(fromProposal?.title ?? '');
@@ -183,6 +183,7 @@ export default function EventCreatePage() {
           ? Object.entries(recCatModes).map(([c, m]) => `${c}:${m}`)
           : undefined,
         isPrivate: isPrivate || undefined,
+        proposalId: fromProposal?.id,
       });
       const newEventId = String((result as any).id ?? '');
       // Link selected recommendations (best effort)
