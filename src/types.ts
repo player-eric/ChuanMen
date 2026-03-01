@@ -5,6 +5,8 @@ export interface MemberMutual {
   events: string[];
   evtCount: number;
   cards: number;
+  recommendations?: Record<string, { id: string; title: string }[]>;
+  tasteCount?: number;
 }
 
 export interface MemberData {

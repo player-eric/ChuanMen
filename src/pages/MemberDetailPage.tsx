@@ -49,7 +49,8 @@ export default function MemberDetailPage() {
 
   const member = raw.user;
   const mutual = raw.mutual;
-  const hasMutual = mutual && (mutual.evtCount > 0 || mutual.movies.length > 0 || mutual.cards > 0);
+  const tasteCount = mutual?.tasteCount ?? mutual?.movies?.length ?? 0;
+  const hasMutual = mutual && (mutual.evtCount > 0 || tasteCount > 0 || mutual.cards > 0);
   const hostCount = raw.stats?.hostCount ?? member.hostCount ?? 0;
   const memberBadge = hostCount >= 20 ? '👑' : hostCount >= 10 ? '🔥' : hostCount >= 5 ? '⭐' : hostCount >= 1 ? '🏠' : undefined;
   const isOwnProfile = user?.id === member.id;
@@ -634,14 +635,24 @@ export default function MemberDetailPage() {
       )}
 
       {/* ══════ Tab 4: 我们的交集 ══════ */}
-      {hasMutual && tab === 4 && (
+      {hasMutual && tab === 4 && (() => {
+        const catEmoji: Record<string, string> = {
+          book: '📚', recipe: '🍜', music: '🎵', place: '📍', external_event: '🎭',
+        };
+        const catLabel: Record<string, string> = {
+          book: '图书', recipe: '食谱', music: '音乐', place: '地点', external_event: '演出',
+        };
+        const recs = mutual.recommendations ?? {};
+        const recCategories = Object.keys(recs).filter((cat) => recs[cat].length > 0);
+
+        return (
         <Stack spacing={2}>
           {/* Mutual stats */}
           <Grid container spacing={1.2}>
             {[
-              { label: '一起参加', value: mutual.evtCount },
-              { label: '共同投片', value: mutual.movies.length },
-              { label: '互寄卡片', value: mutual.cards },
+              { label: '📅 一起参加', value: mutual.evtCount },
+              { label: '🤝 共同品味', value: tasteCount },
+              { label: '💌 互寄卡片', value: mutual.cards },
             ].filter((s) => s.value > 0).map((stat) => (
               <Grid key={stat.label} size={{ xs: 4 }}>
                 <Card>
@@ -668,7 +679,7 @@ export default function MemberDetailPage() {
                       sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
                       onClick={() => navigate(`/events/${evt.id}`)}
                     >
-                      • {evt.title}
+                      {sceneEmoji[evt.scene] ?? '📅'} {evt.title}
                     </Typography>
                   ))}
                 </Stack>
@@ -676,21 +687,47 @@ export default function MemberDetailPage() {
             </Card>
           )}
 
-          {/* Mutual movies */}
-          {mutual.movies.length > 0 && (
+          {/* Unified taste card: movies + recommendations by category */}
+          {tasteCount > 0 && (
             <Card>
               <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>共同投票的影片</Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {mutual.movies.map((movie: any) => (
-                    <Chip
-                      key={movie.id}
-                      size="small"
-                      color="secondary"
-                      label={movie.title}
-                      onClick={() => navigate(`/discover/movies/${movie.id}`)}
-                      sx={{ cursor: 'pointer' }}
-                    />
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>共同品味</Typography>
+                <Stack spacing={1.5}>
+                  {mutual.movies.length > 0 && (
+                    <Box>
+                      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>🎬 电影 ({mutual.movies.length})</Typography>
+                      <Stack direction="row" spacing={0.8} flexWrap="wrap" useFlexGap>
+                        {mutual.movies.map((movie: any) => (
+                          <Chip
+                            key={movie.id}
+                            size="small"
+                            color="secondary"
+                            label={movie.title}
+                            onClick={() => navigate(`/discover/movies/${movie.id}`)}
+                            sx={{ cursor: 'pointer' }}
+                          />
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+                  {recCategories.map((cat) => (
+                    <Box key={cat}>
+                      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+                        {catEmoji[cat] ?? '📌'} {catLabel[cat] ?? cat} ({recs[cat].length})
+                      </Typography>
+                      <Stack direction="row" spacing={0.8} flexWrap="wrap" useFlexGap>
+                        {recs[cat].map((item: any) => (
+                          <Chip
+                            key={item.id}
+                            size="small"
+                            color="secondary"
+                            label={item.title}
+                            onClick={() => navigate(`/discover/${cat}/${item.id}`)}
+                            sx={{ cursor: 'pointer' }}
+                          />
+                        ))}
+                      </Stack>
+                    </Box>
                   ))}
                 </Stack>
               </CardContent>
@@ -701,12 +738,16 @@ export default function MemberDetailPage() {
             <Card>
               <CardContent>
                 <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>互寄感谢卡</Typography>
-                <Typography variant="body2" color="text.secondary">你们之间互寄了 {mutual.cards} 张感谢卡</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  你们之间互寄了 {mutual.cards} 张感谢卡
+                  {/* TODO: 展示最近 2-3 张卡片预览（需要额外后端查询） */}
+                </Typography>
               </CardContent>
             </Card>
           )}
         </Stack>
-      )}
+        );
+      })()}
 
       {/* ══════ Lightbox Dialog ══════ */}
       <Dialog

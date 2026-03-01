@@ -131,8 +131,15 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         },
         orderBy: { startsAt: 'desc' },
         take: 20,
-        include: {
+        select: {
+          id: true,
+          title: true,
+          startsAt: true,
+          hostId: true,
+          tags: true,
+          status: true,
           host: { select: { id: true, name: true } },
+          recapPhotoUrls: true,
         },
       }),
 
@@ -159,9 +166,14 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
     // Mutual computation (when viewing someone else's profile)
     let mutual = undefined;
     if (viewerId && !isOwnProfile) {
-      const [viewerSignups, viewerVotes, mutualCardsSent, mutualCardsReceived] = await Promise.all([
+      const [viewerSignups, viewerVotes, viewerRecVotes, targetRecVotes, mutualCardsSent, mutualCardsReceived] = await Promise.all([
         prisma.eventSignup.findMany({ where: { userId: viewerId, status: 'accepted' }, select: { eventId: true } }),
         prisma.movieVote.findMany({ where: { userId: viewerId }, select: { movieId: true } }),
+        prisma.recommendationVote.findMany({ where: { userId: viewerId }, select: { recommendationId: true } }),
+        prisma.recommendationVote.findMany({
+          where: { userId: targetId },
+          include: { recommendation: { select: { id: true, title: true, category: true } } },
+        }),
         prisma.postcard.count({ where: { fromId: viewerId, toId: targetId } }),
         prisma.postcard.count({ where: { fromId: targetId, toId: viewerId } }),
       ]);
@@ -172,11 +184,11 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
       // Find mutual events from pastEvents (already fetched)
       const mutualEvents = pastEvents
         .filter((e) => viewerEventIds.has(e.id))
-        .map((e) => ({ id: e.id, title: e.title }));
+        .map((e) => ({ id: e.id, title: e.title, scene: (e as any).tags?.[0] ?? '' }));
       // Also check upcoming
       const mutualUpcoming = upcomingEvents
         .filter((e) => viewerEventIds.has(e.id))
-        .map((e) => ({ id: e.id, title: e.title }));
+        .map((e) => ({ id: e.id, title: e.title, scene: (e as any).tags?.[0] ?? '' }));
 
       // Find mutual movies from votedMovies (already fetched)
       const targetMovieIds = votedMovies.map((v) => v.movie.id);
@@ -187,10 +199,24 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           return { id: m.id, title: m.title };
         });
 
+      // Find mutual recommendation votes (exclude 'movie' to avoid overlap with MovieVote)
+      const viewerRecIds = new Set(viewerRecVotes.map((v) => v.recommendationId));
+      const mutualRecs: Record<string, { id: string; title: string }[]> = {};
+      let totalRecCount = 0;
+      for (const rv of targetRecVotes) {
+        if (!viewerRecIds.has(rv.recommendationId)) continue;
+        if (rv.recommendation.category === 'movie') continue;
+        const cat = rv.recommendation.category;
+        (mutualRecs[cat] ??= []).push({ id: rv.recommendation.id, title: rv.recommendation.title });
+        totalRecCount++;
+      }
+
       mutual = {
         evtCount: mutualEvents.length + mutualUpcoming.length,
         events: [...mutualUpcoming, ...mutualEvents],
         movies: mutualMovies,
+        recommendations: mutualRecs,
+        tasteCount: mutualMovies.length + totalRecCount,
         cards: mutualCardsSent + mutualCardsReceived,
       };
     }

@@ -562,6 +562,8 @@ function mapApiMember(m: any) {
       movies: Array.isArray(raw.movies) ? raw.movies : [],
       events: Array.isArray(raw.events) ? raw.events : [],
       movieCount: raw.movieCount ?? 0,
+      recommendations: raw.recommendations ?? undefined,
+      tasteCount: raw.tasteCount ?? undefined,
     },
     role: m.role ?? 'member',
   };
