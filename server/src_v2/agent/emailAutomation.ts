@@ -14,7 +14,173 @@ interface UserRow {
   email: string;
 }
 
-// ── P3-F: Churn recall (inactive 45+ days) ──────────────────
+// ── P1: Post-event recap email (2-6h after event ends) ──────
+
+export async function sendPostEventRecap(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const rule = await prisma.emailRule.findUnique({ where: { id: 'P1' } });
+  if (!rule?.enabled) return 0;
+
+  const now = new Date();
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+
+  // Find events that ended 2-6 hours ago (use startsAt + 4h as default end estimate)
+  const recentlyEnded = await prisma.event.findMany({
+    where: {
+      phase: 'ended',
+      startsAt: { gte: new Date(sixHoursAgo.getTime() - 4 * 60 * 60 * 1000), lte: new Date(twoHoursAgo.getTime() - 4 * 60 * 60 * 1000) },
+    },
+    include: {
+      host: { select: { name: true } },
+      signups: {
+        where: { status: 'accepted', participated: true },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      },
+      recommendations: {
+        where: { isSelected: true },
+        include: { recommendation: { select: { title: true, category: true } } },
+      },
+    },
+  });
+
+  let sent = 0;
+  for (const event of recentlyEnded) {
+    const participants = event.signups
+      .map((s) => s.user)
+      .filter((u): u is UserRow => !!u?.email);
+
+    // Filter by refId to avoid duplicate sends per event per user
+    const eligible = await filterByRefId(
+      prisma,
+      participants.map((u) => u.id),
+      'P1',
+      event.id,
+    );
+
+    // Build recommendation mention
+    const selectedRec = event.recommendations?.[0]?.recommendation;
+    const recMention = selectedRec ? `今天我们一起体验了「${selectedRec.title}」` : '';
+
+    for (const user of participants) {
+      if (!eligible.has(user.id)) continue;
+      try {
+        const result = await sendTemplatedEmail(prisma, {
+          to: user.email,
+          ruleId: 'P1',
+          variables: {
+            userName: user.name,
+            eventTitle: event.title,
+            hostName: event.host?.name ?? '',
+            recMention,
+          },
+          ctaLabel: '回顾活动',
+          ctaUrl: `https://chuanmener.club/events/${event.id}`,
+        });
+        await prisma.emailLog.create({
+          data: { userId: user.id, ruleId: 'P1', refId: event.id, messageId: result.MessageId },
+        });
+        sent++;
+      } catch (err) {
+        log.error({ err, userId: user.id, eventId: event.id }, 'P1 send failed');
+      }
+    }
+  }
+
+  log.info(`P1 post-event recap: ${sent} sent for ${recentlyEnded.length} events`);
+  return sent;
+}
+
+// ── P0-B: Event reminder (20-28h before event) ─────────────
+
+export async function sendEventReminder(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const rule = await prisma.emailRule.findUnique({ where: { id: 'P0-B' } });
+  if (!rule?.enabled) return 0;
+
+  const now = new Date();
+  const in20h = new Date(now.getTime() + 20 * 60 * 60 * 1000);
+  const in28h = new Date(now.getTime() + 28 * 60 * 60 * 1000);
+
+  // Find events starting in 20-28 hours
+  const upcomingEvents = await prisma.event.findMany({
+    where: {
+      startsAt: { gte: in20h, lte: in28h },
+      phase: { in: ['open', 'closed', 'invite'] },
+    },
+    include: {
+      host: { select: { name: true } },
+      signups: {
+        where: { status: 'accepted' },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      },
+    },
+  });
+
+  let sent = 0;
+  for (const event of upcomingEvents) {
+    const participants = event.signups
+      .map((s) => s.user)
+      .filter((u): u is UserRow => !!u?.email);
+
+    // Use refId to avoid duplicate reminders per event
+    const eligible = await filterByRefId(
+      prisma,
+      participants.map((u) => u.id),
+      'P0-B',
+      event.id,
+    );
+
+    const eventDate = event.startsAt.toLocaleDateString('zh-CN', {
+      month: 'long', day: 'numeric', weekday: 'short',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    });
+    const acceptedCount = event.signups.length;
+
+    for (const user of participants) {
+      if (!eligible.has(user.id)) continue;
+      try {
+        const result = await sendTemplatedEmail(prisma, {
+          to: user.email,
+          ruleId: 'P0-B',
+          variables: {
+            userName: user.name,
+            eventTitle: event.title,
+            eventDate,
+            eventLocation: event.location ?? '',
+            hostName: event.host?.name ?? '',
+            attendeeCount: String(acceptedCount),
+          },
+          ctaLabel: '查看活动详情',
+          ctaUrl: `https://chuanmener.club/events/${event.id}`,
+        });
+        await prisma.emailLog.create({
+          data: { userId: user.id, ruleId: 'P0-B', refId: event.id, messageId: result.MessageId },
+        });
+        // Update lastReminderSentAt
+        const signup = event.signups.find((s) => s.user?.id === user.id);
+        if (signup) {
+          await prisma.eventSignup.update({
+            where: { id: signup.id },
+            data: { lastReminderSentAt: new Date() },
+          });
+        }
+        sent++;
+      } catch (err) {
+        log.error({ err, userId: user.id, eventId: event.id }, 'P0-B send failed');
+      }
+    }
+  }
+
+  log.info(`P0-B event reminder: ${sent} sent for ${upcomingEvents.length} events`);
+  return sent;
+}
+
+// ── P3-F: Churn recall (inactive 14+ days, personalized) ────
 
 export async function sendChurnRecall(
   prisma: PrismaClient,
@@ -23,8 +189,9 @@ export async function sendChurnRecall(
   const rule = await prisma.emailRule.findUnique({ where: { id: 'P3-F' } });
   if (!rule?.enabled) return 0;
 
+  const inactiveDays = (rule.config as any)?.inactiveDays ?? 14;
   const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - ((rule.config as any)?.inactiveDays ?? 45));
+  cutoff.setDate(cutoff.getDate() - inactiveDays);
 
   const candidates: UserRow[] = await prisma.user.findMany({
     where: {
@@ -50,6 +217,13 @@ export async function sendChurnRecall(
     rule.cooldownDays,
   );
 
+  // Gather personalized stats for the recall period
+  const [newEventCount, newMemberCount, newRecCount] = await Promise.all([
+    prisma.event.count({ where: { createdAt: { gte: cutoff }, phase: { not: 'cancelled' } } }),
+    prisma.user.count({ where: { approvedAt: { gte: cutoff }, userStatus: 'approved' } }),
+    prisma.recommendation.count({ where: { createdAt: { gte: cutoff } } }),
+  ]);
+
   let sent = 0;
   for (const user of candidates) {
     if (!eligible.has(user.id)) continue;
@@ -57,7 +231,14 @@ export async function sendChurnRecall(
       const result = await sendTemplatedEmail(prisma, {
         to: user.email,
         ruleId: 'P3-F',
-        variables: { userName: user.name },
+        variables: {
+          userName: user.name,
+          newEventCount: String(newEventCount),
+          newMemberCount: String(newMemberCount),
+          newRecCount: String(newRecCount),
+        },
+        ctaLabel: '回来看看',
+        ctaUrl: 'https://chuanmener.club',
       });
       await prisma.emailLog.create({
         data: { userId: user.id, ruleId: 'P3-F', messageId: result.MessageId },
@@ -69,6 +250,87 @@ export async function sendChurnRecall(
   }
 
   log.info(`P3-F churn recall: ${sent}/${candidates.length} sent`);
+  return sent;
+}
+
+// ── P3-G: Second churn recall (30+ days, stronger tone) ─────
+
+export async function sendSecondRecall(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const rule = await prisma.emailRule.findUnique({ where: { id: 'P3-G' } });
+  if (!rule?.enabled) return 0;
+
+  const inactiveDays = (rule.config as any)?.inactiveDays ?? 30;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - inactiveDays);
+
+  const candidates: UserRow[] = await prisma.user.findMany({
+    where: {
+      userStatus: 'approved',
+      OR: [
+        { preferences: null },
+        { preferences: { emailState: { not: 'unsubscribed' } } },
+      ],
+      AND: {
+        OR: [
+          { lastActiveAt: null },
+          { lastActiveAt: { lt: cutoff } },
+        ],
+      },
+    },
+    select: { id: true, name: true, email: true },
+  });
+
+  // Only send to users who already received P3-F (first recall)
+  const p3fSent = await prisma.emailLog.findMany({
+    where: {
+      userId: { in: candidates.map((u) => u.id) },
+      ruleId: 'P3-F',
+    },
+    select: { userId: true },
+  });
+  const p3fSentSet = new Set(p3fSent.map((r) => r.userId));
+  const eligible2 = candidates.filter((u) => p3fSentSet.has(u.id));
+
+  const eligible = await filterByCooldown(
+    prisma,
+    eligible2.map((u) => u.id),
+    'P3-G',
+    rule.cooldownDays,
+  );
+
+  // Find upcoming events to recommend
+  const upcomingEvents = await prisma.event.findMany({
+    where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() } },
+    select: { title: true },
+    orderBy: { startsAt: 'asc' },
+    take: 3,
+  });
+  const eventList = upcomingEvents.map((e) => e.title).join('、') || '';
+
+  let sent = 0;
+  for (const user of eligible2) {
+    if (!eligible.has(user.id)) continue;
+    try {
+      const result = await sendTemplatedEmail(prisma, {
+        to: user.email,
+        ruleId: 'P3-G',
+        variables: { userName: user.name, upcomingEvents: eventList },
+        ctaLabel: '查看最新活动',
+        ctaUrl: 'https://chuanmener.club/events',
+      });
+      await prisma.emailLog.create({
+        data: { userId: user.id, ruleId: 'P3-G', messageId: result.MessageId },
+      });
+      sent++;
+    } catch (err) {
+      log.error({ err, userId: user.id }, 'P3-G send failed');
+    }
+  }
+
+  log.info(`P3-G second recall: ${sent}/${eligible2.length} sent`);
   return sent;
 }
 
@@ -243,7 +505,7 @@ export async function sendMilestoneNotif(
 
 // ── DIGEST: Daily community digest ──────────────────────────
 
-async function buildDigestSections(prisma: PrismaClient): Promise<DigestSection[] | null> {
+async function buildDigestSections(prisma: PrismaClient, userId?: string): Promise<DigestSection[] | null> {
   const cutoff = new Date();
   cutoff.setTime(cutoff.getTime() - 24 * 60 * 60 * 1000);
 
@@ -252,6 +514,90 @@ async function buildDigestSections(prisma: PrismaClient): Promise<DigestSection[
   in7Days.setDate(in7Days.getDate() + 7);
 
   const sections: DigestSection[] = [];
+
+  // ── Personal interaction feedback (if userId provided) ──
+  if (userId) {
+    const interactionItems: { text: string; url?: string }[] = [];
+
+    // Get user's hosted event IDs (for filtering likes/comments)
+    const userEvents = await prisma.event.findMany({
+      where: { hostId: userId },
+      select: { id: true, title: true },
+    });
+    const userEventIds = userEvents.map((e) => e.id);
+    const eventTitleMap = new Map(userEvents.map((e) => [e.id, e.title]));
+
+    const [eventLikes, recVotes, eventComments] = await Promise.all([
+      // Likes on events the user hosted
+      userEventIds.length > 0
+        ? prisma.like.count({
+            where: {
+              entityType: 'event',
+              entityId: { in: userEventIds },
+              createdAt: { gte: cutoff },
+              userId: { not: userId },
+            },
+          })
+        : 0,
+
+      // Votes on user's recommendations
+      prisma.recommendationVote.findMany({
+        where: {
+          createdAt: { gte: cutoff },
+          recommendation: { authorId: userId },
+        },
+        include: {
+          recommendation: { select: { title: true } },
+        },
+      }),
+
+      // Comments on user's hosted events
+      userEventIds.length > 0
+        ? prisma.comment.findMany({
+            where: {
+              entityType: 'event',
+              entityId: { in: userEventIds },
+              createdAt: { gte: cutoff },
+              authorId: { not: userId },
+            },
+            select: { entityId: true },
+          })
+        : [],
+    ]);
+
+    // Summarize rec votes
+    const recVoteMap = new Map<string, number>();
+    for (const v of recVotes) {
+      const title = (v as any).recommendation?.title ?? '推荐';
+      recVoteMap.set(title, (recVoteMap.get(title) ?? 0) + 1);
+    }
+    for (const [title, count] of recVoteMap) {
+      interactionItems.push({ text: `你的推荐「${title}」收到了 ${count} 个新投票` });
+    }
+
+    // Summarize comments on user's events
+    if (eventComments.length > 0) {
+      const firstEventId = eventComments[0].entityId;
+      const eventTitle = eventTitleMap.get(firstEventId) ?? '活动';
+      interactionItems.push({
+        text: `有 ${eventComments.length} 条新评论在你的活动「${eventTitle}」`,
+        url: `https://chuanmener.club/events/${firstEventId}`,
+      });
+    }
+
+    // Summarize likes on user's events
+    if (eventLikes > 0) {
+      interactionItems.push({ text: `你的活动收到了 ${eventLikes} 个新赞` });
+    }
+
+    if (interactionItems.length > 0) {
+      sections.push({
+        icon: '💬',
+        title: '你的动态',
+        items: interactionItems,
+      });
+    }
+  }
 
   // 1. New or updated events (created or updated in last 24h, not cancelled)
   const newEvents = await prisma.event.findMany({
@@ -345,14 +691,12 @@ export async function sendDailyDigest(
   const rule = await prisma.emailRule.findUnique({ where: { id: 'DIGEST' } });
   if (!rule?.enabled) return 0;
 
-  // Build content FIRST — skip if nothing happened
-  const sections = await buildDigestSections(prisma);
-  if (!sections) {
+  // Check if there's any global content first (skip per-user queries if nothing happened)
+  const globalSections = await buildDigestSections(prisma);
+  if (!globalSections) {
     log.info('DIGEST: no content, skipping');
     return 0;
   }
-
-  const digestHtml = renderDigestBlock(sections);
 
   // Get eligible users (approved + not unsubscribed)
   const candidates: UserRow[] = await prisma.user.findMany({
@@ -374,6 +718,10 @@ export async function sendDailyDigest(
   for (const user of candidates) {
     if (!eligible.has(user.id)) continue;
     try {
+      // Build per-user digest with personal interaction feedback
+      const personalSections = await buildDigestSections(prisma, user.id);
+      const digestHtml = renderDigestBlock(personalSections ?? globalSections);
+
       const result = await sendTemplatedEmail(prisma, {
         to: user.email,
         ruleId: 'DIGEST',

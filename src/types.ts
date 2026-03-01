@@ -294,6 +294,25 @@ export type FeedItem =
       name: string;
       avatar?: string;
       birthday: string;
+    } & FeedInteraction
+  | {
+      type: 'compactRecommendation';
+      name: string;
+      title: string;
+      category: string;
+      categoryIcon: string;
+      votes: number;
+      time: string;
+      navTarget?: string;
+    } & FeedInteraction
+  | {
+      type: 'announcement';
+      title: string;
+      body: string;
+      announcementType: string;
+      emoji: string;
+      authorName: string;
+      time: string;
     } & FeedInteraction;
 
 // Extended movie detail for MovieDetailPage

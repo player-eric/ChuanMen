@@ -1,7 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { detectMilestones, generateHostTribute, processAnnouncedUsers } from '../agent/contentAutomation.js';
 import {
+  sendPostEventRecap,
+  sendEventReminder,
   sendChurnRecall,
+  sendSecondRecall,
   sendSilentHostRecall,
   sendEncourageHosting,
   sendMilestoneNotif,
@@ -47,10 +50,32 @@ export async function runAgentCycle(app: FastifyInstance) {
   }
 
   // Phase 3: Email automation (each try/catch, independent)
+
+  // P1: Post-event recap (2-6h after event ends)
+  try {
+    await sendPostEventRecap(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendPostEventRecap failed');
+  }
+
+  // P0-B: Event reminder (20-28h before event)
+  try {
+    await sendEventReminder(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendEventReminder failed');
+  }
+
   try {
     await sendChurnRecall(prisma, log);
   } catch (err) {
     log.error({ err }, 'Agent: sendChurnRecall failed');
+  }
+
+  // P3-G: Second recall (30 days inactive, after P3-F sent)
+  try {
+    await sendSecondRecall(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendSecondRecall failed');
   }
 
   try {

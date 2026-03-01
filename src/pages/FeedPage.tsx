@@ -24,6 +24,7 @@ import {
   FeedProposal,
   FeedCompactMovie,
   FeedCompactProposal,
+  FeedRecommendation,
   FeedBook,
   FeedCompactBook,
   FeedSmallGroup,
@@ -82,7 +83,7 @@ const fullWidth = { xs: 12 } as const;
 const halfWidth = { xs: 12, md: 6 } as const;
 
 function gridSizeFor(type: FeedItem['type']) {
-  if (type === 'time' || type === 'milestone' || type === 'newMember') return fullWidth;
+  if (type === 'time' || type === 'milestone' || type === 'announcement' || type === 'newMember') return fullWidth;
   return halfWidth;
 }
 
@@ -223,6 +224,8 @@ function renderFeedItem(item: FeedItem) {
     case 'proposal':       return <FeedProposal {...props as React.ComponentProps<typeof FeedProposal>} />;
     case 'compactMovie':   return <FeedCompactMovie {...props as React.ComponentProps<typeof FeedCompactMovie>} />;
     case 'compactProposal': return <FeedCompactProposal {...props as React.ComponentProps<typeof FeedCompactProposal>} />;
+    case 'compactRecommendation': return <FeedRecommendation {...props as React.ComponentProps<typeof FeedRecommendation>} />;
+    case 'announcement':   return <FeedMilestone {...props as React.ComponentProps<typeof FeedMilestone>} />;
     case 'book':           return <FeedBook {...props as React.ComponentProps<typeof FeedBook>} />;
     case 'compactBook':    return <FeedCompactBook {...props as React.ComponentProps<typeof FeedCompactBook>} />;
     case 'smallGroup':     return <FeedSmallGroup {...props as React.ComponentProps<typeof FeedSmallGroup>} />;

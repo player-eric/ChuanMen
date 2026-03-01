@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { EventRepository } from './event.repository.js';
 import { EventService } from './event.service.js';
+import { sendTemplatedEmail } from '../../services/emailService.js';
 
 export const eventRoutes: FastifyPluginAsync = async (app) => {
   const service = new EventService(new EventRepository(app.prisma), app.prisma);
@@ -87,6 +88,56 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
   app.post('/:id/invite', async (request) => {
     const { id } = request.params as { id: string };
     const signups = await service.inviteUsers(id, request.body);
+
+    // Fire-and-forget: send P0-A invite notification emails
+    const event = await app.prisma.event.findUnique({
+      where: { id },
+      select: {
+        title: true,
+        startsAt: true,
+        location: true,
+        host: { select: { name: true } },
+      },
+    });
+    if (event) {
+      const { invitedById, userIds } = request.body as { invitedById: string; userIds: string[] };
+      const invitedUsers = await app.prisma.user.findMany({
+        where: {
+          id: { in: userIds },
+          userStatus: 'approved',
+          OR: [
+            { preferences: null },
+            { preferences: { emailState: { not: 'unsubscribed' } } },
+          ],
+        },
+        select: { id: true, name: true, email: true },
+      });
+      const eventDate = event.startsAt.toLocaleDateString('zh-CN', {
+        month: 'long', day: 'numeric', weekday: 'short',
+      });
+      for (const user of invitedUsers) {
+        sendTemplatedEmail(app.prisma, {
+          to: user.email,
+          ruleId: 'P0-A',
+          variables: {
+            userName: user.name,
+            hostName: event.host?.name ?? '',
+            eventTitle: event.title,
+            eventDate,
+            eventLocation: event.location ?? '',
+          },
+          ctaLabel: '查看活动并接受邀请',
+          ctaUrl: `https://chuanmener.club/events/${id}`,
+        }).then((result) => {
+          return app.prisma.emailLog.create({
+            data: { userId: user.id, ruleId: 'P0-A', refId: id, messageId: result.MessageId },
+          });
+        }).catch((err) => {
+          app.log.error({ err, userId: user.id }, 'P0-A invite email failed');
+        });
+      }
+    }
+
     return { ok: true, signups };
   });
 
