@@ -42,6 +42,10 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar ?? '');
   const [coverUrl, setCoverUrl] = useState(user?.coverImageUrl ?? '');
 
+  // Birthday
+  const [birthday, setBirthday] = useState(user?.birthday ? user.birthday.slice(0, 10) : '');
+  const [hideBirthday, setHideBirthday] = useState(user?.hideBirthday ?? false);
+
   // Privacy
   const [hideEmail, setHideEmail] = useState(user?.hideEmail ?? false);
   const [hideActivity, setHideActivity] = useState(user?.hideActivity ?? false);
@@ -127,6 +131,8 @@ export default function SettingsPage() {
         hideActivity,
         hideStats,
         hiddenTitleIds,
+        birthday: birthday || undefined,
+        hideBirthday,
         // Notification preferences
         emailState: freqToEmailState(emailFreq),
         notifyEvents,
@@ -194,6 +200,14 @@ export default function SettingsPage() {
             <TextField label="你最好的朋友是什么样子的？" multiline minRows={2} value={idealFriend} onChange={(e) => setIdealFriend(e.target.value)} />
             <TextField label="你可能会怎样参与串门儿？" multiline minRows={2} value={participationPlan} onChange={(e) => setParticipationPlan(e.target.value)} />
             <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <TextField
+              label="生日"
+              type="date"
+              value={birthday}
+              onChange={(e) => setBirthday(e.target.value)}
+              helperText="用于社区生日祝福"
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
           </Stack>
         </CardContent>
       </Card>
@@ -282,6 +296,10 @@ export default function SettingsPage() {
       <Card>
         <CardContent>
           <Stack spacing={1}>
+            <FormControlLabel
+              control={<Switch checked={!hideBirthday} onChange={() => setHideBirthday(!hideBirthday)} />}
+              label="显示生日（关闭后其他成员不可见）"
+            />
             <FormControlLabel
               control={<Switch checked={hideEmail} onChange={() => setHideEmail(!hideEmail)} />}
               label="隐藏 Email（关闭后对其他成员不可见）"

@@ -36,6 +36,7 @@ export const postcardRoutes: FastifyPluginAsync = async (app) => {
     if (recipient?.email) {
       const prefs = recipient.preferences as { emailState?: string } | null;
       if (prefs?.emailState !== 'unsubscribed') {
+        const firstTag = (created.tags as any[])?.[0]?.value as string | undefined;
         const postcardHtml = renderPostcardBlock({
           fromName: created.from.name,
           toName: created.to.name,
@@ -43,6 +44,7 @@ export const postcardRoutes: FastifyPluginAsync = async (app) => {
           date: new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
           eventCtx: created.eventCtx || undefined,
           photo: created.photoUrl || undefined,
+          stampLabel: firstTag,
         });
         sendTemplatedEmail(app.prisma, {
           to: recipient.email,

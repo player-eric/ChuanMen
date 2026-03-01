@@ -133,6 +133,8 @@ export async function createEvent(payload: {
   isWeeklyLotteryEvent?: boolean;
   phase?: 'invite' | 'open' | 'ended';
   publishAt?: string;
+  recSelectionMode?: string;
+  recCategories?: string[];
 }) {
   return requestJson<EntityMap>('/api/events', {
     method: 'POST',
@@ -259,6 +261,8 @@ export interface UserSettingsPayload {
   defaultHouseRules?: string;
   homeAddress?: string;
   hideEmail?: boolean;
+  birthday?: string;
+  hideBirthday?: boolean;
   emailState?: 'active' | 'weekly' | 'stopped' | 'unsubscribed';
   notifyEvents?: boolean;
   notifyCards?: boolean;
@@ -292,6 +296,8 @@ export async function updateEvent(eventId: string, payload: {
   phase?: string;
   startsAt?: string;
   endsAt?: string;
+  recSelectionMode?: string;
+  recCategories?: string[];
 }) {
   return requestJson<{ ok: boolean; event: EntityMap }>(`/api/events/${eventId}`, {
     method: 'PATCH',
@@ -316,17 +322,23 @@ export async function removeEventRecapPhoto(eventId: string, photoUrl: string) {
   });
 }
 
-export async function linkEventRecommendation(eventId: string, recommendationId: string, linkedById?: string) {
+export async function linkEventRecommendation(eventId: string, recommendationId: string, linkedById?: string, isNomination?: boolean) {
   return requestJson<{ ok: boolean }>(`/api/events/${eventId}/recommendations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ recommendationId, linkedById }),
+    body: JSON.stringify({ recommendationId, linkedById, isNomination }),
   });
 }
 
 export async function unlinkEventRecommendation(eventId: string, recommendationId: string) {
   return requestJson<{ ok: boolean }>(`/api/events/${eventId}/recommendations/${recommendationId}`, {
     method: 'DELETE',
+  });
+}
+
+export async function selectEventRecommendation(eventId: string, recommendationId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/recommendations/${recommendationId}/select`, {
+    method: 'PATCH',
   });
 }
 
@@ -672,6 +684,7 @@ export async function submitApplication(payload: {
   coverImageUrl?: string;
   googleId?: string;
   subscribeNewsletter?: boolean;
+  birthday?: string;
 }) {
   const base = typeof window === 'undefined' ? 'http://localhost:4000' : '';
   const res = await fetch(`${base}/api/users/apply`, {

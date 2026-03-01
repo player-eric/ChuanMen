@@ -14,6 +14,8 @@ const createEventSchema = z.object({
   capacity: z.number().int().positive().optional(),
   phase: z.enum(['invite', 'open', 'ended']).optional(),
   publishAt: z.coerce.date().optional(),
+  recSelectionMode: z.enum(['nominate', 'pick']).optional(),
+  recCategories: z.array(z.string()).optional(),
 });
 
 const inviteUsersSchema = z.object({
@@ -32,6 +34,8 @@ const updateEventSchema = z.object({
   phase: z.enum(['invite', 'open', 'closed', 'ended']).optional(),
   startsAt: z.coerce.date().optional(),
   endsAt: z.coerce.date().optional(),
+  recSelectionMode: z.enum(['nominate', 'pick']).optional(),
+  recCategories: z.array(z.string()).optional(),
 });
 
 const addRecapPhotoSchema = z.object({

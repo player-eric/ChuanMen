@@ -25,6 +25,8 @@ export interface AuthUser {
   hideStats?: boolean;
   hiddenTitleIds?: string[];
   googleId?: string;
+  birthday?: string;
+  hideBirthday?: boolean;
   preferences?: UserPreferences;
 }
 

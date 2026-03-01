@@ -23,6 +23,7 @@ const applySchema = z.object({
   coverImageUrl: z.string().optional(),
   googleId: z.string().optional(),
   subscribeNewsletter: z.boolean().optional(),
+  birthday: z.string().optional(),
 });
 
 // v2.1: Settings update schema
@@ -42,6 +43,8 @@ const updateSettingsSchema = z.object({
   hideActivity: z.boolean().optional(),
   hideStats: z.boolean().optional(),
   hiddenTitleIds: z.array(z.string()).optional(),
+  birthday: z.string().optional(),
+  hideBirthday: z.boolean().optional(),
   // Notification preferences (persisted to UserPreference)
   emailState: z.enum(['active', 'weekly', 'stopped', 'unsubscribed']).optional(),
   notifyEvents: z.boolean().optional(),
@@ -169,7 +172,10 @@ export class UserService {
       throw err;
     }
 
-    return this.repository.createApplicant(data);
+    return this.repository.createApplicant({
+      ...data,
+      birthday: data.birthday ? new Date(data.birthday) : undefined,
+    });
   }
 
   // v2.1: Update user settings
@@ -177,8 +183,12 @@ export class UserService {
     const data = updateSettingsSchema.parse(input);
 
     // Split preference fields from user fields
-    const { emailState, notifyEvents, notifyCards, notifyOps, notifyAnnounce, ...userFields } = data;
+    const { emailState, notifyEvents, notifyCards, notifyOps, notifyAnnounce, birthday, ...restFields } = data;
     const prefFields = { emailState, notifyEvents, notifyCards, notifyOps, notifyAnnounce };
+    const userFields = {
+      ...restFields,
+      ...(birthday !== undefined ? { birthday: birthday ? new Date(birthday) : null } : {}),
+    };
     const hasPrefUpdate = Object.values(prefFields).some((v) => v !== undefined);
 
     if (hasPrefUpdate) {

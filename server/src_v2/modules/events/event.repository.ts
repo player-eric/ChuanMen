@@ -26,7 +26,8 @@ export class EventRepository {
         },
         recommendations: {
           include: {
-            recommendation: { select: { id: true, title: true, category: true, coverUrl: true } },
+            recommendation: { select: { id: true, title: true, category: true, coverUrl: true, voteCount: true } },
+            linkedBy: { select: { id: true, name: true } },
           },
         },
         _count: { select: { signups: true } },
@@ -50,7 +51,8 @@ export class EventRepository {
         },
         recommendations: {
           include: {
-            recommendation: { select: { id: true, title: true, category: true, coverUrl: true } },
+            recommendation: { select: { id: true, title: true, category: true, coverUrl: true, voteCount: true } },
+            linkedBy: { select: { id: true, name: true } },
           },
         },
       },
@@ -68,6 +70,8 @@ export class EventRepository {
     capacity?: number;
     phase?: 'invite' | 'open' | 'ended';
     publishAt?: Date;
+    recSelectionMode?: string;
+    recCategories?: string[];
   }) {
     return this.prisma.event.create({
       data: {
@@ -81,6 +85,8 @@ export class EventRepository {
         capacity: input.capacity ?? 10,
         phase: input.phase,
         publishAt: input.publishAt,
+        recSelectionMode: input.recSelectionMode,
+        recCategories: input.recCategories,
       },
     });
   }
@@ -96,6 +102,8 @@ export class EventRepository {
     phase?: EventPhase;
     startsAt?: Date;
     endsAt?: Date;
+    recSelectionMode?: string;
+    recCategories?: string[];
   }) {
     return this.prisma.event.update({
       where: { id },

@@ -1127,6 +1127,36 @@ export function FeedNewMember({ phase, id, name, bio, location, selfAsFriend, pa
   );
 }
 
+/* ═══ FeedBirthday ═══ */
+interface FeedBirthdayProps extends InteractionProps {
+  id: string;
+  name: string;
+  avatar?: string;
+  birthday: string;
+}
+
+export function FeedBirthday({ id, name, avatar, likes, likedBy, comments, newComments, commentCount }: FeedBirthdayProps) {
+  const c = useColors();
+  const navigate = useNavigate();
+  const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+
+  return (
+    <Card glow>
+      <div style={{ padding: 16, textAlign: 'center' }}>
+        <div style={{ fontSize: 28, marginBottom: 6 }}>🎂</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+          <Ava name={name} src={avatar} size={48} badge="🎂" onTap={() => goMember(name)} />
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 600 }}>
+          今天是 <b style={{ cursor: 'pointer' }} onClick={() => goMember(name)}>{name}</b> 的生日！
+        </div>
+        <div style={{ fontSize: 13, color: c.text3, marginTop: 4 }}>祝 ta 生日快乐 🎉</div>
+      </div>
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} entityType="user" entityId={id} />
+    </Card>
+  );
+}
+
 export function FeedCommentNotice({ name, text, targetTitle, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCommentNoticeProps) {
   const c = useColors();
   const navigate = useNavigate();

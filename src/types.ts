@@ -60,7 +60,9 @@ export interface EventData {
   isHomeEvent?: boolean;
   scene: string;
   film?: string;
-  linkedRecommendations?: { id: string; title: string; category: string; coverUrl?: string }[];
+  linkedRecommendations?: { id: string; title: string; category: string; coverUrl?: string; linkedById?: string; isSelected?: boolean; isNomination?: boolean; globalVotes?: number; attendeeVotes?: number; attendeeTotal?: number; linkedByName?: string }[];
+  recSelectionMode?: string;
+  recCategories?: string[];
   spots: number;
   total: number;
   people: string[];
@@ -284,7 +286,14 @@ export type FeedItem =
       avatar?: string;
       likes: number;
       likedBy: string[];
-    };
+    }
+  | {
+      type: 'birthday';
+      id: string;
+      name: string;
+      avatar?: string;
+      birthday: string;
+    } & FeedInteraction;
 
 // Extended movie detail for MovieDetailPage
 export interface MovieDetailData {

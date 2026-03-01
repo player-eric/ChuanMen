@@ -31,7 +31,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EditIcon from '@mui/icons-material/Edit';
 import type { EventComment, EventData, EventPhoto, FoodOption, SignupStatus, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, addComment as addCommentApi, fetchCommentsApi, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, unlinkEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist } from '@/lib/domainApi';
+import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, addComment as addCommentApi, fetchCommentsApi, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, unlinkEventRecommendation, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist } from '@/lib/domainApi';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
@@ -167,8 +167,6 @@ export default function EventDetailPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [tasks, setTasks] = useState<TaskRole[]>(loadedEvent?.tasks ?? []);
   const [taskEditing, setTaskEditing] = useState(false);
-  const [nominateOpen, setNominateOpen] = useState(false);
-  const [nominateSearch, setNominateSearch] = useState('');
   const [photos, setPhotos] = useState<EventPhoto[]>(loadedEvent?.photos ?? []);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -636,231 +634,195 @@ export default function EventDetailPage() {
               </Card>
             )}
 
-            {/* 6b. Linked recommendations */}
-            {((event as any).linkedRecommendations?.length > 0 || isHost || signedUp) && (
-              <Card variant="outlined" sx={{ mb: 2 }}>
-                <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                  <Typography variant="caption" fontWeight={700} sx={{ mb: 1, display: 'block' }}>
-                    📋 相关推荐
-                  </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    {((event as any).linkedRecommendations ?? []).map((rec: any) => {
-                      const canDelete = isHost || (user && rec.linkedById === user.id);
-                      return (
-                        <Chip
-                          key={rec.id}
-                          label={rec.title}
-                          variant="outlined"
-                          size="small"
-                          clickable
-                          onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}
-                          onDelete={canDelete ? async () => {
-                            if (!eventId) return;
-                            try {
-                              await unlinkEventRecommendation(eventId, rec.id);
-                              setEvent((prev) => {
-                                if (!prev) return prev;
-                                const linked = ((prev as any).linkedRecommendations ?? []).filter((r: any) => r.id !== rec.id);
-                                return { ...prev, linkedRecommendations: linked } as any;
-                              });
-                              setFlash({ open: true, severity: 'success', message: `已取消关联「${rec.title}」` });
-                            } catch {
-                              setFlash({ open: true, severity: 'error', message: '取消关联失败' });
-                            }
-                          } : undefined}
-                        />
-                      );
-                    })}
-                    {(isHost || signedUp) && [
-                      { key: 'all', label: '+ 全部' },
-                      { key: 'movie', label: '🍿 电影' },
-                      { key: 'book', label: '📚 书' },
-                      { key: 'recipe', label: '🍳 食谱' },
-                      { key: 'place', label: '📍 地方' },
-                      { key: 'music', label: '🎵 音乐' },
-                      { key: 'external_event', label: '🎭 演出' },
-                    ].map((cat) => (
-                      <Chip
-                        key={cat.key}
-                        label={cat.label}
-                        size="small"
-                        variant="outlined"
-                        clickable
-                        onClick={() => { setRecCategory(cat.key); setRecLinkOpen(true); }}
-                      />
-                    ))}
-                  </Stack>
-                </CardContent>
-              </Card>
-            )}
+            {/* 6b. Unified recommendations section */}
+            {(() => {
+              const recs = (event.linkedRecommendations ?? []) as NonNullable<typeof event.linkedRecommendations>;
+              const recMode = event.recSelectionMode ?? 'nominate';
+              const cats = event.recCategories ?? [];
+              const hasRecs = recs.length > 0;
+              const showSection = hasRecs || cats.length > 0 || isHost || signedUp;
+              if (!showSection) return null;
+
+              const selectedRecs = recs.filter((r) => r.isSelected);
+              const nominations = recs.filter((r) => !r.isSelected);
+              const catIcon: Record<string, string> = { movie: '🍿', book: '📚', recipe: '🍳', place: '📍', music: '🎵', external_event: '🎭' };
+              const catLabel: Record<string, string> = { movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' };
+              const categoryText = cats.map((c) => catLabel[c] ?? c).join(' / ');
+
+              return (
+                <Card variant="outlined" sx={{ mb: 2 }}>
+                  <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                    <Typography variant="caption" fontWeight={700} sx={{ mb: 1, display: 'block' }}>
+                      📋 {cats.length > 0 ? `推荐 · ${categoryText}` : '相关推荐'}
+                      {recMode === 'nominate' && cats.length > 0 && (
+                        <Typography component="span" variant="caption" color="text.secondary"> · 开放提名</Typography>
+                      )}
+                    </Typography>
+
+                    {/* Selected recommendations */}
+                    {selectedRecs.length > 0 && (
+                      <Stack spacing={1} sx={{ mb: 1.5 }}>
+                        {selectedRecs.map((rec) => (
+                          <Card key={rec.id} variant="outlined" sx={{ borderColor: 'success.main', borderWidth: 2 }}>
+                            <CardActionArea onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}>
+                              <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <Typography variant="body2" fontWeight={700} sx={{ flex: 1 }}>
+                                    {catIcon[rec.category] ?? '📋'} {rec.title}
+                                  </Typography>
+                                  <Chip size="small" color="success" label="✓ 已选" />
+                                </Stack>
+                                <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
+                                  <Typography variant="caption" color="text.secondary">
+                                    🌐 {rec.globalVotes ?? 0}票
+                                  </Typography>
+                                  <Typography variant="caption" fontWeight={700} color="primary">
+                                    👥 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal ?? 0}人投票
+                                  </Typography>
+                                </Stack>
+                              </CardContent>
+                            </CardActionArea>
+                          </Card>
+                        ))}
+                      </Stack>
+                    )}
+
+                    {/* Nomination list */}
+                    {nominations.length > 0 && (
+                      <Stack spacing={1} sx={{ mb: 1.5 }}>
+                        {nominations.map((rec) => {
+                          const canDelete = isHost || (user && rec.linkedById === user.id);
+                          const canSelect = isHost && (event.phase === 'invite' || event.phase === 'open');
+                          return (
+                            <Card key={rec.id} variant="outlined">
+                              <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <Box
+                                    sx={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
+                                    onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}
+                                  >
+                                    <Typography variant="body2" fontWeight={600}>
+                                      {catIcon[rec.category] ?? '📋'} {rec.title}
+                                    </Typography>
+                                    <Stack direction="row" spacing={2} sx={{ mt: 0.25 }}>
+                                      <Typography variant="caption" color="text.secondary">
+                                        🌐 {rec.globalVotes ?? 0}票
+                                      </Typography>
+                                      <Typography variant="caption" fontWeight={700} color="primary">
+                                        👥 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal ?? 0}人投票
+                                      </Typography>
+                                      {rec.linkedByName && (
+                                        <Typography variant="caption" color="text.secondary">
+                                          {rec.linkedByName} 提名
+                                        </Typography>
+                                      )}
+                                    </Stack>
+                                  </Box>
+                                  {canSelect && (
+                                    <Button
+                                      variant="outlined"
+                                      size="small"
+                                      color="success"
+                                      onClick={async () => {
+                                        if (!eventId) return;
+                                        try {
+                                          await selectEventRecommendation(eventId, rec.id);
+                                          setEvent((prev) => {
+                                            if (!prev) return prev;
+                                            const updated = (prev.linkedRecommendations ?? []).map((r) => ({
+                                              ...r,
+                                              isSelected: r.category === rec.category ? r.id === rec.id : r.isSelected,
+                                            }));
+                                            return { ...prev, linkedRecommendations: updated };
+                                          });
+                                          setFlash({ open: true, severity: 'success', message: `已选定「${rec.title}」` });
+                                        } catch {
+                                          setFlash({ open: true, severity: 'error', message: '选定失败' });
+                                        }
+                                      }}
+                                      sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
+                                    >
+                                      选为本场
+                                    </Button>
+                                  )}
+                                  {canDelete && (
+                                    <IconButton
+                                      size="small"
+                                      onClick={async () => {
+                                        if (!eventId) return;
+                                        try {
+                                          await unlinkEventRecommendation(eventId, rec.id);
+                                          setEvent((prev) => {
+                                            if (!prev) return prev;
+                                            const linked = (prev.linkedRecommendations ?? []).filter((r) => r.id !== rec.id);
+                                            return { ...prev, linkedRecommendations: linked };
+                                          });
+                                          setFlash({ open: true, severity: 'success', message: `已移除「${rec.title}」` });
+                                        } catch {
+                                          setFlash({ open: true, severity: 'error', message: '移除失败' });
+                                        }
+                                      }}
+                                      sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}
+                                    >
+                                      <CloseIcon fontSize="small" />
+                                    </IconButton>
+                                  )}
+                                </Stack>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </Stack>
+                    )}
+
+                    {/* Nominate / link button */}
+                    {(isHost || (signedUp && recMode === 'nominate')) && event.phase !== 'ended' && event.phase !== 'cancelled' && (
+                      <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                        {cats.length > 0 ? cats.map((cat) => (
+                          <Chip
+                            key={cat}
+                            label={`+ ${catIcon[cat] ?? ''} ${catLabel[cat] ?? cat}`}
+                            size="small"
+                            variant="outlined"
+                            clickable
+                            onClick={() => { setRecCategory(cat); setRecLinkOpen(true); }}
+                          />
+                        )) : [
+                          { key: 'all', label: '+ 全部' },
+                          { key: 'movie', label: '🍿 电影' },
+                          { key: 'book', label: '📚 书' },
+                          { key: 'recipe', label: '🍳 食谱' },
+                          { key: 'place', label: '📍 地方' },
+                          { key: 'music', label: '🎵 音乐' },
+                          { key: 'external_event', label: '🎭 演出' },
+                        ].map((cat) => (
+                          <Chip
+                            key={cat.key}
+                            label={cat.label}
+                            size="small"
+                            variant="outlined"
+                            clickable
+                            onClick={() => { setRecCategory(cat.key); setRecLinkOpen(true); }}
+                          />
+                        ))}
+                      </Stack>
+                    )}
+
+                    {!hasRecs && (
+                      <Typography variant="body2" color="text.secondary">
+                        {recMode === 'nominate' ? '还没有提名，快来推荐吧' : '暂无推荐'}
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </CardContent>
         </Card>
 
-        {/* 7. Movie nominations — show for all movieNight events */}
-        {event.scene === 'movieNight' && (
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
-                🎬 候选电影{(event.nominations?.length ?? 0) > 0 ? ` (${event.nominations!.length})` : ''}
-              </Typography>
-              {(event.nominations?.length ?? 0) > 0 ? (
-                <Stack spacing={1.5}>
-                  {event.nominations!.map((movieId) => {
-                    const detail = allMovies.find((m: any) => m.id === movieId);
-                    const pool = detail;
-                    if (!detail) return null;
-                    const title = detail.title;
-                    const dir = detail.director;
-                    const year = detail.year;
-                    const totalVotes = detail._count?.votes ?? 0;
-                    const voters = (detail.votes ?? []).map((v: any) => v.user?.name).filter(Boolean);
-                    const attendeeVotes = voters.filter((name: string) => event.people.includes(name)).length;
-                    const isSelected = event.film === title;
-                    const isHost = user?.name === event.host;
-                    const canSelect = isHost && (event.phase === 'invite' || event.phase === 'open') && !isSelected;
-                    return (
-                      <Card key={movieId} variant="outlined" sx={isSelected ? { borderColor: 'success.main', borderWidth: 2 } : undefined}>
-                        <CardActionArea onClick={() => navigate(`/discover/movies/${movieId}`)}>
-                          <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                            <Stack direction="row" spacing={1.5} alignItems="center">
-                              <Poster title={title} w={36} h={50} />
-                              <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Stack direction="row" alignItems="center" spacing={1}>
-                                  <Typography variant="body2" fontWeight={700}>{title}</Typography>
-                                  {isSelected && <Chip size="small" color="success" label="✓ 已选" />}
-                                </Stack>
-                                <Typography variant="caption" color="text.secondary">
-                                  {year} · {dir}
-                                </Typography>
-                                <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    社区 {totalVotes} 票
-                                  </Typography>
-                                  <Typography variant="caption" fontWeight={700} color="primary">
-                                    本场 {attendeeVotes} 票
-                                  </Typography>
-                                </Stack>
-                              </Box>
-                              {/* Host 选片 button */}
-                              {canSelect && (
-                                <Button
-                                  variant="outlined"
-                                  size="small"
-                                  color="success"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEvent({ ...event, film: title });
-                                    setFlash({ open: true, severity: 'success', message: `已选定「${title}」为本场放映` });
-                                  }}
-                                  sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
-                                >
-                                  选为本场
-                                </Button>
-                              )}
-                            </Stack>
-                          </CardContent>
-                        </CardActionArea>
-                      </Card>
-                    );
-                  })}
-                </Stack>
-              ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  还没有提名，快来推荐一部电影吧
-                </Typography>
-              )}
-              {/* Nominate button — only for signed-up users, non-ended events */}
-              {signedUp && event.phase !== 'ended' && event.phase !== 'cancelled' && (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  fullWidth
-                  sx={{ mt: 1.5 }}
-                  onClick={() => setNominateOpen(true)}
-                >
-                  🎬 提名一部电影
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Nominate dialog */}
-        <Dialog open={nominateOpen} onClose={() => { setNominateOpen(false); setNominateSearch(''); }} maxWidth="xs" fullWidth>
-          <DialogTitle>提名候选电影</DialogTitle>
-          <DialogContent>
-            <TextField
-              size="small"
-              fullWidth
-              placeholder="搜电影名、导演..."
-              value={nominateSearch}
-              onChange={(e) => setNominateSearch(e.target.value)}
-              autoFocus
-              sx={{ mb: 1.5, mt: 0.5 }}
-            />
-            {(() => {
-              const nq = nominateSearch.toLowerCase();
-              const filtered = allMovies.filter((m: any) => {
-                if (m.status === 'screened') return false;
-                if ((event.nominations ?? []).includes(m.id)) return false;
-                if (nq && !m.title.toLowerCase().includes(nq) && !(m.director ?? '').toLowerCase().includes(nq) && !(m.recommendedBy?.name ?? '').toLowerCase().includes(nq)) return false;
-                return true;
-              });
-              return filtered.length > 0 ? (
-                <Stack spacing={1}>
-                  {filtered.map((m) => (
-                    <Card key={m.id} variant="outlined">
-                      <CardActionArea onClick={() => {
-                        if (event) {
-                          setEvent({ ...event, nominations: [...(event.nominations ?? []), m.id] });
-                        }
-                        setNominateOpen(false);
-                        setNominateSearch('');
-                        setFlash({ open: true, severity: 'success', message: `已提名「${m.title}」` });
-                      }}>
-                        <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-                          <Stack direction="row" spacing={1.5} alignItems="center">
-                            <Poster title={m.title} w={28} h={40} />
-                            <Box>
-                              <Typography variant="body2" fontWeight={600}>{m.title}</Typography>
-                              <Typography variant="caption" color="text.secondary">{m.year} · {m.director} · {m._count?.votes ?? 0} 票</Typography>
-                            </Box>
-                          </Stack>
-                        </CardContent>
-                      </CardActionArea>
-                    </Card>
-                  ))}
-                </Stack>
-              ) : (
-                <Stack spacing={1.5} alignItems="center" sx={{ py: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {nominateSearch ? `没有找到「${nominateSearch}」` : '没有更多候选电影'}
-                  </Typography>
-                  {nominateSearch && (
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => {
-                        setNominateOpen(false);
-                        setNominateSearch('');
-                        navigate('/discover/movie/add');
-                      }}
-                    >
-                      添加到候选池
-                    </Button>
-                  )}
-                </Stack>
-              );
-            })()}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => { setNominateOpen(false); setNominateSearch(''); }}>取消</Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Link Recommendation dialog */}
+        {/* Link/Nominate Recommendation dialog */}
         <Dialog open={recLinkOpen} onClose={() => { setRecLinkOpen(false); setRecSearch(''); setRecCategory('all'); }} maxWidth="xs" fullWidth>
-          <DialogTitle>关联推荐{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' }[recCategory] ?? ''}` : ''}</DialogTitle>
+          <DialogTitle>{(event.recSelectionMode === 'nominate') ? '提名推荐' : '关联推荐'}{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' }[recCategory] ?? ''}` : ''}</DialogTitle>
           <DialogContent>
             <TextField
               size="small"
@@ -887,19 +849,25 @@ export default function EventDetailPage() {
                     <Card key={r.id} variant="outlined">
                       <CardActionArea onClick={async () => {
                         if (!eventId) return;
+                        const isNom = event.recSelectionMode === 'nominate';
                         try {
-                          await linkEventRecommendation(eventId, r.id, user?.id);
+                          await linkEventRecommendation(eventId, r.id, user?.id, isNom);
                           setEvent((prev) => {
                             if (!prev) return prev;
-                            const linked = [...((prev as any).linkedRecommendations ?? []), { id: r.id, title: r.title, category: r.category, linkedById: user?.id }];
-                            return { ...prev, linkedRecommendations: linked } as any;
+                            const linked = [...(prev.linkedRecommendations ?? []), {
+                              id: r.id, title: r.title, category: r.category,
+                              linkedById: user?.id, linkedByName: user?.name,
+                              isSelected: false, isNomination: isNom,
+                              globalVotes: r.voteCount ?? 0, attendeeVotes: 0, attendeeTotal: 0,
+                            }];
+                            return { ...prev, linkedRecommendations: linked };
                           });
                           setRecLinkOpen(false);
                           setRecSearch('');
                           setRecCategory('all');
-                          setFlash({ open: true, severity: 'success', message: `已关联「${r.title}」` });
+                          setFlash({ open: true, severity: 'success', message: isNom ? `已提名「${r.title}」` : `已关联「${r.title}」` });
                         } catch {
-                          setFlash({ open: true, severity: 'error', message: '关联失败' });
+                          setFlash({ open: true, severity: 'error', message: '操作失败' });
                         }
                       }}>
                         <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>

@@ -29,9 +29,8 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
 import { useTaskPresets } from '@/hooks/useTaskPresets';
-import { createEvent, inviteToEvent, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation } from '@/lib/domainApi';
+import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, linkEventRecommendation } from '@/lib/domainApi';
 import type { FoodOption, TaskRole } from '@/types';
-import { Poster } from '@/components/Poster';
 import { ImageUpload } from '@/components/ImageUpload';
 import { chineseTagToEventTag } from '@/lib/mappings';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
@@ -79,14 +78,6 @@ export default function EventCreatePage() {
   const [inviteSearch, setInviteSearch] = useState('');
   const [invitedPeople, setInvitedPeople] = useState<string[]>([]);
 
-  // Movie night state
-  const [filmMode, setFilmMode] = useState<'nominate' | 'pick'>('nominate');
-  const [selectedFilm, setSelectedFilm] = useState<string | null>(null);
-  const [nominations, setNominations] = useState<string[]>([]);
-  const [moviePickerOpen, setMoviePickerOpen] = useState(false);
-  const [moviePickerTarget, setMoviePickerTarget] = useState<'film' | 'nomination'>('film');
-  const [movieSearch, setMovieSearch] = useState('');
-
   // Food option state
   const [foodOption, setFoodOption] = useState<FoodOption>('none');
   const [restaurantLocation, setRestaurantLocation] = useState('');
@@ -102,14 +93,14 @@ export default function EventCreatePage() {
   const [recPickerOpen, setRecPickerOpen] = useState(false);
   const [recSearch, setRecSearch] = useState('');
   const [recCategory, setRecCategory] = useState<string>('all');
+  const [recSelectionMode, setRecSelectionMode] = useState<'nominate' | 'pick'>('nominate');
+  const [recCategories, setRecCategories] = useState<string[]>([]);
 
-  // API-loaded data for members & movies
+  // API-loaded data for members
   const [allMembers, setAllMembers] = useState<{ id: string; name: string; avatar?: string }[]>([]);
-  const [allMovies, setAllMovies] = useState<any[]>([]);
 
   useEffect(() => {
     fetchMembersApi().then((m: any[]) => setAllMembers(m)).catch(() => {});
-    fetchMoviesApi().then((m: any[]) => setAllMovies(m)).catch(() => {});
     fetchRecommendationsApi().then((r: any[]) => setAllRecs(r)).catch(() => {});
   }, []);
 
@@ -141,18 +132,8 @@ export default function EventCreatePage() {
     }
   }, [startDate, startTime, endDate, endTime]);
 
-  // Reset movie state when tags no longer include 电影夜
-  useEffect(() => {
-    if (!tags.includes('电影夜')) {
-      setFilmMode('nominate');
-      setSelectedFilm(null);
-      setNominations([]);
-    }
-  }, [tags]);
-
   if (!user) return null;
 
-  const isMovieNight = tags.includes('电影夜');
   const capMax = 50;
   const isPastDate = startDate && new Date(combineDT(startDate, startTime || '23:59')) < new Date();
 
@@ -161,8 +142,6 @@ export default function EventCreatePage() {
     if (!q) return allMembers.slice(0, 6);
     return allMembers.filter((m) => m.name.toLowerCase().includes(q));
   }, [inviteSearch]);
-  const availableMovies = allMovies.filter((m) => m.status !== 'screened');
-  const selectedFilmData = selectedFilm ? allMovies.find((m) => m.id === selectedFilm) : null;
 
   const onSubmit = async () => {
     if (submitting) return;
@@ -183,11 +162,14 @@ export default function EventCreatePage() {
         tags: mappedTags.length > 0 ? mappedTags : undefined,
         phase: isPastDate ? 'ended' : delayPublish ? 'invite' : 'open',
         publishAt: delayPublish && publishDate ? combineDT(publishDate, publishTime || '00:00') : undefined,
+        recSelectionMode: recCategories.length > 0 ? recSelectionMode : undefined,
+        recCategories: recCategories.length > 0 ? recCategories : undefined,
       });
       const newEventId = String((result as any).id ?? '');
       // Link selected recommendations (best effort)
+      const isNom = recSelectionMode === 'nominate';
       for (const rec of selectedRecs) {
-        try { await linkEventRecommendation(newEventId, rec.id, user.id); } catch { /* best effort */ }
+        try { await linkEventRecommendation(newEventId, rec.id, user.id, !isNom); } catch { /* best effort */ }
       }
       setCreatedId(newEventId);
     } catch (err: any) {
@@ -197,28 +179,14 @@ export default function EventCreatePage() {
     }
   };
 
-  const openPicker = (target: 'film' | 'nomination') => {
-    setMoviePickerTarget(target);
-    setMovieSearch('');
-    setMoviePickerOpen(true);
-  };
-
-  const handlePickMovie = (movieId: string) => {
-    if (moviePickerTarget === 'film') {
-      setSelectedFilm(movieId);
-    } else {
-      setNominations((prev) => [...prev, movieId]);
-    }
-    setMoviePickerOpen(false);
-  };
-
-  // Movies not yet selected/nominated, filtered by search
-  const q = movieSearch.toLowerCase();
-  const pickerMovies = availableMovies.filter((m) => {
-    if (moviePickerTarget === 'nomination' && (nominations.includes(m.id) || m.id === selectedFilm)) return false;
-    if (q && !m.title.toLowerCase().includes(q) && !(m.director ?? '').toLowerCase().includes(q) && !(m.recommendedBy?.name ?? '').toLowerCase().includes(q)) return false;
-    return true;
-  });
+  const recCategoryOptions = [
+    { key: 'movie', label: '🍿 电影' },
+    { key: 'book', label: '📚 书' },
+    { key: 'recipe', label: '🍳 食谱' },
+    { key: 'place', label: '📍 地方' },
+    { key: 'music', label: '🎵 音乐' },
+    { key: 'external_event', label: '🎭 演出' },
+  ];
 
   return (
     <Card>
@@ -462,54 +430,113 @@ export default function EventCreatePage() {
             </CardContent>
           </Card>
 
-          {/* 关联推荐（可选） */}
+          {/* 推荐选择（可选） */}
           <Card variant="outlined">
             <CardContent>
               <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
-                📋 关联推荐（可选）
+                📋 推荐选择（可选）
               </Typography>
-              {selectedRecs.length > 0 && (
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
-                  {selectedRecs.map((rec) => {
-                    const icon = { movie: '🍿', place: '📍', book: '📚', recipe: '🍳' }[rec.category as string] ?? '📋';
-                    return (
-                      <Chip
-                        key={rec.id}
-                        label={`${icon} ${rec.title}`}
-                        variant="outlined"
-                        size="small"
-                        onDelete={() => setSelectedRecs((prev) => prev.filter((r) => r.id !== rec.id))}
-                      />
-                    );
-                  })}
-                </Stack>
-              )}
-              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-                {[
-                  { key: 'all', label: '全部' },
-                  { key: 'movie', label: '🍿 电影' },
-                  { key: 'book', label: '📚 书' },
-                  { key: 'recipe', label: '🍳 食谱' },
-                  { key: 'place', label: '📍 地方' },
-                  { key: 'music', label: '🎵 音乐' },
-                  { key: 'external_event', label: '🎭 演出' },
-                ].map((cat) => (
+
+              {/* Category multi-select */}
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>类别</Typography>
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
+                {recCategoryOptions.map((cat) => (
                   <Chip
                     key={cat.key}
-                    label={cat.key === 'all' ? '+ 全部' : cat.label}
+                    label={cat.label}
                     size="small"
-                    variant="outlined"
-                    clickable
-                    onClick={() => { setRecCategory(cat.key); setRecPickerOpen(true); }}
+                    color={recCategories.includes(cat.key) ? 'primary' : 'default'}
+                    variant={recCategories.includes(cat.key) ? 'filled' : 'outlined'}
+                    onClick={() => setRecCategories((prev) =>
+                      prev.includes(cat.key) ? prev.filter((c) => c !== cat.key) : [...prev, cat.key]
+                    )}
                   />
                 ))}
               </Stack>
+
+              {recCategories.length > 0 && (
+                <>
+                  {/* Mode selection */}
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>模式</Typography>
+                  <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                    <Chip
+                      label="先开放提名"
+                      onClick={() => setRecSelectionMode('nominate')}
+                      color={recSelectionMode === 'nominate' ? 'primary' : 'default'}
+                      variant={recSelectionMode === 'nominate' ? 'filled' : 'outlined'}
+                    />
+                    <Chip
+                      label="直接选定"
+                      onClick={() => setRecSelectionMode('pick')}
+                      color={recSelectionMode === 'pick' ? 'primary' : 'default'}
+                      variant={recSelectionMode === 'pick' ? 'filled' : 'outlined'}
+                    />
+                  </Stack>
+
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                    {recSelectionMode === 'pick'
+                      ? '直接选好推荐，活动发布后即可展示。'
+                      : '活动发布后，报名成员可提名推荐，你可以在活动页选定。'}
+                  </Typography>
+
+                  {/* Per-category lists */}
+                  {recCategories.map((cat) => {
+                    const catIcon = recCategoryOptions.find((o) => o.key === cat)?.label ?? cat;
+                    const catRecs = selectedRecs.filter((r) => r.category === cat);
+                    const isPick = recSelectionMode === 'pick';
+                    return (
+                      <Box key={cat} sx={{ mb: 2 }}>
+                        <Typography variant="caption" fontWeight={700} sx={{ mb: 0.75, display: 'block' }}>
+                          {catIcon}{catRecs.length > 0 ? ` (${catRecs.length})` : ''}
+                        </Typography>
+                        {catRecs.length > 0 && (
+                          <Stack spacing={1} sx={{ mb: 1 }}>
+                            {catRecs.map((rec) => (
+                              <Card key={rec.id} variant="outlined" sx={isPick ? { borderColor: 'success.main', borderWidth: 2 } : undefined}>
+                                <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+                                  <Stack direction="row" spacing={1} alignItems="center">
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                      <Typography variant="body2" fontWeight={600}>{rec.title}</Typography>
+                                      <Stack direction="row" spacing={1.5} sx={{ mt: 0.25 }}>
+                                        <Typography variant="caption" color="text.secondary">
+                                          🌐 {rec.voteCount ?? 0}票
+                                        </Typography>
+                                        {rec.authorName && (
+                                          <Typography variant="caption" color="text.secondary">
+                                            {rec.authorName} 推荐
+                                          </Typography>
+                                        )}
+                                      </Stack>
+                                    </Box>
+                                    {isPick && <Chip size="small" color="success" label="✓ 已选" />}
+                                    <IconButton size="small" onClick={() => setSelectedRecs((prev) => prev.filter((r) => r.id !== rec.id))}>
+                                      <CloseIcon fontSize="small" />
+                                    </IconButton>
+                                  </Stack>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </Stack>
+                        )}
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          onClick={() => { setRecCategory(cat); setRecPickerOpen(true); }}
+                        >
+                          {isPick ? `选择${catIcon}` : `添加${catIcon}提名`}
+                        </Button>
+                      </Box>
+                    );
+                  })}
+                </>
+              )}
             </CardContent>
           </Card>
 
           {/* Recommendation picker dialog */}
           <Dialog open={recPickerOpen} onClose={() => { setRecPickerOpen(false); setRecSearch(''); setRecCategory('all'); }} maxWidth="xs" fullWidth>
-            <DialogTitle>关联推荐{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' }[recCategory] ?? ''}` : ''}</DialogTitle>
+            <DialogTitle>选择推荐{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' }[recCategory] ?? ''}` : ''}</DialogTitle>
             <DialogContent>
               <TextField
                 size="small"
@@ -532,23 +559,38 @@ export default function EventCreatePage() {
                 const categoryLabel: Record<string, string> = { book: '书', recipe: '食谱', place: '地方', movie: '电影', music: '音乐', external_event: '演出' };
                 return filtered.length > 0 ? (
                   <Stack spacing={1}>
-                    {filtered.slice(0, 20).map((r: any) => (
-                      <Card key={r.id} variant="outlined">
-                        <CardActionArea onClick={() => {
-                          setSelectedRecs((prev) => [...prev, { id: r.id, title: r.title, category: r.category }]);
-                          setRecPickerOpen(false);
-                          setRecSearch('');
-                          setRecCategory('all');
-                        }}>
-                          <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-                            <Typography variant="body2" fontWeight={600}>{r.title}</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {categoryLabel[r.category] ?? r.category}{r.author?.name ? ` · ${r.author.name} 推荐` : ''}
-                            </Typography>
-                          </CardContent>
-                        </CardActionArea>
-                      </Card>
-                    ))}
+                    {filtered.slice(0, 20).map((r: any) => {
+                      const votes = r.voteCount ?? r._count?.votes ?? 0;
+                      return (
+                        <Card key={r.id} variant="outlined">
+                          <CardActionArea onClick={() => {
+                            setSelectedRecs((prev) => [...prev, {
+                              id: r.id, title: r.title, category: r.category,
+                              voteCount: votes, authorName: r.author?.name,
+                            }]);
+                            setRecPickerOpen(false);
+                            setRecSearch('');
+                          }}>
+                            <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+                              <Typography variant="body2" fontWeight={600}>{r.title}</Typography>
+                              <Stack direction="row" spacing={1.5}>
+                                <Typography variant="caption" color="text.secondary">
+                                  {categoryLabel[r.category] ?? r.category}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  🌐 {votes}票
+                                </Typography>
+                                {r.author?.name && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    {r.author.name} 推荐
+                                  </Typography>
+                                )}
+                              </Stack>
+                            </CardContent>
+                          </CardActionArea>
+                        </Card>
+                      );
+                    })}
                   </Stack>
                 ) : (
                   <Stack spacing={1.5} alignItems="center" sx={{ py: 2 }}>
@@ -561,7 +603,6 @@ export default function EventCreatePage() {
                       onClick={() => {
                         setRecPickerOpen(false);
                         setRecSearch('');
-                        setRecCategory('all');
                         navigate('/discover');
                       }}
                     >
@@ -572,177 +613,7 @@ export default function EventCreatePage() {
               })()}
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => { setRecPickerOpen(false); setRecSearch(''); setRecCategory('all'); }}>取消</Button>
-            </DialogActions>
-          </Dialog>
-
-          {/* Movie night — film selection */}
-          {isMovieNight && (
-            <Card variant="outlined">
-              <CardContent>
-                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
-                  🎬 电影选择
-                </Typography>
-
-                <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                  <Chip
-                    label="先开放提名"
-                    onClick={() => setFilmMode('nominate')}
-                    color={filmMode === 'nominate' ? 'primary' : 'default'}
-                    variant={filmMode === 'nominate' ? 'filled' : 'outlined'}
-                  />
-                  <Chip
-                    label="直接选定电影"
-                    onClick={() => setFilmMode('pick')}
-                    color={filmMode === 'pick' ? 'primary' : 'default'}
-                    variant={filmMode === 'pick' ? 'filled' : 'outlined'}
-                  />
-                </Stack>
-
-                {filmMode === 'pick' && (
-                  <Box>
-                    {selectedFilmData ? (
-                      <Card variant="outlined" sx={{ borderColor: 'success.main', borderWidth: 2, mb: 1.5 }}>
-                        <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                          <Stack direction="row" spacing={1.5} alignItems="center">
-                            <Poster title={selectedFilmData.title} w={36} h={50} />
-                            <Box sx={{ flex: 1 }}>
-                              <Typography variant="body2" fontWeight={700}>{selectedFilmData.title}</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {selectedFilmData.year} · {selectedFilmData.director} · {selectedFilmData._count?.votes ?? 0} 票
-                              </Typography>
-                            </Box>
-                            <Button
-                              size="small"
-                              color="error"
-                              onClick={() => setSelectedFilm(null)}
-                            >
-                              移除
-                            </Button>
-                          </Stack>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      <Button
-                        variant="outlined"
-                        fullWidth
-                        onClick={() => openPicker('film')}
-                      >
-                        从候选池选择电影
-                      </Button>
-                    )}
-                  </Box>
-                )}
-
-                {filmMode === 'nominate' && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                      活动发布后，报名成员可提名候选电影，你可以在活动页选片。
-                    </Typography>
-                    {nominations.length > 0 && (
-                      <Stack spacing={1} sx={{ mb: 1.5 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          初始提名 ({nominations.length})
-                        </Typography>
-                        {nominations.map((id) => {
-                          const m = allMovies.find((p: any) => p.id === id);
-                          if (!m) return null;
-                          return (
-                            <Card key={id} variant="outlined">
-                              <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-                                <Stack direction="row" spacing={1.5} alignItems="center">
-                                  <Poster title={m.title} w={28} h={40} />
-                                  <Box sx={{ flex: 1 }}>
-                                    <Typography variant="body2" fontWeight={600}>{m.title}</Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                      {m.year} · {m.director} · {m._count?.votes ?? 0} 票
-                                    </Typography>
-                                  </Box>
-                                  <Button
-                                    size="small"
-                                    color="error"
-                                    onClick={() => setNominations((prev) => prev.filter((n) => n !== id))}
-                                  >
-                                    移除
-                                  </Button>
-                                </Stack>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </Stack>
-                    )}
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      onClick={() => openPicker('nomination')}
-                    >
-                      添加初始提名（可选）
-                    </Button>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Movie picker dialog */}
-          <Dialog open={moviePickerOpen} onClose={() => setMoviePickerOpen(false)} maxWidth="xs" fullWidth>
-            <DialogTitle>
-              {moviePickerTarget === 'film' ? '选择放映电影' : '添加提名'}
-            </DialogTitle>
-            <DialogContent>
-              <TextField
-                size="small"
-                fullWidth
-                placeholder="搜电影名、导演..."
-                value={movieSearch}
-                onChange={(e) => setMovieSearch(e.target.value)}
-                autoFocus
-                sx={{ mb: 1.5, mt: 0.5 }}
-              />
-              {pickerMovies.length > 0 ? (
-                <Stack spacing={1}>
-                  {pickerMovies.map((m) => (
-                    <Card key={m.id} variant="outlined">
-                      <CardActionArea onClick={() => handlePickMovie(m.id)}>
-                        <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-                          <Stack direction="row" spacing={1.5} alignItems="center">
-                            <Poster title={m.title} w={28} h={40} />
-                            <Box>
-                              <Typography variant="body2" fontWeight={600}>{m.title}</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {m.year} · {m.director} · {m._count?.votes ?? 0} 票
-                              </Typography>
-                            </Box>
-                          </Stack>
-                        </CardContent>
-                      </CardActionArea>
-                    </Card>
-                  ))}
-                </Stack>
-              ) : (
-                <Stack spacing={1.5} alignItems="center" sx={{ py: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {movieSearch ? `没有找到「${movieSearch}」` : '没有更多候选电影'}
-                  </Typography>
-                  {movieSearch && (
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => {
-                        setMoviePickerOpen(false);
-                        navigate('/discover/movie/add');
-                      }}
-                    >
-                      添加到候选池
-                    </Button>
-                  )}
-                </Stack>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setMoviePickerOpen(false)}>取消</Button>
+              <Button onClick={() => { setRecPickerOpen(false); setRecSearch(''); }}>取消</Button>
             </DialogActions>
           </Dialog>
 

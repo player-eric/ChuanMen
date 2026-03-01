@@ -11,6 +11,11 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
+    // Birthday week helper: check if a birthday falls within ±3 days of today
+    const today = new Date();
+    const todayMonth = today.getMonth() + 1;
+    const todayDay = today.getDate();
+
     // Fetch in parallel
     const [events, announcements, recommendations, members, postcards, recentMovies, recentProposals, newMembers] =
       await Promise.all([
@@ -64,6 +69,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             role: true,
             hostCount: true,
             city: true,
+            birthday: true,
+            hideBirthday: true,
           },
           orderBy: { lastActiveAt: 'desc' },
         }),
@@ -131,6 +138,56 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         }),
       ]);
 
+    // Birthday users: find approved users whose birthday is within ±3 days of today
+    let birthdayUsers: { id: string; name: string; avatar: string; birthday: string }[] = [];
+    if (userId) {
+      // Filter members who have visible birthdays within birthday week
+      const candidateBirthday = members.filter((m) => {
+        if (!m.birthday || m.hideBirthday) return false;
+        const bd = new Date(m.birthday);
+        const bdMonth = bd.getMonth() + 1;
+        const bdDay = bd.getDate();
+        // Check if within ±3 days (simplified: compare day-of-year distance)
+        const todayDOY = todayMonth * 31 + todayDay;
+        const bdDOY = bdMonth * 31 + bdDay;
+        const diff = Math.abs(todayDOY - bdDOY);
+        // Handle year wrap (e.g. Dec 30 vs Jan 2)
+        const wrapDiff = 12 * 31 - diff;
+        return Math.min(diff, wrapDiff) <= 3;
+      });
+
+      if (candidateBirthday.length > 0) {
+        // Filter to only birthday users who have mutual postcards with the viewer
+        const mutualPostcards = await prisma.postcard.findMany({
+          where: {
+            OR: [
+              { fromId: userId, toId: { in: candidateBirthday.map((u) => u.id) } },
+              { toId: userId, fromId: { in: candidateBirthday.map((u) => u.id) } },
+            ],
+          },
+          select: { fromId: true, toId: true },
+        });
+
+        // Build sets of who sent to whom
+        const viewerSentTo = new Set<string>();
+        const viewerReceivedFrom = new Set<string>();
+        for (const pc of mutualPostcards) {
+          if (pc.fromId === userId) viewerSentTo.add(pc.toId);
+          if (pc.toId === userId) viewerReceivedFrom.add(pc.fromId);
+        }
+
+        // Mutual = viewer sent to them AND they sent to viewer
+        birthdayUsers = candidateBirthday
+          .filter((u) => viewerSentTo.has(u.id) && viewerReceivedFrom.has(u.id))
+          .map((u) => ({
+            id: u.id,
+            name: u.name,
+            avatar: u.avatar,
+            birthday: u.birthday!.toISOString(),
+          }));
+      }
+    }
+
     // Collect all entity IDs by type for batch like/comment fetching
     const eventIds = events.map((e) => e.id);
     const postcardIds = postcards.map((p) => p.id);
@@ -191,6 +248,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       recentMovies: recentMovies.map(withInteraction),
       recentProposals: recentProposals.map(withInteraction),
       newMembers: newMembers.map(withInteraction),
+      birthdayUsers,
     };
   });
 };

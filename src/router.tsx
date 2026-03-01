@@ -169,6 +169,22 @@ function buildFeedItems(data: any): any[] {
     });
   }
 
+  // Birthday users → birthday items
+  const todayStr = new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+  for (const bu of (data.birthdayUsers ?? [])) {
+    addToDate(todayStr, {
+      type: 'birthday',
+      id: bu.id,
+      name: bu.name,
+      avatar: bu.avatar,
+      birthday: bu.birthday,
+      likes: 0,
+      likedBy: [],
+      comments: [],
+      commentCount: 0,
+    });
+  }
+
   // Proposals → compactProposal items
   for (const p of (data.recentProposals ?? [])) {
     const d = p.createdAt ? new Date(p.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
@@ -275,8 +291,16 @@ function mapApiEvent(e: any): any {
       title: er.recommendation?.title,
       category: er.recommendation?.category,
       coverUrl: er.recommendation?.coverUrl || undefined,
-      linkedById: er.linkedById || undefined,
+      linkedById: er.linkedById || er.linkedBy?.id || undefined,
+      linkedByName: er.linkedBy?.name || undefined,
+      isSelected: er.isSelected ?? false,
+      isNomination: er.isNomination ?? false,
+      globalVotes: er.recommendation?.voteCount ?? 0,
+      attendeeVotes: er.attendeeVotes ?? 0,
+      attendeeTotal: er.attendeeTotal ?? 0,
     })),
+    recSelectionMode: e.recSelectionMode ?? 'nominate',
+    recCategories: e.recCategories ?? [],
     spots: Math.max(0, (e.capacity ?? 0) - occupying.length),
     total: e.capacity ?? 0,
     people,
@@ -566,9 +590,27 @@ function hostMilestoneBadge(count: number): string | undefined {
   return undefined;
 }
 
+/** Check if a birthday falls within ±3 days of today */
+function isBirthdayWeek(birthday: string): boolean {
+  const bd = new Date(birthday);
+  const today = new Date();
+  const todayMonth = today.getMonth() + 1;
+  const todayDay = today.getDate();
+  const bdMonth = bd.getMonth() + 1;
+  const bdDay = bd.getDate();
+  const todayDOY = todayMonth * 31 + todayDay;
+  const bdDOY = bdMonth * 31 + bdDay;
+  const diff = Math.abs(todayDOY - bdDOY);
+  const wrapDiff = 12 * 31 - diff;
+  return Math.min(diff, wrapDiff) <= 3;
+}
+
 function mapApiMember(m: any) {
   const raw = m.mutual ?? {};
   const hostCount = m.host ?? m.hostCount ?? 0;
+  // Birthday badge overrides host milestone badge during birthday week
+  const birthdayStr = m.birthday ? (typeof m.birthday === 'string' ? m.birthday : new Date(m.birthday).toISOString()) : '';
+  const hasBirthdayBadge = birthdayStr && !m.hideBirthday && isBirthdayWeek(birthdayStr);
   return {
     ...m,
     titles: Array.isArray(m.titles)
@@ -577,7 +619,7 @@ function mapApiMember(m: any) {
         ? m.socialTitles.map((t: any) => (typeof t === 'string' ? t : t.value))
         : [],
     host: hostCount,
-    badge: m.badge ?? hostMilestoneBadge(hostCount),
+    badge: hasBirthdayBadge ? '🎂' : (m.badge ?? hostMilestoneBadge(hostCount)),
     mutual: {
       evtCount: raw.evtCount ?? 0,
       cards: raw.cards ?? raw.cardCount ?? 0,

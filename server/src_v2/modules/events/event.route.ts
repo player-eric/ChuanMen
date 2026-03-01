@@ -27,6 +27,33 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.params as { id: string };
     const event = await service.getEventById(id);
     if (!event) return reply.notFound('活动不存在');
+
+    // Compute attendeeVotes for each linked recommendation
+    if (event.recommendations && event.recommendations.length > 0) {
+      const acceptedUserIds = event.signups
+        .filter((s: any) => s.status === 'accepted' || s.status === 'invited' || s.status === 'offered')
+        .map((s: any) => s.user?.id ?? s.userId)
+        .filter(Boolean);
+      const recIds = event.recommendations.map((er: any) => er.recommendationId);
+      const votes = await app.prisma.recommendationVote.findMany({
+        where: {
+          recommendationId: { in: recIds },
+          userId: { in: acceptedUserIds },
+        },
+        select: { recommendationId: true, userId: true },
+      });
+      const attendeeVoteMap = new Map<string, number>();
+      for (const v of votes) {
+        attendeeVoteMap.set(v.recommendationId, (attendeeVoteMap.get(v.recommendationId) ?? 0) + 1);
+      }
+      const enriched = event.recommendations.map((er: any) => ({
+        ...er,
+        attendeeVotes: attendeeVoteMap.get(er.recommendationId) ?? 0,
+        attendeeTotal: acceptedUserIds.length,
+      }));
+      return { ...event, recommendations: enriched };
+    }
+
     return event;
   });
 
@@ -136,15 +163,39 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
 
   app.post('/:id/recommendations', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const { recommendationId, linkedById } = request.body as { recommendationId: string; linkedById?: string };
+    const { recommendationId, linkedById, isNomination } = request.body as { recommendationId: string; linkedById?: string; isNomination?: boolean };
     if (!recommendationId) return reply.badRequest('缺少 recommendationId');
     const link = await app.prisma.eventRecommendation.upsert({
       where: { eventId_recommendationId: { eventId: id, recommendationId } },
-      create: { eventId: id, recommendationId, linkedById: linkedById || null },
+      create: { eventId: id, recommendationId, linkedById: linkedById || null, isNomination: isNomination ?? false },
       update: {},
-      include: { recommendation: { select: { id: true, title: true, category: true } } },
+      include: { recommendation: { select: { id: true, title: true, category: true, coverUrl: true, voteCount: true } } },
     });
     return reply.code(201).send({ ok: true, link });
+  });
+
+  // Host selects a recommendation for the event
+  app.patch('/:id/recommendations/:recId/select', async (request, reply) => {
+    const { id, recId } = request.params as { id: string; recId: string };
+    // Transaction: clear previous selections in same category, then mark this one
+    const target = await app.prisma.eventRecommendation.findFirst({
+      where: { eventId: id, recommendationId: recId },
+      include: { recommendation: { select: { category: true } } },
+    });
+    if (!target) return reply.notFound('关联不存在');
+    await app.prisma.$transaction([
+      // Clear previous selections of same category for this event
+      app.prisma.eventRecommendation.updateMany({
+        where: { eventId: id, isSelected: true, recommendation: { category: target.recommendation.category } },
+        data: { isSelected: false },
+      }),
+      // Mark this one as selected
+      app.prisma.eventRecommendation.update({
+        where: { id: target.id },
+        data: { isSelected: true },
+      }),
+    ]);
+    return { ok: true };
   });
 
   app.delete('/:id/recommendations/:recommendationId', async (request, reply) => {

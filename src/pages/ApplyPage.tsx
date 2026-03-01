@@ -57,6 +57,7 @@ export default function ApplyPage() {
     wechatId: '',
     referralSource: '',
     coverImageUrl: googleProfile?.picture ?? '',
+    birthday: '',
   });
 
   const update = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -75,6 +76,7 @@ export default function ApplyPage() {
         participationPlan: form.participationPlan.join(', '),
         googleId: googleProfile?.googleId,
         subscribeNewsletter,
+        birthday: form.birthday || undefined,
       });
       setSubmitted(true);
     } catch (err: any) {
@@ -220,6 +222,15 @@ export default function ApplyPage() {
         value={form.wechatId}
         onChange={update('wechatId')}
         helperText="运营联络用，不会公开展示"
+      />
+
+      <TextField
+        label="你的生日（可选）"
+        type="date"
+        value={form.birthday}
+        onChange={update('birthday')}
+        helperText="用于社区生日祝福，通过后也可以在设置里修改"
+        slotProps={{ inputLabel: { shrink: true } }}
       />
 
       <TextField

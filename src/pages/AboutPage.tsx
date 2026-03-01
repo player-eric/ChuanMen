@@ -12,7 +12,7 @@ export default function AboutPage() {
     { icon: '👥', title: '成员', desc: `${data.memberCount} 位成员 · ${data.hostCount} 位 Host`, action: () => navigate('/members') },
     { icon: '📖', title: '串门原则', desc: '我们怎么定义这个社群', action: () => navigate('/about/principle') },
     { icon: '🏠', title: 'Host 手册', desc: '如何在家里办一场串门', action: () => navigate('/about/host_guide') },
-    { icon: '✉', title: '串门来信', desc: '写给还没来串门的你', action: () => navigate('/about/letter') },
+    { icon: '✉', title: '串门来信', desc: '写给还没来串门的你', action: () => window.open('https://chengdaorange.substack.com/', '_blank') },
     { icon: '💬', title: '关于我们', desc: '串门儿是怎么开始的', action: () => navigate('/about/about') },
   ];
 

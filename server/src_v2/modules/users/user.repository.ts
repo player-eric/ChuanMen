@@ -113,6 +113,7 @@ export class UserRepository {
     coverImageUrl?: string;
     googleId?: string;
     subscribeNewsletter?: boolean;
+    birthday?: Date;
   }) {
     return this.prisma.user.create({
       data: {
@@ -128,6 +129,7 @@ export class UserRepository {
         coverImageUrl: input.coverImageUrl ?? '',
         googleId: input.googleId || undefined,
         subscribeNewsletter: input.subscribeNewsletter ?? true,
+        birthday: input.birthday ?? undefined,
         userStatus: 'applicant',
       },
     });
@@ -152,6 +154,8 @@ export class UserRepository {
       hideActivity?: boolean;
       hideStats?: boolean;
       hiddenTitleIds?: string[];
+      birthday?: Date | null;
+      hideBirthday?: boolean;
     },
   ) {
     return this.prisma.user.update({

@@ -201,57 +201,70 @@ export function renderPostcardBlock(opts: PostcardBlockOptions): string {
   const { fromName, toName, message, date, eventCtx, stamp = '✉', stampLabel, photo } = opts;
   const initial = fromName.charAt(0);
   const hue = fromName.charCodeAt(0) * 37 % 360;
+  const CARD_H = 320; // 480px width × 2/3 = 320px (aspect-ratio 3:2)
 
-  const wmBottom = eventCtx ? '26px' : '10px';
+  // Left banner background
+  const leftBgStyle = photo
+    ? `background-image:url('${escapeAttr(photo)}');background-size:cover;background-position:center;`
+    : 'background:linear-gradient(135deg,#D4A574 0%,#C4915A 40%,#B07D48 100%);';
 
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-radius:16px;overflow:hidden;border-collapse:separate;" bgcolor="#1E1C1A">
+  // "Thank You" centered in left banner (only when no photo)
+  const thankYouHtml = !photo
+    ? `<div style="font-size:20px;font-style:italic;font-weight:600;color:rgba(255,255,255,0.55);letter-spacing:0.05em;font-family:Georgia,'Noto Serif SC',serif;">Thank You</div>`
+    : '';
+
+  // Event context line
+  const eventLineHtml = eventCtx
+    ? `<tr><td style="font-size:10px;color:#ffffff;font-family:${FONT_STACK};padding:0 10px 8px;">&#x1F4CD; ${escapeHtml(eventCtx)}</td></tr>`
+    : '';
+
+  // Watermark
+  const watermarkHtml = !photo
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="opacity:0.25;" align="right">
+        <tr>
+          <td style="width:14px;height:14px;border-radius:3px;background:rgba(224,216,206,0.09);text-align:center;vertical-align:middle;font-size:7px;font-weight:800;color:rgba(224,216,206,0.38);line-height:14px;">串</td>
+          <td style="padding-left:3px;font-size:9px;font-weight:600;letter-spacing:0.06em;color:rgba(224,216,206,0.31);font-family:${FONT_STACK};">CHUANMEN</td>
+          <td style="padding-left:3px;font-size:9px;font-weight:600;color:rgba(224,216,206,0.25);font-family:${FONT_STACK};">${escapeHtml(date)}</td>
+        </tr>
+      </table>`
+    : '';
+
+  return `<table role="presentation" width="480" cellpadding="0" cellspacing="0" align="center" style="max-width:100%;border-radius:16px;overflow:hidden;border-collapse:separate;border:1px solid rgba(212,165,116,0.15);" bgcolor="#1E1C1A">
   <tr>
-    <!-- Left: banner 45% -->
-    <td width="45%" valign="top" bgcolor="#2a2018" style="${photo ? `background-image:url('${escapeAttr(photo)}');background-size:cover;background-position:center;` : 'background:linear-gradient(145deg,#1c1814 0%,#2a2018 25%,#3a2a20 50%,#2a2218 75%,#1c1814 100%);'}">
-      <div style="height:240px;position:relative;overflow:hidden;">${!photo ? `
-        <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#D4A574 0%,#C4915A 40%,#B07D48 100%);"></div>
-        <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:0.4;background-image:url('data:image/svg+xml,%3Csvg viewBox=%270 0 200 200%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%271.2%27 numOctaves=%275%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23n)%27/%3E%3C/svg%3E');background-repeat:repeat;background-size:100px 100px;"></div>
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
-          <div style="font-size:20px;font-style:italic;font-weight:600;color:rgba(255,255,255,0.55);letter-spacing:0.05em;font-family:Georgia,'Noto Serif SC',serif;">Thank You</div>
-        </div>` : ''}
-        <table role="presentation" cellpadding="0" cellspacing="0" style="position:absolute;bottom:${wmBottom};right:8px;opacity:0.25;">
-          <tr>
-            <td style="width:14px;height:14px;border-radius:3px;background:rgba(224,216,206,0.09);text-align:center;vertical-align:middle;font-size:7px;font-weight:800;color:rgba(224,216,206,0.38);line-height:14px;">串</td>
-            <td style="padding-left:3px;font-size:9px;font-weight:600;letter-spacing:0.06em;color:rgba(224,216,206,0.31);font-family:${FONT_STACK};">CHUANMEN</td>
-            <td style="padding-left:3px;font-size:9px;font-weight:600;color:rgba(224,216,206,0.25);font-family:${FONT_STACK};">${escapeHtml(date)}</td>
-          </tr>
-        </table>${eventCtx ? `
-        <div style="position:absolute;bottom:8px;left:8px;right:8px;font-size:10px;color:#ffffff;opacity:0.85;text-shadow:0 1px 4px rgba(0,0,0,0.7);font-family:${FONT_STACK};">&#x1F4CD; ${escapeHtml(eventCtx)}</div>` : ''}
-      </div>
+    <!-- Left: banner (45%) -->
+    <td width="45%" height="${CARD_H}" valign="middle" align="center" style="${leftBgStyle}">
+      <table role="presentation" width="100%" height="${CARD_H}" cellpadding="0" cellspacing="0">
+        <tr><td valign="middle" align="center" height="${CARD_H - 40}">${thankYouHtml}</td></tr>
+        <tr><td valign="bottom" height="40" style="padding:0 8px 8px;">${watermarkHtml}</td></tr>
+        ${eventLineHtml}
+      </table>
     </td>
-    <!-- Right: content 55% -->
-    <td width="55%" valign="top" bgcolor="#1E1C1A" style="background:linear-gradient(165deg,#1E1C1A,#161412);padding:0;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="height:240px;">
-        <tr>
-          <td valign="top" style="padding:12px 14px 0;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td valign="top" style="font-size:10px;letter-spacing:0.08em;color:#9A9088;text-transform:uppercase;font-family:${FONT_STACK};padding:0;">TO: ${escapeHtml(toName)}</td>
-                <td valign="top" align="right" style="padding:0;white-space:nowrap;">
-                  <div style="display:inline-block;width:22px;height:27px;border-radius:2px;border:1.5px solid #D4A574;background:linear-gradient(160deg,#0C0C0E,rgba(212,165,116,0.21));text-align:center;line-height:27px;font-size:12px;vertical-align:middle;">${escapeHtml(stamp)}</div>${stampLabel ? `<span style="font-size:10px;font-weight:600;color:#D4A574;vertical-align:middle;margin-left:4px;font-family:${FONT_STACK};">${escapeHtml(stampLabel)}</span>` : ''}
-                </td>
-              </tr>
-            </table>
-            <p style="margin:6px 0 0;font-size:15px;font-style:italic;line-height:1.7;color:#E0D8CE;font-family:Georgia,'Noto Serif SC',serif;">${escapeHtml(message)}</p>
-          </td>
-        </tr>
-        <tr>
-          <td valign="bottom" style="padding:0 14px 14px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td valign="middle" style="font-size:13px;font-weight:600;color:#E0D8CE;font-family:${FONT_STACK};padding:0;">
-                  <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:hsl(${hue},25%,22%);vertical-align:middle;margin-right:4px;text-align:center;line-height:18px;font-size:7px;color:#9A9894;font-weight:600;">${escapeHtml(initial)}</span>${escapeHtml(fromName)}
-                </td>
-                <td valign="middle" align="right" style="font-size:11px;color:rgba(154,144,136,0.5);font-family:${FONT_STACK};padding:0;">${escapeHtml(date)}</td>
-              </tr>
-            </table>
-          </td>
-        </tr>
+    <!-- Right: content (55%) — mimics flex space-between -->
+    <td width="55%" height="${CARD_H}" valign="top" bgcolor="#1E1C1A" style="background:linear-gradient(165deg,#1E1C1A,#161412);">
+      <table role="presentation" width="100%" height="${CARD_H}" cellpadding="0" cellspacing="0">
+        <!-- Top section: TO + stamp + message -->
+        <tr><td valign="top" style="padding:12px 14px 0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td valign="top" style="font-size:10px;letter-spacing:0.08em;color:#9A9088;text-transform:uppercase;font-family:${FONT_STACK};">TO: ${escapeHtml(toName)}</td>
+              <td valign="top" align="right" style="white-space:nowrap;">
+                <div style="display:inline-block;width:22px;height:27px;border-radius:2px;border:1.5px solid #D4A574;background:linear-gradient(160deg,#0C0C0E,rgba(212,165,116,0.21));text-align:center;line-height:27px;font-size:12px;">${escapeHtml(stamp)}</div>${stampLabel ? `<span style="font-size:10px;font-weight:600;color:#D4A574;margin-left:4px;font-family:${FONT_STACK};">${escapeHtml(stampLabel)}</span>` : ''}
+              </td>
+            </tr>
+          </table>
+          <p style="margin:4px 0 0;font-size:14px;font-style:italic;line-height:1.7;color:#E0D8CE;font-family:Georgia,'Noto Serif SC',serif;">${escapeHtml(message)}</p>
+        </td></tr>
+        <!-- Bottom section: sender + date (pushed to bottom by valign) -->
+        <tr><td valign="bottom" style="padding:0 14px 14px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td valign="middle" style="font-size:14px;font-weight:600;color:#E0D8CE;font-family:${FONT_STACK};">
+                <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:hsl(${hue},25%,22%);vertical-align:middle;margin-right:4px;text-align:center;line-height:18px;font-size:7px;color:#9A9894;font-weight:600;">${escapeHtml(initial)}</span>${escapeHtml(fromName)}
+              </td>
+              <td valign="middle" align="right" style="font-size:12px;color:rgba(154,144,136,0.5);font-family:${FONT_STACK};">${escapeHtml(date)}</td>
+            </tr>
+          </table>
+        </td></tr>
       </table>
     </td>
   </tr>

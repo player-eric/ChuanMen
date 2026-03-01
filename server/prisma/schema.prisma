@@ -177,6 +177,8 @@ model User {
   homeAddress          String              @default("")
   subscribeNewsletter  Boolean             @default(true)
   postcardCredits      Int                 @default(2)
+  birthday             DateTime?
+  hideBirthday         Boolean             @default(false)
   announcedAt          DateTime?
   announcedEndAt       DateTime?
   approvedAt           DateTime?
@@ -294,6 +296,9 @@ model Event {
   pinned                 Boolean                   @default(false)
   // v2.1 new fields
   inviteDeadline         DateTime?
+  // v2.2 unified recommendation selection
+  recSelectionMode       String                    @default("nominate")
+  recCategories          String[]                  @default([])
   isHomeEvent            Boolean                   @default(false)
   locationPrivate        Boolean                   @default(false)
   createdAt              DateTime                  @default(now())
@@ -409,6 +414,8 @@ model EventRecommendation {
   eventId          String
   recommendationId String
   linkedById       String?
+  isSelected       Boolean         @default(false)
+  isNomination     Boolean         @default(false)
   createdAt        DateTime        @default(now())
 
   event            Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
