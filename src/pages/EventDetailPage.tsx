@@ -506,7 +506,7 @@ export default function EventDetailPage() {
                 <Button
                   size="small"
                   variant="outlined"
-                  color={event.isPrivate ? 'warning' : 'default'}
+                  color={event.isPrivate ? 'warning' : 'inherit'}
                   onClick={async () => {
                     if (!eventId) return;
                     const next = !event.isPrivate;
