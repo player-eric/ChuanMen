@@ -22,13 +22,13 @@ import {
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import type { EventComment } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
-import { toggleMovieVote, addComment, fetchCommentsApi, updateMovie, deleteMovie } from '@/lib/domainApi';
+import { toggleMovieVote, updateMovie, deleteMovie } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { firstNonEmoji } from '@/components/Atoms';
+import CommentSection from '@/components/CommentSection';
 
 export default function MovieDetailPage() {
   const navigate = useNavigate();
@@ -47,8 +47,6 @@ export default function MovieDetailPage() {
   const [voters, setVoters] = useState<{ id: string; name: string }[]>(
     (raw?.votes ?? []).map((v: any) => ({ id: v.user?.id ?? v.userId ?? '', name: v.user?.name ?? '?' })),
   );
-  const [comments, setComments] = useState<EventComment[]>([]);
-  const [commentText, setCommentText] = useState('');
   const [nominateOpen, setNominateOpen] = useState(false);
   const [flash, setFlash] = useState<{ open: boolean; severity: 'success' | 'error'; message: string }>({ open: false, severity: 'success', message: '' });
   const [editingLink, setEditingLink] = useState(false);
@@ -56,15 +54,6 @@ export default function MovieDetailPage() {
   const [movieLink, setMovieLink] = useState<string>(raw?.doubanUrl ?? '');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  useEffect(() => {
-    if (!raw?.id) return;
-    fetchCommentsApi('movie', String(raw.id)).then((list) => {
-      if (Array.isArray(list)) {
-        setComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '' })));
-      }
-    }).catch(() => {});
-  }, [raw]);
 
   if (!raw) {
     return (
@@ -408,91 +397,7 @@ export default function MovieDetailPage() {
         )}
 
         {/* 8. Comments */}
-        <Card>
-          <CardContent>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
-              💬 讨论 ({comments.length})
-            </Typography>
-            {comments.length > 0 ? (
-              <Stack spacing={1.5} sx={{ mb: 2 }}>
-                {comments.map((cm, i) => (
-                  <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
-                    <Avatar
-                      sx={{ width: 28, height: 28, fontSize: 12, cursor: 'pointer', mt: 0.25 }}
-                      onClick={() => navigate(`/members/${encodeURIComponent(cm.name)}`)}
-                    >
-                      {firstNonEmoji(cm.name)}
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Stack direction="row" spacing={1} alignItems="baseline">
-                        <Typography variant="body2" fontWeight={700}>{cm.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{cm.date}</Typography>
-                      </Stack>
-                      <Typography variant="body2" color="text.secondary">{cm.text}</Typography>
-                    </Box>
-                  </Stack>
-                ))}
-              </Stack>
-            ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                暂无讨论，来说点什么吧！
-              </Typography>
-            )}
-            {user ? (
-              <Stack direction="row" spacing={1} alignItems="flex-start">
-                <Avatar sx={{ width: 28, height: 28, fontSize: 12, mt: 0.5 }}>
-                  {firstNonEmoji(user.name ?? 'U')}
-                </Avatar>
-                <TextField
-                  size="small"
-                  fullWidth
-                  multiline
-                  maxRows={4}
-                  placeholder="说点什么..."
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={async (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
-                      e.preventDefault();
-                      const text = commentText.trim();
-                      setCommentText('');
-                      setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
-                      try {
-                        await addComment({ entityType: 'movie', entityId: String(raw.id ?? (raw as any).id), authorId: user.id, content: text });
-                      } catch {
-                        setComments((prev) => prev.filter((_, i) => i !== prev.length - 1));
-                        setFlash({ open: true, severity: 'error', message: '评论失败，请重新登录后再试' });
-                      }
-                    }
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  size="small"
-                  disabled={!commentText.trim()}
-                  onClick={async () => {
-                    if (commentText.trim()) {
-                      const text = commentText.trim();
-                      setCommentText('');
-                      setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
-                      try {
-                        await addComment({ entityType: 'movie', entityId: String(raw.id ?? (raw as any).id), authorId: user.id, content: text });
-                      } catch {
-                        setComments((prev) => prev.filter((_, i) => i !== prev.length - 1));
-                        setFlash({ open: true, severity: 'error', message: '评论失败，请重新登录后再试' });
-                      }
-                    }
-                  }}
-                  sx={{ mt: 0.5 }}
-                >
-                  发送
-                </Button>
-              </Stack>
-            ) : (
-              <Typography variant="body2" color="text.secondary">登录后可参与讨论</Typography>
-            )}
-          </CardContent>
-        </Card>
+        {raw?.id && <CommentSection entityType="movie" entityId={String(raw.id)} />}
 
         <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
           <DialogTitle>确认删除</DialogTitle>

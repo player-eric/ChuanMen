@@ -21,14 +21,15 @@ import {
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
-import type { EventComment, BookDetailData, BookPool } from '@/types';
+import type { BookDetailData, BookPool } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
-import { addComment, fetchCommentsApi, toggleRecommendationVote, updateRecommendation, deleteRecommendation } from '@/lib/domainApi';
+import { toggleRecommendationVote, updateRecommendation, deleteRecommendation } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { firstNonEmoji } from '@/components/Atoms';
+import CommentSection from '@/components/CommentSection';
 
 export default function BookDetailPage() {
   const navigate = useNavigate();
@@ -40,8 +41,6 @@ export default function BookDetailPage() {
     const voters = (raw as any).voterIds ?? (raw as any).voters ?? [];
     return Array.isArray(voters) && voters.includes(user.id);
   });
-  const [comments, setComments] = useState<EventComment[]>([]);
-  const [commentText, setCommentText] = useState('');
   const [editingLink, setEditingLink] = useState(false);
   const [linkDraft, setLinkDraft] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
@@ -60,16 +59,6 @@ export default function BookDetailPage() {
       }
     },
   });
-
-  useEffect(() => {
-    const bookId = raw && 'id' in raw ? (raw as any).id : null;
-    if (!bookId) return;
-    fetchCommentsApi('recommendation', String(bookId)).then((list) => {
-      if (Array.isArray(list)) {
-        setComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '' })));
-      }
-    }).catch(() => {});
-  }, [raw]);
 
   if (!raw) {
     return (
@@ -305,83 +294,7 @@ export default function BookDetailPage() {
         )}
 
         {/* 6. Comments */}
-        <Card>
-          <CardContent>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
-              💬 讨论 ({comments.length})
-            </Typography>
-            {comments.length > 0 && (
-              <Stack spacing={1.5} sx={{ mb: 2 }}>
-                {comments.map((cm, i) => (
-                  <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
-                    <Avatar
-                      sx={{ width: 28, height: 28, fontSize: 12, cursor: 'pointer', mt: 0.25 }}
-                      onClick={() => navigate(`/members/${encodeURIComponent(cm.name)}`)}
-                    >
-                      {firstNonEmoji(cm.name)}
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Stack direction="row" spacing={1} alignItems="baseline">
-                        <Typography variant="body2" fontWeight={700}>{cm.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{cm.date}</Typography>
-                      </Stack>
-                      <Typography variant="body2" color="text.secondary">{cm.text}</Typography>
-                    </Box>
-                  </Stack>
-                ))}
-              </Stack>
-            )}
-            {user ? (
-              <Stack direction="row" spacing={1} alignItems="flex-start">
-                <Avatar sx={{ width: 28, height: 28, fontSize: 12, mt: 0.5 }}>
-                  {firstNonEmoji(user.name ?? 'U')}
-                </Avatar>
-                <TextField
-                  size="small"
-                  fullWidth
-                  multiline
-                  maxRows={4}
-                  placeholder="说点什么..."
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={async (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
-                      e.preventDefault();
-                      const text = commentText.trim();
-                      setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
-                      setCommentText('');
-                      const bookId = raw && 'id' in raw ? (raw as any).id : null;
-                      if (bookId && user.id) {
-                        try { await addComment({ entityType: 'recommendation', entityId: String(bookId), authorId: user.id, content: text }); } catch { /* optimistic */ }
-                      }
-                    }
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  size="small"
-                  disabled={!commentText.trim()}
-                  onClick={async () => {
-                    if (commentText.trim()) {
-                      const text = commentText.trim();
-                      setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
-                      setCommentText('');
-                      const bookId = raw && 'id' in raw ? (raw as any).id : null;
-                      if (bookId && user.id) {
-                        try { await addComment({ entityType: 'recommendation', entityId: String(bookId), authorId: user.id, content: text }); } catch { /* optimistic */ }
-                      }
-                    }
-                  }}
-                  sx={{ mt: 0.5 }}
-                >
-                  发送
-                </Button>
-              </Stack>
-            ) : (
-              <Typography variant="body2" color="text.secondary">登录后可参与讨论</Typography>
-            )}
-          </CardContent>
-        </Card>
+        {bookId && <CommentSection entityType="recommendation" entityId={String(bookId)} />}
 
         <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
           <DialogTitle>确认删除</DialogTitle>

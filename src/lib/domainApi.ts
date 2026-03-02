@@ -455,6 +455,12 @@ export async function fetchMembersApi() {
   return requestJson<EntityMap[]>('/api/users');
 }
 
+export async function searchUsersApi(q: string) {
+  return requestJson<{ id: string; name: string; avatar: string | null }[]>(
+    `/api/users/search${toQueryString({ q })}`,
+  );
+}
+
 export async function fetchMemberByNameApi(name: string, viewerId?: string) {
   const headers: Record<string, string> = {};
   if (viewerId) headers['x-user-id'] = viewerId;

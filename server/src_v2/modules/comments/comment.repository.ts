@@ -17,6 +17,7 @@ export class CommentRepository {
     authorId: string;
     content: string;
     parentCommentId?: string;
+    mentionedUserIds?: string[];
   }) {
     return this.prisma.comment.create({
       data: input,

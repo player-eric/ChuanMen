@@ -30,8 +30,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EditIcon from '@mui/icons-material/Edit';
-import type { EventComment, EventData, EventPhoto, FoodOption, SignupStatus, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, addComment as addCommentApi, fetchCommentsApi, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, unlinkEventRecommendation, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist } from '@/lib/domainApi';
+import type { EventData, EventPhoto, FoodOption, SignupStatus, TaskRole } from '@/types';
+import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, unlinkEventRecommendation, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist } from '@/lib/domainApi';
+import CommentSection from '@/components/CommentSection';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
@@ -152,18 +153,6 @@ export default function EventDetailPage() {
     }
   }, [user?.id, loadedEvent]);
 
-  const [comments, setComments] = useState<EventComment[]>([]);
-  const [commentText, setCommentText] = useState('');
-
-  // Load comments from API
-  useEffect(() => {
-    if (!eventId) return;
-    fetchCommentsApi('event', eventId).then((list) => {
-      if (Array.isArray(list)) {
-        setComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '' })));
-      }
-    }).catch(() => {});
-  }, [eventId]);
   const [inviteDeclined, setInviteDeclined] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [tasks, setTasks] = useState<TaskRole[]>(loadedEvent?.tasks ?? []);
@@ -204,6 +193,7 @@ export default function EventDetailPage() {
   const [allMembers, setAllMembers] = useState<{ id: string; name: string }[]>([]);
   const [allRecs, setAllRecs] = useState<any[]>([]);
   const [recLinkOpen, setRecLinkOpen] = useState(false);
+  const [showAllPeople, setShowAllPeople] = useState(false);
   const [recSearch, setRecSearch] = useState('');
   const [recCategory, setRecCategory] = useState<string>('all');
   useEffect(() => {
@@ -964,8 +954,22 @@ export default function EventDetailPage() {
             ) : (
               /* Normal view: avatar group */
               <Stack spacing={0.5}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <AvatarGroup max={8}>
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                  <AvatarGroup
+                    max={showAllPeople ? event.people.length + 1 : 8}
+                    sx={{
+                      flexWrap: showAllPeople ? 'wrap' : 'nowrap',
+                      ...(!showAllPeople && event.people.length > 8 && {
+                        '& .MuiAvatarGroup-avatar:first-of-type': { cursor: 'pointer' },
+                      }),
+                    }}
+                    onClick={(e) => {
+                      if (!showAllPeople && event.people.length > 8) {
+                        const el = (e.target as HTMLElement).closest('.MuiAvatar-root');
+                        if (el?.textContent?.startsWith('+')) setShowAllPeople(true);
+                      }
+                    }}
+                  >
                     {event.people.map((name) => (
                       <Avatar
                         key={name}
@@ -976,6 +980,16 @@ export default function EventDetailPage() {
                       </Avatar>
                     ))}
                   </AvatarGroup>
+                  {showAllPeople && (
+                    <Typography
+                      variant="caption"
+                      color="primary"
+                      sx={{ cursor: 'pointer', ml: 1 }}
+                      onClick={() => setShowAllPeople(false)}
+                    >
+                      收起
+                    </Typography>
+                  )}
                 </Stack>
                 <Typography variant="caption" color="text.secondary">
                   🏠 {event.host} · Host
@@ -983,46 +997,32 @@ export default function EventDetailPage() {
               </Stack>
             )}
             {event.phase === 'ended' && user && (
-              <Button
-                variant="contained"
-                fullWidth
-                sx={{ mt: 2 }}
-                onClick={() => navigate('/cards')}
-              >
-                ✉ 给 Ta 们寄张感谢卡
-              </Button>
+              <Stack spacing={1} sx={{ mt: 2 }}>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  onClick={() => navigate('/cards')}
+                >
+                  ✉ 给 Ta 们寄张感谢卡
+                </Button>
+                {signedUp && (
+                  <>
+                    {event.host !== user?.name && (
+                      <Button variant="outlined" size="small" fullWidth
+                        onClick={() => navigate('/events/new')}>
+                        🏠 试试当 Host
+                      </Button>
+                    )}
+                    <Button variant="outlined" size="small" fullWidth
+                      onClick={() => navigate('/events/proposals/new')}>
+                      💡 提一个活动创意
+                    </Button>
+                  </>
+                )}
+              </Stack>
             )}
           </CardContent>
         </Card>
-
-        {/* Next-step guidance for ended events */}
-        {event.phase === 'ended' && user && signedUp && (
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
-                🚀 下一步
-              </Typography>
-              <Stack spacing={1}>
-                {(event.linkedRecommendations ?? []).length > 0 && (
-                  <Button variant="outlined" size="small" fullWidth
-                    onClick={() => navigate('/discover')}>
-                    🔍 发现更多推荐
-                  </Button>
-                )}
-                {event.host !== user?.name && (
-                  <Button variant="outlined" size="small" fullWidth
-                    onClick={() => navigate('/events/new')}>
-                    🏠 试试当 Host
-                  </Button>
-                )}
-                <Button variant="outlined" size="small" fullWidth
-                  onClick={() => navigate('/events/proposals/new')}>
-                  💡 提一个活动创意
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Host waitlist management panel */}
         {isHost && event.phase !== 'ended' && event.phase !== 'cancelled' && (() => {
@@ -1563,91 +1563,7 @@ export default function EventDetailPage() {
         </Dialog>
 
         {/* 9. Comments */}
-        <Card>
-          <CardContent>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
-              💬 讨论 ({comments.length})
-            </Typography>
-            {comments.length > 0 ? (
-              <Stack spacing={1.5} sx={{ mb: 2 }}>
-                {comments.map((c, i) => (
-                  <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
-                    <Avatar
-                      sx={{ width: 28, height: 28, fontSize: 12, cursor: 'pointer', mt: 0.25 }}
-                      onClick={() => navigate(`/members/${encodeURIComponent(c.name)}`)}
-                    >
-                      {firstNonEmoji(c.name)}
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Stack direction="row" spacing={1} alignItems="baseline">
-                        <Typography variant="body2" fontWeight={700}>{c.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{c.date}</Typography>
-                      </Stack>
-                      <Typography variant="body2" color="text.secondary">{c.text}</Typography>
-                    </Box>
-                  </Stack>
-                ))}
-              </Stack>
-            ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                暂无讨论，来说点什么吧！
-              </Typography>
-            )}
-            {user ? (
-              <Stack direction="row" spacing={1} alignItems="flex-start">
-                <Avatar sx={{ width: 28, height: 28, fontSize: 12, mt: 0.5 }}>
-                  {user.name?.[0] ?? 'U'}
-                </Avatar>
-                <TextField
-                  size="small"
-                  fullWidth
-                  multiline
-                  maxRows={4}
-                  placeholder="说点什么..."
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={async (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
-                      e.preventDefault();
-                      const text = commentText.trim();
-                      setCommentText('');
-                      setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
-                      try {
-                        await addCommentApi({ entityType: 'event', entityId: eventId!, authorId: user.id, content: text });
-                      } catch {
-                        setComments((prev) => prev.slice(0, -1));
-                        setFlash({ open: true, severity: 'error', message: '评论失败，请重新登录后再试' });
-                      }
-                    }
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  size="small"
-                  disabled={!commentText.trim()}
-                  onClick={async () => {
-                    if (commentText.trim()) {
-                      const text = commentText.trim();
-                      setCommentText('');
-                      setComments((prev) => [...prev, { name: user.name ?? '我', text, date: '刚刚' }]);
-                      try {
-                        await addCommentApi({ entityType: 'event', entityId: eventId!, authorId: user.id, content: text });
-                      } catch {
-                        setComments((prev) => prev.slice(0, -1));
-                        setFlash({ open: true, severity: 'error', message: '评论失败，请重新登录后再试' });
-                      }
-                    }
-                  }}
-                  sx={{ mt: 0.5 }}
-                >
-                  发送
-                </Button>
-              </Stack>
-            ) : (
-              <Typography variant="body2" color="text.secondary">登录后可参与讨论</Typography>
-            )}
-          </CardContent>
-        </Card>
+        {eventId && <CommentSection entityType="event" entityId={eventId} />}
 
         {/* 10. Action button — offer response or signup */}
         {event.phase !== 'cancelled' && myStatus === 'offered' && user && (() => {

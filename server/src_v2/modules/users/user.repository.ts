@@ -13,6 +13,18 @@ export class UserRepository {
     });
   }
 
+  search(q: string) {
+    return this.prisma.user.findMany({
+      where: {
+        userStatus: 'approved',
+        ...(q ? { name: { contains: q, mode: 'insensitive' as const } } : {}),
+      },
+      select: { id: true, name: true, avatar: true },
+      orderBy: { name: 'asc' },
+      take: 20,
+    });
+  }
+
   getById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },

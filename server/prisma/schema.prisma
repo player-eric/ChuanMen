@@ -618,14 +618,15 @@ model Like {
 }
 
 model Comment {
-  id              String                 @id @default(cuid())
-  entityType      InteractionEntityType
-  entityId        String
-  authorId        String
-  content         String
-  parentCommentId String?
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
+  id               String                 @id @default(cuid())
+  entityType       InteractionEntityType
+  entityId         String
+  authorId         String
+  content          String
+  parentCommentId  String?
+  mentionedUserIds String[]               @default([])
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 
   author          User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
   parentComment   Comment?               @relation("CommentTree", fields: [parentCommentId], references: [id], onDelete: SetNull)

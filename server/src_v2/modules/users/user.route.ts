@@ -14,6 +14,12 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/', async () => service.listUsers());
 
+  // Search approved users by name (for @mention autocomplete)
+  app.get('/search', async (request) => {
+    const { q } = request.query as { q?: string };
+    return service.searchUsers(q ?? '');
+  });
+
   app.get('/by-email/:email', async (request, reply) => {
     const { email } = request.params as { email: string };
     const user = await service.getUserByEmail(email);

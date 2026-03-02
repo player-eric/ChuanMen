@@ -12,6 +12,22 @@ const createSchema = z.object({
   parentCommentId: z.string().optional(),
 });
 
+/** Extract user IDs from TipTap mention HTML: <span data-type="mention" data-id="userId"> */
+function extractMentionIds(html: string): string[] {
+  const ids: string[] = [];
+  const regex = /data-type="mention"[^>]*data-id="([^"]+)"/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(html)) !== null) {
+    ids.push(match[1]);
+  }
+  // Also try reversed attribute order
+  const regex2 = /data-id="([^"]+)"[^>]*data-type="mention"/g;
+  while ((match = regex2.exec(html)) !== null) {
+    if (!ids.includes(match[1])) ids.push(match[1]);
+  }
+  return ids;
+}
+
 export class CommentService {
   constructor(private readonly repository: CommentRepository) {}
 
@@ -21,7 +37,11 @@ export class CommentService {
 
   create(input: unknown) {
     const data = createSchema.parse(input);
-    return this.repository.create(data as any);
+    const mentionedUserIds = extractMentionIds(data.content);
+    return this.repository.create({
+      ...(data as any),
+      ...(mentionedUserIds.length > 0 ? { mentionedUserIds } : {}),
+    });
   }
 
   delete(id: string) {
@@ -32,3 +52,5 @@ export class CommentService {
     return this.repository.adminListAll();
   }
 }
+
+export { extractMentionIds };

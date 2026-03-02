@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/auth/AuthContext';
-import { signupEvent, cancelSignup, addComment, fetchCommentsApi } from '@/lib/domainApi';
+import { signupEvent, cancelSignup, addComment, fetchCommentsApi, fetchMembersApi } from '@/lib/domainApi';
 import type { FeedComment } from '@/types';
+import RichTextEditor, { RichTextViewer, type MentionMember } from './RichTextEditor';
 import FavoriteBorderRounded from '@mui/icons-material/FavoriteBorderRounded';
 import FavoriteRounded from '@mui/icons-material/FavoriteRounded';
 import ChatBubbleOutlineRounded from '@mui/icons-material/ChatBubbleOutlineRounded';
@@ -53,6 +54,27 @@ interface InteractionProps {
   commentCount?: number;
 }
 
+/* ═══ Shared members cache for @mention in feed ═══ */
+let _membersCache: MentionMember[] | null = null;
+let _membersFetching = false;
+function useFeedMembers() {
+  const [members, setMembers] = useState<MentionMember[]>(_membersCache ?? []);
+  useEffect(() => {
+    if (_membersCache) { setMembers(_membersCache); return; }
+    if (_membersFetching) return;
+    _membersFetching = true;
+    fetchMembersApi().then((list) => {
+      if (Array.isArray(list)) {
+        _membersCache = list
+          .filter((m: any) => m.userStatus === 'approved')
+          .map((m: any) => ({ id: m.id, name: m.name ?? '', avatar: m.avatar ?? undefined }));
+        setMembers(_membersCache);
+      }
+    }).catch(() => {}).finally(() => { _membersFetching = false; });
+  }, []);
+  return members;
+}
+
 /* ═══ FeedActions (shared like + comment bar) ═══ */
 export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, newComments, commentCount: commentCountProp, entityType, entityId, defaultExpanded, liked: likedProp, onLike }: InteractionProps & { compact?: boolean; newComments?: number; commentCount?: number; entityType?: string; entityId?: string; defaultExpanded?: boolean; liked?: boolean; onLike?: () => void }) {
   const c = useColors();
@@ -63,8 +85,10 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   const setLiked = onLike ?? (() => setLikedLocal((v) => !v));
   const [expanded, setExpanded] = useState(defaultExpanded ?? false);
   const [localComments, setLocalComments] = useState(comments ?? []);
-  const [input, setInput] = useState('');
+  const [canSend, setCanSend] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const editorRef = useRef<{ clear: () => void; getHTML: () => string } | null>(null);
+  const members = useFeedMembers();
 
   // Load persisted comments from API when section is first expanded
   useEffect(() => {
@@ -81,14 +105,17 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   const likeCount = likes + (liked ? 1 : 0);
   const px = compact ? 10 : 14;
 
+  const isEmptyHtml = (html: string) => html.replace(/<[^>]*>/g, '').trim().length === 0;
+
   const handleSubmit = async () => {
-    if (!input.trim() || !user) return;
-    const text = input.trim();
-    setLocalComments(prev => [...prev, { name: user.name, text, date: '刚刚' }]);
-    setInput('');
+    const html = editorRef.current?.getHTML() ?? '';
+    if (isEmptyHtml(html) || !user) return;
+    setLocalComments(prev => [...prev, { name: user.name, text: html, date: '刚刚' }]);
+    editorRef.current?.clear();
+    setCanSend(false);
     if (entityType && entityId) {
       try {
-        await addComment({ entityType, entityId, authorId: user.id, content: text });
+        await addComment({ entityType, entityId, authorId: user.id, content: html });
       } catch { /* optimistic */ }
     }
   };
@@ -153,6 +180,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
       {/* Expanded comment list */}
       {expanded && (
         <div style={{ padding: `0 ${px}px ${compact ? 8 : 10}px` }}>
+          <style>{`.mention, span[data-type="mention"] { color: ${c.blue}; font-weight: 600; cursor: pointer; background: ${c.blue}15; padding: 1px 4px; border-radius: 4px; }`}</style>
           {localComments.length === 0 && (
             <div style={{ fontSize: 12, color: c.text3, marginBottom: 8 }}>暂无评论，来说两句吧</div>
           )}
@@ -164,33 +192,43 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
                   <b onClick={() => goMember(cm.name)} style={{ cursor: 'pointer' }}>{cm.name}</b>
                   <span style={{ color: c.text3, marginLeft: 6 }}>{cm.date}</span>
                 </div>
-                <div style={{ fontSize: compact ? 13 : 14, color: c.text2, marginTop: 1 }}>{cm.text}</div>
+                <div
+                  style={{ fontSize: compact ? 13 : 14, color: c.text2, marginTop: 1 }}
+                  dangerouslySetInnerHTML={{ __html: cm.text }}
+                  onClick={(e) => {
+                    const el = (e.target as HTMLElement).closest('[data-type="mention"]') as HTMLElement | null;
+                    if (!el) return;
+                    e.stopPropagation();
+                    const label = el.getAttribute('data-label') || el.textContent?.replace(/^@/, '') || '';
+                    if (label) goMember(label);
+                  }}
+                />
               </div>
             </div>
           ))}
 
           {/* Comment input */}
           {user && (
-            <div style={{ display: 'flex', gap: 8, marginTop: localComments.length > 0 ? 4 : 0, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 8, marginTop: localComments.length > 0 ? 4 : 0, alignItems: 'flex-start' }}>
               <Ava name={user.name} size={compact ? 20 : 24} />
-              <input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                placeholder="写评论..."
-                style={{
-                  flex: 1, padding: '6px 10px', borderRadius: 8,
-                  background: c.s2, border: `1px solid ${c.line}`,
-                  color: c.text, fontSize: compact ? 13 : 14, outline: 'none',
-                }}
-              />
-              {input.trim() && (
+              <div style={{ flex: 1 }}>
+                <RichTextEditor
+                  content=""
+                  onChange={(html) => setCanSend(!isEmptyHtml(html))}
+                  placeholder="写评论... 输入 @ 提及成员"
+                  members={members}
+                  compact
+                  editorRef={editorRef}
+                />
+              </div>
+              {canSend && (
                 <button
                   onClick={handleSubmit}
                   style={{
                     padding: '5px 12px', borderRadius: 6, flexShrink: 0,
                     background: c.warm, border: 'none',
                     color: c.bg, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    marginTop: 4,
                   }}
                 >
                   发送

@@ -25,10 +25,10 @@ import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import { useAuth } from '@/auth/AuthContext';
 import { useColors } from '@/hooks/useColors';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
-import { getRecommendationById, deleteRecommendation, updateRecommendation, toggleRecommendationVote, fetchCommentsApi, addComment, type RecommendationCategory } from '@/lib/domainApi';
+import { getRecommendationById, deleteRecommendation, updateRecommendation, toggleRecommendationVote, type RecommendationCategory } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { firstNonEmoji } from '@/components/Atoms';
-import type { EventComment } from '@/types';
+import CommentSection from '@/components/CommentSection';
 
 function isCategory(value: string | undefined): value is RecommendationCategory {
   return value === 'movie' || value === 'book' || value === 'recipe' || value === 'music' || value === 'place' || value === 'external_event';
@@ -51,8 +51,6 @@ export default function RecommendationDetailPage() {
   const [voted, setVoted] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
   const [voters, setVoters] = useState<{ id: string; name: string }[]>([]);
-  const [comments, setComments] = useState<EventComment[]>([]);
-  const [commentText, setCommentText] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
 
   const { pickFile, isUploading: coverUploading } = useMediaUpload({
@@ -91,19 +89,6 @@ export default function RecommendationDetailPage() {
     void run();
   }, [recommendationId, user?.id]);
 
-  useEffect(() => {
-    if (!recommendationId) return;
-    fetchCommentsApi('recommendation', recommendationId).then((list) => {
-      if (Array.isArray(list)) {
-        setComments(list.map((c: any) => ({
-          name: c.author?.name ?? '匿名',
-          text: c.content ?? '',
-          date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '',
-        })));
-      }
-    }).catch(() => {});
-  }, [recommendationId]);
-
   const canModify = user && item && (
     (item.authorId && item.authorId === user.id) || user.role === 'admin'
   );
@@ -132,14 +117,6 @@ export default function RecommendationDetailPage() {
       setVoters((prev) => prev.filter((v) => v.id !== user.id));
     }
     try { await toggleRecommendationVote(recommendationId, user.id); } catch { /* optimistic */ }
-  };
-
-  const handleAddComment = async (text: string) => {
-    if (!user?.id || !recommendationId || !text.trim()) return;
-    const trimmed = text.trim();
-    setComments((prev) => [...prev, { name: user.name ?? '我', text: trimmed, date: '刚刚' }]);
-    setCommentText('');
-    try { await addComment({ entityType: 'recommendation', entityId: recommendationId, authorId: user.id, content: trimmed }); } catch { /* optimistic */ }
   };
 
   if (error) {
@@ -293,71 +270,7 @@ export default function RecommendationDetailPage() {
         </Card>
 
         {/* 5. Comments */}
-        <Card>
-          <CardContent>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
-              💬 讨论 ({comments.length})
-            </Typography>
-            {comments.length > 0 ? (
-              <Stack spacing={1.5} sx={{ mb: 2 }}>
-                {comments.map((cm, i) => (
-                  <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
-                    <Avatar
-                      sx={{ width: 28, height: 28, fontSize: 12, cursor: 'pointer', mt: 0.25 }}
-                      onClick={() => navigate(`/members/${encodeURIComponent(cm.name)}`)}
-                    >
-                      {firstNonEmoji(cm.name)}
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Stack direction="row" spacing={1} alignItems="baseline">
-                        <Typography variant="body2" fontWeight={700}>{cm.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{cm.date}</Typography>
-                      </Stack>
-                      <Typography variant="body2" color="text.secondary">{cm.text}</Typography>
-                    </Box>
-                  </Stack>
-                ))}
-              </Stack>
-            ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                暂无讨论，来说点什么吧！
-              </Typography>
-            )}
-            {user ? (
-              <Stack direction="row" spacing={1} alignItems="flex-start">
-                <Avatar sx={{ width: 28, height: 28, fontSize: 12, mt: 0.5 }}>
-                  {firstNonEmoji(user.name ?? 'U')}
-                </Avatar>
-                <TextField
-                  size="small"
-                  fullWidth
-                  multiline
-                  maxRows={4}
-                  placeholder="说点什么..."
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={async (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
-                      e.preventDefault();
-                      handleAddComment(commentText);
-                    }
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  size="small"
-                  disabled={!commentText.trim()}
-                  onClick={() => handleAddComment(commentText)}
-                  sx={{ mt: 0.5 }}
-                >
-                  发送
-                </Button>
-              </Stack>
-            ) : (
-              <Typography variant="body2" color="text.secondary">登录后可参与讨论</Typography>
-            )}
-          </CardContent>
-        </Card>
+        {recommendationId && <CommentSection entityType="recommendation" entityId={recommendationId} />}
 
         <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
           <DialogTitle>确认删除</DialogTitle>

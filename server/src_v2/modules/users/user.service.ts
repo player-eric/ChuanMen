@@ -70,6 +70,10 @@ export class UserService {
     return this.repository.list();
   }
 
+  searchUsers(q: string) {
+    return this.repository.search(q);
+  }
+
   getUserById(id: string) {
     return this.repository.getById(id);
   }

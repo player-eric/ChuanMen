@@ -37,6 +37,81 @@ export interface RenderedEmail {
 }
 
 /**
+ * Render a notification email — clean, personal style to land in Gmail Primary.
+ * No images, no CTA buttons, minimal tables. Looks like a well-formatted personal message.
+ */
+export function renderNotificationEmail(options: {
+  subject: string;
+  body: string;
+  variables: Record<string, string>;
+  linkLabel?: string;
+  linkUrl?: string;
+  /** Optional quoted content block (e.g. the comment text) */
+  quote?: string;
+}): RenderedEmail {
+  const { body, variables, linkLabel, linkUrl, quote } = options;
+
+  const sub = (text: string) =>
+    text.replace(/\{(\w+)\}/g, (_, key: string) => variables[key] ?? `{${key}}`);
+
+  const subject = sub(options.subject);
+  const resolvedBody = sub(body);
+  const resolvedUrl = linkUrl ? sub(linkUrl) : undefined;
+
+  const paragraphs = resolvedBody
+    .split('\n\n')
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const bodyHtml = paragraphs
+    .map((p) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.7;color:#1a1a1a;">${notifRichify(p)}</p>`)
+    .join('\n');
+
+  const quoteHtml = quote
+    ? `<div style="margin:4px 0 16px;padding:10px 14px;border-left:3px solid #d4a574;background:#faf8f5;border-radius:0 6px 6px 0;font-size:14px;line-height:1.6;color:#444;">${escapeHtml(sub(quote))}</div>`
+    : '';
+
+  const linkHtml = linkLabel && resolvedUrl
+    ? `<p style="margin:4px 0 0;"><a href="${escapeAttr(resolvedUrl)}" style="font-size:14px;color:#d4a574;text-decoration:none;font-weight:500;">${escapeHtml(linkLabel)}</a></p>`
+    : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="zh">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;font-family:${FONT_STACK};background:#ffffff;">
+<div style="max-width:520px;margin:0 auto;padding:32px 20px 24px;">
+<div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #eee;">
+<span style="font-size:15px;font-weight:600;color:#1a1a1a;">串门儿</span>
+<span style="font-size:13px;color:#999;margin-left:6px;">· 社区通知</span>
+</div>
+${bodyHtml}
+${quoteHtml}
+${linkHtml}
+<div style="margin-top:28px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#bbb;">
+此邮件由串门儿社区自动发送
+</div>
+</div>
+</body>
+</html>`;
+
+  const text = buildPlainText(subject, resolvedBody, linkLabel, resolvedUrl);
+  return { subject, html, text };
+}
+
+function notifRichify(p: string): string {
+  let html = escapeHtml(p);
+  // **bold** → <strong>
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // [label](url) → <a>
+  html = html.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+    '<a href="$2" style="color:#d4a574;text-decoration:underline;">$1</a>',
+  );
+  html = html.replace(/\n/g, '<br/>');
+  return html;
+}
+
+/**
  * Render a branded email from a template subject/body + variables.
  *
  * 1. Replace `{key}` placeholders in subject + body
