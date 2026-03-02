@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { EventRepository } from './event.repository.js';
 import { EventService } from './event.service.js';
-import { sendTemplatedEmail } from '../../services/emailService.js';
+import { sendEmail, sendTemplatedEmail } from '../../services/emailService.js';
 
 export const eventRoutes: FastifyPluginAsync = async (app) => {
   const service = new EventService(new EventRepository(app.prisma), app.prisma);
@@ -75,15 +75,10 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
       }).then(async (votes) => {
         for (const vote of votes) {
           if (!vote.user.email || vote.user.id === eventResponse.hostId) continue;
-          sendTemplatedEmail(app.prisma, {
+          sendEmail({
             to: vote.user.email,
-            ruleId: 'P0-B',
-            variables: {
-              userName: vote.user.name,
-              eventTitle: eventResponse.title,
-            },
-            ctaLabel: '查看活动并报名',
-            ctaUrl: `https://chuanmener.club/events/${eventResponse.id}`,
+            subject: `【串门儿】你感兴趣的创意「${eventResponse.title}」变成活动了！`,
+            text: `Hi ${vote.user.name}，\n\n你之前感兴趣的创意「${eventResponse.title}」已经有人组织啦！快来看看并报名吧。\n\n查看活动：https://chuanmener.club/events/${eventResponse.id}\n\n— 串门儿`,
           }).catch((err) => {
             app.log.error({ err, userId: vote.user.id }, 'Proposal→event notification failed');
           });

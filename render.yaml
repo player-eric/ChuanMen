@@ -56,7 +56,7 @@ services:
     runtime: docker
     dockerfilePath: ./server/Dockerfile
     dockerContext: ./server
-    schedule: "0 14 * * *"
+    schedule: "*/10 * * * *"
     plan: starter
     region: oregon
     dockerCommand: node dist/workers/agentTick.js

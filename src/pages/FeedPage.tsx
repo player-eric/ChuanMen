@@ -64,7 +64,7 @@ function EmptyFeed() {
       <Grid container spacing={1.5}>
         {[
           { icon: '📅', label: '看看活动', desc: '最近有什么好玩的', page: '/events' },
-          { icon: '🎬', label: '推荐电影', desc: '投票选下次看什么', page: '/discover' },
+          { icon: '🎬', label: '推荐好内容', desc: '电影、书、餐厅…', page: '/discover' },
           { icon: '📖', label: '了解串门', desc: '我们是谁、怎么玩', page: '/about' },
           { icon: '✉', label: '寄感谢卡', desc: '给朋友说声谢谢', page: '/cards' },
         ].map((a, i) => (
@@ -479,7 +479,7 @@ function FullFeed() {
         </Button>
         <Button variant="outlined" size="small" onClick={() => navigate('/discover')} disabled={!canInteract}
           sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start', bgcolor: 'background.paper', borderColor: 'divider', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          👍 推荐电影
+          👍 推荐好内容
         </Button>
       </Stack>
 
