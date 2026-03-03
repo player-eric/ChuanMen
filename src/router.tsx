@@ -87,9 +87,10 @@ function buildFeedItems(data: any): any[] {
     return [sort, label];
   };
 
-  // Events → activity items
+  // Events → activity items (grouped by createdAt, not startsAt)
   for (const e of (data.events ?? [])) {
-    const [sortKey, d] = dateParts(e.startsAt);
+    const [sortKey, sortLabel] = dateParts(e.createdAt ?? e.startsAt);
+    const d = e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
     const hostName = e.host?.name ?? '';
     const allSignups = (e.signups ?? []) as any[];
     const feedOccupying = allSignups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
@@ -104,7 +105,7 @@ function buildFeedItems(data: any): any[] {
       role: t.role,
       claimerName: t.claimedBy?.name ?? undefined,
     }));
-    addToDate(sortKey, d, {
+    addToDate(sortKey, sortLabel, {
       type: 'activity',
       name: hostName,
       title: e.title,
@@ -249,6 +250,24 @@ function buildFeedItems(data: any): any[] {
     });
   }
 
+  // Personal notifications → actionNotice items
+  for (const n of (data.notifications ?? [])) {
+    const [sk, d] = dateParts(n.createdAt);
+    addToDate(sk, d, {
+      type: 'actionNotice',
+      action: n.action,
+      name: n.name ?? '',
+      targetTitle: n.targetTitle ?? '',
+      detail: n.detail,
+      time: n.createdAt ? timeAgo(n.createdAt) : '',
+      navTarget: n.navTarget,
+      likes: 0,
+      likedBy: [],
+      comments: [],
+      commentCount: 0,
+    });
+  }
+
   // Proposals → compactProposal items
   for (const p of (data.recentProposals ?? [])) {
     const [sk, d] = dateParts(p.createdAt);
@@ -321,7 +340,11 @@ async function feedLoader() {
       }
     }
 
-    return { items, members };
+    // Extract lottery data from feed response
+    const currentLottery = (data as any).currentLottery ?? null;
+    const lotteryUserStatus = (data as any).lotteryUserStatus ?? null;
+
+    return { items, members, currentLottery, lotteryUserStatus };
   } catch {
     return { items: [], members: [] };
   }

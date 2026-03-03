@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { getWeekKey } from '../modules/lottery/lottery.service.js';
 
 /**
  * GET /api/feed?userId=xxx
@@ -193,6 +194,201 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    // ── Personal notifications (14 days, only when userId is present) ──
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000);
+    const notificationQueries = userId
+      ? await Promise.all([
+          // 1. 被@提及
+          prisma.comment.findMany({
+            where: { mentionedUserIds: { has: userId }, createdAt: { gte: fourteenDaysAgo } },
+            select: {
+              id: true, entityType: true, entityId: true, createdAt: true,
+              author: { select: { id: true, name: true } },
+            },
+            take: 10,
+            orderBy: { createdAt: 'desc' },
+          }),
+          // 2. 被邀请活动
+          prisma.eventSignup.findMany({
+            where: { userId, status: 'invited', createdAt: { gte: fourteenDaysAgo } },
+            select: {
+              createdAt: true, invitedById: true,
+              event: { select: { id: true, title: true } },
+            },
+            take: 10,
+            orderBy: { createdAt: 'desc' },
+          }),
+          // 3. 被安排分工 (someone else assigned me)
+          prisma.eventTask.findMany({
+            where: { claimedById: userId, updatedAt: { gte: fourteenDaysAgo } },
+            select: {
+              role: true, updatedAt: true,
+              event: { select: { id: true, title: true, hostId: true } },
+            },
+            take: 10,
+            orderBy: { updatedAt: 'desc' },
+          }),
+          // 4. 收到感谢卡
+          prisma.postcard.findMany({
+            where: { toId: userId, createdAt: { gte: fourteenDaysAgo } },
+            select: {
+              createdAt: true,
+              from: { select: { id: true, name: true } },
+            },
+            take: 10,
+            orderBy: { createdAt: 'desc' },
+          }),
+          // 5+6. 等位有名额 (offered) + 被接纳 (accepted from waitlist)
+          prisma.eventSignup.findMany({
+            where: {
+              userId,
+              status: { in: ['offered', 'accepted'] },
+              offeredAt: { gte: fourteenDaysAgo },
+            },
+            select: {
+              status: true, offeredAt: true, respondedAt: true,
+              event: { select: { id: true, title: true } },
+            },
+            take: 10,
+            orderBy: { offeredAt: 'desc' },
+          }),
+          // 7. 创意变活动 (proposals I voted on that now have a linked event)
+          prisma.proposalVote.findMany({
+            where: { userId },
+            select: {
+              proposal: {
+                select: {
+                  id: true, title: true,
+                  events: {
+                    where: { createdAt: { gte: fourteenDaysAgo } },
+                    select: { id: true, title: true, createdAt: true },
+                    take: 1,
+                  },
+                },
+              },
+            },
+          }),
+        ])
+      : [[], [], [], [], [], []];
+
+    // Normalize notifications into a flat array
+    const notifications: {
+      action: string;
+      name: string;
+      targetTitle: string;
+      detail?: string;
+      navTarget: string;
+      createdAt: string;
+    }[] = [];
+
+    if (userId) {
+      const [mentions, invites, taskAssigns, postcardReceived, waitlistSignups, proposalVotes] = notificationQueries;
+
+      // Build a userId→name map from already-fetched members for name lookups
+      const memberNameMap = new Map<string, string>();
+      for (const m of members) memberNameMap.set(m.id, m.name);
+
+      // Build entity title maps from already-fetched data for mention target titles
+      const entityTitleMap = new Map<string, string>();
+      for (const e of events) entityTitleMap.set(e.id, e.title);
+      for (const m of recentMovies) entityTitleMap.set(m.id, m.title);
+      for (const p of recentProposals) entityTitleMap.set(p.id, p.title);
+
+      // 1. Mentions
+      for (const c of mentions as any[]) {
+        // Determine navTarget from entityType + entityId
+        let nav = '/';
+        if (c.entityType === 'event') nav = `/events/${c.entityId}`;
+        else if (c.entityType === 'movie') nav = `/discover/movies/${c.entityId}`;
+        else if (c.entityType === 'proposal') nav = `/events/proposals/${c.entityId}`;
+        notifications.push({
+          action: 'mention',
+          name: c.author?.name ?? '',
+          targetTitle: entityTitleMap.get(c.entityId) ?? '',
+          navTarget: nav,
+          createdAt: c.createdAt?.toISOString() ?? '',
+        });
+      }
+
+      // 2. Event invites
+      for (const s of invites as any[]) {
+        notifications.push({
+          action: 'event_invite',
+          name: (s.invitedById ? memberNameMap.get(s.invitedById) : '') ?? '',
+          targetTitle: s.event?.title ?? '',
+          navTarget: `/events/${s.event?.id}`,
+          createdAt: s.createdAt?.toISOString() ?? '',
+        });
+      }
+
+      // 3. Task assignments
+      for (const t of taskAssigns as any[]) {
+        notifications.push({
+          action: 'task_assign',
+          name: '',
+          targetTitle: t.event?.title ?? '',
+          detail: t.role,
+          navTarget: `/events/${t.event?.id}`,
+          createdAt: t.updatedAt?.toISOString() ?? '',
+        });
+      }
+
+      // 4. Postcards received
+      for (const p of postcardReceived as any[]) {
+        notifications.push({
+          action: 'postcard_received',
+          name: p.from?.name ?? '',
+          targetTitle: '',
+          navTarget: '/cards',
+          createdAt: p.createdAt?.toISOString() ?? '',
+        });
+      }
+
+      // 5+6. Waitlist offered / approved
+      for (const s of waitlistSignups as any[]) {
+        notifications.push({
+          action: s.status === 'offered' ? 'waitlist_offered' : 'waitlist_approved',
+          name: '',
+          targetTitle: s.event?.title ?? '',
+          navTarget: `/events/${s.event?.id}`,
+          createdAt: (s.status === 'offered' ? s.offeredAt : s.respondedAt ?? s.offeredAt)?.toISOString() ?? '',
+        });
+      }
+
+      // 7. Proposal realized
+      for (const v of proposalVotes as any[]) {
+        const linkedEvent = v.proposal?.events?.[0];
+        if (!linkedEvent) continue;
+        notifications.push({
+          action: 'proposal_realized',
+          name: '',
+          targetTitle: v.proposal?.title ?? '',
+          navTarget: `/events/${linkedEvent.id}`,
+          createdAt: linkedEvent.createdAt?.toISOString() ?? '',
+        });
+      }
+    }
+
+    // Fetch current lottery draw
+    const weekKey = getWeekKey();
+    const currentLottery = await prisma.weeklyLottery.findFirst({
+      where: { weekKey, status: { not: 'skipped' } },
+      include: {
+        drawnMember: { select: { id: true, name: true, avatar: true } },
+        event: { select: { id: true, title: true, startsAt: true } },
+      },
+    });
+
+    // Fetch user's lottery/candidate status if logged in
+    let lotteryUserStatus: { hostCandidate: boolean; consecutiveEvents: number } | null = null;
+    if (userId) {
+      const u = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { hostCandidate: true, consecutiveEvents: true },
+      });
+      if (u) lotteryUserStatus = u;
+    }
+
     // Collect all entity IDs by type for batch like/comment fetching
     const eventIds = events.map((e) => e.id);
     const postcardIds = postcards.map((p) => p.id);
@@ -254,6 +450,9 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       recentProposals: recentProposals.map(withInteraction),
       newMembers: newMembers.map(withInteraction),
       birthdayUsers,
+      currentLottery,
+      lotteryUserStatus,
+      notifications,
     };
   });
 };

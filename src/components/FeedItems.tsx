@@ -1076,7 +1076,10 @@ interface FeedCommentNoticeProps extends InteractionProps {
 
 /* ═══ FeedActionNotice ═══ */
 type ActionNoticeAction = 'event_join' | 'photo_upload' | 'movie_nominate' | 'movie_vote'
-  | 'book_vote' | 'task_claim' | 'host_help' | 'interest_express' | 'film_select';
+  | 'book_vote' | 'task_claim' | 'host_help' | 'interest_express' | 'film_select'
+  | 'mention' | 'event_invite' | 'task_assign'
+  | 'postcard_received' | 'waitlist_offered' | 'waitlist_approved'
+  | 'proposal_realized';
 
 interface FeedActionNoticeProps extends InteractionProps {
   action: ActionNoticeAction;
@@ -1098,6 +1101,13 @@ const actionConfig: Record<ActionNoticeAction, { emoji: string; text: (p: FeedAc
   host_help:        { emoji: '🙋', text: p => `${p.name} 添加了分工：${p.detail}` },
   interest_express: { emoji: '💡', text: p => `${p.name} 对「${p.targetTitle}」感兴趣` },
   film_select:      { emoji: '🎬', text: p => `${p.name} 选定了「${p.detail}」为「${p.targetTitle}」的放映` },
+  mention:          { emoji: '💬', text: p => `${p.name} 在「${p.targetTitle}」中提到了你` },
+  event_invite:     { emoji: '📩', text: p => `${p.name} 邀请你参加「${p.targetTitle}」` },
+  task_assign:      { emoji: '📋', text: p => `你在「${p.targetTitle}」中被安排了分工${p.detail ? `：${p.detail}` : ''}` },
+  postcard_received:{ emoji: '✉️', text: p => `${p.name} 给你寄了一张感谢卡` },
+  waitlist_offered: { emoji: '🎉', text: p => `「${p.targetTitle}」有名额了，请在 24 小时内确认` },
+  waitlist_approved:{ emoji: '✅', text: p => `你已被接纳参加「${p.targetTitle}」` },
+  proposal_realized:{ emoji: '💡', text: p => `你感兴趣的创意「${p.targetTitle}」变成活动了` },
 };
 
 export function FeedActionNotice(props: FeedActionNoticeProps) {

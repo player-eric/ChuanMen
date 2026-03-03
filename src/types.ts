@@ -263,7 +263,10 @@ export type FeedItem =
       type: 'actionNotice';
       action: 'event_join' | 'photo_upload' | 'movie_nominate' | 'movie_vote'
             | 'book_vote' | 'task_claim' | 'host_help'
-            | 'interest_express' | 'film_select';
+            | 'interest_express' | 'film_select'
+            | 'mention' | 'event_invite' | 'task_assign'
+            | 'postcard_received' | 'waitlist_offered' | 'waitlist_approved'
+            | 'proposal_realized';
       name: string;
       targetTitle: string;
       time: string;
@@ -364,9 +367,22 @@ export interface EventTaskData {
   createdAt: string;
 }
 
+export interface LotteryDraw {
+  id: string;
+  weekKey: string;
+  weekNumber: number;
+  drawnMemberId: string;
+  status: 'pending' | 'accepted' | 'completed' | 'skipped';
+  eventId: string | null;
+  drawnMember: { id: string; name: string; avatar: string };
+  event?: { id: string; title: string; startsAt?: string } | null;
+}
+
 export interface FeedPageData {
   members: MemberData[];
   items: FeedItem[];
+  currentLottery?: LotteryDraw | null;
+  lotteryUserStatus?: { hostCandidate: boolean; consecutiveEvents: number } | null;
 }
 
 export interface EventsPageData {
