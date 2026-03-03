@@ -13,6 +13,8 @@ import {
   sendDailyDigest,
   processWaitlistExpiry,
 } from '../agent/emailAutomation.js';
+import { drawWeeklyHost, getWeekKey } from '../modules/lottery/lottery.service.js';
+import { sendLotteryDrawNotif, sendConsecutiveEventsReminder } from '../agent/emailAutomation.js';
 
 export async function runAgentCycle(app: FastifyInstance) {
   const prisma = app.prisma;
@@ -41,6 +43,75 @@ export async function runAgentCycle(app: FastifyInstance) {
     }
   } catch (err) {
     log.error({ err }, 'Agent: processAnnouncedUsers failed');
+  }
+
+  // Phase 1c: Weekly lottery draw (run on Mondays)
+  try {
+    const now = new Date();
+    const isMonday = now.getDay() === 1;
+    if (isMonday) {
+      // Check if draw already exists for this week
+      const weekKey = getWeekKey(now);
+      const existingDraw = await prisma.weeklyLottery.findFirst({
+        where: { weekKey, status: { not: 'skipped' } },
+      });
+      if (!existingDraw) {
+        const draw = await drawWeeklyHost(prisma, log);
+        if (draw && draw.drawnMember) {
+          log.info(`Agent: weekly lottery drew ${draw.drawnMember.name}`);
+          // Send notification email to the drawn user
+          if (draw.drawnMember.email) {
+            await sendLotteryDrawNotif(prisma, log, draw.drawnMember, draw.weekNumber);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    log.error({ err }, 'Agent: weekly lottery draw failed');
+  }
+
+  // Phase 1d: Update consecutiveEvents for recently ended events
+  try {
+    const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000);
+    const recentlyEnded = await prisma.event.findMany({
+      where: {
+        phase: 'ended',
+        updatedAt: { gte: eightHoursAgo },
+      },
+      select: {
+        id: true,
+        startsAt: true,
+        signups: {
+          where: { status: 'accepted', participated: true },
+          select: { userId: true },
+        },
+      },
+    });
+
+    for (const event of recentlyEnded) {
+      for (const signup of event.signups) {
+        // Update lastEventAt and increment consecutiveEvents
+        const user = await prisma.user.findUnique({
+          where: { id: signup.userId },
+          select: { consecutiveEvents: true, lastEventAt: true },
+        });
+        if (!user) continue;
+
+        // Reset if more than 30 days since last event
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const shouldReset = user.lastEventAt && user.lastEventAt < thirtyDaysAgo;
+
+        await prisma.user.update({
+          where: { id: signup.userId },
+          data: {
+            consecutiveEvents: shouldReset ? 1 : { increment: 1 },
+            lastEventAt: event.startsAt,
+          },
+        });
+      }
+    }
+  } catch (err) {
+    log.error({ err }, 'Agent: consecutiveEvents update failed');
   }
 
   // Phase 2: Waitlist offer expiry (time-sensitive, run before emails)
@@ -118,6 +189,13 @@ export async function runAgentCycle(app: FastifyInstance) {
     await sendDailyDigest(prisma, log);
   } catch (err) {
     log.error({ err }, 'Agent: sendDailyDigest failed');
+  }
+
+  // Lottery: consecutive events reminder
+  try {
+    await sendConsecutiveEventsReminder(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendConsecutiveEventsReminder failed');
   }
 
   return { milestones, tribute };

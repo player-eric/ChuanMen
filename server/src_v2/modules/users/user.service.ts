@@ -51,6 +51,8 @@ const updateSettingsSchema = z.object({
   notifyCards: z.boolean().optional(),
   notifyOps: z.boolean().optional(),
   notifyAnnounce: z.boolean().optional(),
+  // Lottery candidate pool
+  hostCandidate: z.boolean().optional(),
 });
 
 // Admin: update any user fields
@@ -187,11 +189,12 @@ export class UserService {
     const data = updateSettingsSchema.parse(input);
 
     // Split preference fields from user fields
-    const { emailState, notifyEvents, notifyCards, notifyOps, notifyAnnounce, birthday, ...restFields } = data;
+    const { emailState, notifyEvents, notifyCards, notifyOps, notifyAnnounce, hostCandidate, birthday, ...restFields } = data;
     const prefFields = { emailState, notifyEvents, notifyCards, notifyOps, notifyAnnounce };
     const userFields = {
       ...restFields,
       ...(birthday !== undefined ? { birthday: birthday ? new Date(birthday) : null } : {}),
+      ...(hostCandidate !== undefined ? { hostCandidate } : {}),
     };
     const hasPrefUpdate = Object.values(prefFields).some((v) => v !== undefined);
 

@@ -177,6 +177,9 @@ model User {
   homeAddress          String              @default("")
   subscribeNewsletter  Boolean             @default(true)
   postcardCredits      Int                 @default(2)
+  hostCandidate        Boolean             @default(false)
+  consecutiveEvents    Int                 @default(0)
+  lastEventAt          DateTime?
   birthday             DateTime?
   hideBirthday         Boolean             @default(false)
   announcedAt          DateTime?

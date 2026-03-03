@@ -20,6 +20,7 @@ import { taskPresetRoutes } from '../modules/task-presets/task-preset.route.js';
 import { eventTaskRoutes } from '../modules/event-tasks/event-task.route.js';
 import { newsletterRoutes } from '../modules/newsletters/newsletter.route.js';
 import { siteConfigRoutes } from '../modules/site-config/site-config.route.js';
+import { lotteryRoutes } from '../modules/lottery/lottery.route.js';
 
 export const apiRoutes: FastifyPluginAsync = async (app) => {
   // Touch lastActiveAt on meaningful API activity (throttled per user, fire-and-forget)
@@ -62,6 +63,7 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
   app.register(eventTaskRoutes, { prefix: '/events' });
   app.register(newsletterRoutes, { prefix: '/newsletters' });
   app.register(siteConfigRoutes, { prefix: '/config' });
+  app.register(lotteryRoutes, { prefix: '/lottery' });
 
   // Admin dashboard stats
   app.get('/admin/stats', async () => {

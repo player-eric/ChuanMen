@@ -968,3 +968,79 @@ export async function processWaitlistExpiry(
   log.info(`Waitlist expiry: ${expired} expired, ${promoted} promoted`);
   return { expired, promoted };
 }
+
+// ── Lottery: draw notification (sent when someone is drawn) ──
+
+export async function sendLotteryDrawNotif(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+  drawnUser: { id: string; name: string; email: string },
+  weekNumber: number,
+): Promise<void> {
+  const siteUrl = 'https://chuanmener.club';
+  try {
+    await sendEmail({
+      to: drawnUser.email,
+      subject: `🎲 本周轮到你 Host 啦！`,
+      text: `Hi ${drawnUser.name}，\n\n这周轮到你来组织一次小聚！不用有压力，2-6 个人的小局就好。\n\n可以是：一起喝杯咖啡、散个步、看个电影、或者聊聊天。\n\n👉 前往发起小聚：${siteUrl}\n\n如果这周实在不方便，登录后可以点击跳过，没有任何影响。\n\n— 串门儿`,
+    });
+    await prisma.emailLog.create({
+      data: { userId: drawnUser.id, ruleId: 'LOTTERY-DRAW', refId: `week-${weekNumber}` },
+    });
+    log.info(`Lottery draw notification sent to ${drawnUser.name}`);
+  } catch (err) {
+    log.error({ err, userId: drawnUser.id }, 'Lottery draw notification failed');
+  }
+}
+
+// ── Lottery: 3-consecutive-events reminder ───────────────────
+
+export async function sendConsecutiveEventsReminder(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const siteUrl = 'https://chuanmener.club';
+
+  // Find users with 3+ consecutive events who are NOT in the candidate pool
+  const candidates: UserRow[] = await prisma.user.findMany({
+    where: {
+      userStatus: 'approved',
+      consecutiveEvents: { gte: 3 },
+      hostCandidate: false,
+      OR: [
+        { preferences: null },
+        { preferences: { emailState: { not: 'unsubscribed' } } },
+      ],
+    },
+    select: { id: true, name: true, email: true },
+  });
+
+  // Filter by cooldown (30 days between reminders)
+  const eligible = await filterByCooldown(
+    prisma,
+    candidates.map((u) => u.id),
+    'LOTTERY-3X',
+    30,
+  );
+
+  let sent = 0;
+  for (const user of candidates) {
+    if (!eligible.has(user.id)) continue;
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: '你已经是串门儿活跃分子了！',
+        text: `Hi ${user.name}，\n\n你已经连续参加了 3 次活动，大家都很喜欢有你在！\n\n有没有兴趣试试做一次 Host？可以是很简单的小聚，2-6 个人，做点你喜欢的事就好。\n\n👉 前往设置加入轮值候选池：${siteUrl}/settings\n\n完全自愿，没有压力 :)\n\n— 串门儿`,
+      });
+      await prisma.emailLog.create({
+        data: { userId: user.id, ruleId: 'LOTTERY-3X' },
+      });
+      sent++;
+    } catch (err) {
+      log.error({ err, userId: user.id }, 'LOTTERY-3X send failed');
+    }
+  }
+
+  log.info(`LOTTERY-3X consecutive events reminder: ${sent}/${candidates.length} sent`);
+  return sent;
+}

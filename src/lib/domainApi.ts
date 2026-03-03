@@ -1516,4 +1516,60 @@ export async function updateDigestConfig(config: DigestConfig) {
   });
 }
 
+// ═══════════════════════════════════════════════
+//  Lottery API (轮值 Host 抽签)
+// ═══════════════════════════════════════════════
+
+export interface LotteryDraw {
+  id: string;
+  weekKey: string;
+  weekNumber: number;
+  drawnMemberId: string;
+  status: 'pending' | 'accepted' | 'completed' | 'skipped';
+  eventId: string | null;
+  createdAt: string;
+  drawnMember: { id: string; name: string; avatar: string };
+  event?: { id: string; title: string; startsAt?: string } | null;
+}
+
+export async function fetchCurrentLottery() {
+  return requestJson<LotteryDraw | { none: true }>('/api/lottery/current');
+}
+
+export async function fetchLotteryHistory(take = 20, skip = 0) {
+  return requestJson<LotteryDraw[]>(`/api/lottery/history?take=${take}&skip=${skip}`);
+}
+
+export async function acceptLottery(lotteryId: string, userId: string) {
+  return requestJson<LotteryDraw>(`/api/lottery/${lotteryId}/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function skipLottery(lotteryId: string, userId: string) {
+  return requestJson<{ ok: boolean; newDraw: LotteryDraw | null }>(`/api/lottery/${lotteryId}/skip`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function completeLottery(lotteryId: string, eventId: string) {
+  return requestJson<LotteryDraw>(`/api/lottery/${lotteryId}/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventId }),
+  });
+}
+
+export async function updateHostCandidate(userId: string, hostCandidate: boolean) {
+  return requestJson<{ id: string; hostCandidate: boolean }>('/api/lottery/host-candidate', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+    body: JSON.stringify({ hostCandidate }),
+  });
+}
+
 

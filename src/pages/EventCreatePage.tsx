@@ -29,7 +29,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
 import { useTaskPresets } from '@/hooks/useTaskPresets';
-import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, fetchMoviesApi, linkEventRecommendation } from '@/lib/domainApi';
+import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, fetchMoviesApi, linkEventRecommendation, completeLottery } from '@/lib/domainApi';
 import type { FoodOption } from '@/types';
 
 interface CreateTaskItem {
@@ -58,6 +58,7 @@ export default function EventCreatePage() {
 
   const fromProposal = (routeLocation.state as { fromProposal?: { id?: string; title: string; descriptionHtml: string } } | null)?.fromProposal;
   const preTag = (routeLocation.state as { preTag?: string } | null)?.preTag;
+  const lotteryId = (routeLocation.state as { lotteryId?: string } | null)?.lotteryId;
 
   const [name, setName] = useState(fromProposal?.title ?? '');
   const [tags, setTags] = useState<string[]>(preTag ? [preTag] : []);
@@ -68,7 +69,7 @@ export default function EventCreatePage() {
   const [location, setLocation] = useState('');
   const [isHome, setIsHome] = useState(false);
   const [houseRules, setHouseRules] = useState('');
-  const [capacity, setCapacity] = useState(8);
+  const [capacity, setCapacity] = useState(lotteryId ? 6 : 8);
   const [description, setDescription] = useState(fromProposal?.descriptionHtml ?? '');
   const [delayPublish, setDelayPublish] = useState(false);
   const [publishDate, setPublishDate] = useState('');
@@ -192,17 +193,22 @@ export default function EventCreatePage() {
         startsAt: combineDT(startDate, startTime || '19:00'),
         capacity,
         description,
-        tags: mappedTags.length > 0 ? mappedTags : undefined,
+        tags: mappedTags.length > 0 ? mappedTags : (lotteryId ? ['small_group'] : undefined),
         phase: isPastDate ? 'ended' : delayPublish ? 'invite' : 'open',
         publishAt: delayPublish && publishDate ? combineDT(publishDate, publishTime || '00:00') : undefined,
         recCategories: recCategories.length > 0
           ? Object.entries(recCatModes).map(([c, m]) => `${c}:${m}`)
           : undefined,
         isPrivate: isPrivate || undefined,
+        isWeeklyLotteryEvent: lotteryId ? true : undefined,
         proposalId: fromProposal?.id,
         tasks: validTasks.length > 0 ? validTasks : undefined,
       });
       const newEventId = String((result as any).id ?? '');
+      // Complete lottery draw if this is a lottery event
+      if (lotteryId && newEventId) {
+        try { await completeLottery(lotteryId, newEventId); } catch { /* best effort */ }
+      }
       // Link selected recommendations (best effort)
       for (const rec of selectedRecs) {
         const isNom = recCatModes[rec.category] === 'nominate';
@@ -412,9 +418,9 @@ export default function EventCreatePage() {
                 分工
               </Typography>
               {tasks.length > 0 ? (
-                <Stack spacing={1.5}>
+                <Stack spacing={2}>
                   {tasks.map((task, idx) => (
-                    <Stack key={idx} spacing={0.5}>
+                    <Box key={idx}>
                       <Stack direction="row" spacing={1} alignItems="center">
                         <TextField
                           size="small"
@@ -443,9 +449,10 @@ export default function EventCreatePage() {
                           next[idx] = { ...next[idx], description: e.target.value };
                           setTasks(next);
                         }}
-                        sx={{ ml: 0 }}
+                        variant="standard"
+                        sx={{ ml: 1.5, mt: 0.5, width: 'calc(100% - 48px)', '& .MuiInputBase-input': { fontSize: 13, color: 'text.secondary' } }}
                       />
-                    </Stack>
+                    </Box>
                   ))}
                 </Stack>
               ) : (

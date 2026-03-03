@@ -210,6 +210,18 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    // Auto-join lottery candidate pool if participationPlan includes Host
+    if (user.participationPlan && /host|Host|做Host/i.test(user.participationPlan)) {
+      try {
+        await app.prisma.user.update({
+          where: { id: user.id },
+          data: { hostCandidate: true },
+        });
+      } catch (err) {
+        app.log.error(err, 'Failed to set hostCandidate on approve');
+      }
+    }
+
     // Send TXN-4 welcome email
     const siteUrl = env.FRONTEND_ORIGIN || 'https://chuanmener.club';
     try {

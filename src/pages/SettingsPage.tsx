@@ -75,6 +75,9 @@ export default function SettingsPage() {
       .catch(() => {});
   }, [user?.id]);
 
+  // Lottery candidate pool
+  const [hostCandidate, setHostCandidate] = useState(user?.hostCandidate ?? false);
+
   // Notification (read from persisted preferences)
   const prefs = user?.preferences;
   const emailStateToFreq = (s?: string) => {
@@ -145,6 +148,8 @@ export default function SettingsPage() {
         notifyCards,
         notifyOps,
         notifyAnnounce,
+        // Lottery
+        hostCandidate,
       };
       const res = await updateUserSettings(user.id, payload);
       // Update local auth context so avatar/cover show immediately
@@ -321,6 +326,16 @@ export default function SettingsPage() {
             <FormControlLabel control={<Switch checked={notifyAnnounce} onChange={() => setNotifyAnnounce(!notifyAnnounce)} />} label="社群公告" />
 
             <Alert severity="info" variant="outlined">免打扰时段设置即将上线（默认 22:00 - 08:00）</Alert>
+
+            <Divider />
+
+            <FormControlLabel
+              control={<Switch checked={hostCandidate} onChange={() => setHostCandidate(!hostCandidate)} />}
+              label="加入轮值 Host 候选池"
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: -1, ml: 4 }}>
+              开启后，你可能会被随机选为每周 Host。你可以随时跳过，没有压力。
+            </Typography>
           </Stack>
         </CardContent>
       </Card>

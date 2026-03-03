@@ -20,8 +20,8 @@ import {
   Typography,
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
-import type { FeedPageData, FeedItem } from '@/types';
-import { sendPostcard } from '@/lib/domainApi';
+import type { FeedPageData, FeedItem, LotteryDraw } from '@/types';
+import { sendPostcard, acceptLottery, skipLottery, updateHostCandidate } from '@/lib/domainApi';
 import { Ava } from '@/components/Atoms';
 import QuickActionDialog from '@/components/QuickActionDialog';
 import {
@@ -43,9 +43,6 @@ import {
   FeedNewMember,
   FeedBirthday,
 } from '@/components/FeedItems';
-
-/* ═══ Mock: current small-group draw ═══ */
-const currentDraw = { person: '星星', week: 12 };
 
 /* ═══ Empty Feed ═══ */
 function EmptyFeed() {
@@ -373,11 +370,23 @@ const PAGE_SIZE = 8;
 function FullFeed() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { items } = useLoaderData() as FeedPageData;
+  const { items, currentLottery, lotteryUserStatus } = useLoaderData() as FeedPageData;
   const [snackMsg, setSnackMsg] = useState('');
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [quickOpen, setQuickOpen] = useState(false);
+  const [lotteryState, setLotteryState] = useState<LotteryDraw | null>(null);
+  const [lotteryDismissed, setLotteryDismissed] = useState(false);
+  const [candidateBannerDismissed, setCandidateBannerDismissed] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Initialize lottery state from loader data
+  useEffect(() => {
+    if (currentLottery && !('none' in currentLottery)) {
+      setLotteryState(currentLottery as LotteryDraw);
+    } else {
+      setLotteryState(null);
+    }
+  }, [currentLottery]);
 
   const hasMore = visible < items.length;
 
@@ -401,14 +410,54 @@ function FullFeed() {
   useEffect(() => { setVisible(PAGE_SIZE); }, [items]);
 
   const canInteract = Boolean(user);
-  const isDrawnPerson = user?.name === currentDraw.person;
+  const isDrawnPerson = lotteryState?.drawnMemberId === user?.id && lotteryState?.status === 'pending';
+
+  const handleAcceptLottery = async () => {
+    if (!lotteryState || !user) return;
+    try {
+      await acceptLottery(lotteryState.id, user.id);
+      navigate('/events/new', { state: { preTag: '小聚', lotteryId: lotteryState.id } });
+    } catch {
+      setSnackMsg('操作失败，请重试');
+    }
+  };
+
+  const handleSkipLottery = async () => {
+    if (!lotteryState || !user) return;
+    try {
+      await skipLottery(lotteryState.id, user.id);
+      setLotteryDismissed(true);
+      setSnackMsg('已跳过，系统将重新抽签');
+    } catch {
+      setSnackMsg('操作失败，请重试');
+    }
+  };
+
+  const handleJoinCandidatePool = async () => {
+    if (!user) return;
+    try {
+      await updateHostCandidate(user.id, true);
+      setCandidateBannerDismissed(true);
+      setSnackMsg('已加入轮值 Host 候选池');
+    } catch {
+      setSnackMsg('操作失败，请重试');
+    }
+  };
+
+  // Show 3-consecutive-events banner
+  const showCandidateBanner = !candidateBannerDismissed &&
+    lotteryUserStatus &&
+    lotteryUserStatus.consecutiveEvents >= 3 &&
+    !lotteryUserStatus.hostCandidate;
 
   return (
     <Box>
       <RecapBanner items={items} onSnack={setSnackMsg} />
       <WelcomeBanner />
       <ProfileNudgeBanner />
-      {isDrawnPerson && (
+
+      {/* Lottery: drawn person banner */}
+      {isDrawnPerson && !lotteryDismissed && (
         <Card sx={{ mb: 2, border: '1px solid', borderColor: 'primary.light', bgcolor: 'primary.50' }}>
           <CardContent>
             <Typography variant="h6" sx={{ mb: 1 }}>🎲 本周轮到你 Host！</Typography>
@@ -422,7 +471,7 @@ function FullFeed() {
               <Button
                 variant="contained"
                 size="small"
-                onClick={() => navigate('/events/new', { state: { preTag: '小聚' } })}
+                onClick={handleAcceptLottery}
                 sx={{ textTransform: 'none' }}
               >
                 🏠 发起小聚
@@ -430,7 +479,7 @@ function FullFeed() {
               <Button
                 variant="outlined"
                 size="small"
-                onClick={() => setSnackMsg('已跳过，系统将重新抽签')}
+                onClick={handleSkipLottery}
                 sx={{ textTransform: 'none' }}
               >
                 这周不行
@@ -438,6 +487,30 @@ function FullFeed() {
             </Stack>
           </CardContent>
         </Card>
+      )}
+
+      {/* 3-consecutive-events: invite to join candidate pool */}
+      {showCandidateBanner && (
+        <Alert
+          severity="info"
+          sx={{ mb: 2 }}
+          onClose={() => setCandidateBannerDismissed(true)}
+        >
+          <Typography variant="body2" fontWeight={700} sx={{ mb: 0.5 }}>
+            🎉 你已经连续参加了 {lotteryUserStatus!.consecutiveEvents} 次活动！
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            考虑做一次 Host 吗？可以是很简单的小聚，2-6 个人，做点你喜欢的事就好。
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            <Button size="small" variant="contained" onClick={handleJoinCandidatePool}>
+              加入候选池
+            </Button>
+            <Button size="small" onClick={() => setCandidateBannerDismissed(true)}>
+              暂时不了
+            </Button>
+          </Stack>
+        </Alert>
       )}
 
       <Grid container spacing={2}>

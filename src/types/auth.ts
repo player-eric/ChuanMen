@@ -27,6 +27,8 @@ export interface AuthUser {
   googleId?: string;
   birthday?: string;
   hideBirthday?: boolean;
+  hostCandidate?: boolean;
+  consecutiveEvents?: number;
   preferences?: UserPreferences;
 }
 
