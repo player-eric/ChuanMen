@@ -53,8 +53,23 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error('❌ 环境变量校验失败：', parsed.error.flatten().fieldErrors);
-  process.exit(1);
+  // In test mode, use permissive defaults instead of crashing
+  if (process.env.NODE_ENV === 'test') {
+    const testDefaults = envSchema.safeParse({
+      ...process.env,
+      DATABASE_URL: process.env.DATABASE_URL || 'postgresql://chuanmen:chuanmen@localhost:5432/chuanmen_test',
+    });
+    if (testDefaults.success) {
+      // Export test defaults below
+      (globalThis as any).__chuanmen_env = testDefaults.data;
+    } else {
+      console.error('❌ 测试环境变量校验失败：', testDefaults.error.flatten().fieldErrors);
+      process.exit(1);
+    }
+  } else {
+    console.error('❌ 环境变量校验失败：', parsed.error.flatten().fieldErrors);
+    process.exit(1);
+  }
 }
 
-export const env = parsed.data;
+export const env = parsed.success ? parsed.data : (globalThis as any).__chuanmen_env;
