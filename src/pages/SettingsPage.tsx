@@ -6,10 +6,14 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Chip,
   CircularProgress,
   Divider,
+  FormControl,
   FormControlLabel,
+  FormGroup,
+  FormLabel,
   MenuItem,
   Snackbar,
   Stack,
@@ -33,7 +37,9 @@ export default function SettingsPage() {
   const [bio, setBio] = useState(user?.bio ?? '');
   const [selfAsFriend, setSelfAsFriend] = useState(user?.selfAsFriend ?? '');
   const [idealFriend, setIdealFriend] = useState(user?.idealFriend ?? '');
-  const [participationPlan, setParticipationPlan] = useState(user?.participationPlan ?? '');
+  const [participationPlan, setParticipationPlan] = useState<string[]>(
+    user?.participationPlan ? user.participationPlan.split(', ').filter(Boolean) : [],
+  );
   const [email, setEmail] = useState(user?.email ?? '');
   const [defaultHouseRules, setDefaultHouseRules] = useState(user?.defaultHouseRules ?? '');
   const [homeAddress, setHomeAddress] = useState(user?.homeAddress ?? '');
@@ -123,7 +129,7 @@ export default function SettingsPage() {
         bio: bio || undefined,
         selfAsFriend: selfAsFriend || undefined,
         idealFriend: idealFriend || undefined,
-        participationPlan: participationPlan || undefined,
+        participationPlan: participationPlan.length > 0 ? participationPlan.join(', ') : undefined,
         email: email || undefined,
         defaultHouseRules: defaultHouseRules || undefined,
         homeAddress: homeAddress || undefined,
@@ -198,7 +204,35 @@ export default function SettingsPage() {
             <TextField label="自我介绍" multiline minRows={2} value={bio} onChange={(e) => setBio(e.target.value)} />
             <TextField label="你觉得自己是一个什么样的朋友？" multiline minRows={2} value={selfAsFriend} onChange={(e) => setSelfAsFriend(e.target.value)} />
             <TextField label="你最好的朋友是什么样子的？" multiline minRows={2} value={idealFriend} onChange={(e) => setIdealFriend(e.target.value)} />
-            <TextField label="你可能会怎样参与串门儿？" multiline minRows={2} value={participationPlan} onChange={(e) => setParticipationPlan(e.target.value)} />
+            <FormControl>
+              <FormLabel sx={{ fontWeight: 600, mb: 0.5 }}>你可能会怎样参与串门儿？</FormLabel>
+              <FormGroup>
+                {[
+                  '仅参加活动',
+                  '参加活动，提供反馈',
+                  '可以做Host组织活动，家里客厅还不太想开放',
+                  '可以做Host组织活动，让朋友们来家里串门',
+                  '可以做志愿者或其他（比如拍照摄影、视频剪辑、活动支持等）',
+                ].map((option) => (
+                  <FormControlLabel
+                    key={option}
+                    control={
+                      <Checkbox
+                        checked={participationPlan.includes(option)}
+                        onChange={(e) => {
+                          setParticipationPlan((prev) =>
+                            e.target.checked
+                              ? [...prev, option]
+                              : prev.filter((v) => v !== option),
+                          );
+                        }}
+                      />
+                    }
+                    label={option}
+                  />
+                ))}
+              </FormGroup>
+            </FormControl>
             <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             <TextField
               label="生日"
