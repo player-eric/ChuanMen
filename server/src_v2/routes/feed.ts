@@ -38,6 +38,10 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
                 recommendation: { select: { id: true, title: true, category: true } },
               },
             },
+            tasks: {
+              include: { claimedBy: { select: { id: true, name: true } } },
+              orderBy: { createdAt: 'asc' as const },
+            },
           },
         }),
 

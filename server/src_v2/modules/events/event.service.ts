@@ -3,6 +3,11 @@ import type { PrismaClient } from '@prisma/client';
 import type { EventRepository } from './event.repository.js';
 import { sendEmail } from '../../services/emailService.js';
 
+const taskItemSchema = z.object({
+  role: z.string().min(1),
+  description: z.string().optional(),
+});
+
 const createEventSchema = z.object({
   title: z.string().min(1),
   hostId: z.string().min(1),
@@ -18,6 +23,7 @@ const createEventSchema = z.object({
   recCategories: z.array(z.string()).optional(),
   isPrivate: z.boolean().optional(),
   proposalId: z.string().optional(),
+  tasks: z.array(taskItemSchema).optional(),
 });
 
 const inviteUsersSchema = z.object({
@@ -61,10 +67,36 @@ export class EventService {
     return this.repository.getById(id);
   }
 
-  createEvent(input: unknown) {
+  async createEvent(input: unknown) {
     const data = createEventSchema.parse(input);
-    const { proposalId, ...eventData } = data;
-    return this.repository.create(eventData).then((created) => ({ ...created, proposalId }));
+    const { proposalId, tasks: taskItems, ...eventData } = data;
+    const created = await this.repository.create(eventData);
+
+    // Create tasks if provided, otherwise auto-init from preset based on first tag
+    if (taskItems && taskItems.length > 0) {
+      for (const t of taskItems) {
+        await this.prisma.eventTask.create({
+          data: { eventId: created.id, role: t.role, description: t.description ?? '' },
+        });
+      }
+    } else if (eventData.tags && eventData.tags.length > 0) {
+      // Auto-init from TaskPreset for the first tag
+      const preset = await this.prisma.taskPreset.findUnique({
+        where: { tag: eventData.tags[0] },
+      });
+      if (preset) {
+        const roles = preset.roles as any[];
+        for (const r of roles) {
+          const role = typeof r === 'string' ? r : r.role;
+          const description = typeof r === 'string' ? '' : (r.description ?? '');
+          await this.prisma.eventTask.create({
+            data: { eventId: created.id, role, description },
+          });
+        }
+      }
+    }
+
+    return { ...created, proposalId };
   }
 
   updateEvent(id: string, input: unknown) {

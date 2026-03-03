@@ -11,11 +11,11 @@ export class TaskPresetRepository {
     return this.prisma.taskPreset.findUnique({ where: { tag } });
   }
 
-  create(data: { tag: string; roles: string[] }) {
+  create(data: { tag: string; roles: any }) {
     return this.prisma.taskPreset.create({ data });
   }
 
-  update(id: string, data: { tag?: string; roles?: string[] }) {
+  update(id: string, data: { tag?: string; roles?: any }) {
     return this.prisma.taskPreset.update({ where: { id }, data });
   }
 

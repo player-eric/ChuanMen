@@ -118,6 +118,10 @@ export async function sendEventReminder(
         where: { status: 'accepted' },
         include: { user: { select: { id: true, name: true, email: true } } },
       },
+      tasks: {
+        include: { claimedBy: { select: { id: true, name: true } } },
+        orderBy: { createdAt: 'asc' },
+      },
     },
   });
 
@@ -144,6 +148,16 @@ export async function sendEventReminder(
     for (const user of participants) {
       if (!eligible.has(user.id)) continue;
       try {
+        // Build task info for this user
+        const myTask = (event as any).tasks?.find((t: any) => t.claimedBy?.id === user.id);
+        const unclaimedTasks = ((event as any).tasks ?? []).filter((t: any) => !t.claimedById);
+        let taskInfo = '';
+        if (myTask) {
+          taskInfo = `你的分工：${myTask.role}${myTask.description ? ` — ${myTask.description}` : ''}`;
+        } else if (unclaimedTasks.length > 0) {
+          const t = unclaimedTasks[0];
+          taskInfo = `「${t.role}」还没有人认领${t.description ? `（${t.description}）` : ''}，你要来吗？`;
+        }
         const result = await sendTemplatedEmail(prisma, {
           to: user.email,
           ruleId: 'P0-B',
@@ -154,6 +168,7 @@ export async function sendEventReminder(
             eventLocation: event.location ?? '',
             hostName: event.host?.name ?? '',
             attendeeCount: String(acceptedCount),
+            taskInfo,
           },
           ctaLabel: '查看活动详情',
           ctaUrl: `https://chuanmener.club/events/${event.id}`,
@@ -177,6 +192,87 @@ export async function sendEventReminder(
   }
 
   log.info(`P0-B event reminder: ${sent} sent for ${upcomingEvents.length} events`);
+  return sent;
+}
+
+// ── Unclaimed task reminder (44-52h before event) ────────────
+
+export async function sendUnclaimedTaskReminder(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const now = new Date();
+  const in44h = new Date(now.getTime() + 44 * 60 * 60 * 1000);
+  const in52h = new Date(now.getTime() + 52 * 60 * 60 * 1000);
+
+  // Find events starting in 44-52h that have unclaimed tasks
+  const events = await prisma.event.findMany({
+    where: {
+      startsAt: { gte: in44h, lte: in52h },
+      phase: { in: ['open', 'closed', 'invite'] },
+      tasks: { some: { claimedById: null } },
+    },
+    include: {
+      host: { select: { name: true } },
+      tasks: {
+        where: { claimedById: null },
+        orderBy: { createdAt: 'asc' },
+      },
+      signups: {
+        where: { status: 'accepted' },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      },
+    },
+  });
+
+  let sent = 0;
+  for (const event of events) {
+    const unclaimedTasks = event.tasks;
+    if (unclaimedTasks.length === 0) continue;
+
+    // Find users who are signed up but haven't claimed any task
+    const claimedUserIds = new Set(
+      (await prisma.eventTask.findMany({
+        where: { eventId: event.id, claimedById: { not: null } },
+        select: { claimedById: true },
+      })).map((t) => t.claimedById!),
+    );
+
+    const candidates = event.signups
+      .map((s) => s.user)
+      .filter((u): u is UserRow => !!u?.email && !claimedUserIds.has(u.id));
+
+    // Deduplicate using refId = eventId + "-task-reminder"
+    const refId = `${event.id}-task-reminder`;
+    const eligible = await filterByRefId(
+      prisma,
+      candidates.map((u) => u.id),
+      'P0-B',
+      refId,
+    );
+
+    const firstTask = unclaimedTasks[0];
+    const taskDesc = firstTask.description ? `（${firstTask.description}）` : '';
+
+    for (const user of candidates) {
+      if (!eligible.has(user.id)) continue;
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: `${event.title}还差一个${firstTask.role}，你来吗？`,
+          text: `Hi ${user.name}，\n\n${event.title}还有分工没人认领：\n\n${unclaimedTasks.map((t) => `- ${t.role}${t.description ? `：${t.description}` : ''}`).join('\n')}\n\n认领一个分工${taskDesc}？\n\n查看活动：https://chuanmener.club/events/${event.id}\n\n— 串门儿`,
+        });
+        await prisma.emailLog.create({
+          data: { userId: user.id, ruleId: 'P0-B', refId, messageId: null },
+        });
+        sent++;
+      } catch (err) {
+        log.error({ err, userId: user.id, eventId: event.id }, 'Task reminder send failed');
+      }
+    }
+  }
+
+  log.info(`Unclaimed task reminder: ${sent} sent for ${events.length} events`);
   return sent;
 }
 

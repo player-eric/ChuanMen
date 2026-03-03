@@ -818,25 +818,26 @@ async function main() {
 
   // ─── Step 13: Task Presets ─────────────────
   console.log('══ Step 13: Task Presets ══');
+  const r = (role: string, description: string) => ({ role, description });
   const taskPresetSeeds = [
-    { tag: '电影夜', roles: ['选片', '活动记录', '修图上传'] },
-    { tag: '茶话会/分享会', roles: ['分享人', '活动记录', '修图上传'] },
-    { tag: '徒步', roles: ['路线规划', '开车', '活动记录', '修图上传'] },
-    { tag: '户外', roles: ['活动记录', '修图上传'] },
-    { tag: '小聚', roles: ['活动记录', '修图上传'] },
-    { tag: '其他', roles: ['活动记录', '修图上传'] },
+    { tag: '电影夜', roles: [r('选片', '推荐一部你喜欢的电影，大家投票选出下次观影夜的片子'), r('活动记录', '拍几张活动氛围图上传到活动页面，简单记录就好，不用专业'), r('修图上传', '活动后把照片整理一下传到活动相册')] },
+    { tag: '茶话会/分享会', roles: [r('分享人', '准备一个你感兴趣的话题跟大家聊聊'), r('活动记录', '拍几张活动氛围图上传到活动页面，简单记录就好，不用专业'), r('修图上传', '活动后把照片整理一下传到活动相册')] },
+    { tag: '徒步', roles: [r('路线规划', '提前查一下路线和交通，在群里分享给大家'), r('开车', '帮忙接送小伙伴，出发前在群里协调一下'), r('活动记录', '拍几张活动氛围图上传到活动页面，简单记录就好，不用专业'), r('修图上传', '活动后把照片整理一下传到活动相册')] },
+    { tag: '户外', roles: [r('路线规划', '提前查一下路线和交通，在群里分享给大家'), r('带零食', '带点吃的喝的来分享，买的做的都行'), r('活动记录', '拍几张活动氛围图上传到活动页面，简单记录就好，不用专业'), r('修图上传', '活动后把照片整理一下传到活动相册')] },
+    { tag: '小聚', roles: [r('活动记录', '拍几张活动氛围图上传到活动页面，简单记录就好，不用专业'), r('修图上传', '活动后把照片整理一下传到活动相册')] },
+    { tag: '其他', roles: [r('活动记录', '拍几张活动氛围图上传到活动页面，简单记录就好，不用专业'), r('修图上传', '活动后把照片整理一下传到活动相册')] },
   ];
   for (const tp of taskPresetSeeds) {
     if (DRY_RUN) {
-      console.log(`  [DRY] TaskPreset: ${tp.tag} → [${tp.roles.join(', ')}]`);
+      console.log(`  [DRY] TaskPreset: ${tp.tag} → [${tp.roles.map((x: any) => x.role).join(', ')}]`);
       continue;
     }
     await prisma.taskPreset.upsert({
       where: { tag: tp.tag },
-      create: tp,
+      create: { tag: tp.tag, roles: tp.roles },
       update: { roles: tp.roles },
     });
-    console.log(`  ✅ ${tp.tag}: ${tp.roles.join(', ')}`);
+    console.log(`  ✅ ${tp.tag}: ${tp.roles.map((x: any) => x.role).join(', ')}`);
   }
   console.log('');
 

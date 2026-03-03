@@ -214,7 +214,7 @@ export interface FeedInteraction {
 // Feed item discriminated union for the timeline
 export type FeedItem =
   | { type: 'time'; label: string }
-  | { type: 'activity'; name: string; title: string; date: string; location: string; spots: number; people: string[]; film?: string; scene?: string; navTarget?: string; waitlistCount?: number } & FeedInteraction
+  | { type: 'activity'; name: string; title: string; date: string; location: string; spots: number; people: string[]; film?: string; scene?: string; navTarget?: string; waitlistCount?: number; taskSummary?: { role: string; claimerName?: string }[] } & FeedInteraction
   | { type: 'card'; from: string; to: string; message: string; photo?: string; navTarget?: string } & FeedInteraction
   | { type: 'movie'; name: string; title: string; year: string; dir: string; votes: number } & FeedInteraction
   | { type: 'milestone'; text: string; emoji: string } & FeedInteraction
@@ -350,6 +350,18 @@ export interface ContributionRole {
 export interface TaskRole {
   role: string;       // 任务描述，如"选片"、"带零食"
   name?: string;      // 负责人名（空=待认领）
+}
+
+// Persisted event task from backend
+export interface EventTaskData {
+  id: string;
+  eventId: string;
+  role: string;
+  description: string;
+  claimedById: string | null;
+  claimedBy: { id: string; name: string; avatar?: string } | null;
+  isCustom: boolean;
+  createdAt: string;
 }
 
 export interface FeedPageData {

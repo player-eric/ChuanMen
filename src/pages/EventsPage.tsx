@@ -166,6 +166,7 @@ export default function EventsPage() {
                       }
                       return best;
                     })() : undefined}
+                    taskSummary={evt.taskSummary}
                     likes={evt.likeCount ?? 0} likedBy={[]} comments={[]}
                   />
                 </Grid>

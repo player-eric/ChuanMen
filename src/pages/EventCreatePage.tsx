@@ -30,7 +30,12 @@ import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
 import { useTaskPresets } from '@/hooks/useTaskPresets';
 import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, fetchMoviesApi, linkEventRecommendation } from '@/lib/domainApi';
-import type { FoodOption, TaskRole } from '@/types';
+import type { FoodOption } from '@/types';
+
+interface CreateTaskItem {
+  role: string;
+  description: string;
+}
 import { ImageUpload } from '@/components/ImageUpload';
 import { chineseTagToEventTag } from '@/lib/mappings';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
@@ -83,7 +88,7 @@ export default function EventCreatePage() {
   const [restaurantLocation, setRestaurantLocation] = useState('');
 
   // Task (分工) state
-  const [tasks, setTasks] = useState<TaskRole[]>([]);
+  const [tasks, setTasks] = useState<CreateTaskItem[]>([]);
   // Title image
   const [titleImageUrl, setTitleImageUrl] = useState('');
 
@@ -130,9 +135,16 @@ export default function EventCreatePage() {
   // Auto-fill task presets when tags change (only when tasks are empty)
   useEffect(() => {
     if (tags.length > 0 && tasks.length === 0) {
-      const roles = [...new Set(tags.flatMap((t) => taskPresets[t] ?? []))];
-      if (roles.length > 0) {
-        setTasks(roles.map((role) => ({ role })));
+      const presetRoles = tags.flatMap((t) => taskPresets[t] ?? []);
+      // Deduplicate by role name
+      const seen = new Set<string>();
+      const unique = presetRoles.filter((r) => {
+        if (seen.has(r.role)) return false;
+        seen.add(r.role);
+        return true;
+      });
+      if (unique.length > 0) {
+        setTasks(unique.map((r) => ({ role: r.role, description: r.description })));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -169,6 +181,10 @@ export default function EventCreatePage() {
     setSubmitting(true);
     try {
       const mappedTags = tags.map((t) => chineseTagToEventTag[t]).filter(Boolean);
+      // Filter out empty tasks and prepare for API
+      const validTasks = tasks
+        .filter((t) => t.role.trim())
+        .map((t) => ({ role: t.role.trim(), description: t.description?.trim() || undefined }));
       const result = await createEvent({
         title: name.trim(),
         hostId: user.id,
@@ -184,6 +200,7 @@ export default function EventCreatePage() {
           : undefined,
         isPrivate: isPrivate || undefined,
         proposalId: fromProposal?.id,
+        tasks: validTasks.length > 0 ? validTasks : undefined,
       });
       const newEventId = String((result as any).id ?? '');
       // Link selected recommendations (best effort)
@@ -397,40 +414,37 @@ export default function EventCreatePage() {
               {tasks.length > 0 ? (
                 <Stack spacing={1.5}>
                   {tasks.map((task, idx) => (
-                    <Stack key={idx} direction="row" spacing={1} alignItems="center">
+                    <Stack key={idx} spacing={0.5}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <TextField
+                          size="small"
+                          placeholder="分工名称"
+                          value={task.role}
+                          onChange={(e) => {
+                            const next = [...tasks];
+                            next[idx] = { ...next[idx], role: e.target.value };
+                            setTasks(next);
+                          }}
+                          sx={{ flex: 1 }}
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={() => setTasks((prev) => prev.filter((_, i) => i !== idx))}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
                       <TextField
                         size="small"
-                        placeholder="任务名称"
-                        value={task.role}
+                        placeholder="描述（可选，降低认领门槛）"
+                        value={task.description}
                         onChange={(e) => {
                           const next = [...tasks];
-                          next[idx] = { ...next[idx], role: e.target.value };
+                          next[idx] = { ...next[idx], description: e.target.value };
                           setTasks(next);
                         }}
-                        sx={{ flex: 1 }}
+                        sx={{ ml: 0 }}
                       />
-                      <Select
-                        size="small"
-                        displayEmpty
-                        value={task.name ?? ''}
-                        onChange={(e) => {
-                          const next = [...tasks];
-                          next[idx] = { ...next[idx], name: e.target.value || undefined };
-                          setTasks(next);
-                        }}
-                        sx={{ minWidth: 110 }}
-                      >
-                        <MenuItem value="">待认领</MenuItem>
-                        {allMembers.map((m) => (
-                          <MenuItem key={m.name} value={m.name}>{m.name}</MenuItem>
-                        ))}
-                      </Select>
-                      <IconButton
-                        size="small"
-                        onClick={() => setTasks((prev) => prev.filter((_, i) => i !== idx))}
-                      >
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
                     </Stack>
                   ))}
                 </Stack>
@@ -442,7 +456,7 @@ export default function EventCreatePage() {
               <Button
                 size="small"
                 startIcon={<AddIcon />}
-                onClick={() => setTasks((prev) => [...prev, { role: '' }])}
+                onClick={() => setTasks((prev) => [...prev, { role: '', description: '' }])}
                 sx={{ mt: 1.5 }}
               >
                 添加分工

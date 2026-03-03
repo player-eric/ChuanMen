@@ -255,6 +255,11 @@ export function FeedTime({ label }: { label: string }) {
 }
 
 /* ═══ FeedActivity ═══ */
+interface FeedTaskSummary {
+  role: string;
+  claimerName?: string;
+}
+
 interface FeedActivityProps extends InteractionProps {
   name: string; title: string; date: string; location: string;
   spots: number; people: string[]; signupUserIds?: string[]; film?: string; scene?: string;
@@ -271,9 +276,10 @@ interface FeedActivityProps extends InteractionProps {
   waitlistCount?: number;
   socialHint?: { name: string; count: number };
   time?: string;
+  taskSummary?: FeedTaskSummary[];
 }
 
-export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount, socialHint, time }: FeedActivityProps) {
+export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount, socialHint, time, taskSummary }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -388,12 +394,25 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
           {isEnded ? (
             <div style={{ display: 'flex', gap: 8 }}>
               {photoCount != null && photoCount > 0 && <span style={{ fontSize: 12, color: c.text3 }}>📷 {photoCount}</span>}
-              {commentCount != null && commentCount > 0 && <span style={{ fontSize: 12, color: c.text3 }}>💬 {commentCount}</span>}
             </div>
           ) : !isCancelled && (
             <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `还剩 ${spots} 位` : (waitlistCount ?? 0) > 0 ? `已满 · ${waitlistCount}人等位` : '已满'}</span>
           )}
         </div>
+        {/* Task summary */}
+        {taskSummary && taskSummary.length > 0 && !isCancelled && (
+          <div style={{ fontSize: 12, color: c.text3, marginBottom: 8, lineHeight: 1.6 }}>
+            分工：{taskSummary.map((t, i) => (
+              <span key={i}>
+                {i > 0 && ' · '}
+                {t.role}{' '}
+                <span style={{ color: t.claimerName ? c.text2 : c.warm, fontWeight: t.claimerName ? 400 : 600 }}>
+                  {t.claimerName || '待认领'}
+                </span>
+              </span>
+            ))}
+          </div>
+        )}
         {/* Ended event: "我也参加了" button */}
         {isEnded && !isCancelled && user && (
           <button

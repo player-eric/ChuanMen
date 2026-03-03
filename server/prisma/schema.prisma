@@ -221,6 +221,7 @@ model User {
   newsletters          Newsletter[]         @relation("NewsletterAuthor")
   emailQueueItems      EmailQueue[]         @relation("EmailQueueUser")
   emailUnsubscribes    EmailUnsubscribe[]   @relation("EmailUnsubUser")
+  claimedTasks         EventTask[]
 }
 
 model UserOperatorRole {
@@ -315,6 +316,7 @@ model Event {
   weeklyLotteryEntries   WeeklyLottery[]
   screenedMovies         MovieScreening[]
   recommendations        EventRecommendation[]
+  tasks                  EventTask[]
 
   @@index([startsAt, phase])
   @@index([startsAt(sort: Desc), status])
@@ -789,9 +791,25 @@ model TitleRule {
 model TaskPreset {
   id        String   @id @default(cuid())
   tag       String   @unique
-  roles     String[]
+  roles     Json     @default("[]")  // Array of { role: string, description: string }
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model EventTask {
+  id          String   @id @default(cuid())
+  eventId     String
+  role        String
+  description String   @default("")
+  claimedById String?
+  isCustom    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event     Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  claimedBy User? @relation(fields: [claimedById], references: [id], onDelete: SetNull)
+
+  @@index([eventId])
 }
 
 // ─── Newsletter ───────────────────────────────────────────

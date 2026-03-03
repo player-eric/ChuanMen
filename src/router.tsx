@@ -68,17 +68,28 @@ import { eventTagToScene } from '@/lib/mappings';
 function buildFeedItems(data: any): any[] {
   const items: any[] = [];
 
-  // Group by date
+  // Group by date — use YYYY/MM/DD sort key, display MM/DD label
   const dateGroups = new Map<string, any[]>();
-  const addToDate = (dateStr: string, item: any) => {
-    const key = dateStr || 'unknown';
+  const dateLabelMap = new Map<string, string>(); // sortKey → display label
+  const addToDate = (sortKey: string, label: string, item: any) => {
+    const key = sortKey || 'unknown';
     if (!dateGroups.has(key)) dateGroups.set(key, []);
     dateGroups.get(key)!.push(item);
+    if (!dateLabelMap.has(key)) dateLabelMap.set(key, label);
+  };
+
+  /** Return [sortKey, displayLabel] from a date string */
+  const dateParts = (isoStr: string | undefined): [string, string] => {
+    if (!isoStr) return ['', ''];
+    const dt = new Date(isoStr);
+    const sort = dt.toISOString().slice(0, 10); // YYYY-MM-DD
+    const label = dt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+    return [sort, label];
   };
 
   // Events → activity items
   for (const e of (data.events ?? [])) {
-    const d = e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    const [sortKey, d] = dateParts(e.startsAt);
     const hostName = e.host?.name ?? '';
     const allSignups = (e.signups ?? []) as any[];
     const feedOccupying = allSignups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
@@ -88,7 +99,12 @@ function buildFeedItems(data: any): any[] {
     if (hostName && !people.includes(hostName)) {
       people.unshift(hostName);
     }
-    addToDate(d, {
+    // Build task summary for feed card
+    const feedTasks = ((e as any).tasks ?? []).map((t: any) => ({
+      role: t.role,
+      claimerName: t.claimedBy?.name ?? undefined,
+    }));
+    addToDate(sortKey, d, {
       type: 'activity',
       name: hostName,
       title: e.title,
@@ -110,13 +126,14 @@ function buildFeedItems(data: any): any[] {
       comments: [],
       commentCount: e.commentCount ?? 0,
       photoCount: e.photoCount ?? 0,
+      taskSummary: feedTasks.length > 0 ? feedTasks : undefined,
     });
   }
 
   // Postcards → card items
   for (const p of (data.postcards ?? [])) {
-    const d = p.createdAt ? new Date(p.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
-    addToDate(d, {
+    const [sk, d] = dateParts(p.createdAt);
+    addToDate(sk, d, {
       type: 'card',
       from: p.from?.name ?? '',
       to: p.to?.name ?? '',
@@ -132,9 +149,9 @@ function buildFeedItems(data: any): any[] {
 
   // Movies → compactMovie items
   for (const m of (data.recentMovies ?? [])) {
-    const d = m.createdAt ? new Date(m.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    const [sk, d] = dateParts(m.createdAt);
     const time = m.createdAt ? timeAgo(m.createdAt) : '';
-    addToDate(d, {
+    addToDate(sk, d, {
       type: 'compactMovie',
       name: m.recommendedBy?.name ?? '',
       title: m.title,
@@ -155,8 +172,8 @@ function buildFeedItems(data: any): any[] {
     const isAnnounced = m.userStatus === 'announced';
     const phase = isAnnounced ? 'introducing' : 'welcomed';
     const dateStr = isAnnounced ? m.announcedAt : m.approvedAt;
-    const d = dateStr ? new Date(dateStr).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
-    addToDate(d, {
+    const [sk, d] = dateParts(dateStr);
+    addToDate(sk, d, {
       type: 'newMember',
       phase,
       id: m.id,
@@ -198,10 +215,10 @@ function buildFeedItems(data: any): any[] {
     book: '📖', recipe: '🍽️', place: '📍', music: '🎵', external_event: '🎭', movie: '🎬',
   };
   for (const r of (data.recommendations ?? [])) {
-    const d = r.createdAt ? new Date(r.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    const [sk, d] = dateParts(r.createdAt);
     const time = r.createdAt ? timeAgo(r.createdAt) : '';
     const cat = r.category ?? 'book';
-    addToDate(d, {
+    addToDate(sk, d, {
       type: 'compactRecommendation',
       name: r.author?.name ?? '',
       title: r.title,
@@ -219,9 +236,9 @@ function buildFeedItems(data: any): any[] {
 
   // Announcements → milestone items
   for (const a of (data.announcements ?? [])) {
-    const d = a.createdAt ? new Date(a.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    const [sk, d] = dateParts(a.createdAt);
     const emojiMap: Record<string, string> = { milestone: '🎉', host_tribute: '🏆', announcement: '📣' };
-    addToDate(d, {
+    addToDate(sk, d, {
       type: 'milestone',
       text: a.title ?? '',
       emoji: emojiMap[a.type] ?? '📣',
@@ -234,9 +251,9 @@ function buildFeedItems(data: any): any[] {
 
   // Proposals → compactProposal items
   for (const p of (data.recentProposals ?? [])) {
-    const d = p.createdAt ? new Date(p.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    const [sk, d] = dateParts(p.createdAt);
     const time = p.createdAt ? timeAgo(p.createdAt) : '';
-    addToDate(d, {
+    addToDate(sk, d, {
       type: 'compactProposal',
       name: p.author?.name ?? '',
       title: p.title,
@@ -251,21 +268,18 @@ function buildFeedItems(data: any): any[] {
     });
   }
 
-  // Sort dates descending and build timeline with time separators
-  const sortedDates = [...dateGroups.keys()].sort((a, b) => {
-    // Parse MM/DD format for sorting
-    return b.localeCompare(a);
-  });
+  // Sort dates descending (YYYY-MM-DD keys sort correctly)
+  const sortedDates = [...dateGroups.keys()].sort((a, b) => b.localeCompare(a));
 
   // Pin birthday items at top
   if (birthdayItems.length > 0) {
-    const todayStr = new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
-    items.push({ type: 'time', label: todayStr });
+    const todayLabel = new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+    items.push({ type: 'time', label: todayLabel });
     items.push(...birthdayItems);
   }
 
   for (const dateKey of sortedDates) {
-    items.push({ type: 'time', label: dateKey });
+    items.push({ type: 'time', label: dateLabelMap.get(dateKey) ?? dateKey });
     items.push(...dateGroups.get(dateKey)!);
   }
 
@@ -390,6 +404,10 @@ function mapApiEvent(e: any): any {
     isPrivate: e.isPrivate ?? false,
     likeCount: e.likeCount ?? 0,
     tags: e.tags ?? [],
+    taskSummary: ((e.tasks ?? []) as any[]).map((t: any) => ({
+      role: t.role,
+      claimerName: t.claimedBy?.name ?? undefined,
+    })),
   };
 }
 
@@ -454,7 +472,16 @@ async function eventDetailLoader({ params }: { params: Record<string, string | u
       .filter((s: any) => s.invitedById)
       .map((s: any) => ({ userId: s.user?.id ?? s.userId, invitedById: s.invitedById }));
     base.comments = [];
-    base.tasks = [];
+    // Load tasks from backend EventTask records
+    base.tasks = ((raw as any).tasks ?? []).map((t: any) => ({
+      id: t.id,
+      role: t.role,
+      description: t.description ?? '',
+      name: t.claimedBy?.name ?? undefined,
+      claimedById: t.claimedById ?? undefined,
+      claimedBy: t.claimedBy ?? undefined,
+      isCustom: t.isCustom ?? false,
+    }));
     base.nominations = [];
     base.photos = ((raw.recapPhotoUrls ?? []) as string[]).map((url: string, i: number) => ({
       id: `${raw.id}-${i}`,

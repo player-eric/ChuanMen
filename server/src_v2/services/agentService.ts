@@ -3,6 +3,7 @@ import { detectMilestones, generateHostTribute, processAnnouncedUsers } from '..
 import {
   sendPostEventRecap,
   sendEventReminder,
+  sendUnclaimedTaskReminder,
   sendChurnRecall,
   sendSecondRecall,
   sendSilentHostRecall,
@@ -63,6 +64,13 @@ export async function runAgentCycle(app: FastifyInstance) {
     await sendEventReminder(prisma, log);
   } catch (err) {
     log.error({ err }, 'Agent: sendEventReminder failed');
+  }
+
+  // Unclaimed task reminder (44-52h before event)
+  try {
+    await sendUnclaimedTaskReminder(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendUnclaimedTaskReminder failed');
   }
 
   try {

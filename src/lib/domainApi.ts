@@ -137,6 +137,7 @@ export async function createEvent(payload: {
   recCategories?: string[];
   isPrivate?: boolean;
   proposalId?: string;
+  tasks?: { role: string; description?: string }[];
 }) {
   return requestJson<EntityMap>('/api/events', {
     method: 'POST',
@@ -1119,17 +1120,19 @@ export async function revokeUserTitle(userId: string, value: string) {
    Admin: Task Preset CRUD
    ═══════════════════════════════════════════════════════════════ */
 
+export type TaskPresetRoleItem = string | { role: string; description?: string };
+
 export interface TaskPresetRow {
   id: string;
   tag: string;
-  roles: string[];
+  roles: TaskPresetRoleItem[];
 }
 
 export async function fetchTaskPresets() {
   return requestJson<TaskPresetRow[]>('/api/task-presets');
 }
 
-export async function createTaskPreset(payload: { tag: string; roles: string[] }) {
+export async function createTaskPreset(payload: { tag: string; roles: TaskPresetRoleItem[] }) {
   return requestJson<TaskPresetRow>('/api/task-presets', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1137,7 +1140,7 @@ export async function createTaskPreset(payload: { tag: string; roles: string[] }
   });
 }
 
-export async function updateTaskPreset(id: string, payload: { tag?: string; roles?: string[] }) {
+export async function updateTaskPreset(id: string, payload: { tag?: string; roles?: TaskPresetRoleItem[] }) {
   return requestJson<{ ok: boolean; preset: TaskPresetRow }>(`/api/task-presets/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -1147,6 +1150,60 @@ export async function updateTaskPreset(id: string, payload: { tag?: string; role
 
 export async function deleteTaskPreset(id: string) {
   return requestJson<{ ok: boolean }>(`/api/task-presets/${id}`, { method: 'DELETE' });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Event Tasks API (分工认领)
+   ═══════════════════════════════════════════════════════════════ */
+
+import type { EventTaskData } from '@/types';
+
+export async function fetchEventTasks(eventId: string) {
+  return requestJson<EventTaskData[]>(`/api/events/${eventId}/tasks`);
+}
+
+export async function createEventTasks(eventId: string, tasks: { role: string; description?: string }[]) {
+  return requestJson<EventTaskData[]>(`/api/events/${eventId}/tasks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tasks }),
+  });
+}
+
+export async function claimEventTask(eventId: string, taskId: string, userId: string) {
+  return requestJson<{ ok: boolean; task: EventTaskData }>(`/api/events/${eventId}/tasks/${taskId}/claim`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function unclaimEventTask(eventId: string, taskId: string) {
+  return requestJson<{ ok: boolean; task: EventTaskData }>(`/api/events/${eventId}/tasks/${taskId}/unclaim`, {
+    method: 'PATCH',
+  });
+}
+
+export async function volunteerEventTask(eventId: string, userId: string, role: string, description?: string) {
+  return requestJson<{ ok: boolean; task: EventTaskData }>(`/api/events/${eventId}/tasks/volunteer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, role, description }),
+  });
+}
+
+export async function updateEventTask(eventId: string, taskId: string, data: { role?: string; description?: string }) {
+  return requestJson<{ ok: boolean; task: EventTaskData }>(`/api/events/${eventId}/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteEventTask(eventId: string, taskId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/tasks/${taskId}`, {
+    method: 'DELETE',
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════════

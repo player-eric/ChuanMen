@@ -30,6 +30,10 @@ export class EventRepository {
             linkedBy: { select: { id: true, name: true } },
           },
         },
+        tasks: {
+          include: { claimedBy: { select: { id: true, name: true } } },
+          orderBy: { createdAt: 'asc' as const },
+        },
         _count: { select: { signups: true } },
       },
     });
@@ -54,6 +58,10 @@ export class EventRepository {
             recommendation: { select: { id: true, title: true, category: true, coverUrl: true, voteCount: true } },
             linkedBy: { select: { id: true, name: true } },
           },
+        },
+        tasks: {
+          include: { claimedBy: { select: { id: true, name: true, avatar: true } } },
+          orderBy: { createdAt: 'asc' },
         },
       },
     });
