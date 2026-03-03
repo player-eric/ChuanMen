@@ -26,6 +26,18 @@ function s3() {
   return _s3;
 }
 
+/**
+ * Build the public-facing URL for an S3 key.
+ * - If AWS_S3_PUBLIC_BASE_URL is set (e.g. MinIO local), use it directly.
+ * - Otherwise, route through the backend presigned redirect: /api/media/s3/<key>
+ */
+export function mediaUrl(key: string): string {
+  if (env.AWS_S3_PUBLIC_BASE_URL) {
+    return `${env.AWS_S3_PUBLIC_BASE_URL.replace(/\/$/, '')}/${key}`;
+  }
+  return `/api/media/s3/${key}`;
+}
+
 export async function createUploadUrl(key: string, contentType: string) {
   const command = new PutObjectCommand({
     Bucket: env.AWS_S3_BUCKET,
@@ -37,11 +49,7 @@ export async function createUploadUrl(key: string, contentType: string) {
     expiresIn: env.S3_PRESIGN_EXPIRES_SECONDS,
   });
 
-  const publicUrl = env.AWS_S3_PUBLIC_BASE_URL
-    ? `${env.AWS_S3_PUBLIC_BASE_URL.replace(/\/$/, '')}/${key}`
-    : env.AWS_S3_ENDPOINT
-      ? `${env.AWS_S3_ENDPOINT.replace(/\/$/, '')}/${env.AWS_S3_BUCKET}/${key}`
-      : `https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
+  const publicUrl = mediaUrl(key);
 
   return { uploadUrl, publicUrl };
 }
@@ -68,11 +76,7 @@ export async function uploadObject(key: string, body: Buffer, contentType: strin
 
   await s3().send(command);
 
-  const publicUrl = env.AWS_S3_PUBLIC_BASE_URL
-    ? `${env.AWS_S3_PUBLIC_BASE_URL.replace(/\/$/, '')}/${key}`
-    : env.AWS_S3_ENDPOINT
-      ? `${env.AWS_S3_ENDPOINT.replace(/\/$/, '')}/${env.AWS_S3_BUCKET}/${key}`
-      : `https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
+  const publicUrl = mediaUrl(key);
 
   return { publicUrl };
 }

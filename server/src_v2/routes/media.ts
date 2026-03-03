@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { createUploadUrl, deleteObject, uploadObject } from '../services/s3Service.js';
+import { createUploadUrl, createDownloadUrl, deleteObject, uploadObject } from '../services/s3Service.js';
 
 /* ────────── helpers ────────── */
 
@@ -149,6 +149,23 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     });
 
     return reply.send({ publicUrl, asset });
+  });
+
+  /**
+   * GET /s3/* — serve an S3 object via presigned URL redirect.
+   * This keeps the bucket private while allowing media access.
+   * Example: GET /api/media/s3/avatars/abc123.jpg → 302 → presigned S3 URL
+   */
+  app.get('/s3/*', async (request, reply) => {
+    const key = (request.params as { '*': string })['*'];
+    if (!key) return reply.badRequest('Missing S3 key');
+    try {
+      const url = await createDownloadUrl(key);
+      return reply.redirect(url);
+    } catch (err: any) {
+      request.log.error({ err, key }, 'Failed to presign S3 download URL');
+      return reply.code(404).send({ message: 'Media not found' });
+    }
   });
 
   /**

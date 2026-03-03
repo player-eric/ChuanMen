@@ -70,7 +70,12 @@ function getS3(): S3Client {
 }
 
 function s3PublicUrl(key: string): string {
-  return `https://${S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  // If AWS_S3_PUBLIC_BASE_URL is set (e.g. local MinIO), use it directly.
+  // Otherwise, route through the backend presigned redirect endpoint.
+  if (process.env.AWS_S3_PUBLIC_BASE_URL) {
+    return `${process.env.AWS_S3_PUBLIC_BASE_URL.replace(/\/$/, '')}/${key}`;
+  }
+  return `/api/media/s3/${key}`;
 }
 
 function mimeType(filePath: string): string {
@@ -83,7 +88,11 @@ function mimeType(filePath: string): string {
 }
 
 async function uploadToS3(localPath: string, s3Key: string): Promise<string> {
-  if (SKIP_S3 || !s3Configured) return '';
+  if (SKIP_S3 || !s3Configured) {
+    // Even when skipping uploads, return the public URL so the DB still gets the correct reference.
+    // The file may already exist on S3 from a previous run.
+    return s3PublicUrl(s3Key);
+  }
   if (DRY_RUN) {
     console.log(`    [DRY] Would upload ${path.basename(localPath)} → s3://${S3_BUCKET}/${s3Key}`);
     return s3PublicUrl(s3Key);
@@ -379,7 +388,7 @@ async function main() {
   // ─── Step 3: Member Avatars ──────────────────────────────
   console.log('══ Step 3: Member Avatars ══');
   const friendsDir = path.join(NOTION_DIR, '串门儿伙伴们 Our Friends');
-  if (fs.existsSync(friendsDir) && !SKIP_S3) {
+  if (fs.existsSync(friendsDir)) {
     const memberDirs = fs.readdirSync(friendsDir).filter(d =>
       fs.statSync(path.join(friendsDir, d)).isDirectory()
     );
@@ -414,7 +423,7 @@ async function main() {
       }
     }
   } else {
-    console.log('  ⏭  Skipping (--skip-s3 or no S3 config or no avatar dir)');
+    console.log('  ⏭  Skipping (no avatar dir)');
   }
   console.log('');
 
@@ -586,7 +595,7 @@ async function main() {
   // ─── Step 6: Event Photos ────────────────────────────────
   console.log('══ Step 6: Event Photos ══');
   const eventsDir = path.join(NOTION_DIR, '活动日历');
-  if (fs.existsSync(eventsDir) && !SKIP_S3) {
+  if (fs.existsSync(eventsDir)) {
     const eventDirs = fs.readdirSync(eventsDir).filter(d =>
       fs.statSync(path.join(eventsDir, d)).isDirectory()
     );
@@ -646,7 +655,7 @@ async function main() {
       }
     }
   } else {
-    console.log('  ⏭  Skipping (--skip-s3 or no S3 config or no events dir)');
+    console.log('  ⏭  Skipping (no events dir)');
   }
   console.log('');
 
