@@ -30,8 +30,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EditIcon from '@mui/icons-material/Edit';
-import type { EventData, EventPhoto, FoodOption, SignupStatus, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, unlinkEventRecommendation, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist } from '@/lib/domainApi';
+import type { EventData, EventPhoto, EventTaskData, FoodOption, SignupStatus, TaskRole } from '@/types';
+import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, unlinkEventRecommendation, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask } from '@/lib/domainApi';
+import TaskClaimDialog from '@/components/TaskClaimDialog';
 import CommentSection from '@/components/CommentSection';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
@@ -155,8 +156,11 @@ export default function EventDetailPage() {
 
   const [inviteDeclined, setInviteDeclined] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [tasks, setTasks] = useState<TaskRole[]>(loadedEvent?.tasks ?? []);
+  const [eventTasks, setEventTasks] = useState<EventTaskData[]>([]);
   const [taskEditing, setTaskEditing] = useState(false);
+  const [taskClaimOpen, setTaskClaimOpen] = useState(false);
+  const [newTaskRole, setNewTaskRole] = useState('');
+  const [newTaskDesc, setNewTaskDesc] = useState('');
   const [photos, setPhotos] = useState<EventPhoto[]>(loadedEvent?.photos ?? []);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -196,6 +200,18 @@ export default function EventDetailPage() {
   const [showAllPeople, setShowAllPeople] = useState(false);
   const [recSearch, setRecSearch] = useState('');
   const [recCategory, setRecCategory] = useState<string>('all');
+  // Load persisted event tasks from API
+  const refreshTasks = async () => {
+    if (!eventId) return;
+    try {
+      const tasks = await fetchEventTasks(eventId);
+      setEventTasks(tasks);
+    } catch { /* ignore */ }
+  };
+  useEffect(() => {
+    if (eventId) refreshTasks();
+  }, [eventId]);
+
   useEffect(() => {
     fetchMoviesApi().then((m: any[]) => setAllMovies(m)).catch(() => {});
     fetchMembersApi().then((m: any[]) => setAllMembers(m)).catch(() => {});
@@ -305,7 +321,13 @@ export default function EventDetailPage() {
         setFlash({ open: true, severity: 'success', message: '已加入等位名单' });
       } else {
         setMyStatus('accepted');
-        setFlash({ open: true, severity: 'success', message: event.phase === 'ended' ? '已添加参与记录' : '报名参加成功' });
+        // Check if there are unclaimed tasks — show claim dialog
+        const hasUnclaimed = eventTasks.some((t) => !t.claimedById);
+        if (hasUnclaimed && event.phase !== 'ended') {
+          setTaskClaimOpen(true);
+        } else {
+          setFlash({ open: true, severity: 'success', message: event.phase === 'ended' ? '已添加参与记录' : '报名参加成功' });
+        }
       }
       await refreshEvent();
     } catch (error) {
@@ -1097,13 +1119,13 @@ export default function EventDetailPage() {
           );
         })()}
 
-        {/* 8. Unified tasks (分工) */}
-        {(tasks.length > 0 || user?.name === event.host) && (
+        {/* 8. Unified tasks (分工) — persisted via API */}
+        {(eventTasks.length > 0 || isHost) && (
           <Card>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                <Typography variant="subtitle1" fontWeight={700}>分工</Typography>
-                {user?.name === event.host && !taskEditing && (
+                <Typography variant="subtitle1" fontWeight={700}>分工认领</Typography>
+                {isHost && !taskEditing && (
                   <Button size="small" startIcon={<EditIcon />} onClick={() => setTaskEditing(true)}>
                     编辑
                   </Button>
@@ -1118,90 +1140,103 @@ export default function EventDetailPage() {
               {taskEditing ? (
                 /* Host edit mode */
                 <Stack spacing={1.5}>
-                  {tasks.map((task, idx) => (
-                    <Stack key={idx} direction="row" spacing={1} alignItems="center">
-                      <TextField
-                        size="small"
-                        placeholder="任务名称"
-                        value={task.role}
-                        onChange={(e) => {
-                          const next = [...tasks];
-                          next[idx] = { ...next[idx], role: e.target.value };
-                          setTasks(next);
-                        }}
-                        sx={{ flex: 1 }}
-                      />
-                      <Select
-                        size="small"
-                        displayEmpty
-                        value={task.name ?? ''}
-                        onChange={(e) => {
-                          const next = [...tasks];
-                          next[idx] = { ...next[idx], name: e.target.value || undefined };
-                          setTasks(next);
-                        }}
-                        sx={{ minWidth: 110 }}
-                      >
-                        <MenuItem value="">待认领</MenuItem>
-                        {event.people.map((name) => (
-                          <MenuItem key={name} value={name}>{name}</MenuItem>
-                        ))}
-                      </Select>
+                  {eventTasks.map((task) => (
+                    <Stack key={task.id} direction="row" spacing={1} alignItems="center">
+                      <Stack sx={{ flex: 1 }} spacing={0.5}>
+                        <Typography variant="body2" fontWeight={600}>{task.role}</Typography>
+                        {task.description && (
+                          <Typography variant="caption" color="text.secondary">{task.description}</Typography>
+                        )}
+                        {task.claimedBy && (
+                          <Typography variant="caption" color="primary">认领人：{task.claimedBy.name}</Typography>
+                        )}
+                      </Stack>
                       <IconButton
                         size="small"
-                        onClick={() => setTasks((prev) => prev.filter((_, i) => i !== idx))}
+                        onClick={async () => {
+                          if (!eventId) return;
+                          try {
+                            await deleteEventTask(eventId, task.id);
+                            await refreshTasks();
+                          } catch {
+                            setFlash({ open: true, severity: 'error', message: '删除失败' });
+                          }
+                        }}
                       >
-                        <CloseIcon fontSize="small" />
+                        <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Stack>
                   ))}
-                  <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+                  {/* Add new task inline */}
+                  <Stack spacing={1} sx={{ mt: 1 }}>
+                    <TextField
+                      size="small"
+                      placeholder="新分工名称"
+                      value={newTaskRole}
+                      onChange={(e) => setNewTaskRole(e.target.value)}
+                    />
+                    <TextField
+                      size="small"
+                      placeholder="描述（可选）"
+                      value={newTaskDesc}
+                      onChange={(e) => setNewTaskDesc(e.target.value)}
+                    />
                     <Button
                       size="small"
                       startIcon={<AddIcon />}
-                      onClick={() => setTasks((prev) => [...prev, { role: '' }])}
+                      disabled={!newTaskRole.trim()}
+                      onClick={async () => {
+                        if (!eventId || !newTaskRole.trim()) return;
+                        try {
+                          await createEventTasks(eventId, [{ role: newTaskRole.trim(), description: newTaskDesc.trim() || undefined }]);
+                          setNewTaskRole('');
+                          setNewTaskDesc('');
+                          await refreshTasks();
+                        } catch {
+                          setFlash({ open: true, severity: 'error', message: '添加失败' });
+                        }
+                      }}
                     >
                       添加分工
                     </Button>
-                    {taskPresets[eventTagToChinese[event.scene]] && tasks.length === 0 && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => {
-                          const tag = eventTagToChinese[event.scene];
-                          setTasks(taskPresets[tag].map((role) => ({ role })));
-                        }}
-                      >
-                        使用预设
-                      </Button>
-                    )}
                   </Stack>
                 </Stack>
               ) : (
-                /* Display mode */
+                /* Display mode — all users can see */
                 <Stack spacing={1}>
-                  {tasks.map((task, idx) => (
-                    <Stack key={idx} direction="row" justifyContent="space-between" alignItems="center">
+                  {eventTasks.map((task) => (
+                    <Stack key={task.id} direction="row" justifyContent="space-between" alignItems="center">
                       <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
-                        {task.name ? (
+                        {task.claimedBy ? (
                           <>
-                            <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>{firstNonEmoji(task.name)}</Avatar>
-                            <Typography variant="body2">{task.name}</Typography>
+                            <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>{firstNonEmoji(task.claimedBy.name)}</Avatar>
+                            <Typography variant="body2">{task.claimedBy.name}</Typography>
                           </>
                         ) : (
                           <Typography variant="body2" color="text.secondary">待认领</Typography>
                         )}
-                        <Chip size="small" variant="outlined" label={task.role} />
+                        <Chip
+                          size="small"
+                          variant="outlined"
+                          label={task.role}
+                          color={task.isCustom ? 'info' : 'default'}
+                          icon={task.isCustom ? <span style={{ fontSize: 12, marginLeft: 6 }}>💡</span> : undefined}
+                        />
                       </Stack>
-                      {task.name ? (
-                        task.name === user?.name ? (
+                      {task.claimedBy ? (
+                        task.claimedById === user?.id ? (
                           <Button
                             size="small"
                             variant="outlined"
-                            onClick={() => {
-                              const next = [...tasks];
-                              next[idx] = { ...next[idx], name: undefined };
-                              setTasks(next);
+                            onClick={async () => {
+                              if (!eventId) return;
+                              try {
+                                await unclaimEventTask(eventId, task.id);
+                                await refreshTasks();
+                                setFlash({ open: true, severity: 'success', message: `已取消认领「${task.role}」` });
+                              } catch {
+                                setFlash({ open: true, severity: 'error', message: '操作失败' });
+                              }
                             }}
                           >
                             取消认领
@@ -1210,33 +1245,71 @@ export default function EventDetailPage() {
                           <Chip size="small" color="success" label="已分配" />
                         )
                       ) : (
-                        user && (
+                        user && (signedUp || isHost) && (
                           <Button
                             size="small"
                             variant="contained"
-                            onClick={() => {
-                              const next = [...tasks];
-                              next[idx] = { ...next[idx], name: user.name };
-                              setTasks(next);
-                              setFlash({ open: true, severity: 'success', message: `已认领「${task.role}」` });
+                            onClick={async () => {
+                              if (!eventId) return;
+                              try {
+                                await claimEventTask(eventId, task.id, user.id);
+                                await refreshTasks();
+                                setFlash({ open: true, severity: 'success', message: `已认领「${task.role}」` });
+                              } catch (err) {
+                                setFlash({ open: true, severity: 'error', message: err instanceof Error ? err.message : '认领失败' });
+                              }
                             }}
                           >
-                            我可以！
+                            我来！
                           </Button>
                         )
                       )}
                     </Stack>
                   ))}
-                  {tasks.length === 0 && user?.name === event.host && (
+                  {eventTasks.length === 0 && isHost && (
                     <Typography variant="body2" color="text.secondary">
                       暂无分工，点击"编辑"添加
                     </Typography>
+                  )}
+                  {/* Volunteer button for signed-up users */}
+                  {user && (signedUp || isHost) && eventTasks.length > 0 && (
+                    <Button
+                      size="small"
+                      variant="text"
+                      startIcon={<AddIcon />}
+                      onClick={() => setTaskClaimOpen(true)}
+                      sx={{ alignSelf: 'flex-start', mt: 0.5 }}
+                    >
+                      我也能帮忙
+                    </Button>
                   )}
                 </Stack>
               )}
             </CardContent>
           </Card>
         )}
+
+        {/* Task Claim Dialog */}
+        <TaskClaimDialog
+          open={taskClaimOpen}
+          onClose={() => {
+            setTaskClaimOpen(false);
+            setFlash({ open: true, severity: 'success', message: '报名参加成功' });
+          }}
+          tasks={eventTasks}
+          onClaim={async (taskId) => {
+            if (!eventId || !user?.id) return;
+            await claimEventTask(eventId, taskId, user.id);
+            await refreshTasks();
+            setFlash({ open: true, severity: 'success', message: '认领成功！' });
+          }}
+          onVolunteer={async (role, description) => {
+            if (!eventId || !user?.id) return;
+            await volunteerEventTask(eventId, user.id, role, description);
+            await refreshTasks();
+            setFlash({ open: true, severity: 'success', message: '自荐成功！' });
+          }}
+        />
 
         {/* Photo Gallery — always visible */}
         <Card>
