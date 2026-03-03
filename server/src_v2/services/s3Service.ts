@@ -17,6 +17,7 @@ function getS3Client(): S3Client {
     },
     endpoint: env.AWS_S3_ENDPOINT || undefined,
     forcePathStyle: env.AWS_S3_FORCE_PATH_STYLE,
+    followRegionRedirects: true,
   });
 }
 
