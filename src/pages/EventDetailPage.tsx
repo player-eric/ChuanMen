@@ -321,9 +321,8 @@ export default function EventDetailPage() {
         setFlash({ open: true, severity: 'success', message: '已加入等位名单' });
       } else {
         setMyStatus('accepted');
-        // Check if there are unclaimed tasks — show claim dialog
-        const hasUnclaimed = eventTasks.some((t) => !t.claimedById);
-        if (hasUnclaimed && event.phase !== 'ended') {
+        // Show task claim dialog if there are tasks
+        if (eventTasks.length > 0 && event.phase !== 'ended') {
           setTaskClaimOpen(true);
         } else {
           setFlash({ open: true, severity: 'success', message: event.phase === 'ended' ? '已添加参与记录' : '报名参加成功' });

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Avatar,
   Box,
   Button,
   Chip,
@@ -16,7 +15,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { firstNonEmoji } from '@/components/Atoms';
 import type { EventTaskData } from '@/types';
 
 interface TaskClaimDialogProps {
@@ -39,6 +37,8 @@ export default function TaskClaimDialog({
   const [loading, setLoading] = useState(false);
 
   const unclaimedTasks = tasks.filter((t) => !t.claimedById);
+  const claimedTasks = tasks.filter((t) => t.claimedById);
+  const allClaimed = unclaimedTasks.length === 0;
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -64,10 +64,9 @@ export default function TaskClaimDialog({
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-      <DialogTitle>
-        报名成功！🎉
-      </DialogTitle>
+      <DialogTitle>报名成功！🎉</DialogTitle>
       <DialogContent>
+        {/* Unclaimed tasks — radio select to claim */}
         {unclaimedTasks.length > 0 && (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -81,9 +80,7 @@ export default function TaskClaimDialog({
               }}
             >
               {unclaimedTasks.map((task) => {
-                // Count claimed tasks with same role
                 const sameRoleTasks = tasks.filter((t) => t.role === task.role);
-                const claimedCount = sameRoleTasks.filter((t) => t.claimedById).length;
                 const claimedNames = sameRoleTasks
                   .filter((t) => t.claimedBy)
                   .map((t) => t.claimedBy!.name);
@@ -99,7 +96,7 @@ export default function TaskClaimDialog({
                           <Typography variant="body2" fontWeight={600}>
                             {task.role}
                           </Typography>
-                          {claimedCount > 0 && (
+                          {claimedNames.length > 0 && (
                             <Typography variant="caption" color="text.secondary">
                               已认领：{claimedNames.join('、')}
                             </Typography>
@@ -120,9 +117,27 @@ export default function TaskClaimDialog({
           </>
         )}
 
+        {/* All claimed — show current assignments */}
+        {allClaimed && claimedTasks.length > 0 && (
+          <>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              本次活动的分工已安排好了：
+            </Typography>
+            <Stack spacing={0.75} sx={{ mb: 1 }}>
+              {claimedTasks.map((task) => (
+                <Stack key={task.id} direction="row" spacing={1} alignItems="center">
+                  <Typography variant="body2">✅ {task.role}</Typography>
+                  <Chip label={task.claimedBy?.name ?? '?'} size="small" variant="outlined" />
+                </Stack>
+              ))}
+            </Stack>
+          </>
+        )}
+
+        {/* Volunteer input */}
         <Divider sx={{ my: 2 }}>
           <Typography variant="caption" color="text.secondary">
-            {unclaimedTasks.length > 0 ? '或者' : '想帮忙？'}
+            {allClaimed ? '你还能帮点别的吗？' : '或者'}
           </Typography>
         </Divider>
 
@@ -132,7 +147,7 @@ export default function TaskClaimDialog({
         <TextField
           size="small"
           fullWidth
-          placeholder="例如：准备背景音乐"
+          placeholder="例如：准备背景音乐、带点水果"
           value={volunteerRole}
           onChange={(e) => {
             setVolunteerRole(e.target.value);
@@ -147,7 +162,7 @@ export default function TaskClaimDialog({
           disabled={loading || (!selectedTaskId && !volunteerRole.trim())}
           onClick={handleSubmit}
         >
-          {selectedTaskId ? '认领' : '自荐'}
+          {selectedTaskId ? '认领' : volunteerRole.trim() ? '自荐' : '确定'}
         </Button>
       </DialogActions>
     </Dialog>

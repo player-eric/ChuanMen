@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/auth/AuthContext';
-import { signupEvent, cancelSignup, addComment, fetchCommentsApi, fetchMembersApi } from '@/lib/domainApi';
+import { signupEvent, cancelSignup, addComment, fetchCommentsApi, fetchMembersApi, fetchEventTasks, claimEventTask, volunteerEventTask } from '@/lib/domainApi';
+import type { EventTaskData } from '@/types';
+import TaskClaimDialog from '@/components/TaskClaimDialog';
 import type { FeedComment } from '@/types';
 import RichTextEditor, { RichTextViewer, type MentionMember } from './RichTextEditor';
 import FavoriteBorderRounded from '@mui/icons-material/FavoriteBorderRounded';
@@ -284,6 +286,8 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [claimTasks, setClaimTasks] = useState<EventTaskData[]>([]);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
@@ -310,6 +314,16 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
     try {
       await signupEvent(eventId, user.id);
       setJoined(true);
+      // Fetch tasks and show claim dialog if any exist
+      if (!isEnded) {
+        try {
+          const tasks = await fetchEventTasks(eventId);
+          if (tasks.length > 0) {
+            setClaimTasks(tasks);
+            setClaimOpen(true);
+          }
+        } catch { /* ignore */ }
+      }
     } catch { /* ignore */ }
   };
 
@@ -463,6 +477,21 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
         onConfirm={confirmCancel}
         onCancel={() => setCancelOpen(false)}
       />
+      {claimOpen && eventId && (
+        <TaskClaimDialog
+          open={claimOpen}
+          onClose={() => setClaimOpen(false)}
+          tasks={claimTasks}
+          onClaim={async (taskId) => {
+            if (!eventId || !user?.id) return;
+            await claimEventTask(eventId, taskId, user.id);
+          }}
+          onVolunteer={async (role, description) => {
+            if (!eventId || !user?.id) return;
+            await volunteerEventTask(eventId, user.id, role, description);
+          }}
+        />
+      )}
     </Card>
   );
 }
