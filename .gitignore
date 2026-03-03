@@ -9,8 +9,11 @@ server/.env.*
 server/uploads
 
 # Notion export data (private, not committed)
-notionData/
-server/notionData/
+notionData
+server/notionData
 
 # One-off test scripts
 server/test-*.ts
+
+# Build artifacts
+tsconfig.tsbuildinfo
