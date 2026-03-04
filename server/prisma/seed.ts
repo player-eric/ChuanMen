@@ -192,6 +192,57 @@ function mapTags(tagStr: string): EventTag[] {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   Bio Extraction from Notion per-user Markdown files
+   ═══════════════════════════════════════════════════════════ */
+
+/**
+ * Read the "关于我" bio from a Notion per-user markdown file.
+ * The bio content lives after the `![image.png]` line (and optional tally.so links).
+ * We extract everything from there, stripping the Q&A section headers but keeping answers.
+ */
+function readUserBio(userName: string): string {
+  const friendsDir = path.join(NOTION_DIR, '串门儿伙伴们 Our Friends');
+  if (!fs.existsSync(friendsDir)) return '';
+
+  // Find the .md file matching this user name
+  const mdFiles = fs.readdirSync(friendsDir).filter(f =>
+    f.endsWith('.md') && f.startsWith(userName)
+  );
+  if (mdFiles.length === 0) return '';
+
+  const content = fs.readFileSync(path.join(friendsDir, mdFiles[0]), 'utf-8');
+  const lines = content.split('\n');
+
+  // Find the line with ![image.png] — bio starts after it
+  let startIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim().startsWith('![image')) {
+      startIdx = i + 1;
+      break;
+    }
+  }
+  if (startIdx < 0) return '';
+
+  // Collect bio lines, skipping tally.so image links, house rules links, and empty leading lines
+  const bioLines: string[] = [];
+  let started = false;
+  for (let i = startIdx; i < lines.length; i++) {
+    const line = lines[i].trim();
+    // Skip tally.so image links and Notion sub-page links
+    if (line.startsWith('[') && (line.includes('tally.so') || line.includes('House Rules'))) continue;
+    // Skip empty lines before content starts
+    if (!started && !line) continue;
+    started = true;
+    bioLines.push(lines[i]);
+  }
+
+  // Join and clean up: trim trailing whitespace, collapse 3+ newlines into 2
+  let bio = bioLines.join('\n').trim();
+  bio = bio.replace(/\n{3,}/g, '\n\n');
+  return bio;
+}
+
+/* ═══════════════════════════════════════════════════════════
    ADMIN ACCOUNTS — always seeded first
    ═══════════════════════════════════════════════════════════ */
 
@@ -254,9 +305,15 @@ async function main() {
     console.log('══ Step 0: Wiping all tables ══');
     // Delete in reverse-FK order
     await prisma.loginCode.deleteMany();
+    await prisma.emailQueue.deleteMany();
     await prisma.emailLog.deleteMany();
     await prisma.emailTemplate.deleteMany();
     await prisma.emailRule.deleteMany();
+    await prisma.emailBounce.deleteMany();
+    await prisma.emailSuppression.deleteMany();
+    await prisma.emailUnsubscribe.deleteMany();
+    await prisma.newsletter.deleteMany();
+    await prisma.siteConfig.deleteMany();
     await prisma.postcardPurchase.deleteMany();
     await prisma.postcardTag.deleteMany();
     await prisma.postcard.deleteMany();
@@ -267,13 +324,16 @@ async function main() {
     await prisma.seedCollaborator.deleteMany();
     await prisma.seed.deleteMany();
     await prisma.discussion.deleteMany();
+    await prisma.recommendationVote.deleteMany();
     await prisma.recommendationTag.deleteMany();
+    await prisma.eventRecommendation.deleteMany();
     await prisma.recommendation.deleteMany();
     await prisma.proposalVote.deleteMany();
     await prisma.proposal.deleteMany();
     await prisma.movieScreening.deleteMany();
     await prisma.movieVote.deleteMany();
     await prisma.movie.deleteMany();
+    await prisma.eventTask.deleteMany();
     await prisma.eventSignup.deleteMany();
     await prisma.eventCoHost.deleteMany();
     await prisma.eventVisibilityExclusion.deleteMany();
@@ -303,6 +363,7 @@ async function main() {
       console.log(`  [DRY] Admin: ${admin.name} <${admin.email}>`);
       continue;
     }
+    const notionBio = readUserBio(admin.name);
     const user = await prisma.user.upsert({
       where: { email: admin.email },
       update: {},
@@ -311,7 +372,7 @@ async function main() {
         email: admin.email,
         role: admin.role,
         userStatus: UserStatus.approved,
-        bio: admin.bio,
+        bio: admin.bio || notionBio,
         city: admin.city,
         location: admin.city,
         wechatId: admin.wechatId,
@@ -348,6 +409,7 @@ async function main() {
       continue;
     }
 
+    const bio = readUserBio(name);
     const user = await prisma.user.upsert({
       where: { email },
       update: {},
@@ -359,7 +421,7 @@ async function main() {
         wechatId: wechat,
         city,
         location: city,
-        bio: '',
+        bio,
         createdAt: created || new Date(),
       },
     });
