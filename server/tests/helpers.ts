@@ -56,6 +56,8 @@ export async function cleanDb() {
     prisma.eventSignup.deleteMany(),
     prisma.eventCoHost.deleteMany(),
     prisma.eventVisibilityExclusion.deleteMany(),
+    prisma.eventTask.deleteMany(),
+    prisma.weeklyLottery.deleteMany(),
     prisma.event.deleteMany(),
     prisma.movie.deleteMany(),
     prisma.proposal.deleteMany(),

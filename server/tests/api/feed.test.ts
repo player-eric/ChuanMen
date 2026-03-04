@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { createTestApp, closeTestApp, cleanDb, seedTestUser, seedTestEvent, seedTestMovie, seedTestProposal, seedTestPostcard, getTestPrisma } from '../helpers.js';
+import { createTestApp, closeTestApp, cleanDb, seedTestUser, seedTestEvent, seedTestMovie, seedTestProposal, seedTestPostcard, seedTestRecommendation, getTestPrisma } from '../helpers.js';
 import type { FastifyInstance } from 'fastify';
 
 let app: FastifyInstance;
@@ -148,5 +148,168 @@ describe('GET /api/feed', () => {
     expect(feedEvent.likes).toBe(1);
     expect(feedEvent.commentCount).toBe(1);
     expect(feedEvent.likedBy).toContain(liker.name);
+  });
+
+  // ── Personal notification tests ──
+
+  it('returns empty notifications when no userId', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/feed' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().notifications).toEqual([]);
+  });
+
+  it('returns empty notifications when userId has none', async () => {
+    const user = await seedTestUser();
+    const res = await app.inject({ method: 'GET', url: `/api/feed?userId=${user.id}` });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().notifications).toEqual([]);
+  });
+
+  it('returns mention notification', async () => {
+    const prisma = getTestPrisma();
+    const author = await seedTestUser({ name: '提及者' });
+    const mentioned = await seedTestUser({ name: '被提及' });
+    const event = await seedTestEvent(author.id, { title: '讨论活动' });
+
+    await prisma.comment.create({
+      data: {
+        entityType: 'event',
+        entityId: event.id,
+        authorId: author.id,
+        content: '邀请 @被提及 一起来',
+        mentionedUserIds: [mentioned.id],
+      },
+    });
+
+    const res = await app.inject({ method: 'GET', url: `/api/feed?userId=${mentioned.id}` });
+    expect(res.statusCode).toBe(200);
+    const notifs = res.json().notifications;
+    const mention = notifs.find((n: any) => n.action === 'mention');
+    expect(mention).toBeDefined();
+    expect(mention.name).toBe('提及者');
+    expect(mention.targetTitle).toBe('讨论活动');
+    expect(mention.navTarget).toBe(`/events/${event.id}`);
+  });
+
+  it('returns event_invite notification', async () => {
+    const prisma = getTestPrisma();
+    const host = await seedTestUser({ name: 'Host' });
+    const invitee = await seedTestUser({ name: '被邀请人' });
+    const event = await seedTestEvent(host.id, { title: '邀请活动' });
+
+    await prisma.eventSignup.create({
+      data: { eventId: event.id, userId: invitee.id, status: 'invited', invitedById: host.id },
+    });
+
+    const res = await app.inject({ method: 'GET', url: `/api/feed?userId=${invitee.id}` });
+    const notifs = res.json().notifications;
+    const invite = notifs.find((n: any) => n.action === 'event_invite');
+    expect(invite).toBeDefined();
+    expect(invite.name).toBe('Host');
+    expect(invite.targetTitle).toBe('邀请活动');
+    expect(invite.navTarget).toBe(`/events/${event.id}`);
+  });
+
+  it('returns task_assign notification', async () => {
+    const prisma = getTestPrisma();
+    const host = await seedTestUser({ name: 'Host' });
+    const assignee = await seedTestUser({ name: '被分工' });
+    const event = await seedTestEvent(host.id, { title: '分工活动' });
+
+    await prisma.eventTask.create({
+      data: { eventId: event.id, role: '带零食', description: '带零食', claimedById: assignee.id, isCustom: false },
+    });
+
+    const res = await app.inject({ method: 'GET', url: `/api/feed?userId=${assignee.id}` });
+    const notifs = res.json().notifications;
+    const task = notifs.find((n: any) => n.action === 'task_assign');
+    expect(task).toBeDefined();
+    expect(task.targetTitle).toBe('分工活动');
+    expect(task.detail).toBe('带零食');
+    expect(task.navTarget).toBe(`/events/${event.id}`);
+  });
+
+  it('returns postcard_received notification', async () => {
+    const sender = await seedTestUser({ name: '寄卡人' });
+    const receiver = await seedTestUser({ name: '收卡人' });
+    await seedTestPostcard(sender.id, receiver.id);
+
+    const res = await app.inject({ method: 'GET', url: `/api/feed?userId=${receiver.id}` });
+    const notifs = res.json().notifications;
+    const card = notifs.find((n: any) => n.action === 'postcard_received');
+    expect(card).toBeDefined();
+    expect(card.name).toBe('寄卡人');
+    expect(card.navTarget).toBe('/cards');
+  });
+
+  it('returns waitlist_offered notification', async () => {
+    const prisma = getTestPrisma();
+    const host = await seedTestUser();
+    const waiter = await seedTestUser({ name: '等位人' });
+    const event = await seedTestEvent(host.id, { title: '满员活动' });
+
+    await prisma.eventSignup.create({
+      data: { eventId: event.id, userId: waiter.id, status: 'offered', offeredAt: new Date() },
+    });
+
+    const res = await app.inject({ method: 'GET', url: `/api/feed?userId=${waiter.id}` });
+    const notifs = res.json().notifications;
+    const offered = notifs.find((n: any) => n.action === 'waitlist_offered');
+    expect(offered).toBeDefined();
+    expect(offered.targetTitle).toBe('满员活动');
+    expect(offered.navTarget).toBe(`/events/${event.id}`);
+  });
+
+  it('returns waitlist_approved notification', async () => {
+    const prisma = getTestPrisma();
+    const host = await seedTestUser();
+    const user = await seedTestUser({ name: '被接纳' });
+    const event = await seedTestEvent(host.id, { title: '接纳活动' });
+
+    await prisma.eventSignup.create({
+      data: { eventId: event.id, userId: user.id, status: 'accepted', offeredAt: new Date(), respondedAt: new Date() },
+    });
+
+    const res = await app.inject({ method: 'GET', url: `/api/feed?userId=${user.id}` });
+    const notifs = res.json().notifications;
+    const approved = notifs.find((n: any) => n.action === 'waitlist_approved');
+    expect(approved).toBeDefined();
+    expect(approved.targetTitle).toBe('接纳活动');
+  });
+
+  it('returns proposal_realized notification', async () => {
+    const prisma = getTestPrisma();
+    const author = await seedTestUser();
+    const voter = await seedTestUser({ name: '投票人' });
+    const proposal = await seedTestProposal(author.id, { title: '好创意' });
+
+    await prisma.proposalVote.create({
+      data: { proposalId: proposal.id, userId: voter.id },
+    });
+
+    // Link an event to the proposal
+    await seedTestEvent(author.id, { title: '创意变活动', proposalId: proposal.id });
+
+    const res = await app.inject({ method: 'GET', url: `/api/feed?userId=${voter.id}` });
+    const notifs = res.json().notifications;
+    const realized = notifs.find((n: any) => n.action === 'proposal_realized');
+    expect(realized).toBeDefined();
+    expect(realized.targetTitle).toBe('好创意');
+  });
+
+  it('does not return notifications older than 14 days', async () => {
+    const prisma = getTestPrisma();
+    const sender = await seedTestUser({ name: '旧寄卡人' });
+    const receiver = await seedTestUser({ name: '旧收卡人' });
+
+    // Create postcard 15 days ago
+    const fifteenDaysAgo = new Date(Date.now() - 15 * 86400000);
+    await prisma.postcard.create({
+      data: { fromId: sender.id, toId: receiver.id, message: '旧卡', visibility: 'public', createdAt: fifteenDaysAgo },
+    });
+
+    const res = await app.inject({ method: 'GET', url: `/api/feed?userId=${receiver.id}` });
+    const notifs = res.json().notifications;
+    expect(notifs.filter((n: any) => n.action === 'postcard_received')).toHaveLength(0);
   });
 });
