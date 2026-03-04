@@ -2,18 +2,18 @@
  * Unified Seed: Admin Account + Notion Data + S3 Uploads
  *
  * This is the SINGLE source of truth for seeding the database.
- * It always:
- *   1. Wipes all data (respecting FK order)
- *   2. Creates admin account(s)
- *   3. Imports all Notion CSV data (users, movies, events, proposals)
- *   4. Uploads member avatars + event photos to S3
- *   5. Seeds email rules/templates, about content, announcements
+ * Uses deterministic IDs so S3 keys are stable across runs —
+ * media only needs to be uploaded once.
  *
- * Usage:
- *   cd server
- *   npx prisma db seed                   # full seed (with S3 uploads)
- *   npx prisma db seed -- --dry-run      # preview only
- *   npx prisma db seed -- --skip-s3      # seed DB only, skip S3 uploads
+ * Usage (from server/):
+ *   npm run seed                # DB-only seed (~10s, S3 URLs still work)
+ *   npm run seed:full           # DB + S3 media uploads (~5 min, first time)
+ *   npm run seed:dry            # preview only, no DB changes
+ *
+ * Or directly:
+ *   npx tsx prisma/seed.ts              # DB-only (default)
+ *   npx tsx prisma/seed.ts --with-s3    # with S3 uploads
+ *   npx tsx prisma/seed.ts --dry-run    # preview
  */
 
 import {
@@ -32,13 +32,20 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { parse } from 'csv-parse/sync';
+import * as crypto from 'crypto';
 import * as dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DRY_RUN = process.argv.includes('--dry-run');
-const SKIP_S3 = process.argv.includes('--skip-s3');
+const WITH_S3 = process.argv.includes('--with-s3');
+const SKIP_S3 = !WITH_S3;  // DB-only by default; pass --with-s3 to upload media
+
+/** Deterministic ID — stable across seed runs so S3 keys don't change. */
+function stableId(prefix: string, key: string): string {
+  return prefix + crypto.createHash('sha256').update(key).digest('hex').slice(0, 16);
+}
 
 // Load env from server/.env (symlinked to .env.dev or .env.production)
 const envFile = path.join(__dirname, '..', '.env');
@@ -565,61 +572,24 @@ const ROLE_MAP: Record<string, string> = {
    ═══════════════════════════════════════════════════════════ */
 
 async function main() {
-  console.log(`\n🌱 Seed ${DRY_RUN ? '(DRY RUN) ' : ''}${SKIP_S3 ? '(SKIP S3) ' : ''}starting …\n`);
+  const t0 = Date.now();
+  const mode = DRY_RUN ? 'DRY RUN' : WITH_S3 ? 'DB + S3' : 'DB only';
+  console.log(`\n🌱 Seed starting … [${mode}]\n`);
   console.log(`  Notion data: ${NOTION_DIR}`);
-  console.log(`  S3 configured: ${s3Configured}`);
-  console.log(`  S3 bucket: ${S3_BUCKET}\n`);
+  console.log(`  S3 uploads: ${WITH_S3 ? `yes → ${S3_BUCKET}` : 'no (pass --with-s3 to upload)'}\n`);
 
   // ─── Step 0: Wipe all tables ─────────────────────────────
   if (!DRY_RUN) {
     console.log('══ Step 0: Wiping all tables ══');
-    // Delete in reverse-FK order
-    await prisma.loginCode.deleteMany();
-    await prisma.emailQueue.deleteMany();
-    await prisma.emailLog.deleteMany();
-    await prisma.emailTemplate.deleteMany();
-    await prisma.emailRule.deleteMany();
-    await prisma.emailBounce.deleteMany();
-    await prisma.emailSuppression.deleteMany();
-    await prisma.emailUnsubscribe.deleteMany();
-    await prisma.newsletter.deleteMany();
-    await prisma.siteConfig.deleteMany();
-    await prisma.postcardPurchase.deleteMany();
-    await prisma.postcardTag.deleteMany();
-    await prisma.postcard.deleteMany();
-    await prisma.comment.deleteMany();
-    await prisma.like.deleteMany();
-    await prisma.seedUpdateMedia.deleteMany();
-    await prisma.seedUpdate.deleteMany();
-    await prisma.seedCollaborator.deleteMany();
-    await prisma.seed.deleteMany();
-    await prisma.discussion.deleteMany();
-    await prisma.recommendationVote.deleteMany();
-    await prisma.recommendationTag.deleteMany();
-    await prisma.eventRecommendation.deleteMany();
-    await prisma.recommendation.deleteMany();
-    await prisma.proposalVote.deleteMany();
-    await prisma.proposal.deleteMany();
-    await prisma.movieScreening.deleteMany();
-    await prisma.movieVote.deleteMany();
-    await prisma.movie.deleteMany();
-    await prisma.eventTask.deleteMany();
-    await prisma.eventSignup.deleteMany();
-    await prisma.eventCoHost.deleteMany();
-    await prisma.eventVisibilityExclusion.deleteMany();
-    await prisma.event.deleteMany();
-    await prisma.experimentPairing.deleteMany();
-    await prisma.weeklyLottery.deleteMany();
-    await prisma.announcement.deleteMany();
-    await prisma.aboutContent.deleteMany();
-    await prisma.mediaAsset.deleteMany();
-    await prisma.userMutedGoal.deleteMany();
-    await prisma.userPreference.deleteMany();
-    await prisma.userSocialTitle.deleteMany();
-    await prisma.userOperatorRole.deleteMany();
-    await prisma.taskPreset.deleteMany();
-    await prisma.titleRule.deleteMany();
-    await prisma.user.deleteMany();
+    // TRUNCATE all tables in one statement (much faster than 40 sequential deleteMany)
+    const tables = await prisma.$queryRaw<{tablename: string}[]>`
+      SELECT tablename FROM pg_tables
+      WHERE schemaname = 'public' AND tablename != '_prisma_migrations'
+    `;
+    if (tables.length > 0) {
+      const tableList = tables.map(t => `"${t.tablename}"`).join(', ');
+      await prisma.$executeRawUnsafe(`TRUNCATE ${tableList} CASCADE`);
+    }
     console.log('  ✅ All tables wiped\n');
   }
 
@@ -634,10 +604,12 @@ async function main() {
       continue;
     }
     const notionBio = readUserBio(admin.name);
+    const id = stableId('cm_u_', admin.email);
     const user = await prisma.user.upsert({
       where: { email: admin.email },
       update: {},
       create: {
+        id,
         name: admin.name,
         email: admin.email,
         role: admin.role,
@@ -680,10 +652,12 @@ async function main() {
     }
 
     const bio = readUserBio(name);
+    const id = stableId('cm_u_', email);
     const user = await prisma.user.upsert({
       where: { email },
       update: {},
       create: {
+        id,
         name,
         email,
         role,
@@ -724,34 +698,43 @@ async function main() {
     const memberDirs = fs.readdirSync(friendsDir).filter(d =>
       fs.statSync(path.join(friendsDir, d)).isDirectory()
     );
+    // Collect avatar info (local filesystem scan — fast)
+    const avatarItems: { userId: string; localPath: string; ext: string }[] = [];
     for (const dirName of memberDirs) {
       const dirPath = path.join(friendsDir, dirName);
       const images = fs.readdirSync(dirPath).filter(f =>
         /\.(png|jpe?g|gif|webp)$/i.test(f) && !f.startsWith('.')
       );
       if (images.length === 0) continue;
-
       const avatarFile = images.find(f => f.toLowerCase().startsWith('image')) || images[0];
-      const localPath = path.join(dirPath, avatarFile);
       const userId = resolveUserId(dirName);
       if (!userId) continue;
+      avatarItems.push({ userId, localPath: path.join(dirPath, avatarFile), ext: path.extname(avatarFile).toLowerCase() });
+    }
 
-      const ext = path.extname(avatarFile).toLowerCase();
-      const s3Key = `migration/avatars/${userId}${ext}`;
-      const url = await uploadToS3(localPath, s3Key);
-
-      if (url && !DRY_RUN) {
-        await prisma.user.update({ where: { id: userId }, data: { avatar: url } });
-        const stat = fs.statSync(localPath);
-        await prisma.mediaAsset.upsert({
-          where: { key: s3Key },
-          update: { url, ownerId: userId },
-          create: {
-            key: s3Key, ownerId: userId,
-            contentType: mimeType(localPath), fileSize: stat.size,
-            status: MediaAssetStatus.uploaded, url,
-          },
-        });
+    if (!DRY_RUN && avatarItems.length > 0) {
+      if (WITH_S3) {
+        // S3 mode: upload each avatar + create mediaAsset records
+        for (const item of avatarItems) {
+          const s3Key = `migration/avatars/${item.userId}${item.ext}`;
+          const url = await uploadToS3(item.localPath, s3Key);
+          await prisma.user.update({ where: { id: item.userId }, data: { avatar: url } });
+          const stat = fs.statSync(item.localPath);
+          await prisma.mediaAsset.upsert({
+            where: { key: s3Key },
+            update: { url, ownerId: item.userId },
+            create: { key: s3Key, ownerId: item.userId, contentType: mimeType(item.localPath), fileSize: stat.size, status: MediaAssetStatus.uploaded, url },
+          });
+        }
+      } else {
+        // DB-only: batch-set avatar URLs from stable S3 keys (single transaction)
+        await prisma.$transaction(
+          avatarItems.map(item => {
+            const s3Key = `migration/avatars/${item.userId}${item.ext}`;
+            return prisma.user.update({ where: { id: item.userId }, data: { avatar: s3PublicUrl(s3Key) } });
+          })
+        );
+        console.log(`  ✅ ${avatarItems.length} avatar URLs set`);
       }
     }
   } else {
@@ -763,6 +746,7 @@ async function main() {
   console.log('══ Step 4: Movies ══');
   const movieRows = readCsv('串门Movies 29f5a5d30661806385e0c2a76df4bb9b_all.csv');
   const movieTitleToId: Record<string, string> = {};
+  const allMovieVotes: { movieId: string; userId: string }[] = [];
 
   for (const row of movieRows) {
     const title = row['Name']?.trim()?.replace(/\xa0/g, ' ');
@@ -782,38 +766,40 @@ async function main() {
       continue;
     }
 
+    const movieId = stableId('cm_m_', title);
     let movie = await prisma.movie.findFirst({ where: { title } });
     if (!movie) {
       movie = await prisma.movie.create({
-        data: { title, doubanUrl, recommendedById: recommenderId, status },
+        data: { id: movieId, title, doubanUrl, recommendedById: recommenderId, status },
       });
     }
     movieTitleToId[title] = movie.id;
     console.log(`  ✅ Movie: ${title} [${status}]`);
 
-    // Movie votes
+    // Collect movie votes for batch insert
     const voterStr = row['投票']?.trim() || '';
     if (voterStr) {
       const voterNames = voterStr.split(',').map(n => n.trim()).filter(Boolean);
       for (const vn of voterNames) {
         const voterId = resolveUserId(vn);
         if (!voterId) continue;
-        try {
-          await prisma.movieVote.upsert({
-            where: { movieId_userId: { movieId: movie.id, userId: voterId } },
-            update: {},
-            create: { movieId: movie.id, userId: voterId },
-          });
-        } catch { /* skip */ }
+        allMovieVotes.push({ movieId: movie.id, userId: voterId });
       }
     }
   }
-  console.log(`  Total: ${Object.keys(movieTitleToId).length} movies\n`);
+  // Batch insert all movie votes
+  if (allMovieVotes.length > 0) {
+    await prisma.movieVote.createMany({ data: allMovieVotes, skipDuplicates: true });
+  }
+  console.log(`  Total: ${Object.keys(movieTitleToId).length} movies, ${allMovieVotes.length} votes\n`);
 
   // ─── Step 5: Events ──────────────────────────────────────
   console.log('══ Step 5: Events ══');
   const eventRows = readCsv('活动日历 29e5a5d3066180848384d91f0fcf0975_all.csv');
   const eventTitleToId: Record<string, string> = {};
+  const allScreenings: { movieId: string; eventId: string }[] = [];
+  const allSignups: { eventId: string; userId: string; status: typeof EventSignupStatus[keyof typeof EventSignupStatus]; participated: boolean }[] = [];
+  const signupSeen = new Set<string>();
 
   for (const row of eventRows) {
     const title = row['Name']?.trim();
@@ -864,10 +850,12 @@ async function main() {
     // Extract event body description from Notion markdown
     const eventDescription = readEventBody(title);
 
+    const eventId = stableId('cm_e_', title);
     let event = await prisma.event.findFirst({ where: { title } });
     if (!event) {
       event = await prisma.event.create({
         data: {
+          id: eventId,
           title, hostId, startsAt: date, tags, location, capacity,
           phase: EventPhase.ended, status: EventStatus.completed,
           recorderUserId,
@@ -878,18 +866,12 @@ async function main() {
     eventTitleToId[title] = event.id;
     console.log(`  ✅ Event: ${date.toISOString().slice(0, 10)} | ${title}${eventDescription ? ' (with description)' : ''}`);
 
-    // MovieScreening
+    // Collect screenings for batch insert
     if (selectedMovieId) {
-      try {
-        await prisma.movieScreening.upsert({
-          where: { movieId_eventId: { movieId: selectedMovieId, eventId: event.id } },
-          update: {},
-          create: { movieId: selectedMovieId, eventId: event.id },
-        });
-      } catch { /* skip */ }
+      allScreenings.push({ movieId: selectedMovieId, eventId: event.id });
     }
 
-    // Signups from 报名人
+    // Collect signups for batch insert
     const signupStr = row['报名人']?.trim() || '';
     if (signupStr) {
       const entries = signupStr.split(/,\s*(?=@|[A-Za-z\u4e00-\u9fff])/);
@@ -898,17 +880,15 @@ async function main() {
         if (!m) continue;
         const userId = resolveUserId(m[1].trim());
         if (!userId) continue;
-        try {
-          await prisma.eventSignup.upsert({
-            where: { eventId_userId: { eventId: event.id, userId } },
-            update: {},
-            create: { eventId: event.id, userId, status: EventSignupStatus.accepted, participated: true },
-          });
-        } catch { /* skip */ }
+        const key = `${event.id}:${userId}`;
+        if (!signupSeen.has(key)) {
+          signupSeen.add(key);
+          allSignups.push({ eventId: event.id, userId, status: EventSignupStatus.accepted, participated: true });
+        }
       }
     }
 
-    // Signups from direct links
+    // Collect signups from direct links
     const directSignups = row['报名(选择Link Existing）']?.trim() || '';
     if (directSignups) {
       for (const part of directSignups.split(',')) {
@@ -916,17 +896,22 @@ async function main() {
         if (!name) continue;
         const userId = resolveUserId(name);
         if (!userId) continue;
-        try {
-          await prisma.eventSignup.upsert({
-            where: { eventId_userId: { eventId: event.id, userId } },
-            update: {},
-            create: { eventId: event.id, userId, status: EventSignupStatus.accepted, participated: true },
-          });
-        } catch { /* skip */ }
+        const key = `${event.id}:${userId}`;
+        if (!signupSeen.has(key)) {
+          signupSeen.add(key);
+          allSignups.push({ eventId: event.id, userId, status: EventSignupStatus.accepted, participated: true });
+        }
       }
     }
   }
-  console.log(`  Total: ${Object.keys(eventTitleToId).length} events\n`);
+  // Batch insert all screenings and signups
+  if (allScreenings.length > 0) {
+    await prisma.movieScreening.createMany({ data: allScreenings, skipDuplicates: true });
+  }
+  if (allSignups.length > 0) {
+    await prisma.eventSignup.createMany({ data: allSignups, skipDuplicates: true });
+  }
+  console.log(`  Total: ${Object.keys(eventTitleToId).length} events, ${allSignups.length} signups\n`);
 
   // ─── Step 6: Event Photos ────────────────────────────────
   console.log('══ Step 6: Event Photos ══');
@@ -937,12 +922,12 @@ async function main() {
     );
     const normalize = (s: string) => s.replace(/[|｜\/\s]+/g, '').replace(/[\u{FE00}-\u{FE0F}\u{1F3FB}-\u{1F3FF}]/gu, '');
 
+    // Collect photo info per event (local filesystem scan — fast)
+    const photoItems: { eventId: string; dirName: string; images: string[] }[] = [];
     for (const dirName of eventDirs) {
       const dirPath = path.join(eventsDir, dirName);
       const images = findImagesRecursive(dirPath);
       if (images.length === 0) continue;
-
-      // Match to event
       let eventId = eventTitleToId[dirName];
       if (!eventId) {
         const normDir = normalize(dirName);
@@ -953,42 +938,47 @@ async function main() {
           }
         }
       }
-      if (!eventId) {
-        console.log(`  ⏭  No event match for dir: ${dirName}`);
-        continue;
-      }
+      if (!eventId) { console.log(`  ⏭  No event match for dir: ${dirName}`); continue; }
+      photoItems.push({ eventId, dirName, images });
+    }
 
-      if (DRY_RUN) {
-        console.log(`  [DRY] Event "${dirName}": ${images.length} photos`);
-        continue;
-      }
-
-      const photoUrls: string[] = [];
-      for (let i = 0; i < images.length; i++) {
-        const img = images[i];
-        const ext = path.extname(img).toLowerCase();
-        const s3Key = `migration/events/${eventId}/photo_${String(i).padStart(3, '0')}${ext}`;
-        const url = await uploadToS3(img, s3Key);
-        if (url) {
-          photoUrls.push(url);
-          const stat = fs.statSync(img);
-          await prisma.mediaAsset.upsert({
-            where: { key: s3Key },
-            update: { url },
-            create: {
-              key: s3Key, contentType: mimeType(img), fileSize: stat.size,
-              status: MediaAssetStatus.uploaded, url,
-            },
-          });
+    if (DRY_RUN) {
+      for (const item of photoItems) console.log(`  [DRY] Event "${item.dirName}": ${item.images.length} photos`);
+    } else if (WITH_S3) {
+      // S3 mode: upload photos + create mediaAsset records + update events
+      for (const item of photoItems) {
+        const photoUrls: string[] = [];
+        for (let i = 0; i < item.images.length; i++) {
+          const img = item.images[i];
+          const ext = path.extname(img).toLowerCase();
+          const s3Key = `migration/events/${item.eventId}/photo_${String(i).padStart(3, '0')}${ext}`;
+          const url = await uploadToS3(img, s3Key);
+          if (url) {
+            photoUrls.push(url);
+            const stat = fs.statSync(img);
+            await prisma.mediaAsset.upsert({
+              where: { key: s3Key }, update: { url },
+              create: { key: s3Key, contentType: mimeType(img), fileSize: stat.size, status: MediaAssetStatus.uploaded, url },
+            });
+          }
+        }
+        if (photoUrls.length > 0) {
+          await prisma.event.update({ where: { id: item.eventId }, data: { titleImageUrl: photoUrls[0], recapPhotoUrls: photoUrls } });
+          console.log(`  📷 "${item.dirName}": ${photoUrls.length} photos`);
         }
       }
-      if (photoUrls.length > 0) {
-        await prisma.event.update({
-          where: { id: eventId },
-          data: { titleImageUrl: photoUrls[0], recapPhotoUrls: photoUrls },
+    } else {
+      // DB-only: batch-set photo URLs from stable S3 keys (single transaction)
+      const photoUpdates = photoItems.map(item => {
+        const photoUrls = item.images.map((img, i) => {
+          const ext = path.extname(img).toLowerCase();
+          return s3PublicUrl(`migration/events/${item.eventId}/photo_${String(i).padStart(3, '0')}${ext}`);
         });
-        console.log(`  📷 "${dirName}": ${photoUrls.length} photos`);
-      }
+        return prisma.event.update({ where: { id: item.eventId }, data: { titleImageUrl: photoUrls[0], recapPhotoUrls: photoUrls } });
+      });
+      await prisma.$transaction(photoUpdates);
+      const totalPhotos = photoItems.reduce((sum, item) => sum + item.images.length, 0);
+      console.log(`  ✅ ${photoItems.length} events, ${totalPhotos} photo URLs set`);
     }
   } else {
     console.log('  ⏭  Skipping (no events dir)');
@@ -1007,6 +997,8 @@ async function main() {
     '已安排': 'scheduled',
   };
 
+  const allProposalVotes: { proposalId: string; userId: string }[] = [];
+
   for (const row of proposalRows) {
     const title = row['Name']?.trim();
     if (!title) continue;
@@ -1024,45 +1016,45 @@ async function main() {
     // Extract proposal body from Notion markdown
     const proposalDescription = readProposalBody(title);
 
+    const proposalId = stableId('cm_p_', title);
     let proposal = await prisma.proposal.findFirst({ where: { title } });
     if (!proposal) {
       proposal = await prisma.proposal.create({
-        data: { title, authorId, status, description: proposalDescription, createdAt: created || new Date() },
+        data: { id: proposalId, title, authorId, status, description: proposalDescription, createdAt: created || new Date() },
       });
     }
     console.log(`  ✅ Proposal: ${title}${proposalDescription ? ' (with description)' : ''}`);
 
-    // Votes
+    // Collect votes for batch insert
     const voterStr = row['投票']?.trim() || '';
     if (voterStr) {
       for (const vn of voterStr.split(',').map(n => n.trim()).filter(Boolean)) {
         const voterId = resolveUserId(vn);
         if (!voterId) continue;
-        try {
-          await prisma.proposalVote.upsert({
-            where: { proposalId_userId: { proposalId: proposal.id, userId: voterId } },
-            update: {},
-            create: { proposalId: proposal.id, userId: voterId },
-          });
-        } catch { /* skip */ }
+        allProposalVotes.push({ proposalId: proposal.id, userId: voterId });
       }
     }
+  }
+  // Batch insert all proposal votes
+  if (allProposalVotes.length > 0) {
+    await prisma.proposalVote.createMany({ data: allProposalVotes, skipDuplicates: true });
   }
   console.log('');
 
   // ─── Step 8: Update user counts ──────────────────────────
   if (!DRY_RUN) {
     console.log('══ Step 8: Updating user counts ══');
-    const allUsers = await prisma.user.findMany({ select: { id: true, name: true } });
-    for (const u of allUsers) {
-      const hostCount = await prisma.event.count({ where: { hostId: u.id } });
-      const participationCount = await prisma.eventSignup.count({ where: { userId: u.id, participated: true } });
-      const proposalCount = await prisma.proposal.count({ where: { authorId: u.id } });
-      await prisma.user.update({
-        where: { id: u.id },
-        data: { hostCount, participationCount, proposalCount },
-      });
-    }
+    await prisma.$executeRawUnsafe(`
+      UPDATE "User" u SET
+        "hostCount" = COALESCE(h.cnt, 0),
+        "participationCount" = COALESCE(p.cnt, 0),
+        "proposalCount" = COALESCE(pr.cnt, 0)
+      FROM "User" u2
+      LEFT JOIN (SELECT "hostId", COUNT(*)::int AS cnt FROM "Event" GROUP BY "hostId") h ON h."hostId" = u2.id
+      LEFT JOIN (SELECT "userId", COUNT(*)::int AS cnt FROM "EventSignup" WHERE participated = true GROUP BY "userId") p ON p."userId" = u2.id
+      LEFT JOIN (SELECT "authorId", COUNT(*)::int AS cnt FROM "Proposal" GROUP BY "authorId") pr ON pr."authorId" = u2.id
+      WHERE u.id = u2.id
+    `);
     console.log('  ✅ User counts updated\n');
   }
 
@@ -1200,7 +1192,8 @@ async function main() {
   }
   console.log('');
 
-  console.log('🌱 Seed complete!\n');
+  const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+  console.log(`🌱 Seed complete! (${elapsed}s)\n`);
 }
 
 /* ═══════════════════════════════════════════════════════════
