@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
 import {
   Avatar,
@@ -28,6 +28,7 @@ import { PostCard } from '@/components/PostCard';
 import { Poster } from '@/components/Poster';
 import { EmptyState } from '@/components/EmptyState';
 import { useColors } from '@/hooks/useColors';
+import { fetchProfileApi } from '@/lib/domainApi';
 import { photos } from '@/theme';
 import { firstNonEmoji } from '@/components/Atoms';
 
@@ -40,12 +41,30 @@ const sceneEmoji: Record<string, string> = {
 };
 
 export default function ProfilePage() {
-  const raw = useLoaderData() as any;
+  const loaderData = useLoaderData() as any;
   const { user } = useAuth();
   const navigate = useNavigate();
   const c = useColors();
 
+  // SSR can't read localStorage → loader returns null. Fetch client-side as fallback.
+  const [clientData, setClientData] = useState<any>(null);
+  useEffect(() => {
+    if (loaderData || clientData) return;
+    if (!user?.id) return;
+    fetchProfileApi(user.id).then(setClientData).catch(() => {});
+  }, [loaderData, clientData, user?.id]);
+
+  const raw = loaderData || clientData;
+
   if (!raw) {
+    if (user?.id) {
+      // Still loading client-side
+      return (
+        <Stack alignItems="center" sx={{ py: 8 }}>
+          <Typography variant="body2" color="text.secondary">加载中...</Typography>
+        </Stack>
+      );
+    }
     return (
       <Stack spacing={2} alignItems="center" sx={{ py: 8, textAlign: 'center' }}>
         <Typography variant="h6" fontWeight={700}>无法加载个人页面</Typography>
