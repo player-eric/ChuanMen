@@ -243,6 +243,276 @@ function readUserBio(userName: string): string {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   Event Body Extraction from Notion event Markdown files
+   ═══════════════════════════════════════════════════════════ */
+
+/**
+ * Read the event body (description) from a Notion event markdown file.
+ * Extracts content between the metadata header and the photo gallery section,
+ * keeping schedule, potluck, and other descriptive content.
+ * Returns clean HTML for RichTextViewer rendering.
+ */
+function readEventBody(eventTitle: string): string {
+  const eventsDir = path.join(NOTION_DIR, '活动日历');
+  if (!fs.existsSync(eventsDir)) return '';
+
+  // Find the .md file matching this event title (fuzzy match)
+  const mdFiles = fs.readdirSync(eventsDir).filter(f => f.endsWith('.md'));
+  const normalize = (s: string) => s
+    .replace(/[\u{FE00}-\u{FE0F}\u{1F3FB}-\u{1F3FF}]/gu, '') // strip variation selectors
+    .replace(/\s+/g, '')
+    .toLowerCase();
+
+  const normTitle = normalize(eventTitle);
+  const targetFile = mdFiles.find(f => {
+    // filename is like "EventTitle hash.md"
+    const nameWithoutHash = f.replace(/\s+[a-f0-9]{32}\.md$/, '');
+    return normalize(nameWithoutHash) === normTitle
+      || normalize(nameWithoutHash).includes(normTitle)
+      || normTitle.includes(normalize(nameWithoutHash));
+  });
+
+  if (!targetFile) return '';
+  // Skip the template file
+  if (targetFile.includes('Events Template')) return '';
+
+  const content = fs.readFileSync(path.join(eventsDir, targetFile), 'utf-8');
+  const lines = content.split('\n');
+
+  // Phase 1: Find where the metadata header ends.
+  // Metadata header = everything from line 0 until the first image line or
+  // the first section heading (# ...) AFTER the metadata lines.
+  // Metadata lines start with: Date:, Host:, 总人数:, Tag:, etc.
+  // or are continuation lines of metadata (encoded links, 报名人, etc.)
+  let bodyStartIdx = -1;
+  const metadataKeywords = [
+    'Date:', 'Host:', '总人数:', 'Tag:', '放映电影:', '候选电影',
+    '报名人:', '报名(', 'Waitlist', '人数限制:', '地址:', '活动记录人:',
+  ];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    // Skip title line (# EventTitle)
+    if (i === 0 && line.startsWith('# ')) continue;
+    // Skip empty lines in header
+    if (!line) continue;
+    // Skip metadata lines and their continuations (Notion link lines with encoded URLs)
+    if (metadataKeywords.some(k => line.startsWith(k))) continue;
+    if (line.match(/^[A-Za-z\u4e00-\u9fff].*\(\.\.\//) && i < 20) continue; // Notion relative link continuation
+
+    // First non-metadata, non-empty line is the start of body content
+    bodyStartIdx = i;
+    break;
+  }
+
+  if (bodyStartIdx < 0) return '';
+
+  // Phase 2: Collect body lines, stopping at photo gallery section
+  const photoSectionHeaders = ['# 照片图库', '# 照片集合', '# 照片'];
+  const bodyLines: string[] = [];
+  let inPhotoSection = false;
+
+  for (let i = bodyStartIdx; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    // Stop at photo gallery section
+    if (photoSectionHeaders.some(h => line.startsWith(h))) {
+      inPhotoSection = true;
+      break;
+    }
+
+    bodyLines.push(lines[i]);
+  }
+
+  // Phase 3: Clean up the body content
+  let body = bodyLines.join('\n');
+
+  // Remove image references: ![alt](path)
+  body = body.replace(/!\[.*?\]\(.*?\)\s*/g, '');
+  // Remove Notion page links with encoded paths (but keep regular URLs):
+  // Pattern: [text](../encoded/path.md) or [text](subdir/encoded.md)
+  body = body.replace(/\[([^\]]*)\]\((?:\.\.\/|[A-Za-z].*?\.md).*?\)/g, '$1');
+  // Remove <aside> blocks
+  body = body.replace(/<aside>[\s\S]*?<\/aside>/g, '');
+  // Remove remaining bare <aside> and </aside> tags
+  body = body.replace(/<\/?aside>/g, '');
+  // Remove bare Notion URLs [](https://www.notion.so)
+  body = body.replace(/\[.*?\]\(https:\/\/www\.notion\.so\)/g, '');
+  // Clean up empty heading lines (# \n) — headings with no content after
+  body = body.replace(/^(#{1,3})\s*$/gm, '');
+
+  // Trim and collapse excessive blank lines
+  body = body.trim();
+  body = body.replace(/\n{3,}/g, '\n\n');
+
+  // Return empty if only whitespace/empty headings remain
+  if (!body || body.replace(/[#\s\n]/g, '').length === 0) return '';
+
+  // Phase 4: Convert markdown to simple HTML for RichTextViewer
+  return mdToHtml(body);
+}
+
+/**
+ * Simple markdown → HTML converter for event descriptions.
+ * Handles: headings, bold, bullet lists, markdown tables, URLs, paragraphs.
+ */
+function mdToHtml(md: string): string {
+  const lines = md.split('\n');
+  const htmlParts: string[] = [];
+  let inList = false;
+  let inTable = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Skip empty lines (handle paragraph breaks)
+    if (!trimmed) {
+      if (inList) { htmlParts.push('</ul>'); inList = false; }
+      if (inTable) { htmlParts.push('</table>'); inTable = false; }
+      continue;
+    }
+
+    // Headings
+    if (trimmed.startsWith('### ')) {
+      if (inList) { htmlParts.push('</ul>'); inList = false; }
+      if (inTable) { htmlParts.push('</table>'); inTable = false; }
+      htmlParts.push(`<h3>${escHtml(trimmed.slice(4))}</h3>`);
+      continue;
+    }
+    if (trimmed.startsWith('## ')) {
+      if (inList) { htmlParts.push('</ul>'); inList = false; }
+      if (inTable) { htmlParts.push('</table>'); inTable = false; }
+      htmlParts.push(`<h2>${escHtml(trimmed.slice(3))}</h2>`);
+      continue;
+    }
+    if (trimmed.startsWith('# ')) {
+      if (inList) { htmlParts.push('</ul>'); inList = false; }
+      if (inTable) { htmlParts.push('</table>'); inTable = false; }
+      htmlParts.push(`<h2>${escHtml(trimmed.slice(2))}</h2>`);
+      continue;
+    }
+
+    // Bullet list items (- or ▸ or ）prefix)
+    if (/^[-▸）]\s/.test(trimmed) || /^\d+[.:：]\s/.test(trimmed)) {
+      if (inTable) { htmlParts.push('</table>'); inTable = false; }
+      if (!inList) { htmlParts.push('<ul>'); inList = true; }
+      const content = trimmed.replace(/^[-▸）]\s*/, '').replace(/^\d+[.:：]\s*/, '');
+      htmlParts.push(`<li>${inlineFormatting(content)}</li>`);
+      continue;
+    }
+    // Continuation of list item (indented lines following a list item)
+    if (inList && /^\s{2,}/.test(line) && trimmed) {
+      htmlParts.push(`<li>${inlineFormatting(trimmed)}</li>`);
+      continue;
+    }
+
+    // Table rows (| col | col |)
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      if (inList) { htmlParts.push('</ul>'); inList = false; }
+      // Skip separator rows (| --- | --- |)
+      if (/^\|[\s-|]+\|$/.test(trimmed)) continue;
+      if (!inTable) { htmlParts.push('<table>'); inTable = true; }
+      const cells = trimmed.split('|').filter(Boolean).map(c => c.trim());
+      const tag = !inTable || htmlParts[htmlParts.length - 1] === '<table>' ? 'th' : 'td';
+      htmlParts.push('<tr>' + cells.map(c => `<${tag}>${escHtml(c)}</${tag}>`).join('') + '</tr>');
+      continue;
+    }
+
+    // Regular paragraph
+    if (inList) { htmlParts.push('</ul>'); inList = false; }
+    if (inTable) { htmlParts.push('</table>'); inTable = false; }
+    htmlParts.push(`<p>${inlineFormatting(trimmed)}</p>`);
+  }
+
+  // Close any open tags
+  if (inList) htmlParts.push('</ul>');
+  if (inTable) htmlParts.push('</table>');
+
+  return htmlParts.join('');
+}
+
+function escHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function inlineFormatting(text: string): string {
+  let s = escHtml(text);
+  // Bold: **text**
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Links: [text](url) — only for http(s) URLs
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2">$1</a>');
+  // Bare URLs
+  s = s.replace(/(^|\s)(https?:\/\/\S+)/g, '$1<a href="$2">$2</a>');
+  return s;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Proposal Body Extraction from Notion proposal Markdown files
+   ═══════════════════════════════════════════════════════════ */
+
+/**
+ * Read the proposal body (description) from a Notion proposal markdown file.
+ * Extracts content after the metadata header (Created, Status, Created By, etc.).
+ */
+function readProposalBody(proposalTitle: string): string {
+  const proposalsDir = path.join(NOTION_DIR, '活动提案与想法讨论');
+  if (!fs.existsSync(proposalsDir)) return '';
+
+  const mdFiles = fs.readdirSync(proposalsDir).filter(f => f.endsWith('.md'));
+  const normalize = (s: string) => s
+    .replace(/[\u{FE00}-\u{FE0F}\u{1F3FB}-\u{1F3FF}]/gu, '')
+    .replace(/\s+/g, '')
+    .toLowerCase();
+
+  const normTitle = normalize(proposalTitle);
+  const targetFile = mdFiles.find(f => {
+    const nameWithoutHash = f.replace(/\s+[a-f0-9]{32}\.md$/, '');
+    return normalize(nameWithoutHash) === normTitle
+      || normalize(nameWithoutHash).includes(normTitle)
+      || normTitle.includes(normalize(nameWithoutHash));
+  });
+
+  if (!targetFile) return '';
+
+  const content = fs.readFileSync(path.join(proposalsDir, targetFile), 'utf-8');
+  const lines = content.split('\n');
+
+  // Skip title line and metadata lines (Created:, Status:, Created By:, 投票:, 票数:, Last Edited:)
+  const metadataKeywords = ['Created:', 'Status:', 'Created By:', 'Last Edited:', '投票:', '票数:'];
+  let bodyStartIdx = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (i === 0 && line.startsWith('# ')) continue;
+    if (!line) continue;
+    if (metadataKeywords.some(k => line.startsWith(k))) continue;
+
+    bodyStartIdx = i;
+    break;
+  }
+
+  if (bodyStartIdx < 0) return '';
+
+  // Collect body lines
+  const bodyLines: string[] = [];
+  for (let i = bodyStartIdx; i < lines.length; i++) {
+    bodyLines.push(lines[i]);
+  }
+
+  let body = bodyLines.join('\n').trim();
+  // Remove image references
+  body = body.replace(/!\[.*?\]\(.*?\)\s*/g, '');
+  // Remove Notion page links
+  body = body.replace(/\[([^\]]*)\]\((?:\.\.\/|[A-Za-z].*?\.md).*?\)/g, '$1');
+  body = body.replace(/\n{3,}/g, '\n\n');
+
+  if (!body || body.replace(/\s/g, '').length === 0) return '';
+
+  return mdToHtml(body);
+}
+
+/* ═══════════════════════════════════════════════════════════
    ADMIN ACCOUNTS — always seeded first
    ═══════════════════════════════════════════════════════════ */
 
@@ -591,6 +861,9 @@ async function main() {
       continue;
     }
 
+    // Extract event body description from Notion markdown
+    const eventDescription = readEventBody(title);
+
     let event = await prisma.event.findFirst({ where: { title } });
     if (!event) {
       event = await prisma.event.create({
@@ -598,11 +871,12 @@ async function main() {
           title, hostId, startsAt: date, tags, location, capacity,
           phase: EventPhase.ended, status: EventStatus.completed,
           recorderUserId,
+          description: eventDescription,
         },
       });
     }
     eventTitleToId[title] = event.id;
-    console.log(`  ✅ Event: ${date.toISOString().slice(0, 10)} | ${title}`);
+    console.log(`  ✅ Event: ${date.toISOString().slice(0, 10)} | ${title}${eventDescription ? ' (with description)' : ''}`);
 
     // MovieScreening
     if (selectedMovieId) {
@@ -747,13 +1021,16 @@ async function main() {
       continue;
     }
 
+    // Extract proposal body from Notion markdown
+    const proposalDescription = readProposalBody(title);
+
     let proposal = await prisma.proposal.findFirst({ where: { title } });
     if (!proposal) {
       proposal = await prisma.proposal.create({
-        data: { title, authorId, status, createdAt: created || new Date() },
+        data: { title, authorId, status, description: proposalDescription, createdAt: created || new Date() },
       });
     }
-    console.log(`  ✅ Proposal: ${title}`);
+    console.log(`  ✅ Proposal: ${title}${proposalDescription ? ' (with description)' : ''}`);
 
     // Votes
     const voterStr = row['投票']?.trim() || '';
