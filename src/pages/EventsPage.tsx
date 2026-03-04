@@ -80,7 +80,20 @@ export default function EventsPage() {
     }
     return true;
   });
-  const pastEvents = data.upcoming.filter((e) => e.phase === 'ended');
+  const endedFromUpcoming = data.upcoming.filter((e: any) => e.phase === 'ended');
+
+  // Merge ended events from upcoming + past, deduplicate by id, sort by time descending
+  const allPastEvents = useMemo(() => {
+    const seen = new Set<string>();
+    const fromUpcoming = endedFromUpcoming.map((evt: any) => {
+      if (evt.id) seen.add(evt.id);
+      return { source: 'upcoming' as const, sortKey: evt.startsAt ?? evt.date ?? '', evt };
+    });
+    const fromPast = data.past
+      .filter((evt) => !evt.id || !seen.has(evt.id))
+      .map((evt) => ({ source: 'past' as const, sortKey: evt.startsAt ?? evt.date ?? '', evt }));
+    return [...fromUpcoming, ...fromPast].sort((a, b) => (b.sortKey > a.sortKey ? 1 : b.sortKey < a.sortKey ? -1 : 0));
+  }, [endedFromUpcoming, data.past]);
 
   // Smart sorting for upcoming events
   const [sortMode, setSortMode] = useState<'smart' | 'time'>('smart');
@@ -106,7 +119,7 @@ export default function EventsPage() {
       <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ mb: 2 }}>
         <Tab value="upcoming" label={`即将到来 (${upcomingEvents.length})`} />
         <Tab value="ideas" label={`创意孵化中 (${data.proposals.length})`} />
-        <Tab value="past" label={`过往活动 (${pastEvents.length + data.past.length})`} />
+        <Tab value="past" label={`过往活动 (${allPastEvents.length})`} />
       </Tabs>
 
       {tab === 'upcoming' && (
@@ -305,7 +318,7 @@ export default function EventsPage() {
 
       {tab === 'past' && (
         <Stack spacing={2}>
-          {pastEvents.length === 0 && data.past.length === 0 && (
+          {allPastEvents.length === 0 && (
             <EmptyState
               icon="📷"
               title="还没有过往活动记录"
@@ -313,49 +326,52 @@ export default function EventsPage() {
             />
           )}
           <Grid container spacing={2}>
-            {/* EventData items with phase='ended' */}
-            {pastEvents.map((evt: any) => (
-              <Grid key={evt.id} size={{ xs: 12, md: 6 }}>
-                <FeedActivity
-                  mode="list"
-                  name={evt.host}
-                  title={evt.title}
-                  date={evt.date}
-                  location={evt.location}
-                  spots={evt.spots}
-                  people={evt.people}
-                  film={evt.film}
-                  scene={evt.scene}
-                  navTarget={`/events/${evt.id}`}
-                  phase="ended"
-                  isPrivate={evt.isPrivate}
-                  photoCount={evt.photoCount}
-                  commentCount={evt.commentCount}
-                  likes={evt.likeCount ?? 0} likedBy={[]} comments={[]}
-                />
-              </Grid>
-            ))}
-            {/* Older PastEvent items */}
-            {data.past.map((evt, idx) => (
-              <Grid key={`past-${idx}`} size={{ xs: 12, md: 6 }}>
-                <FeedActivity
-                  mode="list"
-                  name={evt.host}
-                  title={evt.title}
-                  date={evt.date}
-                  location=""
-                  spots={0}
-                  people={[]}
-                  film={evt.film}
-                  scene={evt.scene}
-                  navTarget={evt.id ? `/events/${evt.id}` : undefined}
-                  phase="ended"
-                  photoCount={evt.photoCount}
-                  commentCount={evt.commentCount}
-                  likes={evt.likeCount ?? 0} likedBy={[]} comments={[]}
-                />
-              </Grid>
-            ))}
+            {allPastEvents.map((item, idx) => {
+              const evt = item.evt as any;
+              if (item.source === 'upcoming') {
+                return (
+                  <Grid key={evt.id} size={{ xs: 12, md: 6 }}>
+                    <FeedActivity
+                      mode="list"
+                      name={evt.host}
+                      title={evt.title}
+                      date={evt.date}
+                      location={evt.location}
+                      spots={evt.spots}
+                      people={evt.people}
+                      film={evt.film}
+                      scene={evt.scene}
+                      navTarget={`/events/${evt.id}`}
+                      phase="ended"
+                      isPrivate={evt.isPrivate}
+                      photoCount={evt.photoCount}
+                      commentCount={evt.commentCount}
+                      likes={evt.likeCount ?? 0} likedBy={[]} comments={[]}
+                    />
+                  </Grid>
+                );
+              }
+              return (
+                <Grid key={evt.id ?? `past-${idx}`} size={{ xs: 12, md: 6 }}>
+                  <FeedActivity
+                    mode="list"
+                    name={evt.host}
+                    title={evt.title}
+                    date={evt.date}
+                    location=""
+                    spots={0}
+                    people={[]}
+                    film={evt.film}
+                    scene={evt.scene}
+                    navTarget={evt.id ? `/events/${evt.id}` : undefined}
+                    phase="ended"
+                    photoCount={evt.photoCount}
+                    commentCount={evt.commentCount}
+                    likes={evt.likeCount ?? 0} likedBy={[]} comments={[]}
+                  />
+                </Grid>
+              );
+            })}
           </Grid>
         </Stack>
       )}

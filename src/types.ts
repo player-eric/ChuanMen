@@ -96,6 +96,7 @@ export interface PastEvent {
   title: string;
   host: string;
   date: string;
+  startsAt?: string;
   people: number;
   scene: string;
   film?: string;

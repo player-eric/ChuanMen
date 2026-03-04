@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
 import {
   Avatar,
@@ -108,7 +108,8 @@ export default function ProfilePage() {
   const [tab, setTab] = useState(0);
   const [eventFilter, setEventFilter] = useState<'all' | 'host'>('all');
   const [lightboxIndex, setLightboxIndex] = useState(-1);
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [visibleGroupCount, setVisibleGroupCount] = useState(3);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [timelineExpanded, setTimelineExpanded] = useState(false);
 
   const rawCover = user?.coverImageUrl || photos.cozy;
@@ -116,7 +117,33 @@ export default function ProfilePage() {
   const coverBg = isGradient ? rawCover : `url(${rawCover}) center/cover no-repeat`;
 
   const allGalleryPhotos = data.galleryPhotos ?? [];
-  const galleryPhotos = showAllPhotos ? allGalleryPhotos : allGalleryPhotos.slice(0, 9);
+
+  const photoGroups = useMemo(() => {
+    const groupMap = new Map<string, { eventId: string; eventTitle: string; latestAt: string; photos: typeof allGalleryPhotos }>();
+    for (const photo of allGalleryPhotos) {
+      const key = photo.eventId ?? 'unknown';
+      const existing = groupMap.get(key);
+      if (!existing) {
+        groupMap.set(key, { eventId: key, eventTitle: photo.eventTitle ?? '', latestAt: photo.createdAt ?? '', photos: [photo] });
+      } else {
+        existing.photos.push(photo);
+        if ((photo.createdAt ?? '') > existing.latestAt) existing.latestAt = photo.createdAt ?? '';
+      }
+    }
+    return Array.from(groupMap.values()).sort((a, b) => (b.latestAt > a.latestAt ? 1 : -1));
+  }, [allGalleryPhotos]);
+
+  // Build a flat index map for lightbox: globalIndex → photo
+  const flatPhotosFromGroups = useMemo(() => {
+    const visibleGroups = photoGroups.slice(0, visibleGroupCount);
+    const result: typeof allGalleryPhotos = [];
+    for (const group of visibleGroups) {
+      if (!collapsedGroups.has(group.eventId)) {
+        result.push(...group.photos);
+      }
+    }
+    return result;
+  }, [photoGroups, visibleGroupCount, collapsedGroups]);
 
   return (
     <Stack spacing={0}>
@@ -389,7 +416,7 @@ export default function ProfilePage() {
             </Box>
           )}
 
-          {/* Photo Gallery */}
+          {/* Photo Gallery — grouped by event */}
           {allGalleryPhotos.length > 0 && (
             <Card>
               <CardContent>
@@ -408,59 +435,75 @@ export default function ProfilePage() {
                   </Button>
                 </Stack>
 
-                <Box sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gridAutoRows: '1fr',
-                  gap: 0.5,
-                }}>
-                  {galleryPhotos.map((photo, idx) => (
-                    <Box
-                      key={photo.id}
-                      onClick={() => setLightboxIndex(idx)}
-                      sx={{
-                        position: 'relative',
-                        aspectRatio: '1',
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                        ...(idx === 0 ? {
-                          gridColumn: 'span 2',
-                          gridRow: 'span 2',
-                        } : {}),
-                      }}
-                    >
-                      <Box
-                        component="img"
-                        src={photo.url}
-                        alt={photo.eventTitle}
-                        sx={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          display: 'block',
-                          filter: 'saturate(0.85) contrast(1.05)',
-                        }}
-                      />
-                      <Box sx={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        p: 0.5,
-                        background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)',
-                      }}>
-                        <Typography variant="caption" sx={{ color: '#fff', fontSize: 10, lineHeight: 1.2 }} noWrap>
-                          {photo.eventTitle}
-                        </Typography>
+                <Stack spacing={2}>
+                  {photoGroups.slice(0, visibleGroupCount).map((group) => {
+                    const isCollapsed = collapsedGroups.has(group.eventId);
+                    return (
+                      <Box key={group.eventId}>
+                        <Stack
+                          direction="row"
+                          justifyContent="space-between"
+                          alignItems="center"
+                          onClick={() => setCollapsedGroups((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(group.eventId)) next.delete(group.eventId);
+                            else next.add(group.eventId);
+                            return next;
+                          })}
+                          sx={{ cursor: 'pointer', mb: isCollapsed ? 0 : 1, py: 0.5 }}
+                        >
+                          <Typography variant="body2" fontWeight={600}>
+                            {group.eventTitle} ({group.photos.length})
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {isCollapsed ? '展开 ▸' : '收起 ▾'}
+                          </Typography>
+                        </Stack>
+                        {!isCollapsed && (
+                          <Box sx={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gap: 0.5,
+                          }}>
+                            {group.photos.map((photo) => {
+                              const globalIdx = flatPhotosFromGroups.indexOf(photo);
+                              return (
+                                <Box
+                                  key={photo.id}
+                                  onClick={() => setLightboxIndex(globalIdx)}
+                                  sx={{
+                                    position: 'relative',
+                                    aspectRatio: '1',
+                                    borderRadius: 1,
+                                    overflow: 'hidden',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  <Box
+                                    component="img"
+                                    src={photo.url}
+                                    alt={photo.eventTitle}
+                                    sx={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover',
+                                      display: 'block',
+                                      filter: 'saturate(0.85) contrast(1.05)',
+                                    }}
+                                  />
+                                </Box>
+                              );
+                            })}
+                          </Box>
+                        )}
                       </Box>
-                    </Box>
-                  ))}
-                </Box>
+                    );
+                  })}
+                </Stack>
 
-                {!showAllPhotos && allGalleryPhotos.length > 9 && (
-                  <Button size="small" sx={{ mt: 1 }} onClick={() => setShowAllPhotos(true)}>
-                    查看全部 →
+                {visibleGroupCount < photoGroups.length && (
+                  <Button size="small" sx={{ mt: 1.5 }} onClick={() => setVisibleGroupCount((n) => n + 5)}>
+                    查看更多活动 →
                   </Button>
                 )}
               </CardContent>
@@ -563,7 +606,7 @@ export default function ProfilePage() {
 
       {/* ══════ Tab 1: 电影 ══════ */}
       {tab === 1 && (
-        <Stack spacing={2}>
+        <>
           {data.myMovies.length === 0 && data.votedMovies.length === 0 && (
             <EmptyState
               icon="🎬"
@@ -573,88 +616,96 @@ export default function ProfilePage() {
             />
           )}
 
-          {/* My Recommended Movies */}
-          {data.myMovies.length > 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-                  🎬 我推荐的电影 ({data.myMovies.length})
-                </Typography>
-                <Stack spacing={1}>
-                  {data.myMovies.map((movie) => (
-                    <CardActionArea
-                      key={movie.id}
-                      onClick={() => navigate(`/discover/movies/${movie.id}`)}
-                      sx={{ borderRadius: 2 }}
-                    >
-                      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
-                        <Poster title={movie.title} w={40} h={56} />
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {movie.year} · {movie.dir}
-                          </Typography>
-                          <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
-                            <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
-                            {movie.status && (
-                              <Chip
-                                size="small"
-                                label={movie.status}
-                                color={movie.status === '本周放映' ? 'warning' : 'default'}
-                                sx={{ height: 20, fontSize: 11 }}
-                              />
-                            )}
-                          </Stack>
-                        </Box>
+          {(data.myMovies.length > 0 || data.votedMovies.length > 0) && (
+            <Grid container spacing={2}>
+              {/* My Recommended Movies */}
+              {data.myMovies.length > 0 && (
+                <Grid size={{ xs: 12, md: data.votedMovies.length > 0 ? 6 : 12 }}>
+                  <Card sx={{ height: '100%' }}>
+                    <CardContent>
+                      <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                        🎬 我推荐的电影 ({data.myMovies.length})
+                      </Typography>
+                      <Stack spacing={1}>
+                        {data.myMovies.map((movie) => (
+                          <CardActionArea
+                            key={movie.id}
+                            onClick={() => navigate(`/discover/movies/${movie.id}`)}
+                            sx={{ borderRadius: 2 }}
+                          >
+                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
+                              <Poster title={movie.title} w={40} h={56} />
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {movie.year} · {movie.dir}
+                                </Typography>
+                                <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
+                                  <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
+                                  {movie.status && (
+                                    <Chip
+                                      size="small"
+                                      label={movie.status}
+                                      color={movie.status === '本周放映' ? 'warning' : 'default'}
+                                      sx={{ height: 20, fontSize: 11 }}
+                                    />
+                                  )}
+                                </Stack>
+                              </Box>
+                            </Stack>
+                          </CardActionArea>
+                        ))}
                       </Stack>
-                    </CardActionArea>
-                  ))}
-                </Stack>
-              </CardContent>
-            </Card>
-          )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )}
 
-          {/* Voted Movies */}
-          {data.votedMovies.length > 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-                  👍 我投票的电影 ({data.votedMovies.length})
-                </Typography>
-                <Stack spacing={1}>
-                  {data.votedMovies.map((movie) => (
-                    <CardActionArea
-                      key={movie.id}
-                      onClick={() => navigate(`/discover/movies/${movie.id}`)}
-                      sx={{ borderRadius: 2 }}
-                    >
-                      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
-                        <Poster title={movie.title} w={40} h={56} />
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {movie.year} · {movie.dir} · 推荐人: {movie.by}
-                          </Typography>
-                          <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
-                            <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
-                            {movie.status && (
-                              <Chip
-                                size="small"
-                                label={movie.status}
-                                color={movie.status === '本周放映' ? 'warning' : 'default'}
-                                sx={{ height: 20, fontSize: 11 }}
-                              />
-                            )}
-                          </Stack>
-                        </Box>
+              {/* Voted Movies */}
+              {data.votedMovies.length > 0 && (
+                <Grid size={{ xs: 12, md: data.myMovies.length > 0 ? 6 : 12 }}>
+                  <Card sx={{ height: '100%' }}>
+                    <CardContent>
+                      <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                        👍 我投票的电影 ({data.votedMovies.length})
+                      </Typography>
+                      <Stack spacing={1}>
+                        {data.votedMovies.map((movie) => (
+                          <CardActionArea
+                            key={movie.id}
+                            onClick={() => navigate(`/discover/movies/${movie.id}`)}
+                            sx={{ borderRadius: 2 }}
+                          >
+                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
+                              <Poster title={movie.title} w={40} h={56} />
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {movie.year} · {movie.dir} · 推荐人: {movie.by}
+                                </Typography>
+                                <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
+                                  <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
+                                  {movie.status && (
+                                    <Chip
+                                      size="small"
+                                      label={movie.status}
+                                      color={movie.status === '本周放映' ? 'warning' : 'default'}
+                                      sx={{ height: 20, fontSize: 11 }}
+                                    />
+                                  )}
+                                </Stack>
+                              </Box>
+                            </Stack>
+                          </CardActionArea>
+                        ))}
                       </Stack>
-                    </CardActionArea>
-                  ))}
-                </Stack>
-              </CardContent>
-            </Card>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )}
+            </Grid>
           )}
-        </Stack>
+        </>
       )}
 
       {/* ══════ Tab 2: 感谢卡 ══════ */}
@@ -787,8 +838,8 @@ export default function ProfilePage() {
         fullScreen
         PaperProps={{ sx: { bgcolor: 'rgba(0,0,0,0.95)' } }}
       >
-        {lightboxIndex >= 0 && lightboxIndex < allGalleryPhotos.length && (() => {
-          const photo = allGalleryPhotos[lightboxIndex];
+        {lightboxIndex >= 0 && lightboxIndex < flatPhotosFromGroups.length && (() => {
+          const photo = flatPhotosFromGroups[lightboxIndex];
           return (
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
@@ -817,7 +868,7 @@ export default function ProfilePage() {
                     filter: 'saturate(0.85) contrast(1.05)',
                   }}
                 />
-                {lightboxIndex < allGalleryPhotos.length - 1 && (
+                {lightboxIndex < flatPhotosFromGroups.length - 1 && (
                   <IconButton
                     onClick={() => setLightboxIndex((i) => i + 1)}
                     sx={{ position: 'absolute', right: 8, color: '#fff' }}

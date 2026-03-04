@@ -365,6 +365,14 @@ export function RichTextViewer({ html }: { html: string }) {
 
   if (!html) return null;
 
+  // If content has no HTML tags, treat as plain text / light markdown
+  const isPlainText = !/<[a-z][\s\S]*?>/i.test(html);
+  const rendered = isPlainText
+    ? html
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>')
+    : html;
+
   const handleClick = (e: React.MouseEvent) => {
     const el = (e.target as HTMLElement).closest('[data-type="mention"]') as HTMLElement | null;
     if (!el) return;
@@ -376,7 +384,7 @@ export function RichTextViewer({ html }: { html: string }) {
     <div>
       <div
         className="rich-text-viewer"
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={{ __html: rendered }}
         onClick={handleClick}
       />
       <style>{`

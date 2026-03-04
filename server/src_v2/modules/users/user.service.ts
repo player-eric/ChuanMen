@@ -63,6 +63,7 @@ const adminUpdateSchema = z.object({
   userStatus: z.enum(['applicant', 'approved', 'rejected', 'banned']).optional(),
   location: z.string().optional(),
   bio: z.string().optional(),
+  hostCandidate: z.boolean().optional(),
 });
 
 export class UserService {

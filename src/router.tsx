@@ -464,6 +464,7 @@ async function eventsLoader() {
         title: e.title ?? '',
         host: typeof e.host === 'string' ? e.host : e.host?.name ?? '?',
         date: e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }) : '',
+        startsAt: e.startsAt ?? '',
         people: peopleCount,
         scene: e.titleImageUrl || eventTagToScene[e.tags?.[0]] || e.tags?.[0] || '',
         film: e.screenedMovies?.[0]?.movie?.title ?? e.film ?? undefined,

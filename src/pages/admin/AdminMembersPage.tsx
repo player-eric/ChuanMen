@@ -13,11 +13,13 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  FormControlLabel,
   Grid,
   IconButton,
   InputAdornment,
   MenuItem,
   Stack,
+  Switch,
   Tab,
   Tabs,
   TextField,
@@ -72,6 +74,7 @@ interface MemberRow {
   eventCount: number;
   announcedAt: string;
   announcedEndAt: string;
+  hostCandidate: boolean;
 }
 
 function mapUser(u: any): MemberRow {
@@ -94,6 +97,7 @@ function mapUser(u: any): MemberRow {
     eventCount: u._count?.eventSignups ?? u.participationCount ?? 0,
     announcedAt: u.announcedAt ?? '',
     announcedEndAt: u.announcedEndAt ?? '',
+    hostCandidate: u.hostCandidate ?? false,
   };
 }
 
@@ -111,6 +115,7 @@ export default function AdminMembersPage() {
   const [editEmail, setEditEmail] = useState('');
   const [editRole, setEditRole] = useState('member');
   const [editLocation, setEditLocation] = useState('');
+  const [editHostCandidate, setEditHostCandidate] = useState(false);
 
   // Applicant detail dialog
   const [applicantDialog, setApplicantDialog] = useState<MemberRow | null>(null);
@@ -165,6 +170,7 @@ export default function AdminMembersPage() {
     setEditEmail(m.email);
     setEditRole(m.role);
     setEditLocation(m.location);
+    setEditHostCandidate(m.hostCandidate);
     setEditOpen(true);
   };
 
@@ -237,12 +243,14 @@ export default function AdminMembersPage() {
         email: editEmail,
         role: editRole,
         location: editLocation,
+        hostCandidate: editHostCandidate,
       });
       updateUserLocal(selectedMember.id, {
         name: editName,
         email: editEmail,
         role: editRole,
         location: editLocation,
+        hostCandidate: editHostCandidate,
       });
     } catch { /* ignore */ }
     setBusy(false);
@@ -493,6 +501,10 @@ export default function AdminMembersPage() {
               <MenuItem value="member">成员</MenuItem>
             </TextField>
             <TextField label="位置" value={editLocation} onChange={(e) => setEditLocation(e.target.value)} fullWidth size="small" />
+            <FormControlLabel
+              control={<Switch checked={editHostCandidate} onChange={(e) => setEditHostCandidate(e.target.checked)} />}
+              label="轮值 Host 候选池"
+            />
           </Stack>
         </DialogContent>
         <DialogActions>
