@@ -236,6 +236,27 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  // ── Event ↔ Movie (screening) linking ──
+
+  app.post('/:id/movies', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { movieId } = request.body as { movieId: string };
+    if (!movieId) return reply.badRequest('缺少 movieId');
+    const existing = await app.prisma.movieScreening.findFirst({ where: { eventId: id, movieId } });
+    if (existing) return reply.code(200).send({ ok: true, screening: existing });
+    const screening = await app.prisma.movieScreening.create({
+      data: { eventId: id, movieId },
+      include: { movie: { select: { id: true, title: true } } },
+    });
+    return reply.code(201).send({ ok: true, screening });
+  });
+
+  app.delete('/:id/movies/:movieId', async (request, reply) => {
+    const { id, movieId } = request.params as { id: string; movieId: string };
+    await app.prisma.movieScreening.deleteMany({ where: { eventId: id, movieId } });
+    return { ok: true };
+  });
+
   // ── Event ↔ Recommendation linking ──
 
   app.post('/:id/recommendations', async (request, reply) => {

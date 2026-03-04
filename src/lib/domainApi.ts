@@ -334,6 +334,20 @@ export async function linkEventRecommendation(eventId: string, recommendationId:
   });
 }
 
+export async function linkEventMovie(eventId: string, movieId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/movies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ movieId }),
+  });
+}
+
+export async function unlinkEventMovie(eventId: string, movieId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/movies/${movieId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function unlinkEventRecommendation(eventId: string, recommendationId: string) {
   return requestJson<{ ok: boolean }>(`/api/events/${eventId}/recommendations/${recommendationId}`, {
     method: 'DELETE',

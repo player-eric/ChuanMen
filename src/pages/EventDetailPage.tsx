@@ -15,9 +15,11 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   IconButton,
   MenuItem,
   Select,
+  Switch,
   Snackbar,
   Stack,
   TextField,
@@ -31,7 +33,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EditIcon from '@mui/icons-material/Edit';
 import type { EventData, EventPhoto, EventTaskData, FoodOption, SignupStatus, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, unlinkEventRecommendation, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask } from '@/lib/domainApi';
+import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask } from '@/lib/domainApi';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import CommentSection from '@/components/CommentSection';
 import { useAuth } from '@/auth/AuthContext';
@@ -171,6 +173,7 @@ export default function EventDetailPage() {
   const [hostInviteOpen, setHostInviteOpen] = useState(false);
   const [hostInviteSearch, setHostInviteSearch] = useState('');
   const [hostInvitedPeople, setHostInvitedPeople] = useState<string[]>([]);
+  const [directSignup, setDirectSignup] = useState(false);
   // Edit event dialog state
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -380,6 +383,7 @@ export default function EventDetailPage() {
 
   const phase = phaseLabel[event.phase] ?? phaseLabel.open;
   const isHost = user?.name === event.host;
+  const isAdmin = user?.role === 'admin';
   const hostId: string = (loadedEvent as any)?.hostId ?? '';
 
   /** Convert a photo URL to a CSS background value — handles both gradient strings and real URLs */
@@ -496,7 +500,7 @@ export default function EventDetailPage() {
             </Stack>
 
             {/* Host management bar */}
-            {isHost && event.phase !== 'cancelled' && (
+            {(isHost || isAdmin) && event.phase !== 'cancelled' && (
               <Stack direction="row" spacing={1} sx={{ mb: 1.5 }} flexWrap="wrap" useFlexGap>
                 <Button
                   size="small"
@@ -676,7 +680,7 @@ export default function EventDetailPage() {
               const defaultMode = event.recSelectionMode ?? 'nominate';
               const hasRecs = recs.length > 0;
               const isEnded = event.phase === 'ended' || event.phase === 'cancelled';
-              const showSection = hasRecs || cats.length > 0 || ((!isEnded) && (isHost || signedUp));
+              const showSection = hasRecs || cats.length > 0 || ((!isEnded) && (isHost || isAdmin || signedUp));
               if (!showSection) return null;
 
               const catIcon: Record<string, string> = { movie: '🍿', book: '📚', recipe: '🍳', place: '📍', music: '🎵', external_event: '🎭' };
@@ -697,7 +701,7 @@ export default function EventDetailPage() {
                       const catRecs = recs.filter((r) => r.category === cat);
                       const selected = catRecs.filter((r) => r.isSelected);
                       const unselected = catRecs.filter((r) => !r.isSelected);
-                      const canNominate = (isHost || (signedUp && mode === 'nominate')) && event.phase !== 'ended' && event.phase !== 'cancelled';
+                      const canNominate = (isHost || isAdmin || (signedUp && mode === 'nominate')) && event.phase !== 'ended' && event.phase !== 'cancelled';
 
                       return (
                         <Box key={cat} sx={{ mb: 2 }}>
@@ -728,17 +732,18 @@ export default function EventDetailPage() {
 
                           {/* Unselected / nominations */}
                           {unselected.map((rec) => {
-                            const canDelete = isHost || (user && rec.linkedById === user.id);
-                            const canSelect = isHost && (event.phase === 'invite' || event.phase === 'open');
+                            const isMovie = (rec as any)._fromMovieTable;
+                            const canDelete = isHost || isAdmin || (!isMovie && user && rec.linkedById === user.id);
+                            const canSelect = !isMovie && (isHost || isAdmin) && (event.phase === 'invite' || event.phase === 'open');
                             return (
                               <Card key={rec.id} variant="outlined" sx={{ mb: 1 }}>
                                 <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
                                   <Stack direction="row" spacing={1} alignItems="center">
-                                    <Box sx={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}>
+                                    <Box sx={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => navigate(isMovie ? `/discover/movies/${rec.id}` : `/discover/${rec.category}/${rec.id}`)}>
                                       <Typography variant="body2" fontWeight={600}>{rec.title}</Typography>
                                       <Stack direction="row" spacing={2} sx={{ mt: 0.25 }}>
                                         <Typography variant="caption" color="text.secondary">🌐 {rec.globalVotes ?? 0}票</Typography>
-                                        <Typography variant="caption" fontWeight={700} color="primary">👥 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal ?? 0}人投票</Typography>
+                                        {!isMovie && <Typography variant="caption" fontWeight={700} color="primary">👥 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal ?? 0}人投票</Typography>}
                                         {rec.linkedByName && <Typography variant="caption" color="text.secondary">{rec.linkedByName} 提名</Typography>}
                                       </Stack>
                                     </Box>
@@ -762,7 +767,11 @@ export default function EventDetailPage() {
                                       <IconButton size="small" onClick={async () => {
                                         if (!eventId) return;
                                         try {
-                                          await unlinkEventRecommendation(eventId, rec.id);
+                                          if (isMovie) {
+                                            await unlinkEventMovie(eventId, rec.id);
+                                          } else {
+                                            await unlinkEventRecommendation(eventId, rec.id);
+                                          }
                                           setEvent((prev) => {
                                             if (!prev) return prev;
                                             return { ...prev, linkedRecommendations: (prev.linkedRecommendations ?? []).filter((r) => r.id !== rec.id) };
@@ -793,7 +802,7 @@ export default function EventDetailPage() {
                     })}
 
                     {/* Fallback: no configured categories, show generic add buttons */}
-                    {displayCats.length === 0 && (isHost || signedUp) && event.phase !== 'ended' && event.phase !== 'cancelled' && (
+                    {displayCats.length === 0 && (isHost || isAdmin || signedUp) && event.phase !== 'ended' && event.phase !== 'cancelled' && (
                       <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
                         {[
                           { key: 'all', label: '+ 全部' },
@@ -846,15 +855,22 @@ export default function EventDetailPage() {
                       <CardActionArea onClick={async () => {
                         if (!eventId) return;
                         const isNom = event.recSelectionMode === 'nominate';
+                        const isMovie = r._fromMovieTable;
                         try {
-                          await linkEventRecommendation(eventId, r.id, user?.id, isNom);
+                          if (isMovie) {
+                            await linkEventMovie(eventId, r.id);
+                          } else {
+                            await linkEventRecommendation(eventId, r.id, user?.id, isNom);
+                          }
                           setEvent((prev) => {
                             if (!prev) return prev;
                             const linked = [...(prev.linkedRecommendations ?? []), {
                               id: r.id, title: r.title, category: r.category,
-                              linkedById: user?.id, linkedByName: user?.name,
+                              linkedById: isMovie ? undefined : user?.id,
+                              linkedByName: isMovie ? undefined : user?.name,
                               isSelected: false, isNomination: isNom,
                               globalVotes: r.voteCount ?? 0, attendeeVotes: 0, attendeeTotal: 0,
+                              _fromMovieTable: isMovie || undefined,
                             }];
                             return { ...prev, linkedRecommendations: linked };
                           });
@@ -924,8 +940,8 @@ export default function EventDetailPage() {
                 </Typography>
               )}
             </Stack>
-            {isHost ? (
-              /* Host view: list with remove buttons */
+            {(isHost || isAdmin) ? (
+              /* Host/admin view: list with remove buttons */
               <Stack spacing={0.5}>
                 {event.people.map((name) => {
                   const memberId = allMembers.find((m) => m.name === name)?.id;
@@ -1046,7 +1062,7 @@ export default function EventDetailPage() {
         </Card>
 
         {/* Host waitlist management panel */}
-        {isHost && event.phase !== 'ended' && event.phase !== 'cancelled' && (() => {
+        {(isHost || isAdmin) && event.phase !== 'ended' && event.phase !== 'cancelled' && (() => {
           const waitlistPeople = (event.signupDetails ?? []).filter((s) => s.status === 'waitlist');
           const offeredPeople = (event.signupDetails ?? []).filter((s) => s.status === 'offered');
           if (waitlistPeople.length === 0 && offeredPeople.length === 0) return null;
@@ -1119,12 +1135,12 @@ export default function EventDetailPage() {
         })()}
 
         {/* 8. Unified tasks (分工) — persisted via API */}
-        {(eventTasks.length > 0 || isHost) && (
+        {(eventTasks.length > 0 || isHost || isAdmin) && (
           <Card>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                 <Typography variant="subtitle1" fontWeight={700}>分工认领</Typography>
-                {isHost && !taskEditing && (
+                {(isHost || isAdmin) && !taskEditing && (
                   <Button size="small" startIcon={<EditIcon />} onClick={() => setTaskEditing(true)}>
                     编辑
                   </Button>
@@ -1244,7 +1260,7 @@ export default function EventDetailPage() {
                           <Chip size="small" color="success" label="已分配" />
                         )
                       ) : (
-                        user && (signedUp || isHost) && (
+                        user && (signedUp || isHost || isAdmin) && (
                           <Button
                             size="small"
                             variant="contained"
@@ -1265,13 +1281,13 @@ export default function EventDetailPage() {
                       )}
                     </Stack>
                   ))}
-                  {eventTasks.length === 0 && isHost && (
+                  {eventTasks.length === 0 && (isHost || isAdmin) && (
                     <Typography variant="body2" color="text.secondary">
                       暂无分工，点击"编辑"添加
                     </Typography>
                   )}
                   {/* Volunteer button for signed-up users */}
-                  {user && (signedUp || isHost) && eventTasks.length > 0 && (
+                  {user && (signedUp || isHost || isAdmin) && eventTasks.length > 0 && (
                     <Button
                       size="small"
                       variant="text"
@@ -1823,41 +1839,50 @@ export default function EventDetailPage() {
               );
             })()}
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => { setHostInviteOpen(false); setHostInviteSearch(''); setHostInvitedPeople([]); }}>取消</Button>
-            <Button
-              variant="contained"
-              disabled={hostInvitedPeople.length === 0}
-              onClick={async () => {
-                if (eventId && user?.id && hostInvitedPeople.length > 0) {
-                  try {
-                    const userIds = hostInvitedPeople
-                      .map((name) => allMembers.find((m) => m.name === name)?.id)
-                      .filter(Boolean) as string[];
-                    if (userIds.length > 0) {
-                      if (event.phase === 'ended') {
-                        // For ended events, directly add as participants
-                        for (const uid of userIds) {
-                          await signupEvent(eventId, uid);
+          <DialogActions sx={{ flexDirection: 'column', alignItems: 'stretch', gap: 1 }}>
+            {isAdmin && event.phase !== 'ended' && (
+              <FormControlLabel
+                control={<Switch size="small" checked={directSignup} onChange={(e) => setDirectSignup(e.target.checked)} />}
+                label={<Typography variant="caption">直接报名（跳过邀请）</Typography>}
+                sx={{ mx: 1 }}
+              />
+            )}
+            <Stack direction="row" spacing={1} justifyContent="flex-end">
+              <Button onClick={() => { setHostInviteOpen(false); setHostInviteSearch(''); setHostInvitedPeople([]); setDirectSignup(false); }}>取消</Button>
+              <Button
+                variant="contained"
+                disabled={hostInvitedPeople.length === 0}
+                onClick={async () => {
+                  if (eventId && user?.id && hostInvitedPeople.length > 0) {
+                    try {
+                      const userIds = hostInvitedPeople
+                        .map((name) => allMembers.find((m) => m.name === name)?.id)
+                        .filter(Boolean) as string[];
+                      if (userIds.length > 0) {
+                        if (event.phase === 'ended' || directSignup) {
+                          for (const uid of userIds) {
+                            await signupEvent(eventId, uid);
+                          }
+                          setFlash({ open: true, severity: 'success', message: `已${directSignup ? '报名' : '添加'} ${userIds.length} 人` });
+                        } else {
+                          await inviteToEvent(eventId, userIds, user.id);
+                          setFlash({ open: true, severity: 'success', message: `已邀请 ${userIds.length} 人` });
                         }
-                        setFlash({ open: true, severity: 'success', message: `已添加 ${userIds.length} 人` });
-                      } else {
-                        await inviteToEvent(eventId, userIds, user.id);
-                        setFlash({ open: true, severity: 'success', message: `已邀请 ${userIds.length} 人` });
+                        await refreshEvent();
                       }
-                      await refreshEvent();
+                    } catch {
+                      setFlash({ open: true, severity: 'error', message: event.phase === 'ended' ? '添加失败，请稍后重试' : '操作失败，请稍后重试' });
                     }
-                  } catch {
-                    setFlash({ open: true, severity: 'error', message: event.phase === 'ended' ? '添加失败，请稍后重试' : '邀请失败，请稍后重试' });
                   }
-                }
-                setHostInviteOpen(false);
-                setHostInviteSearch('');
-                setHostInvitedPeople([]);
-              }}
-            >
-              {event.phase === 'ended' ? '确认添加' : '确认邀请'}
-            </Button>
+                  setHostInviteOpen(false);
+                  setHostInviteSearch('');
+                  setHostInvitedPeople([]);
+                  setDirectSignup(false);
+                }}
+              >
+                {event.phase === 'ended' ? '确认添加' : directSignup ? '确认报名' : '确认邀请'}
+              </Button>
+            </Stack>
           </DialogActions>
         </Dialog>
 

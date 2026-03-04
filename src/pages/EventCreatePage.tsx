@@ -29,7 +29,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
 import { useTaskPresets } from '@/hooks/useTaskPresets';
-import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, fetchMoviesApi, linkEventRecommendation, completeLottery } from '@/lib/domainApi';
+import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, fetchMoviesApi, linkEventRecommendation, linkEventMovie, completeLottery } from '@/lib/domainApi';
 import type { FoodOption } from '@/types';
 
 interface CreateTaskItem {
@@ -105,6 +105,10 @@ export default function EventCreatePage() {
 
   // API-loaded data for members
   const [allMembers, setAllMembers] = useState<{ id: string; name: string; avatar?: string }[]>([]);
+  // "帮别人发起" — pick a different host
+  const [hostForOther, setHostForOther] = useState(false);
+  const [selectedHostId, setSelectedHostId] = useState('');
+  const [hostSearch, setHostSearch] = useState('');
 
   useEffect(() => {
     fetchMembersApi().then((m: any[]) => setAllMembers(m)).catch(() => {});
@@ -179,6 +183,10 @@ export default function EventCreatePage() {
       setError(isHome ? '请填写名称和日期' : '请填写名称、日期和地点');
       return;
     }
+    if (hostForOther && !selectedHostId) {
+      setError('请选择 Host');
+      return;
+    }
     setSubmitting(true);
     try {
       const mappedTags = tags.map((t) => chineseTagToEventTag[t]).filter(Boolean);
@@ -186,9 +194,10 @@ export default function EventCreatePage() {
       const validTasks = tasks
         .filter((t) => t.role.trim())
         .map((t) => ({ role: t.role.trim(), description: t.description?.trim() || undefined }));
+      const actualHostId = (hostForOther && selectedHostId) ? selectedHostId : user.id;
       const result = await createEvent({
         title: name.trim(),
-        hostId: user.id,
+        hostId: actualHostId,
         location: isHome ? '(居家)' : location.trim(),
         startsAt: combineDT(startDate, startTime || '19:00'),
         capacity,
@@ -209,10 +218,16 @@ export default function EventCreatePage() {
       if (lotteryId && newEventId) {
         try { await completeLottery(lotteryId, newEventId); } catch { /* best effort */ }
       }
-      // Link selected recommendations (best effort)
+      // Link selected recommendations / movies
       for (const rec of selectedRecs) {
-        const isNom = recCatModes[rec.category] === 'nominate';
-        try { await linkEventRecommendation(newEventId, rec.id, user.id, isNom); } catch { /* best effort */ }
+        try {
+          if (rec._fromMovieTable) {
+            await linkEventMovie(newEventId, rec.id);
+          } else {
+            const isNom = recCatModes[rec.category] === 'nominate';
+            await linkEventRecommendation(newEventId, rec.id, user.id, isNom);
+          }
+        } catch { /* best effort */ }
       }
       setCreatedId(newEventId);
     } catch (err: any) {
@@ -250,6 +265,53 @@ export default function EventCreatePage() {
             required
             placeholder={undefined}
           />
+
+          {/* 帮别人发起活动 — admin only */}
+          {user.role === 'admin' && (
+            <FormControlLabel
+              control={<Switch checked={hostForOther} onChange={(e) => { setHostForOther(e.target.checked); if (!e.target.checked) setSelectedHostId(''); }} />}
+              label="帮别人发起"
+            />
+          )}
+          {hostForOther && (
+            <Box>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="搜索成员名..."
+                value={hostSearch}
+                onChange={(e) => setHostSearch(e.target.value)}
+                sx={{ mb: 1 }}
+              />
+              {(() => {
+                const hq = hostSearch.toLowerCase();
+                const candidates = allMembers.filter((m) => m.id !== user.id && (!hq || m.name.toLowerCase().includes(hq))).slice(0, 8);
+                return candidates.map((m) => {
+                  const chosen = selectedHostId === m.id;
+                  return (
+                    <Stack direction="row" key={m.id} justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Avatar src={m.avatar} sx={{ width: 28, height: 28 }}>{firstNonEmoji(m.name)}</Avatar>
+                        <Typography variant="body2">{m.name}</Typography>
+                      </Stack>
+                      <Chip
+                        size="small"
+                        label={chosen ? '✓ 已选为 Host' : '选为 Host'}
+                        color={chosen ? 'primary' : 'default'}
+                        variant={chosen ? 'filled' : 'outlined'}
+                        onClick={() => setSelectedHostId(chosen ? '' : m.id)}
+                      />
+                    </Stack>
+                  );
+                });
+              })()}
+              {selectedHostId && (
+                <Typography variant="caption" color="primary" sx={{ mt: 0.5, display: 'block' }}>
+                  将以 {allMembers.find((m) => m.id === selectedHostId)?.name} 的名义发起活动
+                </Typography>
+              )}
+            </Box>
+          )}
 
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Tag</Typography>
