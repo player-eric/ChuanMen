@@ -48,16 +48,23 @@ export default function ProfilePage() {
 
   // SSR can't read localStorage → loader returns null. Fetch client-side as fallback.
   const [clientData, setClientData] = useState<any>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   useEffect(() => {
     if (loaderData || clientData) return;
     if (!user?.id) return;
-    fetchProfileApi(user.id).then(setClientData).catch(() => {});
+    setFetchError(null);
+    fetchProfileApi(user.id)
+      .then(setClientData)
+      .catch((err) => {
+        console.error('ProfilePage fetch failed:', err, 'userId:', user.id);
+        setFetchError(err?.message ?? '未知错误');
+      });
   }, [loaderData, clientData, user?.id]);
 
   const raw = loaderData || clientData;
 
   if (!raw) {
-    if (user?.id) {
+    if (user?.id && fetchError === null) {
       // Still loading client-side
       return (
         <Stack alignItems="center" sx={{ py: 8 }}>
@@ -68,7 +75,7 @@ export default function ProfilePage() {
     return (
       <Stack spacing={2} alignItems="center" sx={{ py: 8, textAlign: 'center' }}>
         <Typography variant="h6" fontWeight={700}>无法加载个人页面</Typography>
-        <Typography variant="body2" color="text.secondary">可能需要重新登录</Typography>
+        <Typography variant="body2" color="text.secondary">{fetchError || '可能需要重新登录'}</Typography>
         <Button variant="contained" onClick={() => navigate('/login')}>重新登录</Button>
         <Button variant="outlined" onClick={() => navigate('/')}>返回首页</Button>
       </Stack>
