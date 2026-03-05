@@ -42,7 +42,7 @@ const envSchema = z.object({
   S3_PRESIGN_EXPIRES_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
   // Resend (email) — optional, email features degrade gracefully when absent
   RESEND_API_KEY: z.string().default(''),
-  RESEND_FROM_EMAIL: z.string().default('noreply@chuanmener.club'),
+  RESEND_FROM_EMAIL: z.string().default('hi@chuanmener.club'),
   RESEND_REPLY_TO: z.string().default('hi@chuanmener.club'),
   // Google OAuth — optional, Google login degrades gracefully when absent
   GOOGLE_CLIENT_ID: z.string().default(''),
