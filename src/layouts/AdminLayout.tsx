@@ -76,7 +76,7 @@ export default function AdminLayout() {
   const currentPath = location.pathname.replace('/admin', '').replace(/^\//, '');
 
   const sidebar = (
-    <Box>
+    <Box sx={{ height: '100%', overflow: 'auto' }}>
       <Toolbar>
         <Typography variant="h6" fontWeight={700}>🛠 管理后台</Typography>
       </Toolbar>
