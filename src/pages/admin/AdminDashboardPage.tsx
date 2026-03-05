@@ -12,6 +12,7 @@ import {
 import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import EventRoundedIcon from '@mui/icons-material/EventRounded';
 import EmailRoundedIcon from '@mui/icons-material/EmailRounded';
+import MarkEmailReadRoundedIcon from '@mui/icons-material/MarkEmailReadRounded';
 import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
 import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
 import MailRoundedIcon from '@mui/icons-material/MailRounded';
@@ -41,6 +42,7 @@ const quickLinks = [
   { label: '称号管理', icon: <MilitaryTechRoundedIcon />, to: '/admin/titles' },
   { label: '分工预设', icon: <AssignmentRoundedIcon />, to: '/admin/task-presets' },
   { label: '公告与里程碑', icon: <CampaignRoundedIcon />, to: '/admin/announcements' },
+  { label: '邮件管理', icon: <MarkEmailReadRoundedIcon />, to: '/admin/email' },
   { label: '社区通讯', icon: <EmailRoundedIcon />, to: '/admin/newsletters' },
   { label: '社群信息编辑', icon: <EditNoteRoundedIcon />, to: '/admin/community-info' },
 ];
