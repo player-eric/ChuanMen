@@ -422,7 +422,9 @@ export default function EventDetailPage() {
           setMyStatus(null);
         }
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('[refreshEvent] failed:', err);
+    }
   };
 
   const phase = phaseLabel[event.phase] ?? phaseLabel.open;
