@@ -30,7 +30,7 @@ COPY tailwind.config.ts ./
 COPY postcss.config.cjs ./
 COPY index.html ./
 COPY src ./src
-RUN npm run build
+RUN npm run build:client && npm run build:server
 
 # ── Stage 3: Production runtime ──────────────────────────
 FROM base AS runtime
