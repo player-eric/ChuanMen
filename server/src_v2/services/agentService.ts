@@ -132,15 +132,23 @@ export async function runAgentCycle(app: FastifyInstance) {
           where: { status: 'accepted', participated: true },
           select: { userId: true, user: { select: { id: true, name: true, email: true } } },
         },
+        coHosts: {
+          select: { userId: true, user: { select: { id: true, name: true, email: true } } },
+        },
       },
     });
 
     for (const event of unprocessed) {
-      // Only award if at least 1 participant besides host
+      // Only award if at least 1 participant besides host (signups + co-hosts)
       const participants = event.signups
         .filter((s) => s.userId !== event.hostId);
+      // Co-hosts are also participants (exclude host who already gets host bonus)
+      const coHostParticipants = (event.coHosts ?? [])
+        .filter((ch) => ch.userId !== event.hostId && !participants.some((p) => p.userId === ch.userId));
 
-      if (participants.length === 0) {
+      const allParticipants = [...participants, ...coHostParticipants];
+
+      if (allParticipants.length === 0) {
         // No real participants — mark as processed but don't award
         await prisma.event.update({
           where: { id: event.id },
@@ -149,11 +157,11 @@ export async function runAgentCycle(app: FastifyInstance) {
         continue;
       }
 
-      const participantIds = participants.map((s) => s.userId);
+      const allParticipantIds = allParticipants.map((s) => s.userId);
 
-      // Award +2 credits to each participant
+      // Award +2 credits to each participant (including co-hosts)
       await prisma.user.updateMany({
-        where: { id: { in: participantIds } },
+        where: { id: { in: allParticipantIds } },
         data: { postcardCredits: { increment: 2 } },
       });
 
@@ -170,8 +178,8 @@ export async function runAgentCycle(app: FastifyInstance) {
 
       // Send credit notification emails (best effort)
       try {
-        // Notify participants (+2)
-        for (const s of participants) {
+        // Notify participants & co-hosts (+2)
+        for (const s of allParticipants) {
           if (s.user?.email) {
             await sendEmail({
               to: s.user.email,
@@ -191,7 +199,7 @@ export async function runAgentCycle(app: FastifyInstance) {
       } catch { /* email failure should not block credit award */ }
 
       log.info(
-        { eventId: event.id, participants: participantIds.length },
+        { eventId: event.id, participants: allParticipantIds.length },
         'Agent: awarded postcard credits (host +6, participants +2 each)',
       );
     }
