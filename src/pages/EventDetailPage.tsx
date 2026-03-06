@@ -3,7 +3,6 @@ import { useLoaderData, useNavigate, useParams } from 'react-router';
 import { firstNonEmoji } from '@/components/Atoms';
 import {
   Avatar,
-  AvatarGroup,
   Box,
   Button,
   Card,
@@ -23,6 +22,7 @@ import {
   Snackbar,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -1111,42 +1111,35 @@ export default function EventDetailPage() {
                 )}
               </Stack>
             ) : (
-              /* Normal view: avatar group */
+              /* Normal view: clickable avatar row */
               <Stack spacing={0.5}>
-                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                  <AvatarGroup
-                    max={showAllPeople ? event.people.length + 1 : 8}
-                    sx={{
-                      flexWrap: showAllPeople ? 'wrap' : 'nowrap',
-                      ...(!showAllPeople && event.people.length > 8 && {
-                        '& .MuiAvatarGroup-avatar:first-of-type': { cursor: 'pointer' },
-                      }),
-                    }}
-                    onClick={(e) => {
-                      if (!showAllPeople && event.people.length > 8) {
-                        const el = (e.target as HTMLElement).closest('.MuiAvatar-root');
-                        if (el?.textContent?.startsWith('+')) setShowAllPeople(true);
-                      }
-                    }}
-                  >
-                    {event.people.map((name) => {
-                      const isNameCoHost = event.coHosts?.includes(name) ?? false;
-                      return (
+                <Stack direction="row" gap={0.5} alignItems="center" flexWrap="wrap">
+                  {(showAllPeople ? event.people : event.people.slice(0, 8)).map((name) => {
+                    const isNameCoHost = event.coHosts?.includes(name) ?? false;
+                    return (
+                      <Tooltip key={name} title={name} arrow>
                         <Avatar
-                          key={name}
-                          sx={{ cursor: 'pointer', width: 34, height: 34, '&:hover': { zIndex: '99 !important' }, ...((name === event.host || isNameCoHost) ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
-                          onClick={(e) => { e.stopPropagation(); navigate(`/members/${encodeURIComponent(name)}`); }}
+                          sx={{ cursor: 'pointer', width: 34, height: 34, ...((name === event.host || isNameCoHost) ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
+                          onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
                         >
                           {firstNonEmoji(name)}
                         </Avatar>
-                      );
-                    })}
-                  </AvatarGroup>
-                  {showAllPeople && (
+                      </Tooltip>
+                    );
+                  })}
+                  {!showAllPeople && event.people.length > 8 && (
+                    <Avatar
+                      sx={{ cursor: 'pointer', width: 34, height: 34, bgcolor: 'action.selected', fontSize: 14 }}
+                      onClick={() => setShowAllPeople(true)}
+                    >
+                      +{event.people.length - 8}
+                    </Avatar>
+                  )}
+                  {showAllPeople && event.people.length > 8 && (
                     <Typography
                       variant="caption"
                       color="primary"
-                      sx={{ cursor: 'pointer', ml: 1 }}
+                      sx={{ cursor: 'pointer', ml: 0.5 }}
                       onClick={() => setShowAllPeople(false)}
                     >
                       收起
