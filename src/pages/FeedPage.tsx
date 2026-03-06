@@ -15,6 +15,9 @@ import {
   Grid,
   Skeleton,
   Snackbar,
+  SpeedDial,
+  SpeedDialAction,
+  SpeedDialIcon,
   Stack,
   TextField,
   Typography,
@@ -545,28 +548,18 @@ function FullFeed() {
         </Stack>
       )}
 
-      <Stack spacing={1} sx={{ position: 'fixed', right: { xs: 16, md: 32 }, bottom: { xs: 84, md: 24 }, alignItems: 'stretch' }}>
-        <Button variant="contained" size="small" onClick={() => setQuickOpen(true)} disabled={!canInteract}
-          sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start' }}>
-          ✏️ 写点什么
-        </Button>
-        <Button variant="outlined" size="small" onClick={() => navigate('/events/new')} disabled={!canInteract}
-          sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start', bgcolor: 'background.paper', borderColor: 'divider', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          + 发起活动
-        </Button>
-        <Button variant="outlined" size="small" onClick={() => navigate('/events/proposals/new')} disabled={!canInteract}
-          sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start', bgcolor: 'background.paper', borderColor: 'divider', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          💡 提创意
-        </Button>
-        <Button variant="outlined" size="small" onClick={() => navigate('/cards')} disabled={!canInteract}
-          sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start', bgcolor: 'background.paper', borderColor: 'divider', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          ✉ 寄感谢卡
-        </Button>
-        <Button variant="outlined" size="small" onClick={() => navigate('/discover')} disabled={!canInteract}
-          sx={{ borderRadius: 6, textTransform: 'none', px: 2, py: 0.8, fontSize: 13, fontWeight: 600, justifyContent: 'flex-start', bgcolor: 'background.paper', borderColor: 'divider', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          👍 推荐好内容
-        </Button>
-      </Stack>
+      <SpeedDial
+        ariaLabel="快速操作"
+        sx={{ position: 'sticky', float: 'right', bottom: 16, right: { xs: 16, md: 32 }, mr: { xs: 0, md: 2 }, zIndex: 10 }}
+        icon={<SpeedDialIcon />}
+        FabProps={{ size: 'medium', disabled: !canInteract }}
+      >
+        <SpeedDialAction icon={<span>👍</span>} tooltipTitle="推荐好内容" tooltipOpen onClick={() => navigate('/discover')} />
+        <SpeedDialAction icon={<span>✉️</span>} tooltipTitle="寄感谢卡" tooltipOpen onClick={() => navigate('/cards')} />
+        <SpeedDialAction icon={<span>💡</span>} tooltipTitle="提创意" tooltipOpen onClick={() => navigate('/events/proposals/new')} />
+        <SpeedDialAction icon={<span>➕</span>} tooltipTitle="发起活动" tooltipOpen onClick={() => navigate('/events/new')} />
+        <SpeedDialAction icon={<span>✏️</span>} tooltipTitle="写点什么" tooltipOpen onClick={() => setQuickOpen(true)} />
+      </SpeedDial>
 
       <QuickActionDialog open={quickOpen} onClose={() => setQuickOpen(false)} />
 

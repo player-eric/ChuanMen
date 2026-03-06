@@ -140,8 +140,8 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<EventData | null>(loadedEvent);
   const [myStatus, setMyStatus] = useState<SignupStatus | null>(null);
 
-  // Derive signedUp from myStatus for backward compatibility
-  const signedUp = myStatus === 'accepted' || myStatus === 'invited';
+  // Derive signedUp from myStatus for backward compatibility (invited = not yet accepted)
+  const signedUp = myStatus === 'accepted';
 
   // Re-check signup status when user becomes available (auth loads from localStorage after hydration)
   useEffect(() => {
@@ -332,8 +332,8 @@ export default function EventDetailPage() {
   }
 
   const onSignup = async () => {
-    // If already signed up or waitlisted, show cancel dialog
-    if (myStatus === 'accepted' || myStatus === 'invited' || myStatus === 'waitlist') {
+    // If already accepted or waitlisted, show cancel dialog
+    if (myStatus === 'accepted' || myStatus === 'waitlist') {
       if (event.phase === 'ended') return;
       setCancelDialogOpen(true);
       return;
@@ -1867,7 +1867,7 @@ export default function EventDetailPage() {
               fullWidth
               onClick={onSignup}
               disabled={!user}
-              color={signedUp ? 'success' : myStatus === 'waitlist' ? 'warning' : 'primary'}
+              color={signedUp ? 'success' : myStatus === 'waitlist' ? 'warning' : myStatus === 'invited' ? 'info' : 'primary'}
             >
               {!user
                 ? '登录后可报名'
@@ -1879,10 +1879,10 @@ export default function EventDetailPage() {
                     ? `等位中 · 第${((event.signupDetails ?? []).filter(s => s.status === 'waitlist').findIndex(s => s.userId === user.id) + 1) || '?'}位`
                     : signedUp
                       ? '✓ 已报名'
-                      : event.spots <= 0
-                        ? '加入等位'
-                        : event.phase === 'invite'
-                          ? '接受邀请'
+                      : myStatus === 'invited'
+                        ? '接受邀请'
+                        : event.spots <= 0
+                          ? '加入等位'
                           : '报名参加'}
             </Button>
           </Box>
