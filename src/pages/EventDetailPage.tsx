@@ -2030,6 +2030,20 @@ export default function EventDetailPage() {
                         .map((name) => allMembers.find((m) => m.name === name)?.id)
                         .filter(Boolean) as string[];
                       if (userIds.length > 0) {
+                        // Check if inviting would exceed capacity
+                        const occupying = (event.signupDetails ?? []).filter((s) => ['accepted', 'invited', 'offered'].includes(s.status)).length;
+                        const hostSlots = 1 + (event.coHosts?.length ?? 0);
+                        const totalAfterInvite = hostSlots + occupying + userIds.length;
+                        if (totalAfterInvite > event.total) {
+                          const newCapacity = totalAfterInvite;
+                          const ok = window.confirm(
+                            `邀请这 ${userIds.length} 人后总人数将达到 ${totalAfterInvite} 人，超过当前上限 ${event.total} 人。\n\n是否自动将上限提高到 ${newCapacity}？`,
+                          );
+                          if (!ok) return;
+                          // Increase capacity first
+                          await updateEvent(eventId, { capacity: newCapacity });
+                          setEvent((prev) => prev ? { ...prev, total: newCapacity } : prev);
+                        }
                         if (event.phase === 'ended' || directSignup) {
                           for (const uid of userIds) {
                             await signupEvent(eventId, uid);
