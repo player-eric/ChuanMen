@@ -206,7 +206,9 @@ export default function LoginPage() {
       setCountdown(60);
     } catch (err: unknown) {
       const errorCode = (err as any)?.errorCode;
-      if (!handleStatusError(errorCode, (err as Error).message)) {
+      if (errorCode === 'email_send_failed') {
+        setErrorMessage('邮件发送失败，该邮箱可能无法接收验证码。请尝试 Google 登录或换一个邮箱。');
+      } else if (!handleStatusError(errorCode, (err as Error).message)) {
         setErrorMessage(err instanceof Error ? err.message : '发送验证码失败');
       }
     } finally {

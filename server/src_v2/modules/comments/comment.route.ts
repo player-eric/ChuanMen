@@ -18,6 +18,14 @@ export const commentRoutes: FastifyPluginAsync = async (app) => {
   app.post('/', async (request, reply) => {
     const comment = await service.create(request.body);
 
+    // Touch parent entity's updatedAt so it bubbles up in the feed
+    if (comment.entityType === 'event') {
+      app.prisma.event.update({
+        where: { id: comment.entityId },
+        data: { updatedAt: new Date() },
+      }).catch(() => {});
+    }
+
     // Fire-and-forget: send mention notification emails
     const mentionedIds = extractMentionIds(comment.content);
     if (mentionedIds.length > 0) {

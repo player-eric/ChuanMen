@@ -20,9 +20,10 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     // Fetch in parallel
     const [events, announcements, recommendations, members, postcards, recentMovies, recentProposals, newMembers] =
       await Promise.all([
-        // Recent events (upcoming + recently ended)
+        // Recent events — sort by updatedAt so events with new activity bubble up
         prisma.event.findMany({
-          orderBy: { startsAt: 'desc' },
+          where: { status: { not: 'cancelled' } },
+          orderBy: { updatedAt: 'desc' },
           take: 20,
           include: {
             host: { select: { id: true, name: true, avatar: true } },
@@ -397,8 +398,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const newMemberIds = newMembers.map((m) => m.id);
     const allEntityIds = [...eventIds, ...postcardIds, ...movieIds, ...proposalIds, ...newMemberIds];
 
-    // Batch fetch likes and comment counts for all entities
-    const [allLikes, commentCounts] = await Promise.all([
+    // Batch fetch likes, comment counts, and latest comment time for events
+    const [allLikes, commentCounts, latestEventComments, latestEventSignups] = await Promise.all([
       allEntityIds.length > 0
         ? prisma.like.findMany({
             where: { entityId: { in: allEntityIds } },
@@ -412,7 +413,23 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             _count: true,
           })
         : [],
-    ]);
+      // Latest comment time per event (for activity hint)
+      eventIds.length > 0
+        ? prisma.comment.groupBy({
+            by: ['entityId'],
+            where: { entityType: 'event', entityId: { in: eventIds } },
+            _max: { createdAt: true },
+          })
+        : [],
+      // Latest signup time per event (for activity hint)
+      eventIds.length > 0
+        ? prisma.eventSignup.groupBy({
+            by: ['eventId'],
+            where: { eventId: { in: eventIds } },
+            _max: { createdAt: true },
+          })
+        : [],
+    ]) as [typeof allLikes, typeof commentCounts, typeof latestEventComments, { eventId: string; _max: { createdAt: Date | null } }[]];
 
     // Group likes by entityId
     const likesMap = new Map<string, { count: number; names: string[] }>();
@@ -427,6 +444,16 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const commentCountMap = new Map<string, number>();
     for (const row of commentCounts) {
       commentCountMap.set(row.entityId, row._count);
+    }
+
+    // Map: eventId → latest comment/signup createdAt
+    const latestCommentMap = new Map<string, Date>();
+    for (const row of latestEventComments) {
+      if (row._max.createdAt) latestCommentMap.set(row.entityId, row._max.createdAt);
+    }
+    const latestSignupMap = new Map<string, Date>();
+    for (const row of latestEventSignups) {
+      if (row._max.createdAt) latestSignupMap.set(row.eventId, row._max.createdAt);
     }
 
     // Helper to attach likes + commentCount to an entity
@@ -448,7 +475,30 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     }
 
     return {
-      events: events.map((e) => ({ ...withInteraction(e), photoCount: e.recapPhotoUrls?.length ?? 0 })),
+      events: events.map((e) => {
+        const base = { ...withInteraction(e), photoCount: e.recapPhotoUrls?.length ?? 0 };
+        // Determine why this event is surfaced (activity hint)
+        // Pick the most recent activity after creation
+        const latestComment = latestCommentMap.get(e.id);
+        const latestSignup = latestSignupMap.get(e.id);
+        const isNewlyCreated = e.updatedAt.getTime() - e.createdAt.getTime() < 60_000;
+        let activityHint: string | undefined;
+        if (!isNewlyCreated) {
+          // Find what happened most recently
+          const candidates: { type: string; at: Date }[] = [];
+          if (latestComment && latestComment > e.createdAt) candidates.push({ type: 'comment', at: latestComment });
+          if (latestSignup && latestSignup > e.createdAt) candidates.push({ type: 'signup', at: latestSignup });
+          if (candidates.length > 0) {
+            candidates.sort((a, b) => b.at.getTime() - a.at.getTime());
+            activityHint = candidates[0].type;
+          } else if (e.recapPhotoUrls?.length > 0) {
+            activityHint = 'photo';
+          } else {
+            activityHint = 'update';
+          }
+        }
+        return { ...base, activityHint };
+      }),
       announcements,
       recommendations,
       members,

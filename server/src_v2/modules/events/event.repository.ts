@@ -149,6 +149,11 @@ export class EventRepository {
     });
   }
 
+  /** Touch updatedAt so the event bubbles up in the feed. */
+  private touchUpdatedAt(eventId: string) {
+    return this.prisma.event.update({ where: { id: eventId }, data: { updatedAt: new Date() } }).catch(() => {});
+  }
+
   /** Count seats occupied (accepted + invited + offered). */
   private async countOccupying(eventId: string): Promise<number> {
     return this.prisma.eventSignup.count({
@@ -228,6 +233,7 @@ export class EventRepository {
       include: { user: { select: { id: true, name: true, avatar: true } } },
     });
 
+    this.touchUpdatedAt(eventId);
     return { ...signup, wasWaitlisted: status === 'waitlist' };
   }
 
@@ -255,6 +261,7 @@ export class EventRepository {
       data: { status: 'cancelled' },
     });
 
+    this.touchUpdatedAt(eventId);
     const promoted = await this.promoteNextWaitlisted(eventId);
     return { cancelled, promoted };
   }

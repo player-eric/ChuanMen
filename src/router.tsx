@@ -87,9 +87,9 @@ function buildFeedItems(data: any): any[] {
     return [sort, label];
   };
 
-  // Events → activity items (grouped by createdAt, not startsAt)
+  // Events → activity items (grouped by updatedAt so recent activity bubbles up)
   for (const e of (data.events ?? [])) {
-    const [sortKey, sortLabel] = dateParts(e.createdAt ?? e.startsAt);
+    const [sortKey, sortLabel] = dateParts(e.updatedAt ?? e.createdAt ?? e.startsAt);
     const d = e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
     const hostName = e.host?.name ?? '';
     const allSignups = (e.signups ?? []) as any[];
@@ -117,7 +117,8 @@ function buildFeedItems(data: any): any[] {
       name: hostName,
       title: e.title,
       date: d,
-      time: e.createdAt ? timeAgo(e.createdAt) : '',
+      time: e.updatedAt ? timeAgo(e.updatedAt) : (e.createdAt ? timeAgo(e.createdAt) : ''),
+      activityHint: e.activityHint as string | undefined,
       location: e.location ?? '',
       spots: Math.max(0, (e.capacity ?? 8) - feedHostSlots - feedOccupying.length),
       total: e.capacity ?? 8,

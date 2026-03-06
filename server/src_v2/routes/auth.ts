@@ -89,6 +89,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       });
     } catch (err) {
       app.log.error(err, 'Failed to send login code email (code logged above for dev)');
+      return reply.code(502).send({
+        error: 'email_send_failed',
+        message: '邮件发送失败，请尝试使用 Google 账号登录，或换一个邮箱',
+      });
     }
 
     return { ok: true, message: '验证码已发送到邮箱' };

@@ -93,6 +93,7 @@ function MoviesSection() {
   const [searching, setSearching] = useState(false);
   const [addedTitle, setAddedTitle] = useState<string | null>(null);
   const [showMine, setShowMine] = useState(false);
+  const [sort, setSort] = useState<'newest' | 'votes'>('newest');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { pool, screened } = data;
@@ -122,6 +123,7 @@ function MoviesSection() {
   const displayedPool = showMine
     ? filteredPool.filter((m) => votes[m.id] || m.by === user?.name)
     : filteredPool;
+  const sortedPool = sort === 'votes' ? [...displayedPool].sort((a, b) => b.v - a.v) : displayedPool;
 
   // Debounced external search
   const handleSearch = useCallback((value: string) => {
@@ -183,16 +185,20 @@ function MoviesSection() {
         }}
       />
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        {user && (
-          <Chip
-            icon={<FavoriteRoundedIcon sx={{ fontSize: 16 }} />}
-            label="我的喜好"
-            variant={showMine ? 'filled' : 'outlined'}
-            color={showMine ? 'warning' : 'default'}
-            clickable
-            onClick={() => setShowMine((v) => !v)}
-          />
-        )}
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          {user && (
+            <Chip
+              icon={<FavoriteRoundedIcon sx={{ fontSize: 16 }} />}
+              label="我的喜好"
+              variant={showMine ? 'filled' : 'outlined'}
+              color={showMine ? 'warning' : 'default'}
+              clickable
+              onClick={() => setShowMine((v) => !v)}
+            />
+          )}
+          <Chip label="最新" size="small" variant={sort === 'newest' ? 'filled' : 'outlined'} clickable onClick={() => setSort('newest')} />
+          <Chip label="热门" size="small" variant={sort === 'votes' ? 'filled' : 'outlined'} clickable onClick={() => setSort('votes')} />
+        </Stack>
         <Button variant="contained" onClick={() => navigate('/discover/movie/add')} disabled={!user}>
           {user ? '添加电影' : '登录后可添加电影'}
         </Button>
@@ -253,7 +259,7 @@ function MoviesSection() {
       </Tabs>
 
       {tab === 'pool' && (
-        displayedPool.length === 0 ? (
+        sortedPool.length === 0 ? (
           showMine ? (
             <EmptyState icon="🎬" title="你还没有投票或推荐过电影" />
           ) : (
@@ -265,7 +271,7 @@ function MoviesSection() {
           )
         ) : (
           <Grid container spacing={1.5}>
-            {displayedPool.map((m) => (
+            {sortedPool.map((m) => (
               <Grid key={m.id} size={{ xs: 12, md: 6 }}>
                 <Card>
                   <CardActionArea onClick={() => navigate(`/discover/movies/${m.id}`)}>
@@ -354,6 +360,7 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
   const [searching, setSearching] = useState(false);
   const [addedTitle, setAddedTitle] = useState<string | null>(null);
   const [showMine, setShowMine] = useState(false);
+  const [sort, setSort] = useState<'newest' | 'votes'>('newest');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [votes, setVotes] = useState<Record<string, boolean>>(() => {
@@ -383,6 +390,7 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
   const displayedPool = showMine
     ? filteredPool.filter((b) => votes[b.id] || b.by === user?.name)
     : filteredPool;
+  const sortedPool = sort === 'votes' ? [...displayedPool].sort((a, b) => b.v - a.v) : displayedPool;
   const filteredRead = q
     ? data.bookRead.filter((b) => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q))
     : data.bookRead;
@@ -448,16 +456,20 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
         }}
       />
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        {user && (
-          <Chip
-            icon={<FavoriteRoundedIcon sx={{ fontSize: 16 }} />}
-            label="我的喜好"
-            variant={showMine ? 'filled' : 'outlined'}
-            color={showMine ? 'warning' : 'default'}
-            clickable
-            onClick={() => setShowMine((v) => !v)}
-          />
-        )}
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          {user && (
+            <Chip
+              icon={<FavoriteRoundedIcon sx={{ fontSize: 16 }} />}
+              label="我的喜好"
+              variant={showMine ? 'filled' : 'outlined'}
+              color={showMine ? 'warning' : 'default'}
+              clickable
+              onClick={() => setShowMine((v) => !v)}
+            />
+          )}
+          <Chip label="最新" size="small" variant={sort === 'newest' ? 'filled' : 'outlined'} clickable onClick={() => setSort('newest')} />
+          <Chip label="热门" size="small" variant={sort === 'votes' ? 'filled' : 'outlined'} clickable onClick={() => setSort('votes')} />
+        </Stack>
         <Button variant="contained" onClick={() => navigate('/discover/book/add')} disabled={!user}>
           {user ? '添加图书' : '登录后可添加图书'}
         </Button>
@@ -515,7 +527,7 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
       </Tabs>
 
       {tab === 'pool' && (
-        displayedPool.length === 0 ? (
+        sortedPool.length === 0 ? (
           showMine ? (
             <EmptyState icon="📖" title="你还没有投票或推荐过图书" />
           ) : (
@@ -528,7 +540,7 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
           )
         ) : (
           <Grid container spacing={1.5}>
-            {displayedPool.map((b) => (
+            {sortedPool.map((b) => (
               <Grid key={b.id} size={{ xs: 12, md: 6 }}>
                 <Card>
                   <CardActionArea onClick={() => navigate(`/discover/books/${b.id}`)}>
@@ -608,6 +620,7 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
   const [searching, setSearching] = useState(false);
   const [addedTitle, setAddedTitle] = useState<string | null>(null);
   const [showMine, setShowMine] = useState(false);
+  const [sort, setSort] = useState<'newest' | 'votes'>('newest');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const items = data.music;
@@ -638,6 +651,7 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
   const displayed = showMine
     ? filtered.filter((r) => votes[r.id] || r.authorId === user?.id)
     : filtered;
+  const sortedItems = sort === 'votes' ? [...displayed].sort((a, b) => b.voteCount - a.voteCount) : displayed;
 
   const handleSearch = useCallback((value: string) => {
     setSearch(value);
@@ -699,16 +713,20 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
         }}
       />
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        {user && (
-          <Chip
-            icon={<FavoriteRoundedIcon sx={{ fontSize: 16 }} />}
-            label="我的喜好"
-            variant={showMine ? 'filled' : 'outlined'}
-            color={showMine ? 'warning' : 'default'}
-            clickable
-            onClick={() => setShowMine((v) => !v)}
-          />
-        )}
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          {user && (
+            <Chip
+              icon={<FavoriteRoundedIcon sx={{ fontSize: 16 }} />}
+              label="我的喜好"
+              variant={showMine ? 'filled' : 'outlined'}
+              color={showMine ? 'warning' : 'default'}
+              clickable
+              onClick={() => setShowMine((v) => !v)}
+            />
+          )}
+          <Chip label="最新" size="small" variant={sort === 'newest' ? 'filled' : 'outlined'} clickable onClick={() => setSort('newest')} />
+          <Chip label="热门" size="small" variant={sort === 'votes' ? 'filled' : 'outlined'} clickable onClick={() => setSort('votes')} />
+        </Stack>
         <Button variant="contained" onClick={() => navigate('/discover/music/add')} disabled={!user}>
           {user ? '添加音乐' : '登录后可添加音乐'}
         </Button>
@@ -763,7 +781,7 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
         </Card>
       )}
 
-      {displayed.length === 0 && !addedTitle ? (
+      {sortedItems.length === 0 && !addedTitle ? (
         showMine ? (
           <EmptyState icon="🎵" title="你还没有投票或推荐过音乐" />
         ) : (
@@ -776,7 +794,7 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
         )
       ) : (
         <Grid container spacing={1.5}>
-          {displayed.map((r) => (
+          {sortedItems.map((r) => (
             <Grid key={r.id} size={{ xs: 12, md: 6 }}>
               <Card>
                 <CardActionArea onClick={() => navigate(`/discover/music/${r.id}`)}>
@@ -826,6 +844,7 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
   const data = useLoaderData() as DiscoverPageData;
   const [search, setSearch] = useState('');
   const [showMine, setShowMine] = useState(false);
+  const [sort, setSort] = useState<'newest' | 'votes'>('newest');
 
   const dataMap: Record<string, RecommendationItem[]> = {
     recipe: data.recipes,
@@ -861,6 +880,7 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
   const displayed = showMine
     ? filtered.filter((r) => votes[r.id] || r.authorId === user?.id)
     : filtered;
+  const sortedItems = sort === 'votes' ? [...displayed].sort((a, b) => b.voteCount - a.voteCount) : displayed;
 
   const emptyMap: Record<string, { icon: string; title: string; desc: string }> = {
     recipe: { icon: '🍜', title: '还没有推荐菜谱', desc: '分享你的拿手菜或发现的好菜谱。' },
@@ -887,22 +907,26 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
         }}
       />
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        {user && (
-          <Chip
-            icon={<FavoriteRoundedIcon sx={{ fontSize: 16 }} />}
-            label="我的喜好"
-            variant={showMine ? 'filled' : 'outlined'}
-            color={showMine ? 'warning' : 'default'}
-            clickable
-            onClick={() => setShowMine((v) => !v)}
-          />
-        )}
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          {user && (
+            <Chip
+              icon={<FavoriteRoundedIcon sx={{ fontSize: 16 }} />}
+              label="我的喜好"
+              variant={showMine ? 'filled' : 'outlined'}
+              color={showMine ? 'warning' : 'default'}
+              clickable
+              onClick={() => setShowMine((v) => !v)}
+            />
+          )}
+          <Chip label="最新" size="small" variant={sort === 'newest' ? 'filled' : 'outlined'} clickable onClick={() => setSort('newest')} />
+          <Chip label="热门" size="small" variant={sort === 'votes' ? 'filled' : 'outlined'} clickable onClick={() => setSort('votes')} />
+        </Stack>
         <Button variant="contained" onClick={() => navigate(`/discover/${category}/add`)} disabled={!user}>
           {user ? categoryAddLabels[category] : `登录后可${categoryAddLabels[category]}`}
         </Button>
       </Stack>
 
-      {displayed.length === 0 ? (
+      {sortedItems.length === 0 ? (
         showMine ? (
           <EmptyState icon={empty.icon} title={`你还没有投票或推荐过${mineEmptyLabel[category]}`} />
         ) : (
@@ -915,7 +939,7 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
         )
       ) : (
         <Grid container spacing={1.5}>
-          {displayed.map((r) => (
+          {sortedItems.map((r) => (
             <Grid key={r.id} size={{ xs: 12, md: 6 }}>
               <Card>
                 <CardActionArea onClick={() => navigate(`/discover/${category}/${r.id}`)}>
