@@ -22,9 +22,11 @@ import {
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
+import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { toggleMovieVote, updateMovie, deleteMovie } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { firstNonEmoji } from '@/components/Atoms';
@@ -54,6 +56,18 @@ export default function MovieDetailPage() {
   const [movieLink, setMovieLink] = useState<string>(raw?.doubanUrl ?? '');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [posterState, setPosterState] = useState<string>(raw?.poster ?? '');
+
+  const { pickFile: pickPoster, isUploading: posterUploading } = useMediaUpload({
+    category: 'cover',
+    ownerId: user?.id,
+    onSuccess: async (url) => {
+      setPosterState(url);
+      if (raw?.id) {
+        try { await updateMovie(String(raw.id), { poster: url }); } catch { /* ignore */ }
+      }
+    },
+  });
 
   if (!raw) {
     return (
@@ -80,8 +94,8 @@ export default function MovieDetailPage() {
     (recommenderId && recommenderId === user.id) || user.role === 'admin'
   );
 
-  // Poster: prefer TMDB image, fall back to gradient
-  const posterUrl = movie.poster as string | undefined;
+  // Poster: prefer uploaded/TMDB image, fall back to gradient
+  const posterUrl = posterState || (movie.poster as string | undefined);
   const posterGradient = posters[title] || { bg: `linear-gradient(135deg, ${c.s3}, ${c.s2})`, accent: c.text3, sub: '' };
   const poster = {
     ...posterGradient,
@@ -154,6 +168,17 @@ export default function MovieDetailPage() {
                 background: 'linear-gradient(transparent 30%, rgba(0,0,0,0.7) 100%)',
               }}
             />
+            {/* Upload poster button */}
+            {canEditLink && (
+              <IconButton
+                size="small"
+                sx={{ position: 'absolute', top: 12, right: 12, zIndex: 2, color: 'rgba(255,255,255,0.7)', bgcolor: 'rgba(0,0,0,0.3)', '&:hover': { bgcolor: 'rgba(0,0,0,0.5)' } }}
+                onClick={pickPoster}
+                disabled={posterUploading}
+              >
+                <AddPhotoAlternateIcon fontSize="small" />
+              </IconButton>
+            )}
             {/* Title & info at bottom */}
             <Box sx={{ position: 'absolute', bottom: 20, left: 20, right: 20, zIndex: 1 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="flex-end">

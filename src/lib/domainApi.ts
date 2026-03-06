@@ -1002,7 +1002,7 @@ export async function fetchCancelledEventsApi() {
    Admin: Movie operations
    ═══════════════════════════════════════════════════════════════ */
 
-export async function updateMovie(movieId: string, payload: { title?: string; status?: string; director?: string; synopsis?: string; doubanUrl?: string }) {
+export async function updateMovie(movieId: string, payload: { title?: string; status?: string; director?: string; synopsis?: string; doubanUrl?: string; poster?: string }) {
   return requestJson<{ ok: boolean; movie: EntityMap }>(`/api/movies/${movieId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

@@ -40,6 +40,7 @@ export class MovieService {
       director: z.string().optional(),
       synopsis: z.string().optional(),
       doubanUrl: z.string().optional(),
+      poster: z.string().optional(),
     }).parse(input);
     return this.repository.update(id, data);
   }
