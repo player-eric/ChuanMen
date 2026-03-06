@@ -131,6 +131,9 @@ export async function createEvent(payload: {
   description?: string;
   tags?: string[];
   isWeeklyLotteryEvent?: boolean;
+  isHomeEvent?: boolean;
+  houseRules?: string;
+  locationPrivate?: boolean;
   phase?: 'invite' | 'open' | 'ended';
   publishAt?: string;
   recSelectionMode?: string;

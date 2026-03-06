@@ -210,6 +210,9 @@ export default function EventCreatePage() {
           : undefined,
         isPrivate: isPrivate || undefined,
         isWeeklyLotteryEvent: lotteryId ? true : undefined,
+        isHomeEvent: isHome || undefined,
+        houseRules: isHome && houseRules.trim() ? houseRules.trim() : undefined,
+        locationPrivate: isHome || undefined,
         proposalId: fromProposal?.id,
         tasks: validTasks.length > 0 ? validTasks : undefined,
       });

@@ -422,10 +422,10 @@ export default function EventDetailPage() {
   };
 
   const phase = phaseLabel[event.phase] ?? phaseLabel.open;
-  const isHost = user?.name === event.host;
+  const hostId: string = (loadedEvent as any)?.hostId ?? '';
+  const isHost = Boolean(user?.id && hostId && user.id === hostId);
   const isCoHost = Boolean(user?.id && event.coHostIds?.includes(user.id));
   const isAdmin = user?.role === 'admin';
-  const hostId: string = (loadedEvent as any)?.hostId ?? '';
 
   /** Convert a photo URL to a CSS background value — handles both gradient strings and real URLs */
   const photoBg = (url: string) =>
@@ -1134,8 +1134,8 @@ export default function EventDetailPage() {
                       return (
                         <Avatar
                           key={name}
-                          sx={{ cursor: 'pointer', width: 34, height: 34, ...((name === event.host || isNameCoHost) ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
-                          onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
+                          sx={{ cursor: 'pointer', width: 34, height: 34, '&:hover': { zIndex: '99 !important' }, ...((name === event.host || isNameCoHost) ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/members/${encodeURIComponent(name)}`); }}
                         >
                           {firstNonEmoji(name)}
                         </Avatar>

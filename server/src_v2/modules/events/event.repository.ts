@@ -34,7 +34,7 @@ export class EventRepository {
           include: { claimedBy: { select: { id: true, name: true } } },
           orderBy: { createdAt: 'asc' as const },
         },
-        _count: { select: { signups: true } },
+        _count: { select: { signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } } } } },
       },
     });
   }
@@ -81,6 +81,10 @@ export class EventRepository {
     recSelectionMode?: string;
     recCategories?: string[];
     isPrivate?: boolean;
+    isWeeklyLotteryEvent?: boolean;
+    isHomeEvent?: boolean;
+    houseRules?: string;
+    locationPrivate?: boolean;
   }) {
     return this.prisma.event.create({
       data: {
@@ -97,6 +101,10 @@ export class EventRepository {
         recSelectionMode: input.recSelectionMode,
         recCategories: input.recCategories,
         isPrivate: input.isPrivate ?? false,
+        isWeeklyLotteryEvent: input.isWeeklyLotteryEvent ?? false,
+        isHomeEvent: input.isHomeEvent ?? false,
+        houseRules: input.houseRules ?? '',
+        locationPrivate: input.locationPrivate ?? false,
       },
     });
   }
@@ -185,13 +193,27 @@ export class EventRepository {
    * Signup with capacity awareness.
    * Returns the signup record plus `wasWaitlisted` flag.
    */
-  async signup(eventId: string, userId: string, _status: string = 'accepted') {
+  async signup(eventId: string, userId: string) {
     const event = await this.prisma.event.findUniqueOrThrow({
       where: { id: eventId },
       select: { capacity: true, waitlistEnabled: true, phase: true, status: true },
     });
 
     const isEnded = event.phase === 'ended' || event.status === 'completed';
+
+    // Check if user already has an occupying signup (invited/offered) — just accept it
+    const existing = await this.prisma.eventSignup.findUnique({
+      where: { eventId_userId: { eventId, userId } },
+      select: { status: true },
+    });
+    if (existing && OCCUPYING_STATUSES.includes(existing.status)) {
+      const signup = await this.prisma.eventSignup.update({
+        where: { eventId_userId: { eventId, userId } },
+        data: { status: 'accepted', ...(isEnded ? { participated: true } : {}) },
+        include: { user: { select: { id: true, name: true, avatar: true } } },
+      });
+      return { ...signup, wasWaitlisted: false };
+    }
 
     const full = await this.isFull(eventId, event.capacity);
     let status: EventSignupStatus = 'accepted';
@@ -267,6 +289,10 @@ export class EventRepository {
 
   /** User accepts an offer — offered → accepted */
   async acceptOffer(eventId: string, userId: string) {
+    const signup = await this.prisma.eventSignup.findUniqueOrThrow({
+      where: { eventId_userId: { eventId, userId } },
+    });
+    if (signup.status !== 'offered') throw new Error('只有 offered 状态可以接受');
     return this.prisma.eventSignup.update({
       where: { eventId_userId: { eventId, userId } },
       data: { status: 'accepted', respondedAt: new Date() },
@@ -278,6 +304,10 @@ export class EventRepository {
    * Returns { declined, promoted }.
    */
   async declineOffer(eventId: string, userId: string) {
+    const signup = await this.prisma.eventSignup.findUniqueOrThrow({
+      where: { eventId_userId: { eventId, userId } },
+    });
+    if (signup.status !== 'offered') throw new Error('只有 offered 状态可以拒绝');
     const declined = await this.prisma.eventSignup.update({
       where: { eventId_userId: { eventId, userId } },
       data: { status: 'declined', respondedAt: new Date() },
@@ -288,6 +318,10 @@ export class EventRepository {
 
   /** Host directly accepts a waitlisted person (skip 24h offer). */
   async hostApproveWaitlist(eventId: string, userId: string) {
+    const signup = await this.prisma.eventSignup.findUniqueOrThrow({
+      where: { eventId_userId: { eventId, userId } },
+    });
+    if (signup.status !== 'waitlist') throw new Error('只有 waitlist 状态可以批准');
     return this.prisma.eventSignup.update({
       where: { eventId_userId: { eventId, userId } },
       data: { status: 'accepted', respondedAt: new Date() },
@@ -296,6 +330,10 @@ export class EventRepository {
 
   /** Host rejects a waitlisted person. */
   async hostRejectWaitlist(eventId: string, userId: string) {
+    const signup = await this.prisma.eventSignup.findUniqueOrThrow({
+      where: { eventId_userId: { eventId, userId } },
+    });
+    if (signup.status !== 'waitlist') throw new Error('只有 waitlist 状态可以拒绝');
     return this.prisma.eventSignup.update({
       where: { eventId_userId: { eventId, userId } },
       data: { status: 'rejected', respondedAt: new Date() },
@@ -320,7 +358,7 @@ export class EventRepository {
       include: {
         host: { select: { id: true, name: true, avatar: true } },
         coHosts: { include: { user: { select: { id: true, name: true } } } },
-        _count: { select: { signups: true } },
+        _count: { select: { signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } } } } },
       },
     });
   }
@@ -331,7 +369,7 @@ export class EventRepository {
       orderBy: { startsAt: 'desc' },
       include: {
         host: { select: { id: true, name: true, avatar: true } },
-        _count: { select: { signups: true } },
+        _count: { select: { signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } } } } },
       },
     });
   }

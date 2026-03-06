@@ -22,6 +22,10 @@ const createEventSchema = z.object({
   recSelectionMode: z.enum(['nominate', 'pick']).optional(),
   recCategories: z.array(z.string()).optional(),
   isPrivate: z.boolean().optional(),
+  isWeeklyLotteryEvent: z.boolean().optional(),
+  isHomeEvent: z.boolean().optional(),
+  houseRules: z.string().optional(),
+  locationPrivate: z.boolean().optional(),
   proposalId: z.string().optional(),
   tasks: z.array(taskItemSchema).optional(),
 });
@@ -121,10 +125,9 @@ export class EventService {
   async signup(eventId: string, input: unknown) {
     const data = z.object({
       userId: z.string().min(1),
-      status: z.string().optional(),
     }).parse(input);
 
-    const result = await this.repository.signup(eventId, data.userId, data.status);
+    const result = await this.repository.signup(eventId, data.userId);
 
     if (result.wasWaitlisted) {
       // Send waitlist notification (best effort)
@@ -182,7 +185,10 @@ export class EventService {
     const event = await this.repository.getById(eventId);
     if (!event) throw new Error('活动不存在');
     if (event.hostId !== requesterId) throw new Error('只有 Host 可以移除 Co-Host');
-    return this.repository.removeCoHost(eventId, userId);
+    const result = await this.repository.removeCoHost(eventId, userId);
+    // Removing a co-host frees a slot — promote next waitlisted if applicable
+    await this.repository.promoteNextWaitlisted(eventId);
+    return result;
   }
 
   /** Check if requester is host or co-host of this event */
@@ -263,6 +269,15 @@ export class EventService {
     const event = await this.repository.getById(eventId);
     if (!event || event.hostId !== requesterId) {
       throw new Error('只有 Host 可以操作等位名单');
+    }
+
+    // Check capacity before approving (waitlist → accepted adds an occupying slot)
+    const occupying = await this.prisma.eventSignup.count({
+      where: { eventId, status: { in: ['accepted', 'invited', 'offered'] } },
+    });
+    const coHostCount = await this.prisma.eventCoHost.count({ where: { eventId } });
+    if (occupying + 1 + coHostCount >= event.capacity) {
+      throw new Error('活动已满，无法批准更多等位者');
     }
 
     const result = await this.repository.hostApproveWaitlist(eventId, userId);
