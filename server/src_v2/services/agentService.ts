@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { sendEmail } from './emailService.js';
 import { detectMilestones, generateHostTribute, processAnnouncedUsers } from '../agent/contentAutomation.js';
 import {
   sendPostEventRecap,
@@ -124,21 +125,22 @@ export async function runAgentCycle(app: FastifyInstance) {
       },
       select: {
         id: true,
+        title: true,
         hostId: true,
+        host: { select: { id: true, name: true, email: true } },
         signups: {
           where: { status: 'accepted', participated: true },
-          select: { userId: true },
+          select: { userId: true, user: { select: { id: true, name: true, email: true } } },
         },
       },
     });
 
     for (const event of unprocessed) {
       // Only award if at least 1 participant besides host
-      const participantIds = event.signups
-        .map((s) => s.userId)
-        .filter((uid) => uid !== event.hostId);
+      const participants = event.signups
+        .filter((s) => s.userId !== event.hostId);
 
-      if (participantIds.length === 0) {
+      if (participants.length === 0) {
         // No real participants — mark as processed but don't award
         await prisma.event.update({
           where: { id: event.id },
@@ -147,13 +149,13 @@ export async function runAgentCycle(app: FastifyInstance) {
         continue;
       }
 
+      const participantIds = participants.map((s) => s.userId);
+
       // Award +2 credits to each participant
-      if (participantIds.length > 0) {
-        await prisma.user.updateMany({
-          where: { id: { in: participantIds } },
-          data: { postcardCredits: { increment: 2 } },
-        });
-      }
+      await prisma.user.updateMany({
+        where: { id: { in: participantIds } },
+        data: { postcardCredits: { increment: 2 } },
+      });
 
       // Award +2 (attend) + 4 (host bonus) = +6 to host
       await prisma.user.update({
@@ -165,6 +167,28 @@ export async function runAgentCycle(app: FastifyInstance) {
         where: { id: event.id },
         data: { creditsAwarded: true },
       });
+
+      // Send credit notification emails (best effort)
+      try {
+        // Notify participants (+2)
+        for (const s of participants) {
+          if (s.user?.email) {
+            await sendEmail({
+              to: s.user.email,
+              subject: `【串门儿】参加「${event.title}」获得感谢卡额度 +2`,
+              text: `Hi ${s.user.name}，\n\n感谢你参加「${event.title}」！你获得了 2 张感谢卡额度，快去给一起参加的小伙伴寄张感谢卡吧 ✉️\n\n寄感谢卡：https://chuanmener.club/cards\n\n— 串门儿`,
+            });
+          }
+        }
+        // Notify host (+6)
+        if (event.host?.email) {
+          await sendEmail({
+            to: event.host.email,
+            subject: `【串门儿】发起「${event.title}」获得感谢卡额度 +6`,
+            text: `Hi ${event.host.name}，\n\n感谢你组织「${event.title}」！作为 Host 你获得了 6 张感谢卡额度（参加 +2，Host 奖励 +4）。快去给参与的小伙伴寄张感谢卡吧 ✉️\n\n寄感谢卡：https://chuanmener.club/cards\n\n— 串门儿`,
+          });
+        }
+      } catch { /* email failure should not block credit award */ }
 
       log.info(
         { eventId: event.id, participants: participantIds.length },

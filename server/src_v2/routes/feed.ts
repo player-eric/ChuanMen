@@ -440,6 +440,13 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       };
     };
 
+    // Fetch user's current postcard credits (for credit change toast)
+    let postcardCredits: number | undefined;
+    if (userId) {
+      const u = await prisma.user.findUnique({ where: { id: userId }, select: { postcardCredits: true } });
+      postcardCredits = u?.postcardCredits ?? undefined;
+    }
+
     return {
       events: events.map((e) => ({ ...withInteraction(e), photoCount: e.recapPhotoUrls?.length ?? 0 })),
       announcements,
@@ -453,6 +460,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       currentLottery,
       lotteryUserStatus,
       notifications,
+      postcardCredits,
     };
   });
 };

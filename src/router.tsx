@@ -350,8 +350,9 @@ async function feedLoader() {
     // Extract lottery data from feed response
     const currentLottery = (data as any).currentLottery ?? null;
     const lotteryUserStatus = (data as any).lotteryUserStatus ?? null;
+    const postcardCredits = (data as any).postcardCredits ?? undefined;
 
-    return { items, members, currentLottery, lotteryUserStatus };
+    return { items, members, currentLottery, lotteryUserStatus, postcardCredits };
   } catch {
     return { items: [], members: [] };
   }

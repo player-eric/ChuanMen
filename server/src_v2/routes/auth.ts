@@ -33,7 +33,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    if (user.userStatus === 'applicant') {
+    if (user.userStatus === 'applicant' || user.userStatus === 'announced') {
       return reply.code(403).send({
         error: 'pending_review',
         message: '你的申请正在审核中，我们会在 3 天内通过 Email 回复你',
@@ -139,7 +139,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // Check user status
-    if (user.userStatus === 'applicant') {
+    if (user.userStatus === 'applicant' || user.userStatus === 'announced') {
       return reply.code(403).send({
         error: 'pending_review',
         message: '你的申请正在审核中，我们会在 3 天内通过 Email 回复你',
@@ -283,7 +283,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // 4. Check user status
-    if (user.userStatus === 'applicant') {
+    if (user.userStatus === 'applicant' || user.userStatus === 'announced') {
       return reply.code(403).send({
         error: 'pending_review',
         message: '你的申请正在审核中，我们会在 3 天内通过 Email 回复你',

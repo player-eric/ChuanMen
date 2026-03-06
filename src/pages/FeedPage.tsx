@@ -370,7 +370,7 @@ const PAGE_SIZE = 8;
 function FullFeed() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { items, currentLottery, lotteryUserStatus } = useLoaderData() as FeedPageData;
+  const { items, currentLottery, lotteryUserStatus, postcardCredits } = useLoaderData() as FeedPageData;
   const [snackMsg, setSnackMsg] = useState('');
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -387,6 +387,18 @@ function FullFeed() {
       setLotteryState(null);
     }
   }, [currentLottery]);
+
+  // Detect postcard credit changes and show toast
+  useEffect(() => {
+    if (postcardCredits == null || !user?.id) return;
+    const key = `chuanmen.credits.${user.id}`;
+    const prev = Number(localStorage.getItem(key) ?? '0');
+    if (prev > 0 && postcardCredits > prev) {
+      const gained = postcardCredits - prev;
+      setSnackMsg(`🎉 你获得了 ${gained} 张感谢卡额度！当前共 ${postcardCredits} 张`);
+    }
+    localStorage.setItem(key, String(postcardCredits));
+  }, [postcardCredits, user?.id]);
 
   const hasMore = visible < items.length;
 

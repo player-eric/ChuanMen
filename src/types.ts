@@ -388,6 +388,7 @@ export interface FeedPageData {
   items: FeedItem[];
   currentLottery?: LotteryDraw | null;
   lotteryUserStatus?: { hostCandidate: boolean; consecutiveEvents: number } | null;
+  postcardCredits?: number;
 }
 
 export interface EventsPageData {
