@@ -702,7 +702,13 @@ export default function EventDetailPage() {
                 }}>
                   <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
                     <Stack direction="row" spacing={1.5} alignItems="center">
-                      <Poster title={event.film} w={40} h={56} />
+                      {(() => {
+                        const movieRec = (event.linkedRecommendations ?? []).find((r) => r.category === 'movie' && r.title === event.film);
+                        const posterUrl = movieRec?.coverUrl;
+                        return posterUrl
+                          ? <img src={posterUrl} alt={event.film} style={{ width: 40, height: 56, borderRadius: 4, objectFit: 'cover' }} />
+                          : <Poster title={event.film} w={40} h={56} />;
+                      })()}
                       <Box>
                         <Typography variant="body2" fontWeight={700}>🎬 放映：{event.film}</Typography>
                         <Typography variant="caption" color="text.secondary">点击查看电影详情</Typography>
@@ -784,7 +790,7 @@ export default function EventDetailPage() {
                                       <Typography variant="body2" fontWeight={600}>{rec.title}</Typography>
                                       <Stack direction="row" spacing={2} sx={{ mt: 0.25 }}>
                                         <Typography variant="caption" color="text.secondary">🌐 {rec.globalVotes ?? 0}票</Typography>
-                                        {!isMovie && <Typography variant="caption" fontWeight={700} color="primary">👥 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal ?? 0}人投票</Typography>}
+                                        <Typography variant="caption" fontWeight={700} color="primary">👥 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal ?? 0}人投票</Typography>
                                         {rec.linkedByName && <Typography variant="caption" color="text.secondary">{rec.linkedByName} 提名</Typography>}
                                       </Stack>
                                     </Box>

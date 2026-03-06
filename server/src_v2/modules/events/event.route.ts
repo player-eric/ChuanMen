@@ -29,12 +29,15 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     const event = await service.getEventById(id);
     if (!event) return reply.notFound('活动不存在');
 
-    // Compute attendeeVotes for each linked recommendation
+    // Compute attendeeVotes for each linked recommendation and movie
+    const acceptedUserIds = event.signups
+      .filter((s: any) => s.status === 'accepted' || s.status === 'invited' || s.status === 'offered')
+      .map((s: any) => s.user?.id ?? s.userId)
+      .filter(Boolean);
+    const attendeeTotal = acceptedUserIds.length;
+
+    let enrichedRecs = event.recommendations;
     if (event.recommendations && event.recommendations.length > 0) {
-      const acceptedUserIds = event.signups
-        .filter((s: any) => s.status === 'accepted' || s.status === 'invited' || s.status === 'offered')
-        .map((s: any) => s.user?.id ?? s.userId)
-        .filter(Boolean);
       const recIds = event.recommendations.map((er: any) => er.recommendationId);
       const votes = await app.prisma.recommendationVote.findMany({
         where: {
@@ -47,15 +50,36 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
       for (const v of votes) {
         attendeeVoteMap.set(v.recommendationId, (attendeeVoteMap.get(v.recommendationId) ?? 0) + 1);
       }
-      const enriched = event.recommendations.map((er: any) => ({
+      enrichedRecs = event.recommendations.map((er: any) => ({
         ...er,
         attendeeVotes: attendeeVoteMap.get(er.recommendationId) ?? 0,
-        attendeeTotal: acceptedUserIds.length,
+        attendeeTotal,
       }));
-      return { ...event, recommendations: enriched };
     }
 
-    return event;
+    // Compute attendeeVotes for screenedMovies (Movie table entries)
+    let enrichedMovies = event.screenedMovies;
+    if (event.screenedMovies && event.screenedMovies.length > 0 && acceptedUserIds.length > 0) {
+      const movieIds = event.screenedMovies.map((sm: any) => sm.movieId);
+      const movieVotes = await app.prisma.movieVote.findMany({
+        where: {
+          movieId: { in: movieIds },
+          userId: { in: acceptedUserIds },
+        },
+        select: { movieId: true },
+      });
+      const movieVoteMap = new Map<string, number>();
+      for (const v of movieVotes) {
+        movieVoteMap.set(v.movieId, (movieVoteMap.get(v.movieId) ?? 0) + 1);
+      }
+      enrichedMovies = event.screenedMovies.map((sm: any) => ({
+        ...sm,
+        attendeeVotes: movieVoteMap.get(sm.movieId) ?? 0,
+        attendeeTotal,
+      }));
+    }
+
+    return { ...event, recommendations: enrichedRecs, screenedMovies: enrichedMovies };
   });
 
   app.post('/', async (request, reply) => {

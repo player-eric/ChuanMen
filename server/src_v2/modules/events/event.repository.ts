@@ -21,7 +21,7 @@ export class EventRepository {
           include: { user: { select: { id: true, name: true, avatar: true } } },
         },
         screenedMovies: {
-          include: { movie: { select: { id: true, title: true } } },
+          include: { movie: { select: { id: true, title: true, poster: true } } },
           take: 1,
         },
         recommendations: {
@@ -50,7 +50,7 @@ export class EventRepository {
           include: { user: true },
         },
         screenedMovies: {
-          include: { movie: { select: { id: true, title: true } } },
+          include: { movie: { select: { id: true, title: true, poster: true } } },
           take: 1,
         },
         recommendations: {
