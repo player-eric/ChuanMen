@@ -264,7 +264,7 @@ interface FeedTaskSummary {
 
 interface FeedActivityProps extends InteractionProps {
   name: string; title: string; date: string; location: string;
-  spots: number; people: string[]; signupUserIds?: string[]; film?: string; filmPoster?: string; scene?: string;
+  spots: number; total?: number; people: string[]; signupUserIds?: string[]; film?: string; filmPoster?: string; scene?: string;
   navTarget?: string;
   /** 'feed' = full card with signup/actions (default); 'list' = compact list card for EventsPage */
   mode?: 'feed' | 'list';
@@ -281,7 +281,7 @@ interface FeedActivityProps extends InteractionProps {
   taskSummary?: FeedTaskSummary[];
 }
 
-export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount, socialHint, time, taskSummary }: FeedActivityProps) {
+export function FeedActivity({ name, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount, socialHint, time, taskSummary }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -410,7 +410,7 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
               {photoCount != null && photoCount > 0 && <span style={{ fontSize: 12, color: c.text3 }}>📷 {photoCount}</span>}
             </div>
           ) : !isCancelled && (
-            <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `还剩 ${spots} 位` : (waitlistCount ?? 0) > 0 ? `已满 · ${waitlistCount}人等位` : '已满'}</span>
+            <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `${total ? `${total - spots}/${total}人 · ` : ''}还剩 ${spots} 位` : (waitlistCount ?? 0) > 0 ? `已满 · ${waitlistCount}人等位` : '已满'}</span>
           )}
         </div>
         {/* Task summary */}

@@ -975,7 +975,7 @@ export default function EventDetailPage() {
               {event.phase !== 'ended' && event.phase !== 'cancelled' && (
                 <Typography variant="body2" color={event.spots > 0 ? 'success.main' : 'text.secondary'}>
                   {event.spots > 0
-                    ? `还剩 ${event.spots} 位 · 共 ${event.people.length}/${event.total} 人`
+                    ? `还剩 ${event.spots} 位 · 共 ${event.total - event.spots}/${event.total} 人`
                     : (event.waitlistCount ?? 0) > 0
                       ? `已满 · ${event.waitlistCount}人等位`
                       : '已满'}

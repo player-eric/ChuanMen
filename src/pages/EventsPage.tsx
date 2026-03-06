@@ -158,6 +158,7 @@ export default function EventsPage() {
                     date={evt.date}
                     location={evt.location}
                     spots={evt.spots}
+                    total={evt.total}
                     people={evt.people}
                     signupUserIds={evt.signupUserIds}
                     film={evt.film}

@@ -220,7 +220,7 @@ export interface FeedInteraction {
 // Feed item discriminated union for the timeline
 export type FeedItem =
   | { type: 'time'; label: string }
-  | { type: 'activity'; name: string; title: string; date: string; location: string; spots: number; people: string[]; film?: string; filmPoster?: string; scene?: string; navTarget?: string; waitlistCount?: number; taskSummary?: { role: string; claimerName?: string }[] } & FeedInteraction
+  | { type: 'activity'; name: string; title: string; date: string; location: string; spots: number; total?: number; people: string[]; film?: string; filmPoster?: string; scene?: string; navTarget?: string; waitlistCount?: number; taskSummary?: { role: string; claimerName?: string }[] } & FeedInteraction
   | { type: 'card'; from: string; to: string; message: string; photo?: string; navTarget?: string } & FeedInteraction
   | { type: 'movie'; name: string; title: string; year: string; dir: string; votes: number } & FeedInteraction
   | { type: 'milestone'; text: string; emoji: string } & FeedInteraction

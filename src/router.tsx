@@ -120,6 +120,7 @@ function buildFeedItems(data: any): any[] {
       time: e.createdAt ? timeAgo(e.createdAt) : '',
       location: e.location ?? '',
       spots: Math.max(0, (e.capacity ?? 8) - feedHostSlots - feedOccupying.length),
+      total: e.capacity ?? 8,
       people,
       signupUserIds: allSignups.map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
       film: e.screenedMovies?.[0]?.movie?.title,
