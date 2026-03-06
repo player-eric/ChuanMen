@@ -129,6 +129,7 @@ export async function createEvent(payload: {
   startsAt: string;
   capacity: number;
   description?: string;
+  titleImageUrl?: string;
   tags?: string[];
   isWeeklyLotteryEvent?: boolean;
   isHomeEvent?: boolean;

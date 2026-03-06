@@ -1,4 +1,4 @@
-import { type CSSProperties, useCallback, useState, type ReactNode } from 'react';
+import { type CSSProperties, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useMediaUpload, type UseMediaUploadOptions } from '@/hooks/useMediaUpload';
 import { useColors } from '@/hooks/useColors';
 
@@ -41,6 +41,8 @@ export function ImageUpload({
   // Tracks if the remote `value` URL failed to load
   const [remoteFailed, setRemoteFailed] = useState(false);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const { pickFile, upload, isUploading, progress, error } = useMediaUpload({
     ...uploadOpts,
     onSuccess: (url, asset) => {
@@ -54,16 +56,38 @@ export function ImageUpload({
     },
   });
 
+  const handleFile = useCallback(
+    (file: File) => {
+      if (disabled || isUploading) return;
+      setRemoteFailed(false);
+      setPreview(URL.createObjectURL(file));
+      upload(file);
+    },
+    [disabled, isUploading, upload],
+  );
+
+  // Paste support — listen on the container
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const file = Array.from(e.clipboardData?.files ?? []).find((f) =>
+        f.type.startsWith('image/'),
+      );
+      if (file) {
+        e.preventDefault();
+        handleFile(file);
+      }
+    };
+    el.addEventListener('paste', onPaste);
+    return () => el.removeEventListener('paste', onPaste);
+  }, [handleFile]);
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      if (disabled || isUploading) return;
       const file = e.dataTransfer.files[0];
-      if (file) {
-        setRemoteFailed(false);
-        setPreview(URL.createObjectURL(file));
-        upload(file);
-      }
+      if (file) handleFile(file);
     },
     [disabled, isUploading, upload],
   );
@@ -76,11 +100,7 @@ export function ImageUpload({
     input.accept = (uploadOpts.accept ?? ['image/jpeg', 'image/png', 'image/webp', 'image/gif']).join(',');
     input.onchange = () => {
       const file = input.files?.[0];
-      if (file) {
-        setRemoteFailed(false);
-        setPreview(URL.createObjectURL(file));
-        upload(file);
-      }
+      if (file) handleFile(file);
     };
     input.click();
   }, [disabled, isUploading, upload, uploadOpts.accept]);
@@ -91,6 +111,8 @@ export function ImageUpload({
 
   return (
     <div
+      ref={containerRef}
+      tabIndex={disabled ? undefined : 0}
       onClick={handleClick}
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
@@ -107,9 +129,10 @@ export function ImageUpload({
         justifyContent: 'center',
         background: c.s2,
         flexShrink: 0,
+        outline: 'none',
         ...style,
       }}
-      title={disabled ? undefined : '点击或拖拽上传图片'}
+      title={disabled ? undefined : '点击、拖拽或粘贴上传图片'}
     >
       {/* Current / preview image */}
       {displayUrl && (
@@ -171,7 +194,7 @@ export function ImageUpload({
           {placeholder ?? (
             <>
               <div style={{ fontSize: 24, marginBottom: 2 }}>📷</div>
-              <div>点击上传</div>
+              <div>点击 / 粘贴上传</div>
             </>
           )}
         </div>

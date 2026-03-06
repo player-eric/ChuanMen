@@ -33,13 +33,14 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EditIcon from '@mui/icons-material/Edit';
 import type { EventData, EventPhoto, EventTaskData, FoodOption, SignupStatus, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask, addCoHost, removeCoHost } from '@/lib/domainApi';
+import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask, addCoHost, removeCoHost, toggleMovieVote, toggleRecommendationVote } from '@/lib/domainApi';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import CommentSection from '@/components/CommentSection';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
 import { RichTextViewer } from '@/components/RichTextEditor';
+import { ImageUpload } from '@/components/ImageUpload';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 import { useTaskPresets } from '@/hooks/useTaskPresets';
 import { eventTagToChinese } from '@/lib/mappings';
@@ -187,6 +188,7 @@ export default function EventDetailPage() {
   const [editCapacity, setEditCapacity] = useState(0);
   const [editStartsAt, setEditStartsAt] = useState('');
   const [editEndsAt, setEditEndsAt] = useState('');
+  const [editTitleImageUrl, setEditTitleImageUrl] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -554,6 +556,7 @@ export default function EventDetailPage() {
                     setEditCapacity(event.total);
                     setEditStartsAt((loadedEvent as any)?.startsAt ? new Date((loadedEvent as any).startsAt).toISOString().slice(0, 16) : '');
                     setEditEndsAt((loadedEvent as any)?.endsAt ? new Date((loadedEvent as any).endsAt).toISOString().slice(0, 16) : '');
+                    setEditTitleImageUrl(event.scene?.startsWith('http') ? event.scene : '');
                     setEditOpen(true);
                   }}
                 >
@@ -728,6 +731,32 @@ export default function EventDetailPage() {
               const hasRecs = recs.length > 0;
               const isEnded = event.phase === 'ended' || event.phase === 'cancelled';
               const showSection = hasRecs || cats.length > 0 || ((!isEnded) && (isHost || isAdmin || signedUp));
+
+              const handleVote = async (recId: string, isMovieTable: boolean) => {
+                if (!user) return;
+                try {
+                  const result = isMovieTable
+                    ? await toggleMovieVote(recId, user.id)
+                    : await toggleRecommendationVote(recId, user.id);
+                  const newVoted = (result as any).voted as boolean;
+                  const serverCount = (result as any).voteCount as number | undefined;
+                  setEvent((prev) => {
+                    if (!prev) return prev;
+                    const updated = (prev.linkedRecommendations ?? []).map((r) => {
+                      if (r.id !== recId) return r;
+                      const newVoterIds = newVoted
+                        ? [...(r.voterIds ?? []).filter((id) => id !== user.id), user.id]
+                        : (r.voterIds ?? []).filter((id) => id !== user.id);
+                      return {
+                        ...r,
+                        voterIds: newVoterIds,
+                        globalVotes: serverCount ?? ((r.globalVotes ?? 0) + (newVoted ? 1 : -1)),
+                      };
+                    });
+                    return { ...prev, linkedRecommendations: updated };
+                  });
+                } catch { setFlash({ open: true, severity: 'error', message: '投票失败' }); }
+              };
               if (!showSection) return null;
 
               const catIcon: Record<string, string> = { movie: '🍿', book: '📚', recipe: '🍳', place: '📍', music: '🎵', external_event: '🎭' };
@@ -760,40 +789,57 @@ export default function EventDetailPage() {
                           </Stack>
 
                           {/* Selected */}
-                          {selected.map((rec) => (
+                          {selected.map((rec) => {
+                            const isMovie = (rec as any)._fromMovieTable;
+                            const voted = user ? (rec.voterIds ?? []).includes(user.id) : false;
+                            return (
                             <Card key={rec.id} variant="outlined" sx={{ borderColor: 'success.main', borderWidth: 2, mb: 1 }}>
-                              <CardActionArea onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}>
-                                <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-                                  <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography variant="body2" fontWeight={700} sx={{ flex: 1 }}>{rec.title}</Typography>
-                                    <Chip size="small" color="success" label="✓ 已选" />
-                                  </Stack>
-                                  <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
-                                    <Typography variant="caption" color="text.secondary">🌐 {rec.globalVotes ?? 0}票</Typography>
-                                    <Typography variant="caption" fontWeight={700} color="primary">👥 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal ?? 0}人投票</Typography>
-                                  </Stack>
-                                </CardContent>
-                              </CardActionArea>
+                              <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <Box sx={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}>
+                                    <Typography variant="body2" fontWeight={700}>{rec.title}</Typography>
+                                  </Box>
+                                  <Chip size="small" color="success" label="✓ 已选" />
+                                  {user && (
+                                    <Chip
+                                      size="small"
+                                      variant={voted ? 'filled' : 'outlined'}
+                                      color={voted ? 'primary' : 'default'}
+                                      label={`▲ ${rec.globalVotes ?? 0}`}
+                                      clickable
+                                      onClick={() => handleVote(rec.id, isMovie)}
+                                    />
+                                  )}
+                                </Stack>
+                              </CardContent>
                             </Card>
-                          ))}
+                            );
+                          })}
 
                           {/* Unselected / nominations */}
                           {unselected.map((rec) => {
                             const isMovie = (rec as any)._fromMovieTable;
                             const canDelete = isHost || isAdmin || (!isMovie && user && rec.linkedById === user.id);
                             const canSelect = !isMovie && (isHost || isAdmin) && (event.phase === 'invite' || event.phase === 'open');
+                            const voted = user ? (rec.voterIds ?? []).includes(user.id) : false;
                             return (
                               <Card key={rec.id} variant="outlined" sx={{ mb: 1 }}>
                                 <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
                                   <Stack direction="row" spacing={1} alignItems="center">
                                     <Box sx={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => navigate(isMovie ? `/discover/movies/${rec.id}` : `/discover/${rec.category}/${rec.id}`)}>
                                       <Typography variant="body2" fontWeight={600}>{rec.title}</Typography>
-                                      <Stack direction="row" spacing={2} sx={{ mt: 0.25 }}>
-                                        <Typography variant="caption" color="text.secondary">🌐 {rec.globalVotes ?? 0}票</Typography>
-                                        <Typography variant="caption" fontWeight={700} color="primary">👥 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal ?? 0}人投票</Typography>
-                                        {rec.linkedByName && <Typography variant="caption" color="text.secondary">{rec.linkedByName} 提名</Typography>}
-                                      </Stack>
+                                      {rec.linkedByName && <Typography variant="caption" color="text.secondary">{rec.linkedByName} 提名</Typography>}
                                     </Box>
+                                    {user && (
+                                      <Chip
+                                        size="small"
+                                        variant={voted ? 'filled' : 'outlined'}
+                                        color={voted ? 'primary' : 'default'}
+                                        label={`▲ ${rec.globalVotes ?? 0}`}
+                                        clickable
+                                        onClick={() => handleVote(rec.id, isMovie)}
+                                      />
+                                    )}
                                     {canSelect && (
                                       <Button variant="outlined" size="small" color="success" onClick={async () => {
                                         if (!eventId) return;
@@ -1855,29 +1901,43 @@ export default function EventDetailPage() {
         })()}
         {event.phase !== 'cancelled' && myStatus !== 'offered' && (
           <Box>
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={onSignup}
-              disabled={!user}
-              color={signedUp ? 'success' : myStatus === 'waitlist' ? 'warning' : myStatus === 'invited' ? 'info' : 'primary'}
-            >
-              {!user
-                ? '登录后可报名'
-                : event.phase === 'ended'
-                  ? signedUp
-                    ? '✓ 已参与'
-                    : '我也参加了'
-                  : myStatus === 'waitlist'
-                    ? `等位中 · 第${((event.signupDetails ?? []).filter(s => s.status === 'waitlist').findIndex(s => s.userId === user.id) + 1) || '?'}位`
-                    : signedUp
-                      ? '✓ 已报名'
+            {signedUp && event.phase !== 'ended' ? (
+              /* Already signed up: muted status with cancel option */
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Box sx={{ flex: 1, textAlign: 'center', py: 1.2, borderRadius: 2, bgcolor: 'success.main', opacity: 0.15 }}>
+                  <Typography sx={{ color: 'success.main', fontWeight: 700, fontSize: 14, opacity: 1 }}>✓ 已报名</Typography>
+                </Box>
+                <Button size="small" color="inherit" sx={{ color: 'text.secondary', fontSize: 12, flexShrink: 0 }} onClick={() => setCancelDialogOpen(true)}>
+                  取消报名
+                </Button>
+              </Stack>
+            ) : signedUp && event.phase === 'ended' ? (
+              /* Already participated in ended event: passive label */
+              <Box sx={{ textAlign: 'center', py: 1.2, borderRadius: 2, bgcolor: 'success.main', opacity: 0.15 }}>
+                <Typography sx={{ color: 'success.main', fontWeight: 700, fontSize: 14, opacity: 1 }}>✓ 已参与</Typography>
+              </Box>
+            ) : (
+              /* Not signed up: action button */
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={onSignup}
+                disabled={!user}
+                color={myStatus === 'waitlist' ? 'warning' : myStatus === 'invited' ? 'info' : 'primary'}
+              >
+                {!user
+                  ? '登录后可报名'
+                  : event.phase === 'ended'
+                    ? '我也参加了'
+                    : myStatus === 'waitlist'
+                      ? `等位中 · 第${((event.signupDetails ?? []).filter(s => s.status === 'waitlist').findIndex(s => s.userId === user.id) + 1) || '?'}位`
                       : myStatus === 'invited'
                         ? '接受邀请'
                         : event.spots <= 0
                           ? '加入等位'
                           : '报名参加'}
-            </Button>
+              </Button>
+            )}
           </Box>
         )}
 
@@ -1923,6 +1983,19 @@ export default function EventDetailPage() {
                 fullWidth
               />
               <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>封面图（可选）</Typography>
+                <ImageUpload
+                  value={editTitleImageUrl}
+                  onChange={setEditTitleImageUrl}
+                  category="event-image"
+                  ownerId={user?.id}
+                  width="100%"
+                  height={160}
+                  shape="rect"
+                  maxSize={10 * 1024 * 1024}
+                />
+              </Box>
+              <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>说明</Typography>
                 <Suspense fallback={<div style={{ minHeight: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>加载编辑器...</div>}>
                   <RichTextEditorLazy content={editDesc} onChange={setEditDesc} placeholder="活动说明..." />
@@ -1946,6 +2019,8 @@ export default function EventDetailPage() {
                   if (editCapacity !== event.total) payload.capacity = editCapacity;
                   if (editStartsAt) payload.startsAt = editStartsAt;
                   if (editEndsAt) payload.endsAt = editEndsAt;
+                  const currentImageUrl = event.scene?.startsWith('http') ? event.scene : '';
+                  if (editTitleImageUrl !== currentImageUrl) payload.titleImageUrl = editTitleImageUrl;
                   if (Object.keys(payload).length > 0) {
                     await updateEvent(eventId, payload as any);
                     setEvent((prev) => prev ? {
@@ -1957,6 +2032,7 @@ export default function EventDetailPage() {
                       spots: Math.max(0, (editCapacity || prev.total) - (1 + (prev.coHosts?.length ?? 0)) - (prev.signupDetails ?? []).filter((s) => ['accepted', 'invited', 'offered'].includes(s.status)).length),
                       date: editStartsAt ? new Date(editStartsAt).toLocaleString('zh-CN') : prev.date,
                       endDate: editEndsAt ? new Date(editEndsAt).toLocaleString('zh-CN') : prev.endDate,
+                      scene: editTitleImageUrl || prev.scene,
                     } : prev);
                     setFlash({ open: true, severity: 'success', message: '活动已更新' });
                   }

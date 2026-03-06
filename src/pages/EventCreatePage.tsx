@@ -202,6 +202,7 @@ export default function EventCreatePage() {
         startsAt: combineDT(startDate, startTime || '19:00'),
         capacity,
         description,
+        titleImageUrl: titleImageUrl || undefined,
         tags: mappedTags.length > 0 ? mappedTags : (lotteryId ? ['small_group'] : undefined),
         phase: isPastDate ? 'ended' : delayPublish ? 'invite' : 'open',
         publishAt: delayPublish && publishDate ? combineDT(publishDate, publishTime || '00:00') : undefined,
