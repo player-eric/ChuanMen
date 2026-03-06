@@ -300,7 +300,7 @@ export default function AppLayout() {
         </Drawer>
       )}
 
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100dvh' }}>
+      <Box sx={{ flex: 1, minWidth: 0, minHeight: '100dvh' }}>
         {/* Top AppBar: hamburger/back + title + status (v2.1 §4.0) */}
         <AppBar position="sticky" color="transparent" elevation={0} sx={{ backdropFilter: 'blur(10px)', borderBottom: 1, borderColor: 'divider' }}>
           <Toolbar sx={{ justifyContent: 'space-between' }}>
@@ -375,12 +375,9 @@ export default function AppLayout() {
         <Box
           key={pathname}
           sx={{
-            flex: 1,
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch',
             px: { xs: 2, sm: 3, md: 4 },
             py: 2,
-            pb: { xs: 2, md: 3 },
+            pb: { xs: 'calc(80px + env(safe-area-inset-bottom))', md: 3 },
             maxWidth: 1100,
             mx: 'auto',
             width: '100%',
@@ -405,7 +402,7 @@ export default function AppLayout() {
 
         {/* Bottom Tab Bar — 5 tabs, hidden when not logged in (v2.1 §4.0) */}
         {!isDesktop && visibleTabs.length > 0 && (
-          <Paper sx={{ flexShrink: 0, borderTop: 1, borderColor: 'divider', pb: 'env(safe-area-inset-bottom)' }} elevation={6}>
+          <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200, borderTop: 1, borderColor: 'divider', pb: 'env(safe-area-inset-bottom)' }} elevation={6}>
             <BottomNavigation
               showLabels
               value={activeTab}

@@ -550,7 +550,7 @@ function FullFeed() {
 
       <SpeedDial
         ariaLabel="快速操作"
-        sx={{ position: 'sticky', float: 'right', bottom: 16, right: { xs: 16, md: 32 }, mr: { xs: 0, md: 2 }, zIndex: 10 }}
+        sx={{ position: 'fixed', bottom: { xs: 'calc(72px + env(safe-area-inset-bottom))', md: 24 }, right: { xs: 16, md: 32 }, zIndex: 10 }}
         icon={<SpeedDialIcon />}
         FabProps={{ size: 'medium', disabled: !canInteract }}
       >
