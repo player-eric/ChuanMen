@@ -1060,6 +1060,22 @@ export default function EventDetailPage() {
                           </Avatar>
                           <Typography variant="body2" sx={{ flex: 1, opacity: 0.6 }}>{s.name}</Typography>
                           <Chip size="small" label="待接受" variant="outlined" sx={{ opacity: 0.6 }} />
+                          <IconButton
+                            size="small"
+                            onClick={async () => {
+                              if (!eventId || !user?.id) return;
+                              try {
+                                await removeParticipant(eventId, s.userId, user.id);
+                                setFlash({ open: true, severity: 'success', message: `已取消邀请 ${s.name}` });
+                                await refreshEvent();
+                              } catch {
+                                setFlash({ open: true, severity: 'error', message: '取消邀请失败' });
+                              }
+                            }}
+                            sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
                         </Stack>
                       ))}
                     </>
