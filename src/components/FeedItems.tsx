@@ -264,7 +264,7 @@ interface FeedTaskSummary {
 
 interface FeedActivityProps extends InteractionProps {
   name: string; title: string; date: string; location: string;
-  spots: number; people: string[]; signupUserIds?: string[]; film?: string; scene?: string;
+  spots: number; people: string[]; signupUserIds?: string[]; film?: string; filmPoster?: string; scene?: string;
   navTarget?: string;
   /** 'feed' = full card with signup/actions (default); 'list' = compact list card for EventsPage */
   mode?: 'feed' | 'list';
@@ -281,7 +281,7 @@ interface FeedActivityProps extends InteractionProps {
   taskSummary?: FeedTaskSummary[];
 }
 
-export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount, socialHint, time, taskSummary }: FeedActivityProps) {
+export function FeedActivity({ name, title, date, location, spots, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount, socialHint, time, taskSummary }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -362,7 +362,7 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
                 <div style={{ padding: '3px 8px', background: `${c.warm}25`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, fontWeight: 600, color: c.warm }}>🔒 私密</div>
               )}
             </div>
-            {film && <div style={{ position: 'absolute', bottom: 8, left: 10 }}><Poster title={film} w={32} h={44} /></div>}
+            {film && <div style={{ position: 'absolute', bottom: 8, left: 10 }}>{filmPoster ? <img src={filmPoster} alt={film} style={{ width: 32, height: 44, borderRadius: 4, objectFit: 'cover' }} /> : <Poster title={film} w={32} h={44} />}</div>}
           </ScenePhoto>
       )}
       <div style={{ padding: 14 }}>
@@ -389,7 +389,7 @@ export function FeedActivity({ name, title, date, location, spots, people, signu
         {scene && <div style={{ fontSize: 13, color: c.text2, marginBottom: 8 }}>{isList ? `${date} · ${location}` : location}</div>}
         {!scene && film && (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', background: c.s2, borderRadius: 6, marginBottom: 8 }}>
-            <Poster title={film} w={20} h={28} /><span style={{ fontSize: 12, color: c.text2 }}>放映 {film}</span>
+            {filmPoster ? <img src={filmPoster} alt={film} style={{ width: 20, height: 28, borderRadius: 3, objectFit: 'cover' }} /> : <Poster title={film} w={20} h={28} />}<span style={{ fontSize: 12, color: c.text2 }}>放映 {film}</span>
           </div>
         )}
         {isList && houseRules && (

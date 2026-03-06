@@ -123,6 +123,7 @@ function buildFeedItems(data: any): any[] {
       people,
       signupUserIds: allSignups.map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
       film: e.screenedMovies?.[0]?.movie?.title,
+      filmPoster: e.screenedMovies?.[0]?.movie?.poster || undefined,
       scene: eventTagToScene[e.tags?.[0]] ?? e.tags?.[0] ?? '',
       navTarget: `/events/${e.id}`,
       phase: e.phase ?? 'open',
@@ -412,6 +413,7 @@ function mapApiEvent(e: any): any {
     isHomeEvent: e.isHomeEvent ?? false,
     scene: e.titleImageUrl || eventTagToScene[e.tags?.[0]] || e.tags?.[0] || '',
     film: e.screenedMovies?.[0]?.movie?.title ?? e.film ?? undefined,
+    filmPoster: e.screenedMovies?.[0]?.movie?.poster || undefined,
     linkedRecommendations: [
       ...(e.recommendations ?? []).map((er: any) => ({
         id: er.recommendation?.id,

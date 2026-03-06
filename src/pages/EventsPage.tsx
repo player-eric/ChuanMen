@@ -161,6 +161,7 @@ export default function EventsPage() {
                     people={evt.people}
                     signupUserIds={evt.signupUserIds}
                     film={evt.film}
+                    filmPoster={evt.filmPoster}
                     scene={evt.scene}
                     navTarget={`/events/${evt.id}`}
                     phase={evt.phase}
@@ -340,6 +341,7 @@ export default function EventsPage() {
                       spots={evt.spots}
                       people={evt.people}
                       film={evt.film}
+                      filmPoster={evt.filmPoster}
                       scene={evt.scene}
                       navTarget={`/events/${evt.id}`}
                       phase="ended"
