@@ -89,6 +89,10 @@ export interface EventData {
   myOfferedAt?: string;
   /** Detailed signup info (for host waitlist management) */
   signupDetails?: SignupInfo[];
+  /** Co-host display names */
+  coHosts?: string[];
+  /** Co-host user IDs */
+  coHostIds?: string[];
 }
 
 export interface PastEvent {

@@ -33,7 +33,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EditIcon from '@mui/icons-material/Edit';
 import type { EventData, EventPhoto, EventTaskData, FoodOption, SignupStatus, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask } from '@/lib/domainApi';
+import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask, addCoHost, removeCoHost } from '@/lib/domainApi';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import CommentSection from '@/components/CommentSection';
 import { useAuth } from '@/auth/AuthContext';
@@ -163,6 +163,8 @@ export default function EventDetailPage() {
   const [taskClaimOpen, setTaskClaimOpen] = useState(false);
   const [newTaskRole, setNewTaskRole] = useState('');
   const [newTaskDesc, setNewTaskDesc] = useState('');
+  // Task assignment dialog state (host assigns task to a signed-up member)
+  const [assignTaskId, setAssignTaskId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<EventPhoto[]>(loadedEvent?.photos ?? []);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -174,6 +176,9 @@ export default function EventDetailPage() {
   const [hostInviteSearch, setHostInviteSearch] = useState('');
   const [hostInvitedPeople, setHostInvitedPeople] = useState<string[]>([]);
   const [directSignup, setDirectSignup] = useState(false);
+  // Co-host management dialog state
+  const [coHostDialogOpen, setCoHostDialogOpen] = useState(false);
+  const [coHostSearch, setCoHostSearch] = useState('');
   // Edit event dialog state
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -216,9 +221,24 @@ export default function EventDetailPage() {
   }, [eventId]);
 
   useEffect(() => {
-    fetchMoviesApi().then((m: any[]) => setAllMovies(m)).catch(() => {});
+    Promise.all([
+      fetchRecommendationsApi().catch(() => []),
+      fetchMoviesApi().catch(() => []),
+    ]).then(([recs, movies]: [any[], any[]]) => {
+      setAllMovies(movies);
+      // Merge movies into allRecs (same as EventCreatePage)
+      const movieRecs = movies.map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        category: 'movie',
+        description: [m.year, m.director].filter(Boolean).join(' · '),
+        voteCount: m.votes?.length ?? m._count?.votes ?? 0,
+        author: m.recommendedBy ?? m.author,
+        _fromMovieTable: true,
+      }));
+      setAllRecs([...recs, ...movieRecs]);
+    });
     fetchMembersApi().then((m: any[]) => setAllMembers(m)).catch(() => {});
-    fetchRecommendationsApi().then((r: any[]) => setAllRecs(r)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -230,11 +250,19 @@ export default function EventDetailPage() {
         const item = await getEventById(eventId);
         const hostName = typeof (item as any).host === 'string' ? (item as any).host : (item as any).host?.name ?? 'Host';
         const signups = ((item as any).signups ?? []) as any[];
-        const people = signups.map((s: any) => s.user?.name ?? s.userName ?? '?');
-        // Host 默认也是参与者之一
+        const coHostNames: string[] = ((item as any).coHosts ?? []).map((ch: any) => ch.user?.name).filter(Boolean);
+        const coHostIds: string[] = ((item as any).coHosts ?? []).map((ch: any) => ch.user?.id ?? ch.userId).filter(Boolean);
+        // People displayed: host + co-hosts + accepted/offered (invited hidden)
+        const accepted = signups.filter((s: any) => ['accepted', 'offered'].includes(s.status));
+        const occupying = signups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
+        const people = accepted.map((s: any) => s.user?.name ?? s.userName ?? '?');
         if (hostName && hostName !== '?' && !people.includes(hostName)) {
           people.unshift(hostName);
         }
+        for (const chName of coHostNames) {
+          if (chName && !people.includes(chName)) people.push(chName);
+        }
+        const hostSlots = 1 + coHostNames.length;
         setEvent({
           id: '',
           title: String(item.title ?? ''),
@@ -243,11 +271,13 @@ export default function EventDetailPage() {
           location: String(item.location ?? ''),
           scene: 'small-group',
           film: undefined,
-          spots: Math.max(0, Number(item.capacity ?? 0) - people.length),
+          spots: Math.max(0, Number(item.capacity ?? 0) - hostSlots - occupying.length),
           total: Number(item.capacity ?? 0),
           people,
           phase: String(item.phase ?? 'open') === 'invite' ? 'invite' : 'open',
           desc: String(item.description ?? ''),
+          coHosts: coHostNames,
+          coHostIds,
         });
       } catch {
         setEvent(null);
@@ -350,10 +380,17 @@ export default function EventDetailPage() {
       const signups = (raw as any).signups ?? [];
       const occupying = signups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
       const waitlistSignups = signups.filter((s: any) => s.status === 'waitlist');
-      const people = occupying.map((s: any) => s.user?.name ?? s.userName ?? '?');
+      const coHostNames: string[] = ((raw as any).coHosts ?? []).map((ch: any) => ch.user?.name).filter(Boolean);
+      const coHostIds: string[] = ((raw as any).coHosts ?? []).map((ch: any) => ch.user?.id ?? ch.userId).filter(Boolean);
+      // People displayed: host + co-hosts + accepted/offered (invited hidden)
+      const accepted = signups.filter((s: any) => ['accepted', 'offered'].includes(s.status));
+      const people = accepted.map((s: any) => s.user?.name ?? s.userName ?? '?');
       const hostName = typeof (raw as any).host === 'string' ? (raw as any).host : (raw as any).host?.name ?? '?';
       if (hostName && hostName !== '?' && !people.includes(hostName)) {
         people.unshift(hostName);
+      }
+      for (const chName of coHostNames) {
+        if (chName && !people.includes(chName)) people.push(chName);
       }
       const signupDetails = signups.map((s: any) => ({
         userId: s.user?.id ?? s.userId,
@@ -361,13 +398,16 @@ export default function EventDetailPage() {
         status: s.status,
         offeredAt: s.offeredAt ?? undefined,
       }));
+      const hostSlots = 1 + coHostNames.length;
       setEvent((prev) => prev ? {
         ...prev,
         people,
         host: hostName,
-        spots: Math.max(0, (prev.total ?? 0) - occupying.length),
+        spots: Math.max(0, (prev.total ?? 0) - hostSlots - occupying.length),
         waitlistCount: waitlistSignups.length,
         signupDetails,
+        coHosts: coHostNames,
+        coHostIds,
       } : prev);
       // Update myStatus
       if (user?.id) {
@@ -383,6 +423,7 @@ export default function EventDetailPage() {
 
   const phase = phaseLabel[event.phase] ?? phaseLabel.open;
   const isHost = user?.name === event.host;
+  const isCoHost = Boolean(user?.id && event.coHostIds?.includes(user.id));
   const isAdmin = user?.role === 'admin';
   const hostId: string = (loadedEvent as any)?.hostId ?? '';
 
@@ -928,7 +969,7 @@ export default function EventDetailPage() {
               {event.phase !== 'ended' && event.phase !== 'cancelled' && (
                 <Typography variant="body2" color={event.spots > 0 ? 'success.main' : 'text.secondary'}>
                   {event.spots > 0
-                    ? `还剩 ${event.spots}/${event.total} 位`
+                    ? `还剩 ${event.spots} 位 · 共 ${event.people.length}/${event.total} 人`
                     : (event.waitlistCount ?? 0) > 0
                       ? `已满 · ${event.waitlistCount}人等位`
                       : '已满'}
@@ -940,22 +981,46 @@ export default function EventDetailPage() {
                 </Typography>
               )}
             </Stack>
-            {(isHost || isAdmin) ? (
-              /* Host/admin view: list with remove buttons */
+            {(isHost || isCoHost || isAdmin) ? (
+              /* Host/co-host/admin view: list with remove buttons */
               <Stack spacing={0.5}>
                 {event.people.map((name) => {
                   const memberId = allMembers.find((m) => m.name === name)?.id;
+                  const isNameCoHost = event.coHosts?.includes(name) ?? false;
                   return (
                     <Stack key={name} direction="row" alignItems="center" spacing={1}>
                       <Avatar
-                        sx={{ cursor: 'pointer', width: 34, height: 34, ...(name === event.host ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
+                        sx={{ cursor: 'pointer', width: 34, height: 34, ...((name === event.host || isNameCoHost) ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
                         onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
                       >
                         {firstNonEmoji(name)}
                       </Avatar>
                       <Typography variant="body2" sx={{ flex: 1 }}>{name}</Typography>
                       {name === event.host && <Chip size="small" label="Host" variant="outlined" />}
-                      {name !== event.host && memberId && (
+                      {isNameCoHost && (
+                        <>
+                          <Chip size="small" label="Co-Host" variant="outlined" color="secondary" />
+                          {isHost && memberId && (
+                            <IconButton
+                              size="small"
+                              onClick={async () => {
+                                if (!eventId || !user?.id) return;
+                                try {
+                                  await removeCoHost(eventId, memberId, user.id);
+                                  setFlash({ open: true, severity: 'success', message: `已移除 Co-Host ${name}` });
+                                  await refreshEvent();
+                                } catch {
+                                  setFlash({ open: true, severity: 'error', message: '移除失败' });
+                                }
+                              }}
+                              sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}
+                            >
+                              <CloseIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                        </>
+                      )}
+                      {name !== event.host && !isNameCoHost && memberId && (
                         <IconButton
                           size="small"
                           onClick={async () => {
@@ -976,16 +1041,51 @@ export default function EventDetailPage() {
                     </Stack>
                   );
                 })}
+                {/* Invited section (pending acceptance) */}
+                {(() => {
+                  const invitedPeople = (event.signupDetails ?? []).filter((s) => s.status === 'invited');
+                  if (invitedPeople.length === 0) return null;
+                  return (
+                    <>
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, mb: 0.5 }}>
+                        已邀请（待确认）
+                      </Typography>
+                      {invitedPeople.map((s) => (
+                        <Stack key={s.userId} direction="row" alignItems="center" spacing={1}>
+                          <Avatar
+                            sx={{ cursor: 'pointer', width: 30, height: 30, opacity: 0.6 }}
+                            onClick={() => navigate(`/members/${encodeURIComponent(s.name)}`)}
+                          >
+                            {firstNonEmoji(s.name)}
+                          </Avatar>
+                          <Typography variant="body2" sx={{ flex: 1, opacity: 0.6 }}>{s.name}</Typography>
+                          <Chip size="small" label="待接受" variant="outlined" sx={{ opacity: 0.6 }} />
+                        </Stack>
+                      ))}
+                    </>
+                  );
+                })()}
                 {event.phase !== 'cancelled' && (
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<AddIcon />}
-                    onClick={() => setHostInviteOpen(true)}
-                    sx={{ mt: 1, alignSelf: 'flex-start' }}
-                  >
-                    {event.phase === 'ended' ? '添加参与者' : '邀请成员'}
-                  </Button>
+                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<AddIcon />}
+                      onClick={() => setHostInviteOpen(true)}
+                    >
+                      {event.phase === 'ended' ? '添加参与者' : '邀请成员'}
+                    </Button>
+                    {isHost && event.phase !== 'ended' && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        color="secondary"
+                        onClick={() => setCoHostDialogOpen(true)}
+                      >
+                        添加 Co-Host
+                      </Button>
+                    )}
+                  </Stack>
                 )}
               </Stack>
             ) : (
@@ -1007,15 +1107,18 @@ export default function EventDetailPage() {
                       }
                     }}
                   >
-                    {event.people.map((name) => (
-                      <Avatar
-                        key={name}
-                        sx={{ cursor: 'pointer', width: 34, height: 34, ...(name === event.host ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
-                        onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
-                      >
-                        {firstNonEmoji(name)}
-                      </Avatar>
-                    ))}
+                    {event.people.map((name) => {
+                      const isNameCoHost = event.coHosts?.includes(name) ?? false;
+                      return (
+                        <Avatar
+                          key={name}
+                          sx={{ cursor: 'pointer', width: 34, height: 34, ...((name === event.host || isNameCoHost) ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
+                          onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
+                        >
+                          {firstNonEmoji(name)}
+                        </Avatar>
+                      );
+                    })}
                   </AvatarGroup>
                   {showAllPeople && (
                     <Typography
@@ -1029,7 +1132,7 @@ export default function EventDetailPage() {
                   )}
                 </Stack>
                 <Typography variant="caption" color="text.secondary">
-                  🏠 {event.host} · Host
+                  🏠 {event.host} · Host{(event.coHosts?.length ?? 0) > 0 && ` + ${event.coHosts!.join(', ')} · Co-Host`}
                 </Typography>
               </Stack>
             )}
@@ -1239,45 +1342,59 @@ export default function EventDetailPage() {
                         />
                       </Stack>
                       {task.claimedBy ? (
-                        task.claimedById === user?.id ? (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={async () => {
-                              if (!eventId) return;
-                              try {
-                                await unclaimEventTask(eventId, task.id);
-                                await refreshTasks();
-                                setFlash({ open: true, severity: 'success', message: `已取消认领「${task.role}」` });
-                              } catch {
-                                setFlash({ open: true, severity: 'error', message: '操作失败' });
-                              }
-                            }}
-                          >
-                            取消认领
-                          </Button>
-                        ) : (
-                          <Chip size="small" color="success" label="已分配" />
-                        )
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          {(task.claimedById === user?.id || isHost || isCoHost || isAdmin) && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={async () => {
+                                if (!eventId) return;
+                                try {
+                                  await unclaimEventTask(eventId, task.id);
+                                  await refreshTasks();
+                                  setFlash({ open: true, severity: 'success', message: `已取消「${task.role}」的分配` });
+                                } catch {
+                                  setFlash({ open: true, severity: 'error', message: '操作失败' });
+                                }
+                              }}
+                            >
+                              {task.claimedById === user?.id ? '取消认领' : '取消分配'}
+                            </Button>
+                          )}
+                          {task.claimedById !== user?.id && !(isHost || isCoHost || isAdmin) && (
+                            <Chip size="small" color="success" label="已分配" />
+                          )}
+                        </Stack>
                       ) : (
-                        user && (signedUp || isHost || isAdmin) && (
-                          <Button
-                            size="small"
-                            variant="contained"
-                            onClick={async () => {
-                              if (!eventId) return;
-                              try {
-                                await claimEventTask(eventId, task.id, user.id);
-                                await refreshTasks();
-                                setFlash({ open: true, severity: 'success', message: `已认领「${task.role}」` });
-                              } catch (err) {
-                                setFlash({ open: true, severity: 'error', message: err instanceof Error ? err.message : '认领失败' });
-                              }
-                            }}
-                          >
-                            我来！
-                          </Button>
-                        )
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          {user && (signedUp || isHost || isCoHost || isAdmin) && (
+                            <Button
+                              size="small"
+                              variant="contained"
+                              onClick={async () => {
+                                if (!eventId) return;
+                                try {
+                                  await claimEventTask(eventId, task.id, user.id);
+                                  await refreshTasks();
+                                  setFlash({ open: true, severity: 'success', message: `已认领「${task.role}」` });
+                                } catch (err) {
+                                  setFlash({ open: true, severity: 'error', message: err instanceof Error ? err.message : '认领失败' });
+                                }
+                              }}
+                            >
+                              我来！
+                            </Button>
+                          )}
+                          {(isHost || isCoHost || isAdmin) && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => setAssignTaskId(task.id)}
+                            >
+                              指派
+                            </Button>
+                          )}
+                        </Stack>
                       )}
                     </Stack>
                   ))}
@@ -1325,6 +1442,59 @@ export default function EventDetailPage() {
             setFlash({ open: true, severity: 'success', message: '自荐成功！' });
           }}
         />
+
+        {/* Assign task dialog — host picks a signed-up member */}
+        <Dialog open={Boolean(assignTaskId)} onClose={() => setAssignTaskId(null)} maxWidth="xs" fullWidth>
+          <DialogTitle>指派分工</DialogTitle>
+          <DialogContent>
+            {(() => {
+              const task = eventTasks.find((t) => t.id === assignTaskId);
+              if (!task) return null;
+              // Show accepted participants (not host/co-hosts, not already assigned to this task)
+              const assignable = (event.signupDetails ?? [])
+                .filter((s) => ['accepted', 'offered'].includes(s.status))
+                .filter((s) => s.name !== event.host && !(event.coHosts ?? []).includes(s.name));
+              return (
+                <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    为「{task.role}」选择负责人
+                  </Typography>
+                  {assignable.map((s) => (
+                    <Stack key={s.userId} direction="row" alignItems="center" spacing={1}>
+                      <Avatar sx={{ width: 28, height: 28 }}>{firstNonEmoji(s.name)}</Avatar>
+                      <Typography variant="body2" sx={{ flex: 1 }}>{s.name}</Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={async () => {
+                          if (!eventId || !assignTaskId) return;
+                          try {
+                            await claimEventTask(eventId, assignTaskId, s.userId);
+                            await refreshTasks();
+                            setAssignTaskId(null);
+                            setFlash({ open: true, severity: 'success', message: `已指派「${task.role}」给 ${s.name}` });
+                          } catch (err) {
+                            setFlash({ open: true, severity: 'error', message: err instanceof Error ? err.message : '指派失败' });
+                          }
+                        }}
+                      >
+                        指派
+                      </Button>
+                    </Stack>
+                  ))}
+                  {assignable.length === 0 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ py: 1, textAlign: 'center' }}>
+                      暂无可指派的参与者
+                    </Typography>
+                  )}
+                </Stack>
+              );
+            })()}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setAssignTaskId(null)}>关闭</Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Photo Gallery — always visible */}
         <Card>
@@ -1714,11 +1884,12 @@ export default function EventDetailPage() {
                 fullWidth
               />
               <TextField
-                label="人数上限"
+                label="总人数上限（含 Host）"
                 type="number"
                 value={editCapacity}
                 onChange={(e) => setEditCapacity(Math.max(2, Number(e.target.value) || 8))}
                 fullWidth
+                helperText="包括 Host 和 Co-Host 在内的总人数"
               />
               <TextField
                 label="开始时间"
@@ -1768,7 +1939,7 @@ export default function EventDetailPage() {
                       desc: editDesc ?? prev.desc,
                       location: editLocation || prev.location,
                       total: editCapacity || prev.total,
-                      spots: Math.max(0, (editCapacity || prev.total) - prev.people.length),
+                      spots: Math.max(0, (editCapacity || prev.total) - (1 + (prev.coHosts?.length ?? 0)) - (prev.signupDetails ?? []).filter((s) => ['accepted', 'invited', 'offered'].includes(s.status)).length),
                       date: editStartsAt ? new Date(editStartsAt).toLocaleString('zh-CN') : prev.date,
                       endDate: editEndsAt ? new Date(editEndsAt).toLocaleString('zh-CN') : prev.endDate,
                     } : prev);
@@ -1883,6 +2054,99 @@ export default function EventDetailPage() {
                 {event.phase === 'ended' ? '确认添加' : directSignup ? '确认报名' : '确认邀请'}
               </Button>
             </Stack>
+          </DialogActions>
+        </Dialog>
+
+        {/* Co-host management dialog */}
+        <Dialog open={coHostDialogOpen} onClose={() => { setCoHostDialogOpen(false); setCoHostSearch(''); }} maxWidth="xs" fullWidth>
+          <DialogTitle>管理 Co-Host</DialogTitle>
+          <DialogContent>
+            {/* Current co-hosts */}
+            {(event.coHosts?.length ?? 0) > 0 && (
+              <Stack spacing={0.5} sx={{ mb: 2 }}>
+                <Typography variant="caption" color="text.secondary">当前 Co-Host</Typography>
+                {event.coHosts!.map((name) => {
+                  const memberId = allMembers.find((m) => m.name === name)?.id;
+                  return (
+                    <Stack key={name} direction="row" alignItems="center" spacing={1}>
+                      <Avatar sx={{ width: 28, height: 28 }}>{firstNonEmoji(name)}</Avatar>
+                      <Typography variant="body2" sx={{ flex: 1 }}>{name}</Typography>
+                      {memberId && (
+                        <IconButton
+                          size="small"
+                          onClick={async () => {
+                            if (!eventId || !user?.id) return;
+                            try {
+                              await removeCoHost(eventId, memberId, user.id);
+                              setFlash({ open: true, severity: 'success', message: `已移除 Co-Host ${name}` });
+                              await refreshEvent();
+                            } catch {
+                              setFlash({ open: true, severity: 'error', message: '移除失败' });
+                            }
+                          }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Stack>
+                  );
+                })}
+              </Stack>
+            )}
+            <TextField
+              autoFocus
+              fullWidth
+              size="small"
+              placeholder="搜索成员..."
+              value={coHostSearch}
+              onChange={(e) => setCoHostSearch(e.target.value)}
+              sx={{ mb: 1 }}
+            />
+            {(() => {
+              const filtered = allMembers.filter((m) => {
+                if (m.name === event.host) return false;
+                if (event.coHosts?.includes(m.name)) return false;
+                if (coHostSearch && !m.name.toLowerCase().includes(coHostSearch.toLowerCase())) return false;
+                return true;
+              }).slice(0, 10);
+              return (
+                <Stack spacing={0.5}>
+                  {filtered.map((m) => (
+                    <Stack direction="row" key={m.name} justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Avatar sx={{ width: 28, height: 28 }}>{firstNonEmoji(m.name)}</Avatar>
+                        <Typography variant="body2">{m.name}</Typography>
+                      </Stack>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="secondary"
+                        onClick={async () => {
+                          if (!eventId || !user?.id || !m.id) return;
+                          try {
+                            await addCoHost(eventId, m.id, user.id);
+                            setFlash({ open: true, severity: 'success', message: `已添加 Co-Host ${m.name}` });
+                            await refreshEvent();
+                          } catch {
+                            setFlash({ open: true, severity: 'error', message: '添加失败' });
+                          }
+                        }}
+                      >
+                        添加
+                      </Button>
+                    </Stack>
+                  ))}
+                  {filtered.length === 0 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ py: 1, textAlign: 'center' }}>
+                      {coHostSearch ? '未找到匹配成员' : '没有更多可添加的成员'}
+                    </Typography>
+                  )}
+                </Stack>
+              );
+            })()}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => { setCoHostDialogOpen(false); setCoHostSearch(''); }}>关闭</Button>
           </DialogActions>
         </Dialog>
 

@@ -20,7 +20,7 @@ NYC-based Chinese-language social community platform. Features: event management
 - **Events (活动)** — Three-tab layout (即将到来 / 创意孵化中 / 过往活动). Two-phase invite system (invite → open → closed → ended). Waitlist with 24h offer mechanism (auto-expire via cron). **Task claiming system** (host creates tasks from presets, members claim/volunteer after signup via `TaskClaimDialog`). Host can manage invites, signups, movie selection, task assignment, recommendation linking. Per-event photo gallery. Supports private events, home events with private location.
 - **Discover (发现/推荐)** — Unified multi-category browser (movies, books, recipes, music, places, external events). Tabbed view with external search (TMDB). Replaces separate category pages. Book detail page for book recommendations.
 - **Proposals (活动提案)** — Submit and vote on activity ideas. Status lifecycle: discussing → scheduled → completed → cancelled. "我来组织" converts a proposal into an event.
-- **Postcards (感谢卡)** — Three-step send flow (选人 → 写话 → 预览寄出). Privacy modes (public/private). Credit-based system: earn by attending/hosting events, initial credit on registration. Preset tag selection for quick messages.
+- **Postcards (感谢卡)** — Three-step send flow (选人 → 写话 → 预览寄出). Privacy modes (public/private). Credit-based system: 4 credits on registration, +2 per completed event for attendees, host gets +6 (+2 attend + 4 host bonus). Only awards if at least 1 participant besides host; cancelled/empty events don't count. Agent awards credits automatically via `creditsAwarded` flag on Event. Preset tag selection for quick messages.
 - **Profile (我的页面)** — Participation stats, milestone timeline (成长足迹 via `MilestoneTimeline`), hosted events, movies, postcards sent/received.
 - **Member Wall (成员墙)** — Gallery grid with cover photos, titles, host badges. Search by name/title. Member detail page with mutual experience tracking (共同活动, 共同品味, 互寄卡片).
 - **About Page** — Hero section, community stats, 5 entry cards (成员, 串门原则, Host 手册, 串门来信, 关于我们), bottom beliefs, CTA for visitors.
@@ -371,12 +371,16 @@ Key models (45+ total in `schema.prisma`):
 ### Manual Tests
 - `docs/test-guide.html` — 15-section UI test checklist. Test account: `cm@gmail.com`
 
+## CRITICAL: Backward Compatibility
+
+**NEVER make changes that lose existing data.** All schema changes MUST use additive migrations (ADD COLUMN with defaults, never DROP COLUMN without explicit user approval). Capacity semantics change (from "max signups" to "total people including host") was handled by incrementing all existing events' capacity by 1 in migration SQL. Always think about existing data impact before making changes.
+
 ## Known Gaps / Future Work
 
 1. **No backend auth middleware** — API endpoints are unprotected. Backend relies on `x-user-id` header trust. No JWT/session.
 2. **Discussion/Topic feature** — `Discussion` Prisma model exists but no backend routes/services or frontend UI are implemented.
 3. **Seed (种子) feature** — Prisma models exist (`Seed`, `SeedCollaborator`, `SeedUpdate`, `SeedUpdateMedia`) but no backend routes or frontend UI.
-4. **Postcard purchase** — Credit system works (earn via events/hosting). `PostcardPurchase` model exists but Stripe payment integration is not built.
+4. **Postcard purchase** — `PostcardPurchase` model exists but Stripe payment integration is not built.
 5. **Google OAuth bind/unbind in settings** — Google login + auto-binding works, but explicit bind/unbind UI in settings page is stubbed ("即将开放").
 6. **Quiet hours** — Email quiet hours setting noted as "即将上线" in settings page.
 7. **Co-Host auto-pairing** — `ExperimentPairing` model exists but no routes/UI. P3-D email rule describes auto-pairing but not implemented.

@@ -168,11 +168,37 @@ export class EventService {
     return cancelled;
   }
 
-  async removeParticipant(eventId: string, userId: string, requesterId: string) {
-    // Verify requester is the host
+  // ── Co-host management ──
+
+  async addCoHost(eventId: string, userId: string, requesterId: string) {
     const event = await this.repository.getById(eventId);
-    if (!event || event.hostId !== requesterId) {
-      throw new Error('只有 Host 可以移除参与者');
+    if (!event) throw new Error('活动不存在');
+    if (event.hostId !== requesterId) throw new Error('只有 Host 可以添加 Co-Host');
+    if (event.hostId === userId) throw new Error('Host 不能添加自己为 Co-Host');
+    return this.repository.addCoHost(eventId, userId);
+  }
+
+  async removeCoHost(eventId: string, userId: string, requesterId: string) {
+    const event = await this.repository.getById(eventId);
+    if (!event) throw new Error('活动不存在');
+    if (event.hostId !== requesterId) throw new Error('只有 Host 可以移除 Co-Host');
+    return this.repository.removeCoHost(eventId, userId);
+  }
+
+  /** Check if requester is host or co-host of this event */
+  private async isHostOrCoHost(eventId: string, userId: string): Promise<boolean> {
+    const event = await this.repository.getById(eventId);
+    if (!event) return false;
+    if (event.hostId === userId) return true;
+    return event.coHosts?.some((ch: any) => ch.userId === userId) ?? false;
+  }
+
+  async removeParticipant(eventId: string, userId: string, requesterId: string) {
+    // Verify requester is the host or co-host
+    const event = await this.repository.getById(eventId);
+    const isHostOrCoHost = event && (event.hostId === requesterId || event.coHosts?.some((ch: any) => ch.userId === requesterId));
+    if (!event || !isHostOrCoHost) {
+      throw new Error('只有 Host 或 Co-Host 可以移除参与者');
     }
     const { cancelled, promoted } = await this.repository.cancelSignup(eventId, userId);
 

@@ -773,6 +773,23 @@ export async function removeParticipant(eventId: string, userId: string, request
   });
 }
 
+/** Add a co-host to an event */
+export async function addCoHost(eventId: string, userId: string, requesterId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/co-hosts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-user-id': requesterId },
+    body: JSON.stringify({ userId }),
+  });
+}
+
+/** Remove a co-host from an event */
+export async function removeCoHost(eventId: string, userId: string, requesterId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/co-hosts/${userId}`, {
+    method: 'DELETE',
+    headers: { 'x-user-id': requesterId },
+  });
+}
+
 /** User accepts a waitlist offer */
 export async function acceptOffer(eventId: string, userId: string) {
   return requestJson<{ ok: boolean }>(`/api/events/${eventId}/offer/accept`, {

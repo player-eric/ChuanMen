@@ -95,16 +95,23 @@ function buildFeedItems(data: any): any[] {
     const allSignups = (e.signups ?? []) as any[];
     const feedOccupying = allSignups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
     const feedWaitlist = allSignups.filter((s: any) => s.status === 'waitlist');
-    const people = feedOccupying.map((s: any) => s.user?.name).filter(Boolean);
+    const feedCoHostNames: string[] = (e.coHosts ?? []).map((ch: any) => ch.user?.name).filter(Boolean);
+    // People displayed: host + co-hosts + accepted/offered (invited hidden)
+    const feedAccepted = allSignups.filter((s: any) => ['accepted', 'offered'].includes(s.status));
+    const people = feedAccepted.map((s: any) => s.user?.name).filter(Boolean);
     // Host 默认也是参与者之一
     if (hostName && !people.includes(hostName)) {
       people.unshift(hostName);
+    }
+    for (const chName of feedCoHostNames) {
+      if (chName && !people.includes(chName)) people.push(chName);
     }
     // Build task summary for feed card
     const feedTasks = ((e as any).tasks ?? []).map((t: any) => ({
       role: t.role,
       claimerName: t.claimedBy?.name ?? undefined,
     }));
+    const feedHostSlots = 1 + feedCoHostNames.length;
     addToDate(sortKey, sortLabel, {
       type: 'activity',
       name: hostName,
@@ -112,7 +119,7 @@ function buildFeedItems(data: any): any[] {
       date: d,
       time: e.createdAt ? timeAgo(e.createdAt) : '',
       location: e.location ?? '',
-      spots: Math.max(0, (e.capacity ?? 8) - feedOccupying.length),
+      spots: Math.max(0, (e.capacity ?? 8) - feedHostSlots - feedOccupying.length),
       people,
       signupUserIds: allSignups.map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
       film: e.screenedMovies?.[0]?.movie?.title,
@@ -355,21 +362,33 @@ function mapApiEvent(e: any): any {
   const hostName = typeof e.host === 'string' ? e.host : e.host?.name ?? '?';
   const hostId = typeof e.host === 'string' ? e.host : e.host?.id ?? '';
 
+  // Co-hosts
+  const coHostNames: string[] = (e.coHosts ?? []).map((ch: any) => ch.user?.name).filter(Boolean);
+  const coHostIds: string[] = (e.coHosts ?? []).map((ch: any) => ch.user?.id ?? ch.userId).filter(Boolean);
+
   // Split signups by status
   const occupying = signups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
   const waitlistSignups = signups.filter((s: any) => s.status === 'waitlist');
 
-  // People list = only occupying signups (not waitlisted)
-  const people = occupying.map((s: any) => s.user?.name ?? s.userName ?? '?');
+  // People displayed: host + co-hosts + accepted/offered only (invited hidden from display)
+  const accepted = signups.filter((s: any) => ['accepted', 'offered'].includes(s.status));
+  const people = accepted.map((s: any) => s.user?.name ?? s.userName ?? '?');
   // Host 默认也是参与者之一
   if (hostName && hostName !== '?' && !people.includes(hostName)) {
     people.unshift(hostName);
+  }
+  // Add co-hosts to people list
+  for (const name of coHostNames) {
+    if (name && !people.includes(name)) people.push(name);
   }
 
   // Collect signup user IDs for visibility checks (invite phase) — include all non-removed
   const signupUserIds = signups.map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
   if (hostId && !signupUserIds.includes(hostId)) {
     signupUserIds.unshift(hostId);
+  }
+  for (const id of coHostIds) {
+    if (id && !signupUserIds.includes(id)) signupUserIds.push(id);
   }
 
   // Signup details for host waitlist management
@@ -429,11 +448,13 @@ function mapApiEvent(e: any): any {
         return [cat, mode];
       }),
     ),
-    spots: Math.max(0, (e.capacity ?? 0) - occupying.length),
+    spots: Math.max(0, (e.capacity ?? 0) - (1 + coHostNames.length) - occupying.length),
     total: e.capacity ?? 0,
     people,
     signupUserIds,
     signupDetails,
+    coHosts: coHostNames,
+    coHostIds,
     waitlistCount: waitlistSignups.length,
     phase: e.phase ?? 'open',
     desc: e.description ?? '',
@@ -473,8 +494,9 @@ async function eventsLoader() {
       })),
       past: (past ?? []).map((e: any) => {
         const signupCount = e._count?.signups ?? e.people ?? 0;
-        // Host 默认也是参与者之一 — count +1 if not already included in signups
-        const peopleCount = signupCount > 0 ? signupCount + 1 : signupCount;
+        const pastCoHostCount = (e.coHosts ?? []).length;
+        // Host + co-hosts + signups
+        const peopleCount = signupCount > 0 ? signupCount + 1 + pastCoHostCount : signupCount;
         return {
         id: e.id,
         title: e.title ?? '',

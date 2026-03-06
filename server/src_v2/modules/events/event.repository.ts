@@ -148,6 +148,39 @@ export class EventRepository {
     });
   }
 
+  /** Count co-hosts for an event. */
+  private async countCoHosts(eventId: string): Promise<number> {
+    return this.prisma.eventCoHost.count({ where: { eventId } });
+  }
+
+  /**
+   * Available signup slots = capacity - 1 (host) - coHostCount - occupyingSignups.
+   * Returns true if the event is full.
+   */
+  private async isFull(eventId: string, capacity: number): Promise<boolean> {
+    const [occupied, coHostCount] = await Promise.all([
+      this.countOccupying(eventId),
+      this.countCoHosts(eventId),
+    ]);
+    const hostSlots = 1 + coHostCount; // host + co-hosts
+    return occupied + hostSlots >= capacity;
+  }
+
+  // ── Co-host management ──
+
+  async addCoHost(eventId: string, userId: string) {
+    return this.prisma.eventCoHost.create({
+      data: { eventId, userId },
+      include: { user: { select: { id: true, name: true, avatar: true } } },
+    });
+  }
+
+  async removeCoHost(eventId: string, userId: string) {
+    return this.prisma.eventCoHost.delete({
+      where: { eventId_userId: { eventId, userId } },
+    });
+  }
+
   /**
    * Signup with capacity awareness.
    * Returns the signup record plus `wasWaitlisted` flag.
@@ -160,9 +193,9 @@ export class EventRepository {
 
     const isEnded = event.phase === 'ended' || event.status === 'completed';
 
-    const occupied = await this.countOccupying(eventId);
+    const full = await this.isFull(eventId, event.capacity);
     let status: EventSignupStatus = 'accepted';
-    if (!isEnded && occupied >= event.capacity && event.waitlistEnabled) {
+    if (!isEnded && full && event.waitlistEnabled) {
       status = 'waitlist';
     }
 
@@ -205,7 +238,7 @@ export class EventRepository {
   }
 
   /**
-   * If there is room (occupying < capacity), promote the earliest waitlisted signup to `offered`.
+   * If there is room (occupying + host + coHosts < capacity), promote the earliest waitlisted signup to `offered`.
    * Returns the promoted signup or null.
    */
   async promoteNextWaitlisted(eventId: string) {
@@ -215,8 +248,8 @@ export class EventRepository {
     });
     if (!event.waitlistEnabled) return null;
 
-    const occupied = await this.countOccupying(eventId);
-    if (occupied >= event.capacity) return null;
+    const full = await this.isFull(eventId, event.capacity);
+    if (full) return null;
 
     const next = await this.prisma.eventSignup.findFirst({
       where: { eventId, status: 'waitlist' },
@@ -286,6 +319,7 @@ export class EventRepository {
       orderBy: { startsAt: 'desc' },
       include: {
         host: { select: { id: true, name: true, avatar: true } },
+        coHosts: { include: { user: { select: { id: true, name: true } } } },
         _count: { select: { signups: true } },
       },
     });

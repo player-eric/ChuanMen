@@ -114,6 +114,67 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: consecutiveEvents update failed');
   }
 
+  // Phase 1e: Award postcard credits for completed events
+  try {
+    // Find completed events that haven't awarded credits yet
+    const unprocessed = await prisma.event.findMany({
+      where: {
+        status: 'completed',
+        creditsAwarded: false,
+      },
+      select: {
+        id: true,
+        hostId: true,
+        signups: {
+          where: { status: 'accepted', participated: true },
+          select: { userId: true },
+        },
+      },
+    });
+
+    for (const event of unprocessed) {
+      // Only award if at least 1 participant besides host
+      const participantIds = event.signups
+        .map((s) => s.userId)
+        .filter((uid) => uid !== event.hostId);
+
+      if (participantIds.length === 0) {
+        // No real participants — mark as processed but don't award
+        await prisma.event.update({
+          where: { id: event.id },
+          data: { creditsAwarded: true },
+        });
+        continue;
+      }
+
+      // Award +2 credits to each participant
+      if (participantIds.length > 0) {
+        await prisma.user.updateMany({
+          where: { id: { in: participantIds } },
+          data: { postcardCredits: { increment: 2 } },
+        });
+      }
+
+      // Award +2 (attend) + 4 (host bonus) = +6 to host
+      await prisma.user.update({
+        where: { id: event.hostId },
+        data: { postcardCredits: { increment: 6 } },
+      });
+
+      await prisma.event.update({
+        where: { id: event.id },
+        data: { creditsAwarded: true },
+      });
+
+      log.info(
+        { eventId: event.id, participants: participantIds.length },
+        'Agent: awarded postcard credits (host +6, participants +2 each)',
+      );
+    }
+  } catch (err) {
+    log.error({ err }, 'Agent: postcard credit award failed');
+  }
+
   // Phase 2: Waitlist offer expiry (time-sensitive, run before emails)
   try {
     await processWaitlistExpiry(prisma, log);

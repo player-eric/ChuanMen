@@ -236,6 +236,34 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  // ── Co-host management ──
+
+  app.post('/:id/co-hosts', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { userId } = request.body as { userId: string };
+    const requesterId = request.headers['x-user-id'] as string;
+    if (!requesterId) return reply.code(400).send({ message: '缺少 x-user-id' });
+    if (!userId) return reply.badRequest('缺少 userId');
+    try {
+      const coHost = await service.addCoHost(id, userId, requesterId);
+      return reply.code(201).send({ ok: true, coHost });
+    } catch (err: any) {
+      return reply.code(403).send({ message: err.message ?? '操作失败' });
+    }
+  });
+
+  app.delete('/:id/co-hosts/:userId', async (request, reply) => {
+    const { id, userId } = request.params as { id: string; userId: string };
+    const requesterId = request.headers['x-user-id'] as string;
+    if (!requesterId) return reply.code(400).send({ message: '缺少 x-user-id' });
+    try {
+      await service.removeCoHost(id, userId, requesterId);
+      return { ok: true };
+    } catch (err: any) {
+      return reply.code(403).send({ message: err.message ?? '操作失败' });
+    }
+  });
+
   // ── Event ↔ Movie (screening) linking ──
 
   app.post('/:id/movies', async (request, reply) => {

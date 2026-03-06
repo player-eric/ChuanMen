@@ -672,6 +672,7 @@ export default function EventCreatePage() {
                             setSelectedRecs((prev) => [...prev, {
                               id: r.id, title: r.title, category: r.category,
                               voteCount: votes, authorName: r.author?.name,
+                              _fromMovieTable: r._fromMovieTable || undefined,
                             }]);
                             setRecPickerOpen(false);
                             setRecSearch('');

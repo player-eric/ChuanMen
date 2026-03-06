@@ -176,7 +176,7 @@ model User {
   defaultHouseRules    String              @default("")
   homeAddress          String              @default("")
   subscribeNewsletter  Boolean             @default(true)
-  postcardCredits      Int                 @default(2)
+  postcardCredits      Int                 @default(4)
   hostCandidate        Boolean             @default(false)
   consecutiveEvents    Int                 @default(0)
   lastEventAt          DateTime?
@@ -306,6 +306,7 @@ model Event {
   isHomeEvent            Boolean                   @default(false)
   locationPrivate        Boolean                   @default(false)
   isPrivate              Boolean                   @default(false)
+  creditsAwarded         Boolean                   @default(false)
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt
 
