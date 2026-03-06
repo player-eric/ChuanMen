@@ -51,7 +51,6 @@ export class EventRepository {
         },
         screenedMovies: {
           include: { movie: { select: { id: true, title: true, poster: true, _count: { select: { votes: true } } } } },
-          take: 1,
         },
         recommendations: {
           include: {
@@ -240,10 +239,22 @@ export class EventRepository {
   async inviteUsers(eventId: string, userIds: string[], invitedById: string) {
     const results = [];
     for (const userId of userIds) {
+      const existing = await this.prisma.eventSignup.findUnique({
+        where: { eventId_userId: { eventId, userId } },
+      });
+      // Skip if already accepted/offered (don't downgrade to invited)
+      if (existing && ['accepted', 'offered'].includes(existing.status)) {
+        const signup = await this.prisma.eventSignup.findUnique({
+          where: { eventId_userId: { eventId, userId } },
+          include: { user: { select: { id: true, name: true, avatar: true } } },
+        });
+        if (signup) results.push(signup);
+        continue;
+      }
       const signup = await this.prisma.eventSignup.upsert({
         where: { eventId_userId: { eventId, userId } },
         create: { eventId, userId, invitedById, status: 'invited', invitedAt: new Date() },
-        update: {},
+        update: { invitedById, status: 'invited', invitedAt: new Date() },
         include: { user: { select: { id: true, name: true, avatar: true } } },
       });
       results.push(signup);

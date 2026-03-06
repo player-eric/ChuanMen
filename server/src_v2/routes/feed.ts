@@ -429,7 +429,12 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             _max: { createdAt: true },
           })
         : [],
-    ]) as [typeof allLikes, typeof commentCounts, typeof latestEventComments, { eventId: string; _max: { createdAt: Date | null } }[]];
+    ]) as [
+      Awaited<ReturnType<typeof prisma.like.findMany<{ where: any; include: { user: { select: { id: true; name: true } } } }>>>,
+      { entityType: string; entityId: string; _count: number }[],
+      { entityId: string; _max: { createdAt: Date | null } }[],
+      { eventId: string; _max: { createdAt: Date | null } }[],
+    ];
 
     // Group likes by entityId
     const likesMap = new Map<string, { count: number; names: string[] }>();

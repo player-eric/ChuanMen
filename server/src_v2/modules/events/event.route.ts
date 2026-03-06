@@ -30,53 +30,88 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     if (!event) return reply.notFound('活动不存在');
 
     // Compute attendeeVotes for each linked recommendation and movie
-    const acceptedUserIds = event.signups
+    // Participants = host + co-hosts + accepted/invited/offered signups
+    const signupUserIds = event.signups
       .filter((s: any) => s.status === 'accepted' || s.status === 'invited' || s.status === 'offered')
       .map((s: any) => s.user?.id ?? s.userId)
       .filter(Boolean);
+    const hostId = (event as any).hostId;
+    const coHostIds = ((event as any).coHosts ?? []).map((ch: any) => ch.userId).filter(Boolean);
+    const acceptedUserIds = [...new Set([...(hostId ? [hostId] : []), ...coHostIds, ...signupUserIds])];
     const attendeeTotal = acceptedUserIds.length;
 
     let enrichedRecs = event.recommendations;
     if (event.recommendations && event.recommendations.length > 0) {
       const recIds = event.recommendations.map((er: any) => er.recommendationId);
-      const votes = await app.prisma.recommendationVote.findMany({
-        where: {
-          recommendationId: { in: recIds },
-          userId: { in: acceptedUserIds },
-        },
-        select: { recommendationId: true, userId: true },
-      });
+      // Fetch ALL votes (not just attendees) so we can show voter IDs for the toggle
+      const [attendeeVotes, allVotes] = await Promise.all([
+        app.prisma.recommendationVote.findMany({
+          where: { recommendationId: { in: recIds }, userId: { in: acceptedUserIds } },
+          select: { recommendationId: true },
+        }),
+        app.prisma.recommendationVote.findMany({
+          where: { recommendationId: { in: recIds } },
+          select: { recommendationId: true, userId: true },
+        }),
+      ]);
       const attendeeVoteMap = new Map<string, number>();
-      for (const v of votes) {
+      for (const v of attendeeVotes) {
         attendeeVoteMap.set(v.recommendationId, (attendeeVoteMap.get(v.recommendationId) ?? 0) + 1);
       }
-      enrichedRecs = event.recommendations.map((er: any) => ({
-        ...er,
-        attendeeVotes: attendeeVoteMap.get(er.recommendationId) ?? 0,
-        attendeeTotal,
-      }));
+      const voterIdsMap = new Map<string, string[]>();
+      for (const v of allVotes) {
+        const arr = voterIdsMap.get(v.recommendationId) ?? [];
+        arr.push(v.userId);
+        voterIdsMap.set(v.recommendationId, arr);
+      }
+      enrichedRecs = event.recommendations.map((er: any) => {
+        const voters = voterIdsMap.get(er.recommendationId) ?? [];
+        return {
+          ...er,
+          globalVotes: voters.length,
+          attendeeVotes: attendeeVoteMap.get(er.recommendationId) ?? 0,
+          attendeeTotal,
+          voterIds: voters,
+        };
+      });
     }
 
     // Compute attendeeVotes for screenedMovies (Movie table entries)
     let enrichedMovies = event.screenedMovies;
-    if (event.screenedMovies && event.screenedMovies.length > 0 && acceptedUserIds.length > 0) {
+    if (event.screenedMovies && event.screenedMovies.length > 0) {
       const movieIds = event.screenedMovies.map((sm: any) => sm.movieId);
-      const movieVotes = await app.prisma.movieVote.findMany({
-        where: {
-          movieId: { in: movieIds },
-          userId: { in: acceptedUserIds },
-        },
-        select: { movieId: true },
-      });
+      const [movieAttendeeVotes, movieAllVotes] = await Promise.all([
+        acceptedUserIds.length > 0
+          ? app.prisma.movieVote.findMany({
+              where: { movieId: { in: movieIds }, userId: { in: acceptedUserIds } },
+              select: { movieId: true },
+            })
+          : [],
+        app.prisma.movieVote.findMany({
+          where: { movieId: { in: movieIds } },
+          select: { movieId: true, userId: true },
+        }),
+      ]);
       const movieVoteMap = new Map<string, number>();
-      for (const v of movieVotes) {
+      for (const v of movieAttendeeVotes) {
         movieVoteMap.set(v.movieId, (movieVoteMap.get(v.movieId) ?? 0) + 1);
       }
-      enrichedMovies = event.screenedMovies.map((sm: any) => ({
-        ...sm,
-        attendeeVotes: movieVoteMap.get(sm.movieId) ?? 0,
-        attendeeTotal,
-      }));
+      const movieVoterIdsMap = new Map<string, string[]>();
+      for (const v of movieAllVotes) {
+        const arr = movieVoterIdsMap.get(v.movieId) ?? [];
+        arr.push(v.userId);
+        movieVoterIdsMap.set(v.movieId, arr);
+      }
+      enrichedMovies = event.screenedMovies.map((sm: any) => {
+        const voters = movieVoterIdsMap.get(sm.movieId) ?? [];
+        return {
+          ...sm,
+          globalVotes: voters.length,
+          attendeeVotes: movieVoteMap.get(sm.movieId) ?? 0,
+          attendeeTotal,
+          voterIds: voters,
+        };
+      });
     }
 
     return { ...event, recommendations: enrichedRecs, screenedMovies: enrichedMovies };

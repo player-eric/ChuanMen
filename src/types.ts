@@ -61,7 +61,7 @@ export interface EventData {
   scene: string;
   film?: string;
   filmPoster?: string;
-  linkedRecommendations?: { id: string; title: string; category: string; coverUrl?: string; linkedById?: string; isSelected?: boolean; isNomination?: boolean; globalVotes?: number; attendeeVotes?: number; attendeeTotal?: number; linkedByName?: string }[];
+  linkedRecommendations?: { id: string; title: string; category: string; coverUrl?: string; linkedById?: string; isSelected?: boolean; isNomination?: boolean; globalVotes?: number; attendeeVotes?: number; attendeeTotal?: number; linkedByName?: string; voterIds?: string[] }[];
   recSelectionMode?: string;
   recCategories?: string[];
   recCategoryModes?: Record<string, string>;

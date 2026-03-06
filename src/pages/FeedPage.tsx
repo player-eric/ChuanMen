@@ -21,6 +21,8 @@ import {
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import type { FeedPageData, FeedItem, LotteryDraw } from '@/types';
@@ -425,6 +427,8 @@ function FullFeed() {
   useEffect(() => { setVisible(PAGE_SIZE); }, [items]);
 
   const canInteract = Boolean(user);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isDrawnPerson = lotteryState?.drawnMemberId === user?.id && lotteryState?.status === 'pending';
 
   const handleAcceptLottery = async () => {
@@ -552,7 +556,8 @@ function FullFeed() {
         ariaLabel="快速操作"
         sx={{ position: 'fixed', bottom: { xs: 'calc(72px + env(safe-area-inset-bottom))', md: 24 }, right: { xs: 16, md: 32 }, zIndex: 10 }}
         icon={<SpeedDialIcon />}
-        FabProps={{ size: 'medium', disabled: !canInteract }}
+        FabProps={{ size: 'medium', disabled: !canInteract, sx: { display: { md: 'none' } } }}
+        open={isMobile ? undefined : true}
       >
         <SpeedDialAction icon={<span>👍</span>} tooltipTitle="推荐好内容" tooltipOpen onClick={() => navigate('/discover')} />
         <SpeedDialAction icon={<span>✉️</span>} tooltipTitle="寄感谢卡" tooltipOpen onClick={() => navigate('/cards')} />

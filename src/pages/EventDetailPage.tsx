@@ -44,6 +44,7 @@ import { ImageUpload } from '@/components/ImageUpload';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 import { useTaskPresets } from '@/hooks/useTaskPresets';
 import { eventTagToChinese } from '@/lib/mappings';
+import { generateEventPoster, downloadBlob, resolveEventTag } from '@/lib/posterGenerator';
 
 const foodLabel: Record<FoodOption, string> = {
   potluck: 'Potluck · 每人带一道菜',
@@ -190,6 +191,7 @@ export default function EventDetailPage() {
   const [editEndsAt, setEditEndsAt] = useState('');
   const [editTitleImageUrl, setEditTitleImageUrl] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const [posterLoading, setPosterLoading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [flash, setFlash] = useState<{
@@ -648,6 +650,42 @@ export default function EventDetailPage() {
               </Stack>
             )}
 
+            {/* Poster generation — visible to all logged-in users */}
+            {user?.id && (
+              <Box sx={{ mb: 1.5 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  disabled={posterLoading}
+                  onClick={async () => {
+                    if (!event) return;
+                    setPosterLoading(true);
+                    try {
+                      const eventTag = resolveEventTag(event.scene, (event as any).tags);
+                      // Determine cover image: linked recommendation cover, filmPoster, or titleImageUrl
+                      const recCover = (event.linkedRecommendations ?? []).find((r) => r.coverUrl)?.coverUrl;
+                      const coverImageUrl = recCover || event.filmPoster || (event.scene?.startsWith('http') ? event.scene : undefined);
+                      const blob = await generateEventPoster({
+                        title: event.title,
+                        date: event.date,
+                        location: event.location,
+                        eventTag,
+                        coverImageUrl,
+                      });
+                      downloadBlob(blob, `${event.title}-海报.png`);
+                    } catch (err) {
+                      console.error('Poster generation failed:', err);
+                      setFlash({ open: true, severity: 'error', message: '海报生成失败' });
+                    } finally {
+                      setPosterLoading(false);
+                    }
+                  }}
+                >
+                  {posterLoading ? '生成中…' : '🖼️ 生成海报'}
+                </Button>
+              </Box>
+            )}
+
             {/* 3. Description */}
             {event.desc && (
               <Box sx={{ mt: 1, mb: 2, p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
@@ -742,6 +780,11 @@ export default function EventDetailPage() {
                   const serverCount = (result as any).voteCount as number | undefined;
                   setEvent((prev) => {
                     if (!prev) return prev;
+                    const signupIds: string[] = (prev as any).signupUserIds ?? [];
+                    const hId: string = (prev as any).hostId ?? '';
+                    const coIds: string[] = (prev as any).coHostIds ?? [];
+                    const isParticipant = user.id === hId || coIds.includes(user.id) || signupIds.includes(user.id);
+                    const delta = newVoted ? 1 : -1;
                     const updated = (prev.linkedRecommendations ?? []).map((r) => {
                       if (r.id !== recId) return r;
                       const newVoterIds = newVoted
@@ -750,7 +793,8 @@ export default function EventDetailPage() {
                       return {
                         ...r,
                         voterIds: newVoterIds,
-                        globalVotes: serverCount ?? ((r.globalVotes ?? 0) + (newVoted ? 1 : -1)),
+                        globalVotes: serverCount ?? ((r.globalVotes ?? 0) + delta),
+                        attendeeVotes: isParticipant ? Math.max(0, (r.attendeeVotes ?? 0) + delta) : r.attendeeVotes,
                       };
                     });
                     return { ...prev, linkedRecommendations: updated };
@@ -798,6 +842,12 @@ export default function EventDetailPage() {
                                 <Stack direction="row" spacing={1} alignItems="center">
                                   <Box sx={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => navigate(`/discover/${rec.category}/${rec.id}`)}>
                                     <Typography variant="body2" fontWeight={700}>{rec.title}</Typography>
+                                    <Stack direction="row" spacing={1.5} sx={{ mt: 0.25 }}>
+                                      <Typography variant="caption" color="text.secondary">串门儿 {rec.globalVotes ?? 0} 票</Typography>
+                                      {(rec.attendeeTotal ?? 0) > 0 && (
+                                        <Typography variant="caption" fontWeight={700} color="primary">参与者 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal} 已投</Typography>
+                                      )}
+                                    </Stack>
                                   </Box>
                                   <Chip size="small" color="success" label="✓ 已选" />
                                   {user && (
@@ -828,7 +878,13 @@ export default function EventDetailPage() {
                                   <Stack direction="row" spacing={1} alignItems="center">
                                     <Box sx={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => navigate(isMovie ? `/discover/movies/${rec.id}` : `/discover/${rec.category}/${rec.id}`)}>
                                       <Typography variant="body2" fontWeight={600}>{rec.title}</Typography>
-                                      {rec.linkedByName && <Typography variant="caption" color="text.secondary">{rec.linkedByName} 提名</Typography>}
+                                      <Stack direction="row" spacing={1.5} sx={{ mt: 0.25 }}>
+                                        <Typography variant="caption" color="text.secondary">串门儿 {rec.globalVotes ?? 0} 票</Typography>
+                                        {(rec.attendeeTotal ?? 0) > 0 && (
+                                          <Typography variant="caption" fontWeight={700} color="primary">参与者 {rec.attendeeVotes ?? 0}/{rec.attendeeTotal} 已投</Typography>
+                                        )}
+                                        {rec.linkedByName && <Typography variant="caption" color="text.secondary">{rec.linkedByName} 提名</Typography>}
+                                      </Stack>
                                     </Box>
                                     {user && (
                                       <Chip
@@ -2064,8 +2120,12 @@ export default function EventDetailPage() {
             />
             {(() => {
               const hq = hostInviteSearch.toLowerCase();
+              const invitedIds = new Set(
+                (event.signupDetails ?? []).filter((s) => s.status === 'invited').map((s) => s.userId),
+              );
               const filtered = allMembers.filter((m) => {
                 if (event.people.includes(m.name)) return false;
+                if (invitedIds.has(m.id)) return false;
                 if (hostInvitedPeople.includes(m.name)) return false;
                 if (hq && !m.name.toLowerCase().includes(hq)) return false;
                 return true;

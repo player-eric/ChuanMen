@@ -431,20 +431,30 @@ export function FeedActivity({ name, title, date, location, spots, total, people
             ))}
           </div>
         )}
-        {/* Ended event: "我也参加了" button */}
+        {/* Ended event: passive label if joined, clickable button if not */}
         {isEnded && !isCancelled && user && (
-          <button
-            onClick={handleSignup}
-            style={{
-              width: '100%', padding: '9px 0', borderRadius: 8,
-              background: joined ? c.s2 : 'transparent',
-              border: joined ? `1px solid ${c.green}30` : `1px solid ${c.warm}50`,
-              color: joined ? c.green : c.warm,
-              fontSize: 14, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
-            {joined ? '✓ 已参与' : '我也参加了'}
-          </button>
+          joined ? (
+            <div style={{
+              width: '100%', padding: '9px 0', borderRadius: 8, textAlign: 'center',
+              background: c.s2, border: `1px solid ${c.green}20`,
+              color: c.green, fontSize: 14, fontWeight: 700, opacity: 0.7,
+            }}>
+              ✓ 已参与
+            </div>
+          ) : (
+            <button
+              onClick={handleSignup}
+              style={{
+                width: '100%', padding: '9px 0', borderRadius: 8,
+                background: 'transparent',
+                border: `1px solid ${c.warm}50`,
+                color: c.warm,
+                fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              我也参加了
+            </button>
+          )
         )}
         {/* Social hint + signup (skip for ended/cancelled) */}
         {!isEnded && !isCancelled && (
