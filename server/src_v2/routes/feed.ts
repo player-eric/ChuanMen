@@ -31,7 +31,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
               include: { user: { select: { id: true, name: true } } },
             },
             screenedMovies: {
-              include: { movie: { select: { id: true, title: true, poster: true } } },
+              include: { movie: { select: { id: true, title: true, poster: true, _count: { select: { votes: true } } } } },
               take: 1,
             },
             recommendations: {
