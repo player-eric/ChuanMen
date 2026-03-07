@@ -13,7 +13,6 @@ import {
   DialogContent,
   DialogTitle,
   Grid,
-  Skeleton,
   Snackbar,
   SpeedDial,
   SpeedDialAction,
@@ -552,19 +551,63 @@ function FullFeed() {
         </Stack>
       )}
 
-      <SpeedDial
-        ariaLabel="快速操作"
-        sx={{ position: 'fixed', bottom: { xs: 'calc(72px + env(safe-area-inset-bottom))', md: 24 }, right: { xs: 16, md: 32 }, zIndex: 10 }}
-        icon={<SpeedDialIcon />}
-        FabProps={{ size: 'medium', disabled: !canInteract, sx: { display: { md: 'none' } } }}
-        open={isMobile ? undefined : true}
-      >
-        <SpeedDialAction icon={<span>👍</span>} tooltipTitle="推荐好内容" tooltipOpen onClick={() => navigate('/discover')} />
-        <SpeedDialAction icon={<span>✉️</span>} tooltipTitle="寄感谢卡" tooltipOpen onClick={() => navigate('/cards')} />
-        <SpeedDialAction icon={<span>💡</span>} tooltipTitle="提创意" tooltipOpen onClick={() => navigate('/events/proposals/new')} />
-        <SpeedDialAction icon={<span>➕</span>} tooltipTitle="发起活动" tooltipOpen onClick={() => navigate('/events/new')} />
-        <SpeedDialAction icon={<span>✏️</span>} tooltipTitle="写点什么" tooltipOpen onClick={() => setQuickOpen(true)} />
-      </SpeedDial>
+      {/* Mobile: SpeedDial FAB */}
+      {isMobile && (
+        <SpeedDial
+          ariaLabel="快速操作"
+          sx={{ position: 'fixed', bottom: 'calc(72px + env(safe-area-inset-bottom))', right: 16, zIndex: 10 }}
+          icon={<SpeedDialIcon />}
+          FabProps={{ size: 'medium', disabled: !canInteract }}
+        >
+          <SpeedDialAction icon={<span>👍</span>} tooltipTitle="推荐好内容" tooltipOpen onClick={() => navigate('/discover')} />
+          <SpeedDialAction icon={<span>✉️</span>} tooltipTitle="寄感谢卡" tooltipOpen onClick={() => navigate('/cards')} />
+          <SpeedDialAction icon={<span>💡</span>} tooltipTitle="提创意" tooltipOpen onClick={() => navigate('/events/proposals/new')} />
+          <SpeedDialAction icon={<span>➕</span>} tooltipTitle="发起活动" tooltipOpen onClick={() => navigate('/events/new')} />
+          <SpeedDialAction icon={<span>✏️</span>} tooltipTitle="写点什么" tooltipOpen onClick={() => setQuickOpen(true)} />
+        </SpeedDial>
+      )}
+
+      {/* Desktop: always-expanded pill buttons */}
+      {!isMobile && (
+        <Stack
+          spacing={1}
+          sx={{ position: 'fixed', bottom: 24, right: 32, zIndex: 10 }}
+        >
+          {([
+            { label: '写点什么', icon: '✏️', action: () => setQuickOpen(true) },
+            { label: '发起活动', icon: '+', action: () => navigate('/events/new') },
+            { label: '提创意', icon: '💡', action: () => navigate('/events/proposals/new') },
+            { label: '寄感谢卡', icon: '✉️', action: () => navigate('/cards') },
+            { label: '推荐好内容', icon: '👍', action: () => navigate('/discover') },
+          ] as const).map((item) => (
+            <Button
+              key={item.label}
+              disabled={!canInteract}
+              onClick={item.action}
+              sx={{
+                bgcolor: 'rgba(30,30,30,0.75)',
+                color: '#fff',
+                border: '1px solid',
+                borderColor: 'rgba(212,165,116,0.6)',
+                borderRadius: 999,
+                px: 2,
+                py: 0.5,
+                minHeight: 36,
+                justifyContent: 'flex-start',
+                textTransform: 'none',
+                fontSize: 13,
+                fontWeight: 500,
+                backdropFilter: 'blur(8px)',
+                gap: 0.75,
+                '&:hover': { bgcolor: 'rgba(50,50,50,0.88)', borderColor: 'rgba(212,165,116,0.85)' },
+              }}
+            >
+              <span style={{ fontSize: 14, lineHeight: 1 }}>{item.icon}</span>
+              {item.label}
+            </Button>
+          ))}
+        </Stack>
+      )}
 
       <QuickActionDialog open={quickOpen} onClose={() => setQuickOpen(false)} />
 

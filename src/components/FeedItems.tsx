@@ -279,10 +279,11 @@ interface FeedActivityProps extends InteractionProps {
   socialHint?: { name: string; count: number };
   time?: string;
   activityHint?: string;
+  activityHintUser?: string;
   taskSummary?: FeedTaskSummary[];
 }
 
-export function FeedActivity({ name, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount, socialHint, time, activityHint, taskSummary }: FeedActivityProps) {
+export function FeedActivity({ name, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount, socialHint, time, activityHint, activityHintUser, taskSummary }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -374,7 +375,14 @@ export function FeedActivity({ name, title, date, location, spots, total, people
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14 }}>
                 <b onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</b>
-                {' '}{activityHint === 'comment' ? '的活动有新评论 💬' : activityHint === 'signup' ? '的活动有新报名 👋' : activityHint === 'photo' ? '的活动有新照片 📷' : activityHint === 'update' ? '的活动有更新' : '发起了活动'}
+                {' '}{activityHint === 'comment' && activityHintUser
+                  ? <>的活动 · <b onClick={(e) => { e.stopPropagation(); goMember(activityHintUser); }} style={{ cursor: 'pointer' }}>{activityHintUser}</b> 评论了 💬</>
+                  : activityHint === 'signup' && activityHintUser
+                  ? <>的活动 · <b onClick={(e) => { e.stopPropagation(); goMember(activityHintUser); }} style={{ cursor: 'pointer' }}>{activityHintUser}</b> 报名了 👋</>
+                  : activityHint === 'comment' ? '的活动有新评论 💬'
+                  : activityHint === 'signup' ? '的活动有新报名 👋'
+                  : activityHint === 'photo' ? '的活动有新照片 📷'
+                  : activityHint === 'update' ? '的活动有更新' : '发起了活动'}
               </div>
               {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}</div>}
             </div>

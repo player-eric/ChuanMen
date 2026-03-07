@@ -27,7 +27,6 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           take: 20,
           include: {
             host: { select: { id: true, name: true, avatar: true } },
-            coHosts: { include: { user: { select: { id: true, name: true } } } },
             signups: {
               where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } },
               include: { user: { select: { id: true, name: true } } },
@@ -414,27 +413,31 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             _count: true,
           })
         : [],
-      // Latest comment time per event (for activity hint)
+      // Latest comment per event (for activity hint — who commented)
       eventIds.length > 0
-        ? prisma.comment.groupBy({
-            by: ['entityId'],
-            where: { entityType: 'event', entityId: { in: eventIds } },
-            _max: { createdAt: true },
-          })
+        ? prisma.$queryRawUnsafe<{ entityId: string; createdAt: Date; userName: string }[]>(
+            `SELECT DISTINCT ON (c."entityId") c."entityId", c."createdAt", u."name" AS "userName"
+             FROM "Comment" c JOIN "User" u ON u.id = c."authorId"
+             WHERE c."entityType" = 'event' AND c."entityId" = ANY($1::text[])
+             ORDER BY c."entityId", c."createdAt" DESC`,
+            eventIds,
+          )
         : [],
-      // Latest signup time per event (for activity hint)
+      // Latest signup per event (for activity hint — who signed up)
       eventIds.length > 0
-        ? prisma.eventSignup.groupBy({
-            by: ['eventId'],
-            where: { eventId: { in: eventIds } },
-            _max: { createdAt: true },
-          })
+        ? prisma.$queryRawUnsafe<{ eventId: string; createdAt: Date; userName: string }[]>(
+            `SELECT DISTINCT ON (s."eventId") s."eventId", s."createdAt", u."name" AS "userName"
+             FROM "EventSignup" s JOIN "User" u ON u.id = s."userId"
+             WHERE s."eventId" = ANY($1::text[])
+             ORDER BY s."eventId", s."createdAt" DESC`,
+            eventIds,
+          )
         : [],
     ]) as [
       Awaited<ReturnType<typeof prisma.like.findMany<{ where: any; include: { user: { select: { id: true; name: true } } } }>>>,
       { entityType: string; entityId: string; _count: number }[],
-      { entityId: string; _max: { createdAt: Date | null } }[],
-      { eventId: string; _max: { createdAt: Date | null } }[],
+      { entityId: string; createdAt: Date; userName: string }[],
+      { eventId: string; createdAt: Date; userName: string }[],
     ];
 
     // Group likes by entityId
@@ -452,14 +455,14 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       commentCountMap.set(row.entityId, row._count);
     }
 
-    // Map: eventId → latest comment/signup createdAt
-    const latestCommentMap = new Map<string, Date>();
+    // Map: eventId → latest comment/signup { at, userName }
+    const latestCommentMap = new Map<string, { at: Date; userName: string }>();
     for (const row of latestEventComments) {
-      if (row._max.createdAt) latestCommentMap.set(row.entityId, row._max.createdAt);
+      latestCommentMap.set(row.entityId, { at: row.createdAt, userName: row.userName });
     }
-    const latestSignupMap = new Map<string, Date>();
+    const latestSignupMap = new Map<string, { at: Date; userName: string }>();
     for (const row of latestEventSignups) {
-      if (row._max.createdAt) latestSignupMap.set(row.eventId, row._max.createdAt);
+      latestSignupMap.set(row.eventId, { at: row.createdAt, userName: row.userName });
     }
 
     // Helper to attach likes + commentCount to an entity
@@ -489,21 +492,23 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         const latestSignup = latestSignupMap.get(e.id);
         const isNewlyCreated = e.updatedAt.getTime() - e.createdAt.getTime() < 60_000;
         let activityHint: string | undefined;
+        let activityHintUser: string | undefined;
         if (!isNewlyCreated) {
           // Find what happened most recently
-          const candidates: { type: string; at: Date }[] = [];
-          if (latestComment && latestComment > e.createdAt) candidates.push({ type: 'comment', at: latestComment });
-          if (latestSignup && latestSignup > e.createdAt) candidates.push({ type: 'signup', at: latestSignup });
+          const candidates: { type: string; at: Date; userName: string }[] = [];
+          if (latestComment && latestComment.at > e.createdAt) candidates.push({ type: 'comment', at: latestComment.at, userName: latestComment.userName });
+          if (latestSignup && latestSignup.at > e.createdAt) candidates.push({ type: 'signup', at: latestSignup.at, userName: latestSignup.userName });
           if (candidates.length > 0) {
             candidates.sort((a, b) => b.at.getTime() - a.at.getTime());
             activityHint = candidates[0].type;
+            activityHintUser = candidates[0].userName;
           } else if (e.recapPhotoUrls?.length > 0) {
             activityHint = 'photo';
           } else {
             activityHint = 'update';
           }
         }
-        return { ...base, activityHint };
+        return { ...base, activityHint, activityHintUser };
       }),
       announcements,
       recommendations,

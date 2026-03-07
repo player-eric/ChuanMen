@@ -1,9 +1,14 @@
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../config/env.js';
+import fs from 'node:fs';
+import path from 'node:path';
 
 /** Whether S3 is configured (all 3 required env vars present) */
 export const s3Configured = Boolean(env.AWS_REGION && env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY);
+
+/** Local uploads directory (fallback when S3 is not configured) */
+const LOCAL_UPLOADS_DIR = path.resolve(import.meta.dirname, '../../uploads');
 
 function getS3Client(): S3Client {
   if (!s3Configured) {
@@ -33,6 +38,9 @@ function s3() {
  * - Otherwise, route through the backend presigned redirect: /api/media/s3/<key>
  */
 export function mediaUrl(key: string): string {
+  if (!s3Configured) {
+    return `/api/media/local/${key}`;
+  }
   if (env.AWS_S3_PUBLIC_BASE_URL) {
     return `${env.AWS_S3_PUBLIC_BASE_URL.replace(/\/$/, '')}/${key}`;
   }
@@ -40,6 +48,12 @@ export function mediaUrl(key: string): string {
 }
 
 export async function createUploadUrl(key: string, contentType: string) {
+  if (!s3Configured) {
+    // Local mode: presign not needed, frontend should use /upload instead
+    const publicUrl = mediaUrl(key);
+    return { uploadUrl: `/api/media/upload?key=${encodeURIComponent(key)}`, publicUrl };
+  }
+
   const command = new PutObjectCommand({
     Bucket: env.AWS_S3_BUCKET,
     Key: key,
@@ -68,6 +82,14 @@ export async function createDownloadUrl(key: string) {
 
 /** Upload a Buffer directly to S3 (server-side, no presigning needed). */
 export async function uploadObject(key: string, body: Buffer, contentType: string) {
+  if (!s3Configured) {
+    // Local filesystem fallback
+    const filePath = path.join(LOCAL_UPLOADS_DIR, key);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, body);
+    return { publicUrl: mediaUrl(key) };
+  }
+
   const command = new PutObjectCommand({
     Bucket: env.AWS_S3_BUCKET,
     Key: key,
@@ -83,6 +105,12 @@ export async function uploadObject(key: string, body: Buffer, contentType: strin
 }
 
 export async function deleteObject(key: string) {
+  if (!s3Configured) {
+    const filePath = path.join(LOCAL_UPLOADS_DIR, key);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    return;
+  }
+
   const command = new DeleteObjectCommand({
     Bucket: env.AWS_S3_BUCKET,
     Key: key,

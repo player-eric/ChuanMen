@@ -29,7 +29,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
 import { useTaskPresets } from '@/hooks/useTaskPresets';
-import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, fetchMoviesApi, linkEventRecommendation, linkEventMovie, completeLottery } from '@/lib/domainApi';
+import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, fetchMoviesApi, linkEventRecommendation, linkEventMovie, completeLottery, uploadMedia } from '@/lib/domainApi';
 import type { FoodOption } from '@/types';
 
 interface CreateTaskItem {
@@ -38,6 +38,7 @@ interface CreateTaskItem {
 }
 import { ImageUpload } from '@/components/ImageUpload';
 import { chineseTagToEventTag } from '@/lib/mappings';
+import { generateEventPoster, downloadBlob } from '@/lib/posterGenerator';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 
 const tagOptions = ['电影夜', '茶话会/分享会', '户外', '运动', '其他'];
@@ -92,6 +93,7 @@ export default function EventCreatePage() {
   const [tasks, setTasks] = useState<CreateTaskItem[]>([]);
   // Title image
   const [titleImageUrl, setTitleImageUrl] = useState('');
+  const [posterLoading, setPosterLoading] = useState(false);
 
   // Recommendation state
   const [allRecs, setAllRecs] = useState<any[]>([]);

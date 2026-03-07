@@ -21,12 +21,12 @@ export class EventRepository {
           include: { user: { select: { id: true, name: true, avatar: true } } },
         },
         screenedMovies: {
-          include: { movie: { select: { id: true, title: true, poster: true, _count: { select: { votes: true } } } } },
+          include: { movie: { select: { id: true, title: true, poster: true, year: true, director: true, _count: { select: { votes: true } } } } },
           take: 1,
         },
         recommendations: {
           include: {
-            recommendation: { select: { id: true, title: true, category: true, coverUrl: true, voteCount: true } },
+            recommendation: { select: { id: true, title: true, category: true, coverUrl: true, voteCount: true, description: true } },
             linkedBy: { select: { id: true, name: true } },
           },
         },
@@ -50,11 +50,11 @@ export class EventRepository {
           include: { user: true },
         },
         screenedMovies: {
-          include: { movie: { select: { id: true, title: true, poster: true, _count: { select: { votes: true } } } } },
+          include: { movie: { select: { id: true, title: true, poster: true, year: true, director: true, _count: { select: { votes: true } } } } },
         },
         recommendations: {
           include: {
-            recommendation: { select: { id: true, title: true, category: true, coverUrl: true, voteCount: true } },
+            recommendation: { select: { id: true, title: true, category: true, coverUrl: true, voteCount: true, description: true } },
             linkedBy: { select: { id: true, name: true } },
           },
         },

@@ -1,6 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { createUploadUrl, createDownloadUrl, deleteObject, uploadObject } from '../services/s3Service.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { createUploadUrl, createDownloadUrl, deleteObject, uploadObject, s3Configured } from '../services/s3Service.js';
 
 /* ────────── helpers ────────── */
 
@@ -166,6 +168,64 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       request.log.error({ err, key }, 'Failed to presign S3 download URL');
       return reply.code(404).send({ message: 'Media not found' });
     }
+  });
+
+  /**
+   * GET /proxy — fetch a remote image server-side (bypasses browser CORS).
+   * Query: ?url=https://image.tmdb.org/...
+   * Returns: image binary with original content-type.
+   */
+  app.get('/proxy', async (request, reply) => {
+    const { url } = request.query as { url?: string };
+    if (!url) return reply.badRequest('Missing url parameter');
+
+    try {
+      const parsed = new URL(url);
+      // Only allow http/https image URLs
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        return reply.badRequest('Invalid URL protocol');
+      }
+
+      const res = await fetch(url);
+      if (!res.ok) return reply.code(res.status).send({ message: 'Remote fetch failed' });
+
+      const contentType = res.headers.get('content-type') || 'image/jpeg';
+      const buffer = Buffer.from(await res.arrayBuffer());
+
+      return reply
+        .header('content-type', contentType)
+        .header('cache-control', 'public, max-age=86400')
+        .send(buffer);
+    } catch (err: any) {
+      request.log.warn({ err, url }, 'Image proxy failed');
+      return reply.code(502).send({ message: 'Image proxy failed' });
+    }
+  });
+
+  /**
+   * GET /local/* — serve locally-stored uploads (when S3 is not configured)
+   */
+  app.get('/local/*', async (request, reply) => {
+    const key = (request.params as { '*': string })['*'];
+    if (!key) return reply.badRequest('Missing key');
+
+    const uploadsDir = path.resolve(import.meta.dirname, '../../uploads');
+    const filePath = path.join(uploadsDir, key);
+
+    // Prevent path traversal
+    if (!filePath.startsWith(uploadsDir)) return reply.badRequest('Invalid path');
+
+    if (!fs.existsSync(filePath)) return reply.code(404).send({ message: 'File not found' });
+
+    const ext = path.extname(filePath).slice(1);
+    const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
+    const contentType = mimeMap[ext] || 'application/octet-stream';
+
+    const buffer = fs.readFileSync(filePath);
+    return reply
+      .header('content-type', contentType)
+      .header('cache-control', 'public, max-age=3600')
+      .send(buffer);
   });
 
   /**

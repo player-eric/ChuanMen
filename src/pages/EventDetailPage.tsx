@@ -32,12 +32,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EditIcon from '@mui/icons-material/Edit';
+import ImageIcon from '@mui/icons-material/Image';
 import type { EventData, EventPhoto, EventTaskData, FoodOption, SignupStatus, TaskRole } from '@/types';
 import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask, addCoHost, removeCoHost, toggleMovieVote, toggleRecommendationVote } from '@/lib/domainApi';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import CommentSection from '@/components/CommentSection';
 import { useAuth } from '@/auth/AuthContext';
-import { ScenePhoto } from '@/components/ScenePhoto';
+import { ScenePhoto, isImageUrl } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
 import { RichTextViewer } from '@/components/RichTextEditor';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -560,7 +561,7 @@ export default function EventDetailPage() {
                     setEditCapacity(event.total);
                     setEditStartsAt((loadedEvent as any)?.startsAt ? new Date((loadedEvent as any).startsAt).toISOString().slice(0, 16) : '');
                     setEditEndsAt((loadedEvent as any)?.endsAt ? new Date((loadedEvent as any).endsAt).toISOString().slice(0, 16) : '');
-                    setEditTitleImageUrl(event.scene?.startsWith('http') ? event.scene : '');
+                    setEditTitleImageUrl(isImageUrl(event.scene) ? event.scene : '');
                     setEditOpen(true);
                   }}
                 >
@@ -649,30 +650,74 @@ export default function EventDetailPage() {
                     结束活动
                   </Button>
                 )}
+              {/* Poster generation — visible to all logged-in users */}
+                {user?.id && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    disabled={posterLoading}
+                    startIcon={<ImageIcon />}
+                    onClick={async () => {
+                      if (!event) return;
+                      setPosterLoading(true);
+                      try {
+                        const eventTag = resolveEventTag(event.scene, (event as any).tags);
+                        const recs = event.linkedRecommendations ?? [];
+                        const primaryRec = recs.find((r) => r.isSelected) ?? recs.find((r) => r.coverUrl) ?? recs[0];
+                        const coverImageUrl = primaryRec?.coverUrl || event.filmPoster || (isImageUrl(event.scene) ? event.scene : undefined);
+                        const isMovie = eventTag === 'movie';
+                        const movieRec = isMovie ? (recs.find((r) => r.category === 'movie') ?? primaryRec) : undefined;
+                        const blob = await generateEventPoster({
+                          title: event.title,
+                          date: event.date,
+                          location: event.location,
+                          hostName: event.host,
+                          eventTag,
+                          coverImageUrl,
+                          movieName: isMovie ? (movieRec?.title || event.film || undefined) : undefined,
+                          movieMeta: isMovie ? (movieRec?.description || undefined) : undefined,
+                        });
+                        downloadBlob(blob, `${event.title}-海报.png`);
+                      } catch (err) {
+                        console.error('Poster generation failed:', err);
+                        setFlash({ open: true, severity: 'error', message: '海报生成失败' });
+                      } finally {
+                        setPosterLoading(false);
+                      }
+                    }}
+                  >
+                    {posterLoading ? '生成中…' : '生成海报'}
+                  </Button>
+                )}
               </Stack>
             )}
-
-            {/* Poster generation — visible to all logged-in users */}
-            {user?.id && (
-              <Box sx={{ mb: 1.5 }}>
+            {/* Poster button for non-host users */}
+            {user?.id && !(isHost || isAdmin) && (
+              <Stack direction="row" sx={{ mb: 1.5 }}>
                 <Button
                   size="small"
                   variant="outlined"
                   disabled={posterLoading}
+                  startIcon={<ImageIcon />}
                   onClick={async () => {
                     if (!event) return;
                     setPosterLoading(true);
                     try {
                       const eventTag = resolveEventTag(event.scene, (event as any).tags);
-                      // Determine cover image: linked recommendation cover, filmPoster, or titleImageUrl
-                      const recCover = (event.linkedRecommendations ?? []).find((r) => r.coverUrl)?.coverUrl;
-                      const coverImageUrl = recCover || event.filmPoster || (event.scene?.startsWith('http') ? event.scene : undefined);
+                      const recs = event.linkedRecommendations ?? [];
+                      const primaryRec = recs.find((r) => r.isSelected) ?? recs.find((r) => r.coverUrl) ?? recs[0];
+                      const coverImageUrl = primaryRec?.coverUrl || event.filmPoster || (isImageUrl(event.scene) ? event.scene : undefined);
+                      const isMovie = eventTag === 'movie';
+                      const movieRec = isMovie ? (recs.find((r) => r.category === 'movie') ?? primaryRec) : undefined;
                       const blob = await generateEventPoster({
                         title: event.title,
                         date: event.date,
                         location: event.location,
+                        hostName: event.host,
                         eventTag,
                         coverImageUrl,
+                        movieName: isMovie ? (movieRec?.title || event.film || undefined) : undefined,
+                        movieMeta: isMovie ? (movieRec?.description || undefined) : undefined,
                       });
                       downloadBlob(blob, `${event.title}-海报.png`);
                     } catch (err) {
@@ -683,9 +728,9 @@ export default function EventDetailPage() {
                     }
                   }}
                 >
-                  {posterLoading ? '生成中…' : '🖼️ 生成海报'}
+                  {posterLoading ? '生成中…' : '生成海报'}
                 </Button>
-              </Box>
+              </Stack>
             )}
 
             {/* 3. Description */}
@@ -2077,7 +2122,7 @@ export default function EventDetailPage() {
                   if (editCapacity !== event.total) payload.capacity = editCapacity;
                   if (editStartsAt) payload.startsAt = editStartsAt;
                   if (editEndsAt) payload.endsAt = editEndsAt;
-                  const currentImageUrl = event.scene?.startsWith('http') ? event.scene : '';
+                  const currentImageUrl = isImageUrl(event.scene) ? event.scene : '';
                   if (editTitleImageUrl !== currentImageUrl) payload.titleImageUrl = editTitleImageUrl;
                   if (Object.keys(payload).length > 0) {
                     await updateEvent(eventId, payload as any);
