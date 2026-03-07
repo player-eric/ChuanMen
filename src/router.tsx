@@ -488,6 +488,7 @@ function mapApiEvent(e: any): any {
     houseRules: e.houseRules || undefined,
     photoCount: e.recapPhotoUrls?.length || undefined,
     commentCount: e.commentCount ?? 0,
+    locationPrivate: e.isHomeEvent && e.host?.homeAddress ? e.host.homeAddress : undefined,
     isPrivate: e.isPrivate ?? false,
     likeCount: e.likeCount ?? 0,
     tags: e.tags ?? [],

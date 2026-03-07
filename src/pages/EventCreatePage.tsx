@@ -397,7 +397,12 @@ export default function EventCreatePage() {
           </Box>
 
           <FormControlLabel
-            control={<Switch checked={isHome} onChange={(e) => setIsHome(e.target.checked)} />}
+            control={<Switch checked={isHome} onChange={(e) => {
+              setIsHome(e.target.checked);
+              if (e.target.checked && !houseRules && user?.defaultHouseRules) {
+                setHouseRules(user.defaultHouseRules);
+              }
+            }} />}
             label="在我家"
           />
 
