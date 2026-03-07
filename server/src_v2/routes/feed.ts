@@ -450,12 +450,12 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             eventIds,
           )
         : [],
-      // Latest signup per event (for activity hint — who signed up)
+      // Latest signup per event (for activity hint — who signed up, excluding invited)
       eventIds.length > 0
         ? prisma.$queryRawUnsafe<{ eventId: string; createdAt: Date; userName: string }[]>(
             `SELECT DISTINCT ON (s."eventId") s."eventId", s."createdAt", u."name" AS "userName"
              FROM "EventSignup" s JOIN "User" u ON u.id = s."userId"
-             WHERE s."eventId" = ANY($1::text[])
+             WHERE s."eventId" = ANY($1::text[]) AND s."status" NOT IN ('invited','cancelled','declined','rejected')
              ORDER BY s."eventId", s."createdAt" DESC`,
             eventIds,
           )
