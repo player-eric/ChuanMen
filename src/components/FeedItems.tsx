@@ -1233,7 +1233,7 @@ export function FeedNewMember({ phase, id, name, bio, location, selfAsFriend, pa
 
   return (
     <Card glow>
-      <div style={{ padding: 16 }}>
+      <div style={{ padding: 16, cursor: 'pointer' }} onClick={() => goMember(name)}>
         {/* Header: emoji + headline */}
         <div style={{ textAlign: 'center', marginBottom: 12 }}>
           <div style={{ fontSize: 28, marginBottom: 6 }}>{emoji}</div>

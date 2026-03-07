@@ -71,9 +71,10 @@ function buildFeedItems(data: any): any[] {
   // Group by date — use YYYY/MM/DD sort key, display MM/DD label
   const dateGroups = new Map<string, any[]>();
   const dateLabelMap = new Map<string, string>(); // sortKey → display label
-  const addToDate = (sortKey: string, label: string, item: any) => {
+  const addToDate = (sortKey: string, label: string, item: any, tsIso?: string) => {
     const key = sortKey || 'unknown';
     if (!dateGroups.has(key)) dateGroups.set(key, []);
+    item._ts = tsIso ? new Date(tsIso).getTime() : 0;
     dateGroups.get(key)!.push(item);
     if (!dateLabelMap.has(key)) dateLabelMap.set(key, label);
   };
@@ -90,7 +91,11 @@ function buildFeedItems(data: any): any[] {
   // Events → activity items (grouped by real activity time)
   for (const e of (data.events ?? [])) {
     const [sortKey, sortLabel] = dateParts(e.activityAt ?? e.createdAt);
-    const d = e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    const fmt = (iso: string) => { const dt = new Date(iso); return dt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }); };
+    const datePart = e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) : '';
+    const timePart = e.startsAt ? fmt(e.startsAt) : '';
+    const endTimePart = e.endsAt ? fmt(e.endsAt) : '';
+    const d = timePart ? `${datePart} ${timePart}${endTimePart ? '-' + endTimePart : ''}` : datePart;
     const hostName = e.host?.name ?? '';
     const allSignups = (e.signups ?? []) as any[];
     const feedOccupying = allSignups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
@@ -141,7 +146,7 @@ function buildFeedItems(data: any): any[] {
       commentCount: e.commentCount ?? 0,
       photoCount: e.photoCount ?? 0,
       taskSummary: feedTasks.length > 0 ? feedTasks : undefined,
-    });
+    }, e.activityAt ?? e.createdAt);
   }
 
   // Postcards → card items
@@ -159,7 +164,7 @@ function buildFeedItems(data: any): any[] {
       likedBy: p.likedBy ?? [],
       comments: [],
       commentCount: p.commentCount ?? 0,
-    });
+    }, p.createdAt);
   }
 
   // Movies → compactMovie items
@@ -180,7 +185,7 @@ function buildFeedItems(data: any): any[] {
       likedBy: m.likedBy ?? [],
       comments: [],
       commentCount: m.commentCount ?? 0,
-    });
+    }, m.createdAt);
   }
 
   // New members → newMember items (introducing + welcomed)
@@ -208,7 +213,7 @@ function buildFeedItems(data: any): any[] {
       likedBy: m.likedBy ?? [],
       comments: [],
       commentCount: m.commentCount ?? 0,
-    });
+    }, dateStr);
   }
 
   // Birthday users → collected separately to pin at top
@@ -250,7 +255,7 @@ function buildFeedItems(data: any): any[] {
       likedBy: r.likedBy ?? [],
       comments: [],
       commentCount: r.commentCount ?? 0,
-    });
+    }, r.createdAt);
   }
 
   // Announcements → milestone items
@@ -266,7 +271,7 @@ function buildFeedItems(data: any): any[] {
       likedBy: a.likedBy ?? [],
       comments: [],
       commentCount: a.commentCount ?? 0,
-    });
+    }, a.createdAt);
   }
 
   // Personal notifications → actionNotice items
@@ -285,7 +290,7 @@ function buildFeedItems(data: any): any[] {
       likedBy: [],
       comments: [],
       commentCount: 0,
-    });
+    }, n.createdAt);
   }
 
   // Proposals → compactProposal items
@@ -305,7 +310,7 @@ function buildFeedItems(data: any): any[] {
       likedBy: p.likedBy ?? [],
       comments: [],
       commentCount: p.commentCount ?? 0,
-    });
+    }, p.createdAt);
   }
 
   // Sort dates descending (YYYY-MM-DD keys sort correctly)
@@ -320,7 +325,9 @@ function buildFeedItems(data: any): any[] {
 
   for (const dateKey of sortedDates) {
     items.push({ _key: `time-${dateKey}`, type: 'time', label: dateLabelMap.get(dateKey) ?? dateKey });
-    items.push(...dateGroups.get(dateKey)!);
+    const group = dateGroups.get(dateKey)!;
+    group.sort((a, b) => (b._ts || 0) - (a._ts || 0));
+    items.push(...group);
   }
 
   // If no items, add a milestone
