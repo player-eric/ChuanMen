@@ -533,7 +533,7 @@ function FullFeed() {
 
       <Grid container spacing={2}>
         {items.slice(0, visible).map((item, idx) => (
-          <Grid key={idx} size={gridSizeFor(item.type)} sx={
+          <Grid key={(item as any)._key ?? `fallback-${idx}`} size={gridSizeFor(item.type)} sx={
             (item.type !== 'time' && item.type !== 'milestone')
               ? { display: 'grid', '& > *': { minHeight: 0 } }
               : undefined

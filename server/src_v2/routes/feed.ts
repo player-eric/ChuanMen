@@ -533,8 +533,10 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           activityHint = 'update';
         }
       }
-      // Real activity time: comment/signup → createdAt (new) → startsAt (old, no activity)
-      const realActivityAt = activityHintAt ?? (isNewlyCreated ? e.createdAt : (e.startsAt ?? e.createdAt));
+      // Real activity time: comment/signup → past events use startsAt → future/new use createdAt
+      const now = new Date();
+      const realActivityAt = activityHintAt
+        ?? (e.startsAt && e.startsAt <= now ? e.startsAt : e.createdAt);
       return { ...base, activityHint, activityHintUser, activityAt: realActivityAt };
     });
     // Sort by real activity time (most recent first) and take top 20

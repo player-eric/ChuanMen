@@ -113,6 +113,7 @@ function buildFeedItems(data: any): any[] {
     }));
     const feedHostSlots = 1 + feedCoHostNames.length;
     addToDate(sortKey, sortLabel, {
+      _key: `activity-${e.id}`,
       type: 'activity',
       name: hostName,
       title: e.title,
@@ -146,6 +147,7 @@ function buildFeedItems(data: any): any[] {
   for (const p of (data.postcards ?? [])) {
     const [sk, d] = dateParts(p.createdAt);
     addToDate(sk, d, {
+      _key: `card-${p.id}`,
       type: 'card',
       from: p.from?.name ?? '',
       to: p.to?.name ?? '',
@@ -164,6 +166,7 @@ function buildFeedItems(data: any): any[] {
     const [sk, d] = dateParts(m.createdAt);
     const time = m.createdAt ? timeAgo(m.createdAt) : '';
     addToDate(sk, d, {
+      _key: `movie-${m.id}`,
       type: 'compactMovie',
       name: m.recommendedBy?.name ?? '',
       title: m.title,
@@ -186,6 +189,7 @@ function buildFeedItems(data: any): any[] {
     const dateStr = isAnnounced ? m.announcedAt : m.approvedAt;
     const [sk, d] = dateParts(dateStr);
     addToDate(sk, d, {
+      _key: `newMember-${m.id}`,
       type: 'newMember',
       phase,
       id: m.id,
@@ -210,6 +214,7 @@ function buildFeedItems(data: any): any[] {
   const birthdayItems: any[] = [];
   for (const bu of (data.birthdayUsers ?? [])) {
     birthdayItems.push({
+      _key: `birthday-${bu.id}`,
       type: 'birthday',
       id: bu.id,
       name: bu.name,
@@ -231,6 +236,7 @@ function buildFeedItems(data: any): any[] {
     const time = r.createdAt ? timeAgo(r.createdAt) : '';
     const cat = r.category ?? 'book';
     addToDate(sk, d, {
+      _key: `rec-${r.id}`,
       type: 'compactRecommendation',
       name: r.author?.name ?? '',
       title: r.title,
@@ -251,6 +257,7 @@ function buildFeedItems(data: any): any[] {
     const [sk, d] = dateParts(a.createdAt);
     const emojiMap: Record<string, string> = { milestone: '🎉', host_tribute: '🏆', announcement: '📣' };
     addToDate(sk, d, {
+      _key: `announce-${a.id}`,
       type: 'milestone',
       text: a.title ?? '',
       emoji: emojiMap[a.type] ?? '📣',
@@ -265,6 +272,7 @@ function buildFeedItems(data: any): any[] {
   for (const n of (data.notifications ?? [])) {
     const [sk, d] = dateParts(n.createdAt);
     addToDate(sk, d, {
+      _key: `notice-${n.action}-${n.navTarget ?? ''}-${n.createdAt ?? ''}`,
       type: 'actionNotice',
       action: n.action,
       name: n.name ?? '',
@@ -284,6 +292,7 @@ function buildFeedItems(data: any): any[] {
     const [sk, d] = dateParts(p.createdAt);
     const time = p.createdAt ? timeAgo(p.createdAt) : '';
     addToDate(sk, d, {
+      _key: `proposal-${p.id}`,
       type: 'compactProposal',
       name: p.author?.name ?? '',
       title: p.title,
@@ -304,18 +313,18 @@ function buildFeedItems(data: any): any[] {
   // Pin birthday items at top
   if (birthdayItems.length > 0) {
     const todayLabel = new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
-    items.push({ type: 'time', label: todayLabel });
+    items.push({ _key: 'time-birthday', type: 'time', label: todayLabel });
     items.push(...birthdayItems);
   }
 
   for (const dateKey of sortedDates) {
-    items.push({ type: 'time', label: dateLabelMap.get(dateKey) ?? dateKey });
+    items.push({ _key: `time-${dateKey}`, type: 'time', label: dateLabelMap.get(dateKey) ?? dateKey });
     items.push(...dateGroups.get(dateKey)!);
   }
 
   // If no items, add a milestone
   if (items.length === 0) {
-    items.push({ type: 'milestone', text: '欢迎来到串门儿！', emoji: '🎉' });
+    items.push({ _key: 'welcome', type: 'milestone', text: '欢迎来到串门儿！', emoji: '🎉' });
   }
 
   return items;
