@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';
 import type { EventRepository } from './event.repository.js';
-import { sendEmail } from '../../services/emailService.js';
+import { sendEmail, sendTemplatedEmail } from '../../services/emailService.js';
 
 const taskItemSchema = z.object({
   role: z.string().min(1),
@@ -154,15 +154,20 @@ export class EventService {
     const data = z.object({ userId: z.string().min(1) }).parse(input);
     const { cancelled, promoted } = await this.repository.cancelSignup(eventId, data.userId);
 
-    // Send offer notification to promoted person
-    if (promoted) {
+    // Send TXN-6 offer notification to promoted person
+    if (promoted && promoted.user?.email) {
       try {
         const event = await this.prisma.event.findUnique({ where: { id: eventId }, select: { title: true } });
-        if (event && promoted.user?.email) {
-          await sendEmail({
+        if (event) {
+          const result = await sendTemplatedEmail(this.prisma, {
             to: promoted.user.email,
-            subject: `好消息！${event.title} 有名额了`,
-            text: `Hi ${promoted.user.name}，\n\n${event.title} 有一个名额空出了！请在24小时内确认是否参加。\n\n前往活动页面确认：https://chuanmener.club/events/${eventId}\n\n— 串门儿`,
+            ruleId: 'TXN-6',
+            variables: { userName: promoted.user.name, eventTitle: event.title },
+            ctaLabel: '确认参加',
+            ctaUrl: `https://chuanmener.club/events/${eventId}`,
+          });
+          await this.prisma.emailLog.create({
+            data: { userId: promoted.user.id, ruleId: 'TXN-6', refId: eventId, messageId: result.MessageId },
           });
         }
       } catch { /* best effort */ }
@@ -247,15 +252,20 @@ export class EventService {
   async declineOffer(eventId: string, userId: string) {
     const { declined, promoted } = await this.repository.declineOffer(eventId, userId);
 
-    // Notify the next promoted person
-    if (promoted) {
+    // Send TXN-6 offer notification to promoted person
+    if (promoted && promoted.user?.email) {
       try {
         const event = await this.prisma.event.findUnique({ where: { id: eventId }, select: { title: true } });
-        if (event && promoted.user?.email) {
-          await sendEmail({
+        if (event) {
+          const result = await sendTemplatedEmail(this.prisma, {
             to: promoted.user.email,
-            subject: `好消息！${event.title} 有名额了`,
-            text: `Hi ${promoted.user.name}，\n\n${event.title} 有一个名额空出了！请在24小时内确认是否参加。\n\n前往活动页面确认：https://chuanmener.club/events/${eventId}\n\n— 串门儿`,
+            ruleId: 'TXN-6',
+            variables: { userName: promoted.user.name, eventTitle: event.title },
+            ctaLabel: '确认参加',
+            ctaUrl: `https://chuanmener.club/events/${eventId}`,
+          });
+          await this.prisma.emailLog.create({
+            data: { userId: promoted.user.id, ruleId: 'TXN-6', refId: eventId, messageId: result.MessageId },
           });
         }
       } catch { /* best effort */ }

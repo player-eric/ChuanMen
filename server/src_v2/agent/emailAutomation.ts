@@ -777,7 +777,120 @@ async function buildDigestSections(prisma: PrismaClient, userId?: string): Promi
     });
   }
 
+  // 6. Community announcements (milestones, tributes) from last 24h
+  const announcements = await prisma.announcement.findMany({
+    where: { createdAt: { gte: cutoff } },
+    select: { title: true, body: true },
+    orderBy: { createdAt: 'desc' },
+    take: 3,
+  });
+  if (announcements.length > 0) {
+    sections.push({
+      icon: '🎉',
+      title: '社群动态',
+      items: announcements.map((a) => ({ text: a.title })),
+    });
+  }
+
+  // 7. Personal engagement nudge (P3 rules, pick first matching, max 1)
+  if (userId) {
+    const nudge = await buildPersonalNudge(prisma, userId);
+    if (nudge) {
+      sections.push(nudge);
+    }
+  }
+
   return sections.length > 0 ? sections : null;
+}
+
+/**
+ * Build a personal nudge section for the daily digest.
+ * Checks P3-C/D/E/F conditions in priority order, returns first match.
+ */
+async function buildPersonalNudge(
+  prisma: PrismaClient,
+  userId: string,
+): Promise<DigestSection | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      participationCount: true,
+      hostCount: true,
+      approvedAt: true,
+      lastActiveAt: true,
+    },
+  });
+  if (!user) return null;
+
+  // Helper: check cooldown for a rule
+  const hasCooldown = async (ruleId: string, days: number) => {
+    const recent = await prisma.emailLog.findFirst({
+      where: { userId, ruleId, sentAt: { gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) } },
+    });
+    return !!recent;
+  };
+
+  // P3-C: New member hasn't attended (joined within 14 days, 0 events)
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+  if (user.approvedAt && user.approvedAt >= fourteenDaysAgo && user.participationCount === 0) {
+    if (!(await hasCooldown('P3-C', 3))) {
+      const upcoming = await prisma.event.findMany({
+        where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() } },
+        select: { title: true, id: true, startsAt: true },
+        orderBy: { startsAt: 'asc' },
+        take: 3,
+      });
+      if (upcoming.length > 0) {
+        return {
+          icon: '💡',
+          title: '去串串门？',
+          items: upcoming.map((e) => {
+            const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+            return { text: `${e.title}（${d}）`, url: `https://chuanmener.club/events/${e.id}` };
+          }),
+        };
+      }
+    }
+  }
+
+  // P3-D: Encourage hosting (participated 3+, never hosted)
+  if (user.participationCount >= 3 && user.hostCount === 0) {
+    if (!(await hasCooldown('P3-D', 30))) {
+      return {
+        icon: '💡',
+        title: '试试做 Host？',
+        items: [{ text: `你已经来了 ${user.participationCount} 次了，要不要试试自己办一次？`, url: 'https://chuanmener.club/events/create' }],
+      };
+    }
+  }
+
+  // P3-E: Silent host recall (hosted before, no event in 60 days)
+  if (user.hostCount > 0) {
+    const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+    const recentHost = await prisma.event.findFirst({
+      where: { hostId: userId, startsAt: { gte: sixtyDaysAgo } },
+    });
+    if (!recentHost && !(await hasCooldown('P3-E', 30))) {
+      return {
+        icon: '💡',
+        title: '好久没见你开门了',
+        items: [{ text: '最近忙？什么时候再来一场？', url: 'https://chuanmener.club/events/create' }],
+      };
+    }
+  }
+
+  // P3-F: Churn recall (inactive 14+ days)
+  if (user.lastActiveAt && user.lastActiveAt < fourteenDaysAgo) {
+    if (!(await hasCooldown('P3-F', 21))) {
+      return {
+        icon: '💡',
+        title: '好久没见',
+        items: [{ text: '最近有新活动和推荐，回来看看？', url: 'https://chuanmener.club' }],
+      };
+    }
+  }
+
+  return null;
 }
 
 export async function sendDailyDigest(
@@ -814,7 +927,7 @@ export async function sendDailyDigest(
   for (const user of candidates) {
     if (!eligible.has(user.id)) continue;
     try {
-      // Build per-user digest with personal interaction feedback
+      // Build per-user digest with personal interaction feedback + nudge
       const personalSections = await buildDigestSections(prisma, user.id);
       const digestHtml = renderDigestBlock(personalSections ?? globalSections);
 
@@ -829,6 +942,24 @@ export async function sendDailyDigest(
       await prisma.emailLog.create({
         data: { userId: user.id, ruleId: 'DIGEST', messageId: result.MessageId },
       });
+
+      // Log the nudge rule ID for cooldown tracking
+      const nudgeSection = (personalSections ?? []).find((s) => s.icon === '💡');
+      if (nudgeSection) {
+        const nudgeRuleMap: Record<string, string> = {
+          '去串串门？': 'P3-C',
+          '试试做 Host？': 'P3-D',
+          '好久没见你开门了': 'P3-E',
+          '好久没见': 'P3-F',
+        };
+        const nudgeRuleId = nudgeRuleMap[nudgeSection.title];
+        if (nudgeRuleId) {
+          await prisma.emailLog.create({
+            data: { userId: user.id, ruleId: nudgeRuleId },
+          });
+        }
+      }
+
       sent++;
     } catch (err) {
       log.error({ err, userId: user.id }, 'DIGEST send failed');
@@ -949,13 +1080,19 @@ export async function processWaitlistExpiry(
       const promotedSignup = await repo.promoteNextWaitlisted(offer.eventId);
       if (promotedSignup) {
         promoted++;
-        // Notify the newly promoted person
+        // Send TXN-6 offer notification to the newly promoted person
         if ((promotedSignup as any).user?.email) {
           try {
-            await sendEmail({
-              to: (promotedSignup as any).user.email,
-              subject: `好消息！${offer.event.title} 有名额了`,
-              text: `Hi ${(promotedSignup as any).user.name}，\n\n${offer.event.title} 有一个名额空出了！请在24小时内确认是否参加。\n\n前往活动页面确认：https://chuanmener.club/events/${offer.eventId}\n\n— 串门儿`,
+            const u = (promotedSignup as any).user;
+            const result = await sendTemplatedEmail(prisma, {
+              to: u.email,
+              ruleId: 'TXN-6',
+              variables: { userName: u.name, eventTitle: offer.event.title },
+              ctaLabel: '确认参加',
+              ctaUrl: `https://chuanmener.club/events/${offer.eventId}`,
+            });
+            await prisma.emailLog.create({
+              data: { userId: u.id, ruleId: 'TXN-6', refId: offer.eventId, messageId: result.MessageId },
             });
           } catch { /* best effort */ }
         }
@@ -1042,5 +1179,421 @@ export async function sendConsecutiveEventsReminder(
   }
 
   log.info(`LOTTERY-3X consecutive events reminder: ${sent}/${candidates.length} sent`);
+  return sent;
+}
+
+// ── P0-D: Same-day event reminder (0-8h before event) ─────
+
+export async function sendSameDayReminder(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const rule = await prisma.emailRule.findUnique({ where: { id: 'P0-D' } });
+  if (!rule?.enabled) return 0;
+
+  const now = new Date();
+  const in8h = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+
+  const events = await prisma.event.findMany({
+    where: {
+      startsAt: { gte: now, lte: in8h },
+      phase: { in: ['open', 'closed', 'invite'] },
+    },
+    include: {
+      host: { select: { name: true } },
+      signups: {
+        where: { status: 'accepted' },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      },
+    },
+  });
+
+  let sent = 0;
+  for (const event of events) {
+    const participants = event.signups.map((s) => s.user).filter((u): u is UserRow => !!u?.email);
+    const eligible = await filterByRefId(prisma, participants.map((u) => u.id), 'P0-D', event.id);
+    const eventDate = event.startsAt.toLocaleDateString('zh-CN', {
+      month: 'long', day: 'numeric', weekday: 'short',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    });
+
+    for (const user of participants) {
+      if (!eligible.has(user.id)) continue;
+      try {
+        const result = await sendTemplatedEmail(prisma, {
+          to: user.email,
+          ruleId: 'P0-D',
+          variables: {
+            userName: user.name,
+            eventTitle: event.title,
+            eventDate,
+            eventLocation: event.location ?? '',
+          },
+          ctaLabel: '查看活动详情',
+          ctaUrl: `https://chuanmener.club/events/${event.id}`,
+        });
+        await prisma.emailLog.create({
+          data: { userId: user.id, ruleId: 'P0-D', refId: event.id, messageId: result.MessageId },
+        });
+        sent++;
+      } catch (err) {
+        log.error({ err, userId: user.id, eventId: event.id }, 'P0-D send failed');
+      }
+    }
+  }
+
+  log.info(`P0-D same-day reminder: ${sent} sent for ${events.length} events`);
+  return sent;
+}
+
+// ── P2-A: New event notification (all eligible users) ─────
+
+export async function sendNewEventNotif(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const rule = await prisma.emailRule.findUnique({ where: { id: 'P2-A' } });
+  if (!rule?.enabled) return 0;
+
+  const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
+  const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000);
+
+  // Find events created in the last 10-20 min window (agent runs every 10 min)
+  const newEvents = await prisma.event.findMany({
+    where: {
+      createdAt: { gte: twentyMinAgo, lte: tenMinAgo },
+      phase: { not: 'cancelled' },
+    },
+    include: {
+      host: { select: { id: true, name: true } },
+    },
+  });
+
+  if (newEvents.length === 0) return 0;
+
+  const allUsers: UserRow[] = await prisma.user.findMany({
+    where: ELIGIBLE_USER_WHERE,
+    select: { id: true, name: true, email: true },
+  });
+
+  let sent = 0;
+  for (const event of newEvents) {
+    const eligible = await filterByRefId(prisma, allUsers.map((u) => u.id), 'P2-A', event.id);
+    const eventDate = event.startsAt.toLocaleDateString('zh-CN', {
+      month: 'long', day: 'numeric', weekday: 'short',
+    });
+
+    for (const user of allUsers) {
+      if (!eligible.has(user.id)) continue;
+      if (user.id === event.hostId) continue; // Don't notify the host
+      try {
+        const result = await sendTemplatedEmail(prisma, {
+          to: user.email,
+          ruleId: 'P2-A',
+          variables: {
+            userName: user.name,
+            hostName: event.host?.name ?? '',
+            eventTitle: event.title,
+            eventDate,
+            eventLocation: event.location ?? '',
+          },
+          ctaLabel: '查看活动',
+          ctaUrl: `https://chuanmener.club/events/${event.id}`,
+        });
+        await prisma.emailLog.create({
+          data: { userId: user.id, ruleId: 'P2-A', refId: event.id, messageId: result.MessageId },
+        });
+        sent++;
+      } catch (err) {
+        log.error({ err, userId: user.id, eventId: event.id }, 'P2-A send failed');
+      }
+    }
+  }
+
+  log.info(`P2-A new event notif: ${sent} sent for ${newEvents.length} events`);
+  return sent;
+}
+
+// ── P2-B: New recommendation notification ─────────────────
+
+export async function sendNewRecNotif(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const rule = await prisma.emailRule.findUnique({ where: { id: 'P2-B' } });
+  if (!rule?.enabled) return 0;
+
+  const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
+  const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000);
+
+  const newRecs = await prisma.recommendation.findMany({
+    where: { createdAt: { gte: twentyMinAgo, lte: tenMinAgo } },
+    include: { author: { select: { id: true, name: true } } },
+  });
+
+  if (newRecs.length === 0) return 0;
+
+  const allUsers: UserRow[] = await prisma.user.findMany({
+    where: ELIGIBLE_USER_WHERE,
+    select: { id: true, name: true, email: true },
+  });
+
+  let sent = 0;
+  for (const rec of newRecs) {
+    const eligible = await filterByRefId(prisma, allUsers.map((u) => u.id), 'P2-B', rec.id);
+    for (const user of allUsers) {
+      if (!eligible.has(user.id)) continue;
+      if (user.id === rec.authorId) continue;
+      try {
+        const result = await sendTemplatedEmail(prisma, {
+          to: user.email,
+          ruleId: 'P2-B',
+          variables: {
+            userName: user.name,
+            authorName: rec.author?.name ?? '',
+            recTitle: rec.title,
+          },
+          ctaLabel: '查看推荐',
+          ctaUrl: `https://chuanmener.club/discover/recommendations/${rec.id}`,
+        });
+        await prisma.emailLog.create({
+          data: { userId: user.id, ruleId: 'P2-B', refId: rec.id, messageId: result.MessageId },
+        });
+        sent++;
+      } catch (err) {
+        log.error({ err, userId: user.id }, 'P2-B send failed');
+      }
+    }
+  }
+
+  log.info(`P2-B new rec notif: ${sent} sent for ${newRecs.length} recs`);
+  return sent;
+}
+
+// ── P3-A: One-week onboarding check-in ───────────────────
+
+export async function sendOnboardingCheckin(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const rule = await prisma.emailRule.findUnique({ where: { id: 'P3-A' } });
+  if (!rule?.enabled) return 0;
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+
+  // Users approved 7-8 days ago
+  const candidates: UserRow[] = await prisma.user.findMany({
+    where: {
+      ...ELIGIBLE_USER_WHERE,
+      approvedAt: { gte: eightDaysAgo, lte: sevenDaysAgo },
+    },
+    select: { id: true, name: true, email: true },
+  });
+
+  const eligible = await filterByCooldown(prisma, candidates.map((u) => u.id), 'P3-A', rule.cooldownDays);
+
+  let sent = 0;
+  for (const user of candidates) {
+    if (!eligible.has(user.id)) continue;
+    try {
+      const result = await sendTemplatedEmail(prisma, {
+        to: user.email,
+        ruleId: 'P3-A',
+        variables: { userName: user.name },
+        ctaLabel: '去串门儿看看',
+        ctaUrl: 'https://chuanmener.club',
+      });
+      await prisma.emailLog.create({
+        data: { userId: user.id, ruleId: 'P3-A', messageId: result.MessageId },
+      });
+      sent++;
+    } catch (err) {
+      log.error({ err, userId: user.id }, 'P3-A send failed');
+    }
+  }
+
+  log.info(`P3-A onboarding check-in: ${sent}/${candidates.length} sent`);
+  return sent;
+}
+
+// ── P3-B: Post-first-event follow-up ─────────────────────
+
+export async function sendFirstEventFollowup(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const rule = await prisma.emailRule.findUnique({ where: { id: 'P3-B' } });
+  if (!rule?.enabled) return 0;
+
+  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+
+  // Find users whose first-ever participation was in an event that ended 6-12h ago
+  const recentlyEnded = await prisma.event.findMany({
+    where: {
+      phase: 'ended',
+      startsAt: { gte: new Date(twelveHoursAgo.getTime() - 4 * 60 * 60 * 1000), lte: new Date(sixHoursAgo.getTime() - 4 * 60 * 60 * 1000) },
+    },
+    select: {
+      id: true,
+      title: true,
+      signups: {
+        where: { status: 'accepted', participated: true },
+        select: { userId: true, user: { select: { id: true, name: true, email: true, participationCount: true } } },
+      },
+    },
+  });
+
+  let sent = 0;
+  for (const event of recentlyEnded) {
+    // Only target users with participationCount <= 1 (first event)
+    const firstTimers = event.signups
+      .filter((s) => s.user && s.user.participationCount <= 1 && s.user.email)
+      .map((s) => s.user as UserRow & { participationCount: number });
+
+    const eligible = await filterByRefId(prisma, firstTimers.map((u) => u.id), 'P3-B', event.id);
+
+    for (const user of firstTimers) {
+      if (!eligible.has(user.id)) continue;
+      try {
+        const result = await sendTemplatedEmail(prisma, {
+          to: user.email,
+          ruleId: 'P3-B',
+          variables: { userName: user.name, eventTitle: event.title },
+          ctaLabel: '回顾活动',
+          ctaUrl: `https://chuanmener.club/events/${event.id}`,
+        });
+        await prisma.emailLog.create({
+          data: { userId: user.id, ruleId: 'P3-B', refId: event.id, messageId: result.MessageId },
+        });
+        sent++;
+      } catch (err) {
+        log.error({ err, userId: user.id }, 'P3-B send failed');
+      }
+    }
+  }
+
+  log.info(`P3-B first event follow-up: ${sent} sent`);
+  return sent;
+}
+
+// ── P3-C: New member hasn't attended any event ────────────
+
+export async function sendNewMemberNudge(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const rule = await prisma.emailRule.findUnique({ where: { id: 'P3-C' } });
+  if (!rule?.enabled) return 0;
+
+  const maxDays = (rule.config as any)?.maxDaysSinceJoin ?? 14;
+  const cutoff = new Date(Date.now() - maxDays * 24 * 60 * 60 * 1000);
+
+  // Users approved within maxDays who have never participated
+  const candidates: UserRow[] = await prisma.user.findMany({
+    where: {
+      ...ELIGIBLE_USER_WHERE,
+      approvedAt: { gte: cutoff },
+      participationCount: 0,
+    },
+    select: { id: true, name: true, email: true },
+  });
+
+  const eligible = await filterByCooldown(prisma, candidates.map((u) => u.id), 'P3-C', rule.cooldownDays);
+
+  // Get upcoming events for the email
+  const upcomingEvents = await prisma.event.findMany({
+    where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() } },
+    select: { title: true },
+    orderBy: { startsAt: 'asc' },
+    take: 3,
+  });
+  const eventList = upcomingEvents.map((e) => e.title).join(', ') || '(暂无)';
+
+  let sent = 0;
+  for (const user of candidates) {
+    if (!eligible.has(user.id)) continue;
+    try {
+      const result = await sendTemplatedEmail(prisma, {
+        to: user.email,
+        ruleId: 'P3-C',
+        variables: { userName: user.name, upcomingEvents: eventList },
+        ctaLabel: '浏览活动',
+        ctaUrl: 'https://chuanmener.club/events',
+      });
+      await prisma.emailLog.create({
+        data: { userId: user.id, ruleId: 'P3-C', messageId: result.MessageId },
+      });
+      sent++;
+    } catch (err) {
+      log.error({ err, userId: user.id }, 'P3-C send failed');
+    }
+  }
+
+  log.info(`P3-C new member nudge: ${sent}/${candidates.length} sent`);
+  return sent;
+}
+
+// ── P4-B: Weekly recommendation digest ────────────────────
+
+export async function sendRecDigest(
+  prisma: PrismaClient,
+  log: FastifyBaseLogger,
+): Promise<number> {
+  const rule = await prisma.emailRule.findUnique({ where: { id: 'P4-B' } });
+  if (!rule?.enabled) return 0;
+
+  const minNewRecs = (rule.config as any)?.minNewMovies ?? 2;
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const newRecs = await prisma.recommendation.findMany({
+    where: { createdAt: { gte: sevenDaysAgo } },
+    select: { id: true, title: true, category: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (newRecs.length < minNewRecs) {
+    log.info(`P4-B: only ${newRecs.length} new recs (need ${minNewRecs}), skipping`);
+    return 0;
+  }
+
+  const categoryIcons: Record<string, string> = {
+    book: '📖', recipe: '🍽', place: '📍', music: '🎵', external_event: '🎭', movie: '🎬',
+  };
+  const recList = newRecs.map((r) => `${categoryIcons[r.category] ?? '📖'} [${r.title}](https://chuanmener.club/discover/recommendations/${r.id})`).join('\n');
+
+  const allUsers: UserRow[] = await prisma.user.findMany({
+    where: ELIGIBLE_USER_WHERE,
+    select: { id: true, name: true, email: true },
+  });
+
+  const eligible = await filterByCooldown(prisma, allUsers.map((u) => u.id), 'P4-B', rule.cooldownDays);
+
+  let sent = 0;
+  for (const user of allUsers) {
+    if (!eligible.has(user.id)) continue;
+    try {
+      const result = await sendTemplatedEmail(prisma, {
+        to: user.email,
+        ruleId: 'P4-B',
+        variables: {
+          userName: user.name,
+          newRecCount: String(newRecs.length),
+          recList,
+        },
+        ctaLabel: '查看所有推荐',
+        ctaUrl: 'https://chuanmener.club/discover',
+      });
+      await prisma.emailLog.create({
+        data: { userId: user.id, ruleId: 'P4-B', messageId: result.MessageId },
+      });
+      sent++;
+    } catch (err) {
+      log.error({ err, userId: user.id }, 'P4-B send failed');
+    }
+  }
+
+  log.info(`P4-B rec digest: ${sent}/${allUsers.length} sent (${newRecs.length} recs)`);
   return sent;
 }

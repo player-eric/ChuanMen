@@ -5,17 +5,14 @@ import {
   sendPostEventRecap,
   sendEventReminder,
   sendUnclaimedTaskReminder,
-  sendChurnRecall,
-  sendSecondRecall,
-  sendSilentHostRecall,
-  sendEncourageHosting,
-  sendMilestoneNotif,
-  sendHostTributeNotif,
   sendDailyDigest,
   processWaitlistExpiry,
+  sendLotteryDrawNotif,
+  sendConsecutiveEventsReminder,
+  sendSameDayReminder,
+  sendFirstEventFollowup,
 } from '../agent/emailAutomation.js';
 import { drawWeeklyHost, getWeekKey } from '../modules/lottery/lottery.service.js';
-import { sendLotteryDrawNotif, sendConsecutiveEventsReminder } from '../agent/emailAutomation.js';
 
 export async function runAgentCycle(app: FastifyInstance) {
   const prisma = app.prisma;
@@ -214,7 +211,7 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: processWaitlistExpiry failed');
   }
 
-  // Phase 3: Email automation (each try/catch, independent)
+  // Phase 3: Instant email automation (time-sensitive, event-related)
 
   // P1: Post-event recap (2-6h after event ends)
   try {
@@ -237,51 +234,18 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: sendUnclaimedTaskReminder failed');
   }
 
+  // P0-D: Same-day event reminder (0-8h before)
   try {
-    await sendChurnRecall(prisma, log);
+    await sendSameDayReminder(prisma, log);
   } catch (err) {
-    log.error({ err }, 'Agent: sendChurnRecall failed');
+    log.error({ err }, 'Agent: sendSameDayReminder failed');
   }
 
-  // P3-G: Second recall (30 days inactive, after P3-F sent)
+  // P3-B: Post-first-event follow-up (event-related, instant)
   try {
-    await sendSecondRecall(prisma, log);
+    await sendFirstEventFollowup(prisma, log);
   } catch (err) {
-    log.error({ err }, 'Agent: sendSecondRecall failed');
-  }
-
-  try {
-    await sendSilentHostRecall(prisma, log);
-  } catch (err) {
-    log.error({ err }, 'Agent: sendSilentHostRecall failed');
-  }
-
-  try {
-    await sendEncourageHosting(prisma, log);
-  } catch (err) {
-    log.error({ err }, 'Agent: sendEncourageHosting failed');
-  }
-
-  if (milestones.length > 0) {
-    try {
-      await sendMilestoneNotif(prisma, log, milestones);
-    } catch (err) {
-      log.error({ err }, 'Agent: sendMilestoneNotif failed');
-    }
-  }
-
-  if (tribute) {
-    try {
-      await sendHostTributeNotif(prisma, log, tribute);
-    } catch (err) {
-      log.error({ err }, 'Agent: sendHostTributeNotif failed');
-    }
-  }
-
-  try {
-    await sendDailyDigest(prisma, log);
-  } catch (err) {
-    log.error({ err }, 'Agent: sendDailyDigest failed');
+    log.error({ err }, 'Agent: sendFirstEventFollowup failed');
   }
 
   // Lottery: consecutive events reminder
@@ -289,6 +253,15 @@ export async function runAgentCycle(app: FastifyInstance) {
     await sendConsecutiveEventsReminder(prisma, log);
   } catch (err) {
     log.error({ err }, 'Agent: sendConsecutiveEventsReminder failed');
+  }
+
+  // Phase 4: Daily digest (consolidates all non-instant notifications)
+  // Covers: new events, new recs, new members, postcards, milestones,
+  // engagement nudges (P3-C/D/E/F/G), community stats
+  try {
+    await sendDailyDigest(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendDailyDigest failed');
   }
 
   return { milestones, tribute };

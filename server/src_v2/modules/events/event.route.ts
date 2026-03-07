@@ -150,7 +150,57 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const updated = await service.updateEvent(id, request.body);
+    const body = request.body as Record<string, any>;
+
+    // Snapshot old phase before update (for TXN-1 cancel detection)
+    const oldEvent = await app.prisma.event.findUnique({
+      where: { id },
+      select: { phase: true, title: true, startsAt: true, location: true, host: { select: { name: true } } },
+    });
+
+    const updated = await service.updateEvent(id, body);
+
+    // Fire-and-forget: TXN-1 (event cancelled) or TXN-2 (event updated)
+    if (oldEvent) {
+      const wasCancelled = oldEvent.phase !== 'cancelled' && body.phase === 'cancelled';
+      const wasUpdated = !wasCancelled && (body.startsAt || body.location || body.title);
+
+      if (wasCancelled || wasUpdated) {
+        const ruleId = wasCancelled ? 'TXN-1' : 'TXN-2';
+        const participants = await app.prisma.eventSignup.findMany({
+          where: { eventId: id, status: { in: ['accepted', 'offered', 'invited'] } },
+          include: { user: { select: { id: true, name: true, email: true, preferences: true } } },
+        });
+        const eventDate = (updated as any).startsAt
+          ? new Date((updated as any).startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })
+          : '';
+        for (const s of participants) {
+          if (!s.user?.email) continue;
+          const prefs = s.user.preferences as { emailState?: string } | null;
+          if (prefs?.emailState === 'unsubscribed') continue;
+          sendTemplatedEmail(app.prisma, {
+            to: s.user.email,
+            ruleId,
+            variables: {
+              userName: s.user.name,
+              eventTitle: oldEvent.title,
+              eventDate,
+              eventLocation: (updated as any).location ?? oldEvent.location ?? '',
+              hostName: oldEvent.host?.name ?? '',
+            },
+            ctaLabel: wasCancelled ? '查看其他活动' : '查看活动详情',
+            ctaUrl: wasCancelled ? 'https://chuanmener.club/events' : `https://chuanmener.club/events/${id}`,
+          }).then((result) => {
+            return app.prisma.emailLog.create({
+              data: { userId: s.user.id, ruleId, refId: id, messageId: result.MessageId },
+            });
+          }).catch((err) => {
+            app.log.error({ err, userId: s.user.id }, `${ruleId} email failed`);
+          });
+        }
+      }
+    }
+
     return { ok: true, event: updated };
   });
 
@@ -229,7 +279,49 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
   // Event signup
   app.post('/:id/signup', async (request) => {
     const { id } = request.params as { id: string };
-    return service.signup(id, request.body);
+    const result = await service.signup(id, request.body);
+
+    // Fire-and-forget: TXN-3 signup confirmation (only for accepted, not waitlisted)
+    if (!result.wasWaitlisted && result.user) {
+      const event = await app.prisma.event.findUnique({
+        where: { id },
+        select: { title: true, startsAt: true, location: true },
+      });
+      if (event && result.user.name) {
+        const user = await app.prisma.user.findUnique({
+          where: { id: result.userId },
+          select: { email: true, preferences: true },
+        });
+        if (user?.email) {
+          const prefs = user.preferences as { emailState?: string } | null;
+          if (prefs?.emailState !== 'unsubscribed') {
+            const eventDate = event.startsAt.toLocaleDateString('zh-CN', {
+              month: 'long', day: 'numeric', weekday: 'short',
+            });
+            sendTemplatedEmail(app.prisma, {
+              to: user.email,
+              ruleId: 'TXN-3',
+              variables: {
+                userName: result.user.name,
+                eventTitle: event.title,
+                eventDate,
+                eventLocation: event.location ?? '',
+              },
+              ctaLabel: '查看活动详情',
+              ctaUrl: `https://chuanmener.club/events/${id}`,
+            }).then((r) => {
+              return app.prisma.emailLog.create({
+                data: { userId: result.userId, ruleId: 'TXN-3', refId: id, messageId: r.MessageId },
+              });
+            }).catch((err) => {
+              app.log.error({ err, userId: result.userId }, 'TXN-3 signup email failed');
+            });
+          }
+        }
+      }
+    }
+
+    return result;
   });
 
   // Cancel signup
