@@ -17,14 +17,40 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const todayMonth = today.getUTCMonth() + 1;
     const todayDay = today.getUTCDate();
 
+    // Pre-fetch: event IDs with recent comments or signups (so old events with new activity get included)
+    const [recentCommentEventIds, recentSignupEventIds] = await Promise.all([
+      prisma.comment.findMany({
+        where: { entityType: 'event', createdAt: { gte: sevenDaysAgo } },
+        select: { entityId: true },
+        distinct: ['entityId'],
+      }),
+      prisma.eventSignup.findMany({
+        where: { createdAt: { gte: sevenDaysAgo } },
+        select: { eventId: true },
+        distinct: ['eventId'],
+      }),
+    ]);
+    const activeEventIds = [
+      ...new Set([
+        ...recentCommentEventIds.map((r) => r.entityId),
+        ...recentSignupEventIds.map((r) => r.eventId),
+      ]),
+    ];
+
     // Fetch in parallel
     const [events, announcements, recommendations, members, postcards, recentMovies, recentProposals, newMembers] =
       await Promise.all([
-        // Recent events — sort by updatedAt so events with new activity bubble up
+        // Recent events + events with recent activity
         prisma.event.findMany({
-          where: { status: { not: 'cancelled' } },
+          where: {
+            status: { not: 'cancelled' },
+            OR: [
+              { updatedAt: { gte: sevenDaysAgo } },
+              ...(activeEventIds.length > 0 ? [{ id: { in: activeEventIds } }] : []),
+            ],
+          },
           orderBy: { updatedAt: 'desc' },
-          take: 20,
+          take: 40,
           include: {
             host: { select: { id: true, name: true, avatar: true } },
             signups: {
@@ -483,33 +509,39 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       postcardCredits = u?.postcardCredits ?? undefined;
     }
 
-    return {
-      events: events.map((e) => {
-        const base = { ...withInteraction(e), photoCount: e.recapPhotoUrls?.length ?? 0 };
-        // Determine why this event is surfaced (activity hint)
-        // Pick the most recent activity after creation
-        const latestComment = latestCommentMap.get(e.id);
-        const latestSignup = latestSignupMap.get(e.id);
-        const isNewlyCreated = e.updatedAt.getTime() - e.createdAt.getTime() < 60_000;
-        let activityHint: string | undefined;
-        let activityHintUser: string | undefined;
-        if (!isNewlyCreated) {
-          // Find what happened most recently
-          const candidates: { type: string; at: Date; userName: string }[] = [];
-          if (latestComment && latestComment.at > e.createdAt) candidates.push({ type: 'comment', at: latestComment.at, userName: latestComment.userName });
-          if (latestSignup && latestSignup.at > e.createdAt) candidates.push({ type: 'signup', at: latestSignup.at, userName: latestSignup.userName });
-          if (candidates.length > 0) {
-            candidates.sort((a, b) => b.at.getTime() - a.at.getTime());
-            activityHint = candidates[0].type;
-            activityHintUser = candidates[0].userName;
-          } else if (e.recapPhotoUrls?.length > 0) {
-            activityHint = 'photo';
-          } else {
-            activityHint = 'update';
-          }
+    // Compute activity hint + real activityAt per event, then sort & trim
+    const enrichedEvents = events.map((e) => {
+      const base = { ...withInteraction(e), photoCount: e.recapPhotoUrls?.length ?? 0 };
+      const latestComment = latestCommentMap.get(e.id);
+      const latestSignup = latestSignupMap.get(e.id);
+      const isNewlyCreated = e.updatedAt.getTime() - e.createdAt.getTime() < 60_000;
+      let activityHint: string | undefined;
+      let activityHintUser: string | undefined;
+      let activityHintAt: Date | undefined;
+      if (!isNewlyCreated) {
+        const candidates: { type: string; at: Date; userName: string }[] = [];
+        if (latestComment && latestComment.at > e.createdAt) candidates.push({ type: 'comment', at: latestComment.at, userName: latestComment.userName });
+        if (latestSignup && latestSignup.at > e.createdAt) candidates.push({ type: 'signup', at: latestSignup.at, userName: latestSignup.userName });
+        if (candidates.length > 0) {
+          candidates.sort((a, b) => b.at.getTime() - a.at.getTime());
+          activityHint = candidates[0].type;
+          activityHintUser = candidates[0].userName;
+          activityHintAt = candidates[0].at;
+        } else if (e.recapPhotoUrls?.length > 0) {
+          activityHint = 'photo';
+        } else {
+          activityHint = 'update';
         }
-        return { ...base, activityHint, activityHintUser };
-      }),
+      }
+      // Real activity time: comment/signup → createdAt (new) → startsAt (old, no activity)
+      const realActivityAt = activityHintAt ?? (isNewlyCreated ? e.createdAt : (e.startsAt ?? e.createdAt));
+      return { ...base, activityHint, activityHintUser, activityAt: realActivityAt };
+    });
+    // Sort by real activity time (most recent first) and take top 20
+    enrichedEvents.sort((a, b) => b.activityAt.getTime() - a.activityAt.getTime());
+
+    return {
+      events: enrichedEvents.slice(0, 20),
       announcements,
       recommendations,
       members,
