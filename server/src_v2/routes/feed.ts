@@ -53,6 +53,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           take: 40,
           include: {
             host: { select: { id: true, name: true, avatar: true } },
+            coHosts: { include: { user: { select: { id: true, name: true } } } },
             signups: {
               where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } },
               include: { user: { select: { id: true, name: true } } },
