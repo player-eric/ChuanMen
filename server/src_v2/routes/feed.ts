@@ -534,9 +534,10 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           activityHint = 'update';
         }
       }
-      // Real activity time: comment/signup → past events use startsAt → future/new use createdAt
+      // Real activity time: only comments bump sort order; signups show as hint but don't re-sort
       const now = new Date();
-      const realActivityAt = activityHintAt
+      const commentActivityAt = activityHint === 'comment' ? activityHintAt : undefined;
+      const realActivityAt = commentActivityAt
         ?? (e.startsAt && e.startsAt <= now ? e.startsAt : e.createdAt);
       return { ...base, activityHint, activityHintUser, activityAt: realActivityAt };
     });
