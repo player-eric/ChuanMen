@@ -881,6 +881,23 @@ function drawAccentDiamond(
 /* ── Image loading ── */
 
 async function loadImage(url: string): Promise<HTMLImageElement> {
+  // For local API media URLs (e.g. /api/media/s3/...), fetch as blob to avoid
+  // cross-origin canvas tainting from S3 redirects
+  if (url.startsWith('/api/media/')) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Media fetch failed: ${res.status}`);
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      const img = await imgFromSrc(objectUrl);
+      URL.revokeObjectURL(objectUrl);
+      return img;
+    } catch {
+      URL.revokeObjectURL(objectUrl);
+      throw new Error(`Failed to load media image: ${url}`);
+    }
+  }
+
   if (url.startsWith('/') && !url.startsWith('//')) {
     return imgFromSrc(url);
   }
@@ -981,15 +998,19 @@ function drawAmbientGlow(ctx: CanvasRenderingContext2D, w: number, h: number, ac
 }
 
 function drawGrain(ctx: CanvasRenderingContext2D, w: number, h: number) {
-  const imageData = ctx.getImageData(0, 0, w, h);
-  const d = imageData.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const n = (Math.random() - 0.5) * 25;
-    d[i]     = Math.min(255, Math.max(0, d[i] + n));
-    d[i + 1] = Math.min(255, Math.max(0, d[i + 1] + n));
-    d[i + 2] = Math.min(255, Math.max(0, d[i + 2] + n));
+  try {
+    const imageData = ctx.getImageData(0, 0, w, h);
+    const d = imageData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const n = (Math.random() - 0.5) * 25;
+      d[i]     = Math.min(255, Math.max(0, d[i] + n));
+      d[i + 1] = Math.min(255, Math.max(0, d[i + 1] + n));
+      d[i + 2] = Math.min(255, Math.max(0, d[i + 2] + n));
+    }
+    ctx.putImageData(imageData, 0, 0);
+  } catch {
+    // Canvas tainted by cross-origin image — skip grain effect
   }
-  ctx.putImageData(imageData, 0, 0);
 }
 
 /* ── Shared drawing helpers ── */
