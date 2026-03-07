@@ -70,6 +70,12 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
     const prisma = app.prisma;
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    // Shared filter: events happening this month (by startsAt, not createdAt)
+    const monthEventFilter = {
+      startsAt: { gte: monthStart, lt: nextMonthStart },
+    };
 
     const [
       totalMembers,
@@ -82,7 +88,7 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
       totalMovies,
       totalProposals,
       // Activity supply
-      monthActiveHosts,
+      monthActiveHostEvents,
       waitlistSignups,
       totalSignupsThisMonth,
       eventTagCounts,
@@ -91,15 +97,15 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
       // Member activity
       monthParticipants,
       monthMovieRecommenders,
+      // New member participation: users joined this month who accepted a this-month event
       newMemberParticipants,
       totalNewMembers,
-      // Host funnel
+      // Host funnel (mutually exclusive stages)
       activeParticipants3,
       firstCoHosts,
       soloHosts,
       veteranHosts,
-      // Email stats
-      emailActive,
+      // Email stats (only count explicit overrides; default users computed below)
       emailWeekly,
       emailStopped,
       emailUnsubscribed,
@@ -107,26 +113,30 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
       prisma.user.count({ where: { userStatus: 'approved' } }),
       prisma.user.count({ where: { userStatus: 'applicant' } }),
       prisma.event.count(),
-      prisma.event.count({ where: { createdAt: { gte: monthStart } } }),
+      // Fix #1: month events by startsAt
+      prisma.event.count({ where: monthEventFilter }),
       prisma.postcard.count(),
       prisma.postcard.count({ where: { createdAt: { gte: monthStart } } }),
       prisma.user.count({ where: { hostCount: { gt: 0 } } }),
       prisma.movie.count(),
       prisma.proposal.count(),
-      // Activity supply: hosts who hosted this month
-      prisma.event.findMany({ where: { createdAt: { gte: monthStart } }, select: { hostId: true } })
-        .then(evts => new Set(evts.map(e => e.hostId)).size),
-      // Waitlist signups this month
-      prisma.eventSignup.count({ where: { status: 'waitlist', createdAt: { gte: monthStart } } }),
-      // Total signups this month (for waitlist ratio)
-      prisma.eventSignup.count({ where: { createdAt: { gte: monthStart } } }),
+      // Fix #1: hosts who hosted this month (by startsAt)
+      prisma.event.findMany({ where: monthEventFilter, select: { hostId: true } }),
+      // Fix #5: waitlist signups for this month's events (by event.startsAt)
+      prisma.eventSignup.count({
+        where: { status: 'waitlist', event: monthEventFilter },
+      }),
+      // Fix #5: total signups for this month's events (by event.startsAt)
+      prisma.eventSignup.count({
+        where: { event: monthEventFilter },
+      }),
       // Event tag distribution (all events)
       prisma.event.findMany({ select: { tags: true } }),
       // Public postcards
       prisma.postcard.count({ where: { visibility: 'public' } }),
-      // Members who participated in events this month
+      // Members who participated in events this month (already correct — uses startsAt)
       prisma.eventSignup.findMany({
-        where: { status: 'accepted', event: { startsAt: { gte: monthStart } } },
+        where: { status: 'accepted', event: monthEventFilter },
         select: { userId: true },
       }).then(rows => new Set(rows.map(r => r.userId)).size),
       // Members who recommended movies this month
@@ -134,14 +144,27 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
         where: { createdAt: { gte: monthStart }, recommendedById: { not: undefined } },
         select: { recommendedById: true },
       }).then(rows => new Set(rows.map(r => r.recommendedById).filter(Boolean)).size),
-      // New members (joined this month) who participated in at least one event
-      prisma.user.count({
-        where: { createdAt: { gte: monthStart }, userStatus: 'approved', participationCount: { gt: 0 } },
+      // Fix #2: new members who actually accepted a this-month event signup
+      prisma.user.findMany({
+        where: { createdAt: { gte: monthStart }, userStatus: 'approved' },
+        select: { id: true },
+      }).then(async newUsers => {
+        if (newUsers.length === 0) return 0;
+        const signups = await prisma.eventSignup.findMany({
+          where: {
+            userId: { in: newUsers.map(u => u.id) },
+            status: 'accepted',
+            event: monthEventFilter,
+          },
+          select: { userId: true },
+        });
+        return new Set(signups.map(s => s.userId)).size;
       }),
       prisma.user.count({ where: { createdAt: { gte: monthStart }, userStatus: 'approved' } }),
-      // Host funnel: active participants (≥3 events)
-      prisma.user.count({ where: { userStatus: 'approved', participationCount: { gte: 3 } } }),
-      // First co-hosts (appeared as coHost but hostCount = 0)
+      // Fix #4: host funnel — mutually exclusive stages
+      // Stage 1: active participants (≥3 events) who have NEVER hosted
+      prisma.user.count({ where: { userStatus: 'approved', participationCount: { gte: 3 }, hostCount: 0 } }),
+      // Stage 2: co-hosted but never solo hosted
       prisma.eventCoHost.findMany({ select: { userId: true }, distinct: ['userId'] })
         .then(async rows => {
           if (rows.length === 0) return 0;
@@ -149,16 +172,21 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
             where: { id: { in: rows.map(r => r.userId) }, hostCount: 0 },
           });
         }),
-      // Solo hosts (hostCount >= 1)
-      prisma.user.count({ where: { userStatus: 'approved', hostCount: { gte: 1 } } }),
-      // Veteran hosts (hostCount >= 5)
+      // Stage 3: solo hosts (1-4 times)
+      prisma.user.count({ where: { userStatus: 'approved', hostCount: { gte: 1, lt: 5 } } }),
+      // Stage 4: veteran hosts (≥5 times)
       prisma.user.count({ where: { userStatus: 'approved', hostCount: { gte: 5 } } }),
-      // Email preference stats
-      prisma.userPreference.count({ where: { emailState: 'active' } }),
+      // Fix #3: email stats — only count explicit overrides
       prisma.userPreference.count({ where: { emailState: 'weekly' } }),
       prisma.userPreference.count({ where: { emailState: 'stopped' } }),
       prisma.userPreference.count({ where: { emailState: 'unsubscribed' } }),
     ]);
+
+    // Fix #1: compute monthActiveHosts from fetched events
+    const monthActiveHosts = new Set(monthActiveHostEvents.map(e => e.hostId)).size;
+
+    // Fix #3: email active = total approved members minus those with non-active overrides
+    const emailActive = totalMembers - emailWeekly - emailStopped - emailUnsubscribed;
 
     // Compute event tag distribution
     const tagMap: Record<string, number> = {};
