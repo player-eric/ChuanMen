@@ -230,6 +230,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         bio: user.bio,
         role: user.role,
         location: user.location,
+        city: user.city,
         coverImageUrl: user.coverImageUrl,
         selfAsFriend: user.selfAsFriend,
         idealFriend: user.idealFriend,
