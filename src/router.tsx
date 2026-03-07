@@ -121,6 +121,7 @@ function buildFeedItems(data: any): any[] {
       time: e.activityAt ? timeAgo(e.activityAt) : (e.createdAt ? timeAgo(e.createdAt) : ''),
       activityHint: e.activityHint as string | undefined,
       activityHintUser: e.activityHintUser as string | undefined,
+      hostId: e.host?.id ?? '',
       location: e.location ?? '',
       spots: Math.max(0, (e.capacity ?? 8) - feedHostSlots - feedOccupying.length),
       total: e.capacity ?? 8,

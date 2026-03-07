@@ -283,7 +283,7 @@ interface FeedActivityProps extends InteractionProps {
   taskSummary?: FeedTaskSummary[];
 }
 
-export function FeedActivity({ name, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, waitlistCount, socialHint, time, activityHint, activityHintUser, taskSummary }: FeedActivityProps) {
+export function FeedActivity({ name, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, hostId, waitlistCount, socialHint, time, activityHint, activityHintUser, taskSummary }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -297,6 +297,7 @@ export function FeedActivity({ name, title, date, location, spots, total, people
   const isList = mode === 'list';
   const isCancelled = phase === 'cancelled';
   const isEnded = phase === 'ended';
+  const isHost = Boolean(user?.id && hostId && user.id === hostId);
 
   // Sync signup state when data refreshes
   useEffect(() => {
@@ -464,7 +465,7 @@ export function FeedActivity({ name, title, date, location, spots, total, people
             </button>
           )
         )}
-        {/* Social hint + signup (skip for ended/cancelled) */}
+        {/* Social hint + signup (skip for ended/cancelled and host) */}
         {!isEnded && !isCancelled && (
           <>
             {socialHint && (
@@ -472,18 +473,28 @@ export function FeedActivity({ name, title, date, location, spots, total, people
                 {'💡'} {socialHint.name}也报名了（你们一起参加过 {socialHint.count} 次活动）
               </div>
             )}
-            <button
-              onClick={handleSignup}
-              style={{
-                width: '100%', padding: '9px 0', borderRadius: 8,
-                background: joined ? c.s2 : c.warm,
-                border: joined ? `1px solid ${c.green}30` : 'none',
-                color: joined ? c.green : c.bg,
-                fontSize: 14, fontWeight: 700, cursor: 'pointer',
-              }}
-            >
-              {joined ? '✓ 已报名' : '报名参加'}
-            </button>
+            {isHost ? (
+              <div style={{
+                width: '100%', padding: '9px 0', borderRadius: 8, textAlign: 'center',
+                background: c.s2, border: `1px solid ${c.warm}20`,
+                color: c.warm, fontSize: 14, fontWeight: 700, opacity: 0.7,
+              }}>
+                我的活动
+              </div>
+            ) : (
+              <button
+                onClick={handleSignup}
+                style={{
+                  width: '100%', padding: '9px 0', borderRadius: 8,
+                  background: joined ? c.s2 : c.warm,
+                  border: joined ? `1px solid ${c.green}30` : 'none',
+                  color: joined ? c.green : c.bg,
+                  fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                {joined ? '✓ 已报名' : '报名参加'}
+              </button>
+            )}
           </>
         )}
       </div>
