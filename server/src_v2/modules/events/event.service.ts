@@ -181,7 +181,8 @@ export class EventService {
   async addCoHost(eventId: string, userId: string, requesterId: string) {
     const event = await this.repository.getById(eventId);
     if (!event) throw new Error('活动不存在');
-    if (event.hostId !== requesterId) throw new Error('只有 Host 可以添加 Co-Host');
+    const isHostOrCoHost = event.hostId === requesterId || event.coHosts?.some((ch: any) => ch.userId === requesterId);
+    if (!isHostOrCoHost) throw new Error('只有 Host 或 Co-Host 可以添加 Co-Host');
     if (event.hostId === userId) throw new Error('Host 不能添加自己为 Co-Host');
     return this.repository.addCoHost(eventId, userId);
   }
@@ -189,7 +190,8 @@ export class EventService {
   async removeCoHost(eventId: string, userId: string, requesterId: string) {
     const event = await this.repository.getById(eventId);
     if (!event) throw new Error('活动不存在');
-    if (event.hostId !== requesterId) throw new Error('只有 Host 可以移除 Co-Host');
+    const isHostOrCoHost = event.hostId === requesterId || event.coHosts?.some((ch: any) => ch.userId === requesterId);
+    if (!isHostOrCoHost) throw new Error('只有 Host 或 Co-Host 可以移除 Co-Host');
     const result = await this.repository.removeCoHost(eventId, userId);
     // Removing a co-host frees a slot — promote next waitlisted if applicable
     await this.repository.promoteNextWaitlisted(eventId);
@@ -274,11 +276,12 @@ export class EventService {
     return declined;
   }
 
-  /** Host directly approves a waitlisted person (skips 24h offer) */
+  /** Host or co-host directly approves a waitlisted person (skips 24h offer) */
   async hostApproveWaitlist(eventId: string, userId: string, requesterId: string) {
     const event = await this.repository.getById(eventId);
-    if (!event || event.hostId !== requesterId) {
-      throw new Error('只有 Host 可以操作等位名单');
+    const isHostOrCoHost = event && (event.hostId === requesterId || event.coHosts?.some((ch: any) => ch.userId === requesterId));
+    if (!event || !isHostOrCoHost) {
+      throw new Error('只有 Host 或 Co-Host 可以操作等位名单');
     }
 
     // Check capacity before approving (waitlist → accepted adds an occupying slot)
@@ -306,11 +309,12 @@ export class EventService {
     return result;
   }
 
-  /** Host rejects a waitlisted person */
+  /** Host or co-host rejects a waitlisted person */
   async hostRejectWaitlist(eventId: string, userId: string, requesterId: string) {
     const event = await this.repository.getById(eventId);
-    if (!event || event.hostId !== requesterId) {
-      throw new Error('只有 Host 可以操作等位名单');
+    const isHostOrCoHost = event && (event.hostId === requesterId || event.coHosts?.some((ch: any) => ch.userId === requesterId));
+    if (!event || !isHostOrCoHost) {
+      throw new Error('只有 Host 或 Co-Host 可以操作等位名单');
     }
 
     const result = await this.repository.hostRejectWaitlist(eventId, userId);

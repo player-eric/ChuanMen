@@ -556,7 +556,7 @@ export default function EventDetailPage() {
             </Stack>
 
             {/* Host management bar */}
-            {(isHost || isAdmin) && event.phase !== 'cancelled' && (
+            {(isHost || isCoHost || isAdmin) && event.phase !== 'cancelled' && (
               <Stack direction="row" spacing={1} sx={{ mb: 1.5 }} flexWrap="wrap" useFlexGap>
                 <Button
                   size="small"
@@ -700,7 +700,7 @@ export default function EventDetailPage() {
               </Stack>
             )}
             {/* Poster button for non-host users */}
-            {user?.id && !(isHost || isAdmin) && (
+            {user?.id && !(isHost || isCoHost || isAdmin) && (
               <Stack direction="row" sx={{ mb: 1.5 }}>
                 <Button
                   size="small"
@@ -823,7 +823,7 @@ export default function EventDetailPage() {
               const defaultMode = event.recSelectionMode ?? 'nominate';
               const hasRecs = recs.length > 0;
               const isEnded = event.phase === 'ended' || event.phase === 'cancelled';
-              const showSection = hasRecs || cats.length > 0 || ((!isEnded) && (isHost || isAdmin || signedUp));
+              const showSection = hasRecs || cats.length > 0 || ((!isEnded) && (isHost || isCoHost || isAdmin || signedUp));
 
               const handleVote = async (recId: string, isMovieTable: boolean) => {
                 if (!user) return;
@@ -876,7 +876,7 @@ export default function EventDetailPage() {
                       const catRecs = recs.filter((r) => r.category === cat);
                       const selected = catRecs.filter((r) => r.isSelected);
                       const unselected = catRecs.filter((r) => !r.isSelected);
-                      const canNominate = (isHost || isAdmin || (signedUp && mode === 'nominate')) && event.phase !== 'ended' && event.phase !== 'cancelled';
+                      const canNominate = (isHost || isCoHost || isAdmin || (signedUp && mode === 'nominate')) && event.phase !== 'ended' && event.phase !== 'cancelled';
 
                       return (
                         <Box key={cat} sx={{ mb: 2 }}>
@@ -924,8 +924,8 @@ export default function EventDetailPage() {
                           {/* Unselected / nominations */}
                           {unselected.map((rec) => {
                             const isMovie = (rec as any)._fromMovieTable;
-                            const canDelete = isHost || isAdmin || (!isMovie && user && rec.linkedById === user.id);
-                            const canSelect = !isMovie && (isHost || isAdmin) && (event.phase === 'invite' || event.phase === 'open');
+                            const canDelete = isHost || isCoHost || isAdmin || (!isMovie && user && rec.linkedById === user.id);
+                            const canSelect = !isMovie && (isHost || isCoHost || isAdmin) && (event.phase === 'invite' || event.phase === 'open');
                             const voted = user ? (rec.voterIds ?? []).includes(user.id) : false;
                             return (
                               <Card key={rec.id} variant="outlined" sx={{ mb: 1 }}>
@@ -1006,7 +1006,7 @@ export default function EventDetailPage() {
                     })}
 
                     {/* Fallback: no configured categories, show generic add buttons */}
-                    {displayCats.length === 0 && (isHost || isAdmin || signedUp) && event.phase !== 'ended' && event.phase !== 'cancelled' && (
+                    {displayCats.length === 0 && (isHost || isCoHost || isAdmin || signedUp) && event.phase !== 'ended' && event.phase !== 'cancelled' && (
                       <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
                         {[
                           { key: 'all', label: '+ 全部' },
@@ -1166,7 +1166,7 @@ export default function EventDetailPage() {
                       {isNameCoHost && (
                         <>
                           <Chip size="small" label="Co-Host" variant="outlined" color="secondary" />
-                          {isHost && memberId && (
+                          {(isHost || isCoHost) && memberId && (
                             <IconButton
                               size="small"
                               onClick={async () => {
@@ -1257,7 +1257,7 @@ export default function EventDetailPage() {
                     >
                       {event.phase === 'ended' ? '添加参与者' : '邀请成员'}
                     </Button>
-                    {isHost && event.phase !== 'ended' && (
+                    {(isHost || isCoHost) && event.phase !== 'ended' && (
                       <Button
                         variant="outlined"
                         size="small"
@@ -1343,7 +1343,7 @@ export default function EventDetailPage() {
         </Card>
 
         {/* Host waitlist management panel */}
-        {(isHost || isAdmin) && event.phase !== 'ended' && event.phase !== 'cancelled' && (() => {
+        {(isHost || isCoHost || isAdmin) && event.phase !== 'ended' && event.phase !== 'cancelled' && (() => {
           const waitlistPeople = (event.signupDetails ?? []).filter((s) => s.status === 'waitlist');
           const offeredPeople = (event.signupDetails ?? []).filter((s) => s.status === 'offered');
           if (waitlistPeople.length === 0 && offeredPeople.length === 0) return null;
@@ -1416,12 +1416,12 @@ export default function EventDetailPage() {
         })()}
 
         {/* 8. Unified tasks (分工) — persisted via API */}
-        {(eventTasks.length > 0 || isHost || isAdmin) && (
+        {(eventTasks.length > 0 || isHost || isCoHost || isAdmin) && (
           <Card>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                 <Typography variant="subtitle1" fontWeight={700}>分工认领</Typography>
-                {(isHost || isAdmin) && !taskEditing && (
+                {(isHost || isCoHost || isAdmin) && !taskEditing && (
                   <Button size="small" startIcon={<EditIcon />} onClick={() => setTaskEditing(true)}>
                     编辑
                   </Button>
@@ -1576,13 +1576,13 @@ export default function EventDetailPage() {
                       )}
                     </Stack>
                   ))}
-                  {eventTasks.length === 0 && (isHost || isAdmin) && (
+                  {eventTasks.length === 0 && (isHost || isCoHost || isAdmin) && (
                     <Typography variant="body2" color="text.secondary">
                       暂无分工，点击"编辑"添加
                     </Typography>
                   )}
                   {/* Volunteer button for signed-up users */}
-                  {user && (signedUp || isHost || isAdmin) && eventTasks.length > 0 && (
+                  {user && (signedUp || isHost || isCoHost || isAdmin) && eventTasks.length > 0 && (
                     <Button
                       size="small"
                       variant="text"
