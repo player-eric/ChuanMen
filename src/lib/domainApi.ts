@@ -499,7 +499,7 @@ export async function fetchCoAttendees(userId: string) {
    ═══════════════════════════════════════════════════════════════ */
 
 export async function fetchPostcardsApi(userId: string) {
-  return requestJson<{ received: EntityMap[]; sent: EntityMap[]; credits: number; eligible?: { id: string; name: string; eventCtx: string }[] }>(
+  return requestJson<{ received: EntityMap[]; sent: EntityMap[]; credits: number; eligible?: any[] }>(
     `/api/postcards${toQueryString({ userId })}`,
   );
 }

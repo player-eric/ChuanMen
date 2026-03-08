@@ -273,6 +273,24 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    // Backfill postcard credits if credits were already awarded for this event
+    const eventForCredits = await app.prisma.event.findUnique({
+      where: { id },
+      select: { creditsAwarded: true, hostId: true },
+    });
+    if (eventForCredits?.creditsAwarded) {
+      const { userIds: invitedUserIds } = request.body as { userIds: string[] };
+      // Award +2 to each newly invited user (exclude host who already got +6)
+      const newUserIds = invitedUserIds.filter((uid) => uid !== eventForCredits.hostId);
+      if (newUserIds.length > 0) {
+        await app.prisma.user.updateMany({
+          where: { id: { in: newUserIds } },
+          data: { postcardCredits: { increment: 2 } },
+        });
+        app.log.info({ eventId: id, users: newUserIds.length }, 'Backfilled postcard credits for late invites');
+      }
+    }
+
     return { ok: true, signups };
   });
 

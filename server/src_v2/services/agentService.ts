@@ -154,7 +154,7 @@ export async function runAgentCycle(app: FastifyInstance) {
         hostId: true,
         host: { select: { id: true, name: true, email: true } },
         signups: {
-          where: { status: 'accepted', participated: true },
+          where: { status: 'accepted' },
           select: { userId: true, user: { select: { id: true, name: true, email: true } } },
         },
         coHosts: {

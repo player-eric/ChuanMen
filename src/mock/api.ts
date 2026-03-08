@@ -75,7 +75,7 @@ export async function fetchBookDetail(bookId: string) {
 
 export async function fetchCardsData(): Promise<CardsPageData> {
   await delay();
-  return { people: cardPeople, quickMessages, myCards, sentCards: cardsSent, credits: 6 };
+  return { people: cardPeople, eligibleEvents: [], quickMessages, myCards, sentCards: cardsSent, credits: 6 };
 }
 
 export async function fetchProfileData(): Promise<ProfilePageData> {

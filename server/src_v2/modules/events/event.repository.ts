@@ -200,8 +200,13 @@ export class EventRepository {
   async signup(eventId: string, userId: string) {
     const event = await this.prisma.event.findUniqueOrThrow({
       where: { id: eventId },
-      select: { capacity: true, waitlistEnabled: true, phase: true, status: true },
+      select: { capacity: true, waitlistEnabled: true, phase: true, status: true, startsAt: true },
     });
+
+    // Block self-signup after event has started (host can still invite via inviteUsers)
+    if (event.startsAt <= new Date()) {
+      throw new Error('活动已开始，无法自行报名');
+    }
 
     const isEnded = event.phase === 'ended' || event.status === 'completed';
 
@@ -237,6 +242,12 @@ export class EventRepository {
   }
 
   async inviteUsers(eventId: string, userIds: string[], invitedById: string) {
+    const event = await this.prisma.event.findUniqueOrThrow({
+      where: { id: eventId },
+      select: { startsAt: true },
+    });
+    const alreadyStarted = event.startsAt <= new Date();
+
     const results = [];
     for (const userId of userIds) {
       const existing = await this.prisma.eventSignup.findUnique({
@@ -251,10 +262,12 @@ export class EventRepository {
         if (signup) results.push(signup);
         continue;
       }
+      // If event already started, set directly to accepted (no need to wait for user response)
+      const status = alreadyStarted ? 'accepted' : 'invited';
       const signup = await this.prisma.eventSignup.upsert({
         where: { eventId_userId: { eventId, userId } },
-        create: { eventId, userId, invitedById, status: 'invited', invitedAt: new Date() },
-        update: { invitedById, status: 'invited', invitedAt: new Date() },
+        create: { eventId, userId, invitedById, status, invitedAt: new Date() },
+        update: { invitedById, status, invitedAt: new Date() },
         include: { user: { select: { id: true, name: true, avatar: true } } },
       });
       results.push(signup);

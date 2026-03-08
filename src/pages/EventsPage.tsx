@@ -71,7 +71,14 @@ export default function EventsPage() {
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
 
   /* Split events by phase, filtering invite-phase by user visibility */
-  const allUpcoming = data.upcoming.filter((e: any) => e.phase === 'invite' || e.phase === 'open' || e.phase === 'closed' || e.phase === 'cancelled');
+  const now = new Date();
+  const isPastDate = (e: any) => {
+    const t = e.startsAt ?? e.date;
+    return t && new Date(t).getTime() + 4 * 3600_000 < now.getTime(); // 4h grace like agent
+  };
+  const allUpcoming = data.upcoming.filter((e: any) =>
+    (e.phase === 'invite' || e.phase === 'open' || e.phase === 'closed' || e.phase === 'cancelled') && !isPastDate(e)
+  );
   const upcomingEvents = allUpcoming.filter((e: any) => {
     if (e.phase === 'invite') {
       if (!user) return false;
@@ -80,7 +87,8 @@ export default function EventsPage() {
     }
     return true;
   });
-  const endedFromUpcoming = data.upcoming.filter((e: any) => e.phase === 'ended');
+  // Events that are ended OR have passed their start time (agent hasn't auto-ended yet)
+  const endedFromUpcoming = data.upcoming.filter((e: any) => e.phase === 'ended' || isPastDate(e));
 
   // Merge ended events from upcoming + past, deduplicate by id, sort by time descending
   const allPastEvents = useMemo(() => {
