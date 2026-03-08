@@ -371,6 +371,14 @@ Key models (45+ total in `schema.prisma`):
 ### Manual Tests
 - `docs/test-guide.html` — 15-section UI test checklist. Test account: `cm@gmail.com`
 
+## CRITICAL: Build Before Push
+
+**NEVER push to remote without a successful local build first.** Before running `git push`, always run `npm run build` from the project root and ensure it completes without errors. A broken build on `main` will break the production deployment on Render.
+
+## CRITICAL: Email Safety
+
+**NEVER trigger email sending to real users without explicit user approval.** When testing email-related features (agent tick, digest, notifications), only send to test accounts. Never call production email endpoints (e.g., `POST /api/agent/tick`) without confirming with the user first. Emails sent cannot be undone.
+
 ## CRITICAL: Backward Compatibility
 
 **NEVER make changes that lose existing data.** All schema changes MUST use additive migrations (ADD COLUMN with defaults, never DROP COLUMN without explicit user approval). Capacity semantics change (from "max signups" to "total people including host") was handled by incrementing all existing events' capacity by 1 in migration SQL. Always think about existing data impact before making changes.

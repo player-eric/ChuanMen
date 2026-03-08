@@ -35,19 +35,42 @@ export async function detectMilestones(
     { label: '参与人次', count: totalParticipations, step: 100 },
   ];
 
+  // Load baseline from SiteConfig — prevents retroactive milestone creation
+  // Baseline stores the last known milestone value per label, e.g. { "活动": 30, "成员": 40 }
+  const baselineRow = await prisma.siteConfig.findUnique({ where: { key: 'milestoneBaseline' } });
+  const baseline: Record<string, number> = (baselineRow?.value as Record<string, number>) ?? {};
+
+  // If no baseline exists, initialize it with current values (skip all historical milestones)
+  if (!baselineRow) {
+    const init: Record<string, number> = {};
+    for (const c of checks) {
+      init[c.label] = Math.floor(c.count / c.step) * c.step;
+    }
+    await prisma.siteConfig.create({ data: { key: 'milestoneBaseline', value: init } });
+    log.info({ baseline: init }, 'Milestone baseline initialized (skipping historical)');
+    return [];
+  }
+
   const authorId = await getSystemAuthorId(prisma);
   const created: string[] = [];
+  const updatedBaseline = { ...baseline };
 
   for (const c of checks) {
-    // Only the highest reached milestone (no back-fill)
     const milestone = Math.floor(c.count / c.step) * c.step;
     if (milestone === 0) continue;
+
+    const prev = baseline[c.label] ?? 0;
+    // Only trigger if we crossed a new threshold beyond the baseline
+    if (milestone <= prev) continue;
 
     const title = `串门儿${c.label}突破 ${milestone}！`;
     const exists = await prisma.announcement.findFirst({
       where: { title, type: 'milestone' },
     });
-    if (exists) continue;
+    if (exists) {
+      updatedBaseline[c.label] = milestone;
+      continue;
+    }
 
     await prisma.announcement.create({
       data: {
@@ -58,9 +81,16 @@ export async function detectMilestones(
         authorId,
       },
     });
+    updatedBaseline[c.label] = milestone;
     created.push(title);
     log.info(`Milestone created: ${title}`);
   }
+
+  // Persist updated baseline
+  await prisma.siteConfig.update({
+    where: { key: 'milestoneBaseline' },
+    data: { value: updatedBaseline },
+  });
 
   return created;
 }
