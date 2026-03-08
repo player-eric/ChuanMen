@@ -194,6 +194,8 @@ export interface CardReceived {
   sourceType?: PostcardSourceType;
   tags?: string[];
   eventCtx?: string;
+  fromAvatar?: string;
+  toAvatar?: string;
 }
 
 export interface Collaborator {
