@@ -87,29 +87,33 @@ export class PostcardRepository {
   }
 
   /**
-   * Find people the user co-attended events with, returning the most recent shared event title.
+   * Find people the user co-attended events with, grouped by event (most recent first).
    */
   async listEligibleRecipients(userId: string) {
     // "Participated" means either:
     //   a) participated flag is true, OR
-    //   b) status is 'accepted' in a past event (phase=ended or status=completed)
+    //   b) status is 'accepted' in ended/completed event, OR
+    //   c) status is 'accepted' in an event that has already started (can send cards same day)
     const participatedFilter = {
       OR: [
         { participated: true },
         { status: 'accepted' as const, event: { phase: 'ended' as const } },
         { status: 'accepted' as const, event: { status: 'completed' as const } },
+        { status: 'accepted' as const, event: { startsAt: { lte: new Date() } } },
       ],
     };
 
     // Get events the user participated in
     const mySignups = await this.prisma.eventSignup.findMany({
       where: { userId, ...participatedFilter },
-      select: { eventId: true },
+      select: { eventId: true, event: { select: { id: true, title: true, startsAt: true } } },
+      orderBy: { event: { startsAt: 'desc' } },
     });
-    const myEventIds = mySignups.map((s) => s.eventId);
-    if (!myEventIds.length) return [];
+    if (!mySignups.length) return [];
 
-    // Find other users who participated in those events, with the event info
+    const myEventIds = mySignups.map((s) => s.eventId);
+
+    // Find other users who participated in those events
     const coSignups = await this.prisma.eventSignup.findMany({
       where: {
         eventId: { in: myEventIds },
@@ -118,26 +122,36 @@ export class PostcardRepository {
       },
       select: {
         userId: true,
+        eventId: true,
         user: { select: { id: true, name: true } },
-        event: { select: { id: true, title: true, startsAt: true } },
       },
-      orderBy: { event: { startsAt: 'desc' } },
     });
 
-    // Deduplicate by user, keeping the most recent shared event
-    const seen = new Map<string, { id: string; name: string; eventCtx: string }>();
+    // Build per-event people map
+    const eventPeopleMap = new Map<string, Set<string>>();
+    const userMap = new Map<string, { id: string; name: string }>();
     for (const s of coSignups) {
-      if (seen.has(s.userId)) continue;
-      const dateStr = s.event.startsAt
-        ? new Date(s.event.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
-        : '';
-      seen.set(s.userId, {
-        id: s.user.id,
-        name: s.user.name,
-        eventCtx: dateStr ? `${dateStr} ${s.event.title}` : s.event.title,
+      if (!eventPeopleMap.has(s.eventId)) eventPeopleMap.set(s.eventId, new Set());
+      eventPeopleMap.get(s.eventId)!.add(s.userId);
+      if (!userMap.has(s.userId)) userMap.set(s.userId, { id: s.user.id, name: s.user.name });
+    }
+
+    // Build grouped result, ordered by event date desc (already sorted from mySignups)
+    const seenEventIds = new Set<string>();
+    const events: { eventId: string; title: string; startsAt: string | null; people: { id: string; name: string }[] }[] = [];
+    for (const s of mySignups) {
+      if (seenEventIds.has(s.eventId)) continue;
+      seenEventIds.add(s.eventId);
+      const peopleIds = eventPeopleMap.get(s.eventId);
+      if (!peopleIds?.size) continue;
+      events.push({
+        eventId: s.event.id,
+        title: s.event.title,
+        startsAt: s.event.startsAt?.toISOString() ?? null,
+        people: Array.from(peopleIds).map((uid) => userMap.get(uid)!),
       });
     }
-    return Array.from(seen.values());
+    return events;
   }
 
   adminListAll() {

@@ -141,10 +141,11 @@ export async function runAgentCycle(app: FastifyInstance) {
 
   // Phase 1e: Award postcard credits for completed events
   try {
-    // Find completed events that haven't awarded credits yet
+    // Find events that have started and haven't awarded credits yet
     const unprocessed = await prisma.event.findMany({
       where: {
-        status: 'completed',
+        startsAt: { lte: new Date() },
+        phase: { not: 'cancelled' },
         creditsAwarded: false,
       },
       select: {
