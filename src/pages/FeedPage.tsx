@@ -217,13 +217,18 @@ function RecapBanner({ items, onSnack }: { items: FeedItem[]; onSnack: (msg: str
 
   if (!user) return null;
 
-  // Find ended activities the user participated in
+  // Find recently ended activities the user participated in (within 7 days)
+  const RECAP_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
   const endedMine = items.filter(
-    (it): it is Extract<FeedItem, { type: 'activity' }> =>
-      it.type === 'activity' &&
-      (it as any).phase === 'ended' &&
-      Array.isArray((it as any).signupUserIds) &&
-      (it as any).signupUserIds.includes(user.id),
+    (it): it is Extract<FeedItem, { type: 'activity' }> => {
+      if (it.type !== 'activity') return false;
+      const a = it as any;
+      if (a.phase !== 'ended') return false;
+      if (!Array.isArray(a.signupUserIds) || !a.signupUserIds.includes(user.id)) return false;
+      // Only show recap for events that started within the last 7 days
+      if (a.startsAt && Date.now() - new Date(a.startsAt).getTime() > RECAP_WINDOW_MS) return false;
+      return true;
+    },
   );
 
   // Show the most recent one that hasn't been dismissed

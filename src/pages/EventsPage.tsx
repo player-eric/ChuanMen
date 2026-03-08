@@ -162,6 +162,7 @@ export default function EventsPage() {
                   <FeedActivity
                     mode="list"
                     name={evt.host}
+                    hostAvatar={evt.hostAvatar}
                     title={evt.title}
                     date={evt.date}
                     location={evt.location}

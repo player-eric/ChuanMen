@@ -263,7 +263,7 @@ interface FeedTaskSummary {
 }
 
 interface FeedActivityProps extends InteractionProps {
-  name: string; title: string; date: string; location: string;
+  name: string; hostAvatar?: string; title: string; date: string; location: string;
   spots: number; total?: number; people: (string | { name: string; avatar?: string | null })[]; signupUserIds?: string[]; film?: string; filmPoster?: string; scene?: string;
   navTarget?: string;
   /** 'feed' = full card with signup/actions (default); 'list' = compact list card for EventsPage */
@@ -283,7 +283,7 @@ interface FeedActivityProps extends InteractionProps {
   taskSummary?: FeedTaskSummary[];
 }
 
-export function FeedActivity({ name, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, hostId, waitlistCount, socialHint, time, activityHint, activityHintUser, taskSummary }: FeedActivityProps) {
+export function FeedActivity({ name, hostAvatar, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, hostId, waitlistCount, socialHint, time, activityHint, activityHintUser, taskSummary }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -372,7 +372,7 @@ export function FeedActivity({ name, title, date, location, spots, total, people
         {/* Feed mode: author header */}
         {!isList && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <span onClick={(e) => { e.stopPropagation(); goMember(name); }}><Ava name={name} size={32} badge="🏠" /></span>
+            <span onClick={(e) => { e.stopPropagation(); goMember(name); }}><Ava name={name} src={hostAvatar} size={32} badge="🏠" /></span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14 }}>
                 <b onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</b>
@@ -411,7 +411,7 @@ export function FeedActivity({ name, title, date, location, spots, total, people
         {/* List mode: host row */}
         {isList && (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
-            <Ava name={name} size={22} onTap={() => goMember(name)} />
+            <Ava name={name} src={hostAvatar} size={22} onTap={() => goMember(name)} />
             <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ fontSize: 12, color: c.text3, cursor: 'pointer' }}>{name} Host</span>
           </div>
         )}

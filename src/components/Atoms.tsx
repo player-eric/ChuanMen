@@ -34,9 +34,11 @@ export function Ava({ name: rawName, src, size = 28, border, badge, onTap }: Ava
         <img
           src={src}
           alt={name}
+          loading="lazy"
           style={{
             width: size, height: size, borderRadius: '50%',
             objectFit: 'cover',
+            background: `hsl(${name.charCodeAt(0) * 37 % 360}, 25%, 22%)`,
             border: border ? `2px solid ${c.s1}` : 'none',
           }}
         />
