@@ -109,13 +109,15 @@ function formatLastActive(iso: string | null): string {
   if (!iso) return '—';
   const d = new Date(iso);
   const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffDays = Math.floor(diffMs / 86_400_000);
-  if (diffDays === 0) return '今天';
+  const diffMin = Math.floor((now.getTime() - d.getTime()) / 60_000);
+  if (diffMin < 1) return '刚刚';
+  if (diffMin < 60) return `${diffMin}分钟前`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}小时前`;
+  const diffDays = Math.floor(diffHr / 24);
   if (diffDays === 1) return '昨天';
   if (diffDays < 30) return `${diffDays}天前`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}个月前`;
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short' });
+  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
 export default function AdminMembersPage() {
