@@ -714,6 +714,7 @@ export async function submitApplication(payload: {
   wechatId: string;
   referralSource?: string;
   coverImageUrl?: string;
+  avatar?: string;
   googleId?: string;
   subscribeNewsletter?: boolean;
   birthday?: string;

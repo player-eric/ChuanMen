@@ -1,8 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { UserRepository } from './user.repository.js';
 import { UserService } from './user.service.js';
-import { sendEmail } from '../../services/emailService.js';
-import { sendTemplatedEmail } from '../../services/emailService.js';
+import { sendEmail, sendTemplatedEmail } from '../../services/emailService.js';
 import { renderEmail } from '../../emails/template.js';
 import { env } from '../../config/env.js';
 
@@ -56,7 +55,7 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     try {
       applicant = await service.submitApplication(request.body);
     } catch (err: any) {
-      if (err.errorCode === 'EMAIL_EXISTS' || err.errorCode === 'NAME_EXISTS') {
+      if (err.errorCode === 'EMAIL_EXISTS' || err.errorCode === 'NAME_EXISTS' || err.errorCode === 'REJECTED_COOLDOWN') {
         return reply.code(409).send({ error: err.message, errorCode: err.errorCode });
       }
       throw err;
@@ -181,70 +180,10 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     return { ok: true, publicityEndsAt: announcedEndAt.toISOString() };
   });
 
-  // Admin: approve applicant (sends TXN-4 welcome email + creates UserPreference if subscribed)
+  // Admin: approve applicant (delegates to shared approveUser logic)
   app.post('/:id/approve', async (request, reply) => {
     const { id } = request.params as { id: string };
-
-    const user = await app.prisma.user.update({
-      where: { id },
-      data: { userStatus: 'approved', approvedAt: new Date() },
-    });
-
-    // Create UserPreference if user opted into newsletter
-    if (user.subscribeNewsletter) {
-      try {
-        await app.prisma.userPreference.upsert({
-          where: { userId: user.id },
-          create: {
-            userId: user.id,
-            emailState: 'active',
-            notifyEvents: true,
-            notifyCards: true,
-            notifyOps: true,
-            notifyAnnounce: true,
-          },
-          update: {},
-        });
-      } catch (err) {
-        app.log.error(err, 'Failed to create UserPreference on approve');
-      }
-    }
-
-    // Auto-join lottery candidate pool if participationPlan includes Host
-    if (user.participationPlan && /host|Host|做Host/i.test(user.participationPlan)) {
-      try {
-        await app.prisma.user.update({
-          where: { id: user.id },
-          data: { hostCandidate: true },
-        });
-      } catch (err) {
-        app.log.error(err, 'Failed to set hostCandidate on approve');
-      }
-    }
-
-    // Send TXN-4 welcome email
-    const siteUrl = env.FRONTEND_ORIGIN || 'https://chuanmener.club';
-    try {
-      await sendTemplatedEmail(app.prisma, {
-        to: user.email,
-        ruleId: 'TXN-4',
-        variables: {
-          name: user.name,
-          siteUrl,
-          loginUrl: `${siteUrl}/login`,
-        },
-        ctaLabel: '登录串门儿',
-        ctaUrl: `${siteUrl}/login`,
-      });
-
-      // Log the email
-      await app.prisma.emailLog.create({
-        data: { userId: user.id, ruleId: 'TXN-4' },
-      });
-    } catch (err) {
-      app.log.error(err, 'Failed to send TXN-4 welcome email');
-    }
-
+    const user = await UserService.approveUser(app.prisma, id, app.log);
     return { ok: true, user };
   });
 

@@ -1,5 +1,9 @@
 import { z } from 'zod';
+import type { PrismaClient } from '@prisma/client';
+import type { FastifyBaseLogger } from 'fastify';
 import type { UserRepository } from './user.repository.js';
+import { sendTemplatedEmail } from '../../services/emailService.js';
+import { env } from '../../config/env.js';
 
 const createUserSchema = z.object({
   name: z.string().min(1),
@@ -21,6 +25,7 @@ const applySchema = z.object({
   wechatId: z.string().min(1),
   referralSource: z.string().optional(),
   coverImageUrl: z.string().optional(),
+  avatar: z.string().optional(),
   googleId: z.string().optional(),
   subscribeNewsletter: z.boolean().optional(),
   birthday: z.string().optional(),
@@ -68,6 +73,77 @@ const adminUpdateSchema = z.object({
 
 export class UserService {
   constructor(private readonly repository: UserRepository) {}
+
+  /**
+   * Shared approve logic used by both manual admin approve and auto-approve (cron).
+   * - Sets userStatus to 'approved'
+   * - Upserts UserPreference if subscribeNewsletter
+   * - Sets hostCandidate if participationPlan mentions Host
+   * - Sends TXN-4 welcome email + creates EmailLog
+   */
+  static async approveUser(prisma: PrismaClient, userId: string, log: FastifyBaseLogger) {
+    const now = new Date();
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { userStatus: 'approved', approvedAt: now },
+    });
+
+    // Create UserPreference if user opted into newsletter
+    if (user.subscribeNewsletter) {
+      try {
+        await prisma.userPreference.upsert({
+          where: { userId: user.id },
+          create: {
+            userId: user.id,
+            emailState: 'active',
+            notifyEvents: true,
+            notifyCards: true,
+            notifyOps: true,
+            notifyAnnounce: true,
+          },
+          update: {},
+        });
+      } catch (err) {
+        log.error(err, 'Failed to create UserPreference on approve');
+      }
+    }
+
+    // Auto-join lottery candidate pool if participationPlan includes Host
+    if (user.participationPlan && /host|Host|做Host/i.test(user.participationPlan)) {
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { hostCandidate: true },
+        });
+      } catch (err) {
+        log.error(err, 'Failed to set hostCandidate on approve');
+      }
+    }
+
+    // Send TXN-4 welcome email
+    const siteUrl = env.FRONTEND_ORIGIN || 'https://chuanmener.club';
+    try {
+      await sendTemplatedEmail(prisma, {
+        to: user.email,
+        ruleId: 'TXN-4',
+        variables: {
+          name: user.name,
+          siteUrl,
+          loginUrl: `${siteUrl}/login`,
+        },
+        ctaLabel: '登录串门儿',
+        ctaUrl: `${siteUrl}/login`,
+      });
+
+      await prisma.emailLog.create({
+        data: { userId: user.id, ruleId: 'TXN-4' },
+      });
+    } catch (err) {
+      log.error(err, `Failed to send TXN-4 welcome email for user ${user.id}`);
+    }
+
+    return user;
+  }
 
   listUsers() {
     return this.repository.list();
@@ -157,20 +233,36 @@ export class UserService {
     return this.repository.create(data);
   }
 
-  // v2.1: Submit application (with duplicate name/email check)
+  // v2.1: Submit application (with duplicate name/email check + rejected re-application)
   async submitApplication(input: unknown) {
     const data = applySchema.parse(input);
 
     // Check for duplicate email
     const existingByEmail = await this.repository.getByEmail(data.email);
     if (existingByEmail) {
+      // Allow rejected users to re-apply after 30 days
+      if (existingByEmail.userStatus === 'rejected') {
+        const daysSinceCreation = (Date.now() - new Date(existingByEmail.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSinceCreation < 30) {
+          const err = new Error('你的申请未通过，30 天后可重新申请') as any;
+          err.statusCode = 409;
+          err.errorCode = 'REJECTED_COOLDOWN';
+          throw err;
+        }
+        // Reset rejected user back to applicant with new data
+        return this.repository.resetApplicant(existingByEmail.id, {
+          ...data,
+          birthday: data.birthday ? new Date(data.birthday) : undefined,
+        });
+      }
+
       const err = new Error('该邮箱已被注册') as any;
       err.statusCode = 409;
       err.errorCode = 'EMAIL_EXISTS';
       throw err;
     }
 
-    // Check for duplicate display name
+    // Check for duplicate display name (skip if same email — handled above)
     const existingByName = await this.repository.getByName(data.displayName);
     if (existingByName) {
       const err = new Error('该用户名已被使用') as any;

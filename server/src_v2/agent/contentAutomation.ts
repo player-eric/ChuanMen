@@ -1,8 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import type { FastifyBaseLogger } from 'fastify';
 import { getSystemAuthorId } from './helpers.js';
-import { sendTemplatedEmail } from '../services/emailService.js';
-import { env } from '../config/env.js';
+import { UserService } from '../modules/users/user.service.js';
 
 // ── Milestone detection ──────────────────────────────────────
 
@@ -188,55 +187,8 @@ export async function processAnnouncedUsers(
 
   if (expiredUsers.length === 0) return 0;
 
-  const siteUrl = env.FRONTEND_ORIGIN || 'https://chuanmener.club';
-
   for (const user of expiredUsers) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { userStatus: 'approved', approvedAt: now },
-    });
-
-    // Create UserPreference if user opted into newsletter
-    if (user.subscribeNewsletter) {
-      try {
-        await prisma.userPreference.upsert({
-          where: { userId: user.id },
-          create: {
-            userId: user.id,
-            emailState: 'active',
-            notifyEvents: true,
-            notifyCards: true,
-            notifyOps: true,
-            notifyAnnounce: true,
-          },
-          update: {},
-        });
-      } catch (err) {
-        log.error(err, 'Failed to create UserPreference on auto-approve');
-      }
-    }
-
-    // Send TXN-4 welcome email
-    try {
-      await sendTemplatedEmail(prisma, {
-        to: user.email,
-        ruleId: 'TXN-4',
-        variables: {
-          name: user.name,
-          siteUrl,
-          loginUrl: `${siteUrl}/login`,
-        },
-        ctaLabel: '登录串门儿',
-        ctaUrl: `${siteUrl}/login`,
-      });
-
-      await prisma.emailLog.create({
-        data: { userId: user.id, ruleId: 'TXN-4' },
-      });
-    } catch (err) {
-      log.error(err, `Failed to send TXN-4 welcome email for auto-approved user ${user.id}`);
-    }
-
+    await UserService.approveUser(prisma, user.id, log);
     log.info(`Auto-approved announced user: ${user.name} (${user.id})`);
   }
 

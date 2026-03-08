@@ -42,6 +42,7 @@ export default function ApplyPage() {
   const googleProfile = (location.state as { googleProfile?: GoogleProfile } | null)?.googleProfile;
 
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ displayName?: string; email?: string }>({});
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -56,7 +57,8 @@ export default function ApplyPage() {
     email: googleProfile?.email ?? '',
     wechatId: '',
     referralSource: '',
-    coverImageUrl: googleProfile?.picture ?? '',
+    coverImageUrl: '',
+    avatar: googleProfile?.picture ?? '',
     birthday: '',
   });
 
@@ -67,9 +69,10 @@ export default function ApplyPage() {
   const requiredFilled = form.displayName && form.location && form.bio && form.selfAsFriend && form.idealFriend && form.participationPlan.length > 0 && form.email && form.wechatId;
 
   const handleSubmit = async () => {
-    if (!requiredFilled) return;
+    if (!requiredFilled || submitting) return;
     setSubmitError(null);
     setFieldErrors({});
+    setSubmitting(true);
     try {
       await submitApplication({
         ...form,
@@ -84,9 +87,13 @@ export default function ApplyPage() {
         setFieldErrors({ email: '该邮箱已被注册' });
       } else if (err.errorCode === 'NAME_EXISTS') {
         setFieldErrors({ displayName: '该用户名已被使用' });
+      } else if (err.errorCode === 'REJECTED_COOLDOWN') {
+        setFieldErrors({ email: '你的申请未通过，30 天后可重新申请' });
       } else {
         setSubmitError(err.message || '提交失败，请稍后再试');
       }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -264,9 +271,9 @@ export default function ApplyPage() {
         variant="contained"
         size="large"
         onClick={handleSubmit}
-        disabled={!requiredFilled}
+        disabled={!requiredFilled || submitting}
       >
-        提交申请
+        {submitting ? '提交中…' : '提交申请'}
       </Button>
 
       <Box sx={{ textAlign: 'center' }}>

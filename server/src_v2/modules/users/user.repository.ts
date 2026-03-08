@@ -124,6 +124,7 @@ export class UserRepository {
     wechatId: string;
     referralSource?: string;
     coverImageUrl?: string;
+    avatar?: string;
     googleId?: string;
     subscribeNewsletter?: boolean;
     birthday?: Date;
@@ -140,10 +141,53 @@ export class UserRepository {
         wechatId: input.wechatId,
         referralSource: input.referralSource ?? '',
         coverImageUrl: input.coverImageUrl ?? '',
+        avatar: input.avatar ?? '',
         googleId: input.googleId || undefined,
         subscribeNewsletter: input.subscribeNewsletter ?? true,
         birthday: input.birthday ?? undefined,
         userStatus: 'applicant',
+      },
+    });
+  }
+
+  // Reset a rejected user back to applicant with new form data
+  resetApplicant(userId: string, input: {
+    displayName: string;
+    location: string;
+    bio: string;
+    selfAsFriend: string;
+    idealFriend: string;
+    participationPlan: string;
+    email: string;
+    wechatId: string;
+    referralSource?: string;
+    coverImageUrl?: string;
+    avatar?: string;
+    googleId?: string;
+    subscribeNewsletter?: boolean;
+    birthday?: Date;
+  }) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: input.displayName,
+        email: input.email,
+        bio: input.bio,
+        location: input.location,
+        selfAsFriend: input.selfAsFriend,
+        idealFriend: input.idealFriend,
+        participationPlan: input.participationPlan,
+        wechatId: input.wechatId,
+        referralSource: input.referralSource ?? '',
+        coverImageUrl: input.coverImageUrl ?? '',
+        avatar: input.avatar ?? undefined,
+        googleId: input.googleId || undefined,
+        subscribeNewsletter: input.subscribeNewsletter ?? true,
+        birthday: input.birthday ?? undefined,
+        userStatus: 'applicant',
+        approvedAt: null,
+        announcedAt: null,
+        announcedEndAt: null,
       },
     });
   }

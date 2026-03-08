@@ -6,6 +6,54 @@ import { renderEmail } from '../emails/template.js';
 import { env } from '../config/env.js';
 
 /**
+ * Build a status-based error response for non-approved users.
+ * Returns { code, body } if the user cannot log in, or null if approved.
+ */
+function buildStatusError(user: { userStatus: string; createdAt: Date }) {
+  if (user.userStatus === 'applicant' || user.userStatus === 'announced') {
+    return {
+      code: 403,
+      body: {
+        error: 'pending_review',
+        message: '你的申请正在审核中，我们会在 3 天内通过 Email 回复你',
+      },
+    };
+  }
+
+  if (user.userStatus === 'rejected') {
+    const daysSinceCreation = (Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceCreation >= 30) {
+      return {
+        code: 403,
+        body: {
+          error: 'rejected_can_reapply',
+          message: '你的申请未通过，但你可以重新申请',
+        },
+      };
+    }
+    return {
+      code: 403,
+      body: {
+        error: 'rejected',
+        message: '你的申请未通过。30 天后可重新申请。',
+      },
+    };
+  }
+
+  if (user.userStatus === 'banned') {
+    return {
+      code: 403,
+      body: {
+        error: 'banned',
+        message: '该账号已被停用',
+      },
+    };
+  }
+
+  return null; // approved — no error
+}
+
+/**
  * Auth routes — email verification code login + Google OAuth
  *
  * POST /auth/send-code   → generates & emails a 6-digit code
@@ -33,33 +81,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    if (user.userStatus === 'applicant' || user.userStatus === 'announced') {
-      return reply.code(403).send({
-        error: 'pending_review',
-        message: '你的申请正在审核中，我们会在 3 天内通过 Email 回复你',
-      });
-    }
-
-    if (user.userStatus === 'rejected') {
-      const daysSinceCreation = (Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-      if (daysSinceCreation >= 30) {
-        return reply.code(403).send({
-          error: 'rejected_can_reapply',
-          message: '你的申请未通过，但你可以重新申请',
-        });
-      }
-      return reply.code(403).send({
-        error: 'rejected',
-        message: '你的申请未通过。30 天后可重新申请。',
-      });
-    }
-
-    if (user.userStatus === 'banned') {
-      return reply.code(403).send({
-        error: 'banned',
-        message: '该账号已被停用',
-      });
-    }
+    const statusErr = buildStatusError(user);
+    if (statusErr) return reply.code(statusErr.code).send(statusErr.body);
 
     // Generate 6-digit code
     const code = String(Math.floor(100000 + Math.random() * 900000));
@@ -135,42 +158,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     });
 
     if (!user) {
-      // Email not in DB — not registered
       return reply.code(404).send({
         error: 'not_registered',
         message: '该邮箱尚未注册，请先申请加入',
       });
     }
 
-    // Check user status
-    if (user.userStatus === 'applicant' || user.userStatus === 'announced') {
-      return reply.code(403).send({
-        error: 'pending_review',
-        message: '你的申请正在审核中，我们会在 3 天内通过 Email 回复你',
-      });
-    }
-
-    if (user.userStatus === 'rejected') {
-      // Check if 30 days have passed since creation for re-application
-      const daysSinceCreation = (Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-      if (daysSinceCreation >= 30) {
-        return reply.code(403).send({
-          error: 'rejected_can_reapply',
-          message: '你的申请未通过，但你可以重新申请',
-        });
-      }
-      return reply.code(403).send({
-        error: 'rejected',
-        message: '你的申请未通过。30 天后可重新申请。',
-      });
-    }
-
-    if (user.userStatus === 'banned') {
-      return reply.code(403).send({
-        error: 'banned',
-        message: '该账号已被停用',
-      });
-    }
+    const statusErr = buildStatusError(user);
+    if (statusErr) return reply.code(statusErr.code).send(statusErr.body);
 
     // Status is 'approved' — login success
     // Update lastActiveAt
@@ -287,33 +282,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // 4. Check user status
-    if (user.userStatus === 'applicant' || user.userStatus === 'announced') {
-      return reply.code(403).send({
-        error: 'pending_review',
-        message: '你的申请正在审核中，我们会在 3 天内通过 Email 回复你',
-      });
-    }
-
-    if (user.userStatus === 'rejected') {
-      const daysSinceCreation = (Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-      if (daysSinceCreation >= 30) {
-        return reply.code(403).send({
-          error: 'rejected_can_reapply',
-          message: '你的申请未通过，但你可以重新申请',
-        });
-      }
-      return reply.code(403).send({
-        error: 'rejected',
-        message: '你的申请未通过。30 天后可重新申请。',
-      });
-    }
-
-    if (user.userStatus === 'banned') {
-      return reply.code(403).send({
-        error: 'banned',
-        message: '该账号已被停用',
-      });
-    }
+    const statusErr = buildStatusError(user);
+    if (statusErr) return reply.code(statusErr.code).send(statusErr.body);
 
     // 5. Status is 'approved' — login success
     await prisma.user.update({
