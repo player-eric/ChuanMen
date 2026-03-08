@@ -91,21 +91,22 @@ export class PostcardRepository {
    */
   async listEligibleRecipients(userId: string) {
     // "Participated" means either:
-    //   a) participated flag is true, OR
-    //   b) status is 'accepted' in ended/completed event, OR
-    //   c) status is 'accepted' in an event that has already started (can send cards same day)
+    //   a) participated flag is true (legacy), OR
+    //   b) status is 'accepted' in an event that has already started
     const participatedFilter = {
       OR: [
         { participated: true },
-        { status: 'accepted' as const, event: { phase: 'ended' as const } },
-        { status: 'accepted' as const, event: { status: 'completed' as const } },
         { status: 'accepted' as const, event: { startsAt: { lte: new Date() } } },
       ],
     };
 
+    // Only look at events from the last 6 months
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
     // Get events the user participated in
     const mySignups = await this.prisma.eventSignup.findMany({
-      where: { userId, ...participatedFilter },
+      where: { userId, event: { startsAt: { gte: sixMonthsAgo } }, ...participatedFilter },
       select: { eventId: true, event: { select: { id: true, title: true, startsAt: true } } },
       orderBy: { event: { startsAt: 'desc' } },
     });
@@ -123,22 +124,22 @@ export class PostcardRepository {
       select: {
         userId: true,
         eventId: true,
-        user: { select: { id: true, name: true } },
+        user: { select: { id: true, name: true, avatar: true } },
       },
     });
 
     // Build per-event people map
     const eventPeopleMap = new Map<string, Set<string>>();
-    const userMap = new Map<string, { id: string; name: string }>();
+    const userMap = new Map<string, { id: string; name: string; avatar: string | null }>();
     for (const s of coSignups) {
       if (!eventPeopleMap.has(s.eventId)) eventPeopleMap.set(s.eventId, new Set());
       eventPeopleMap.get(s.eventId)!.add(s.userId);
-      if (!userMap.has(s.userId)) userMap.set(s.userId, { id: s.user.id, name: s.user.name });
+      if (!userMap.has(s.userId)) userMap.set(s.userId, { id: s.user.id, name: s.user.name, avatar: s.user.avatar });
     }
 
     // Build grouped result, ordered by event date desc (already sorted from mySignups)
     const seenEventIds = new Set<string>();
-    const events: { eventId: string; title: string; startsAt: string | null; people: { id: string; name: string }[] }[] = [];
+    const events: { eventId: string; title: string; startsAt: string | null; people: { id: string; name: string; avatar: string | null }[] }[] = [];
     for (const s of mySignups) {
       if (seenEventIds.has(s.eventId)) continue;
       seenEventIds.add(s.eventId);

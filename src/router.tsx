@@ -765,23 +765,39 @@ function mapApiCard(c: any): any {
 
 async function cardsLoader() {
   const userId = getStoredUserId();
-  if (!userId) return { myCards: [], sentCards: [], credits: 0, people: [], quickMessages: [] };
+  if (!userId) return { myCards: [], sentCards: [], credits: 0, people: [], eligibleEvents: [], quickMessages: [] };
   try {
     const data = await fetchPostcardsApi(userId);
-    const people = (data.eligible ?? []).map((p) => ({
-      id: p.id,
-      name: p.name,
-      ctx: p.eventCtx ?? '',
+    // eligible is now an array of events with people
+    const eligibleEvents = (data.eligible ?? []).map((evt: any) => ({
+      eventId: evt.eventId,
+      title: evt.title,
+      startsAt: evt.startsAt,
+      people: evt.people ?? [],
     }));
+    // Flatten for backward compat (deduplicated, most recent event first)
+    const seen = new Set<string>();
+    const people: { id: string; name: string; ctx: string }[] = [];
+    for (const evt of eligibleEvents) {
+      const dateStr = evt.startsAt
+        ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+        : '';
+      for (const p of evt.people) {
+        if (seen.has(p.id)) continue;
+        seen.add(p.id);
+        people.push({ id: p.id, name: p.name, ctx: dateStr ? `${dateStr} ${evt.title}` : evt.title });
+      }
+    }
     return {
       myCards: (data.received ?? []).map(mapApiCard),
       sentCards: (data.sent ?? []).map(mapApiCard),
       credits: data.credits ?? 0,
       people,
+      eligibleEvents,
       quickMessages: ['谢谢你的热情招待！🏠', '和你聊天超开心 😊', '下次一起看电影吧 🎬', '好久不见，想你了 💌'],
     };
   } catch {
-    return { myCards: [], sentCards: [], credits: 0, people: [], quickMessages: [] };
+    return { myCards: [], sentCards: [], credits: 0, people: [], eligibleEvents: [], quickMessages: [] };
   }
 }
 

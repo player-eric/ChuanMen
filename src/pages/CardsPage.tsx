@@ -21,7 +21,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import type { CardsPageData } from '@/types';
+import type { CardsPageData, EligibleEvent } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { PostCard } from '@/components/PostCard';
 import { EmptyState } from '@/components/EmptyState';
@@ -56,7 +56,7 @@ export default function CardsPage() {
   const data = useLoaderData() as CardsPageData;
   const { user } = useAuth();
   // Show empty state when not logged in or no cards and no eligible people
-  const isEmpty = !user || (data.myCards.length === 0 && data.sentCards.length === 0 && data.people.length === 0);
+  const isEmpty = !user || (data.myCards.length === 0 && data.sentCards.length === 0 && data.eligibleEvents.length === 0);
   if (isEmpty) return <EmptyCards credits={data.credits} />;
   return <FullCards />;
 }
@@ -72,6 +72,7 @@ function FullCards() {
   const [who, setWho] = useState<string | null>(null);
   const [whoId, setWhoId] = useState<string | null>(null);
   const [whoCtx, setWhoCtx] = useState<string | null>(null);
+  const [whoAvatar, setWhoAvatar] = useState<string | null>(null);
   const [stamp, setStamp] = useState('');
   const [msg, setMsg] = useState('');
   const [hasPhoto, setHasPhoto] = useState(false);
@@ -85,7 +86,9 @@ function FullCards() {
   const [showAllSent, setShowAllSent] = useState(true);
   const [snackMsg, setSnackMsg] = useState('');
 
-  const { people, quickMessages, myCards, sentCards, credits } = data;
+  const { people, eligibleEvents, quickMessages, myCards, sentCards, credits } = data;
+  const DEFAULT_EVENT_COUNT = 3;
+  const [showAllEvents, setShowAllEvents] = useState(false);
 
   /* If navigated from MemberDetailPage with recipient info, pre-select */
   useEffect(() => {
@@ -200,7 +203,7 @@ function FullCards() {
             </Stepper>
 
             {step === 0 && (
-              people.filter((p) => (p.id ?? p.name) !== user?.id).length === 0 ? (
+              eligibleEvents.length === 0 ? (
                 <EmptyState
                   icon="✉"
                   title="参加一次活动，就可以给同行的人寄感谢卡"
@@ -208,26 +211,52 @@ function FullCards() {
                   action={{ label: '看看最近的活动', to: '/events' }}
                 />
               ) : (
-                <Grid container spacing={1.5}>
-                  {people.filter((p) => (p.id ?? p.name) !== user?.id).map((person, index) => (
-                    <Grid key={index} size={{ xs: 6, md: 4 }}>
-                      <Card
-                        variant="outlined"
-                        onClick={() => {
-                          setWho(person.name);
-                          setWhoId(person.id ?? person.name);
-                          setWhoCtx(person.ctx);
-                          setStep(1);
-                        }}
-                        sx={{ p: 1.5, cursor: 'pointer', textAlign: 'center' }}
-                      >
-                        <Avatar sx={{ mx: 'auto', mb: 1 }}>{firstNonEmoji(person.name)}</Avatar>
-                        <Typography fontWeight={700}>{person.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{person.ctx}</Typography>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
+                <Stack spacing={2}>
+                  {(showAllEvents ? eligibleEvents : eligibleEvents.slice(0, DEFAULT_EVENT_COUNT)).map((evt) => {
+                    const dateStr = evt.startsAt
+                      ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+                      : '';
+                    const eventCtx = dateStr ? `${dateStr} ${evt.title}` : evt.title;
+                    const filteredPeople = evt.people.filter((p) => p.id !== user?.id);
+                    if (!filteredPeople.length) return null;
+                    return (
+                      <Box key={evt.eventId}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          {eventCtx}
+                        </Typography>
+                        <Grid container spacing={1.5}>
+                          {filteredPeople.map((person) => (
+                            <Grid key={person.id} size={{ xs: 6, md: 4 }}>
+                              <Card
+                                variant="outlined"
+                                onClick={() => {
+                                  setWho(person.name);
+                                  setWhoId(person.id);
+                                  setWhoCtx(eventCtx);
+                                  setWhoAvatar(person.avatar ?? null);
+                                  setStep(1);
+                                }}
+                                sx={{ p: 1.5, cursor: 'pointer', textAlign: 'center' }}
+                              >
+                                <Avatar src={person.avatar ?? undefined} sx={{ mx: 'auto', mb: 1 }}>{firstNonEmoji(person.name)}</Avatar>
+                                <Typography fontWeight={700}>{person.name}</Typography>
+                              </Card>
+                            </Grid>
+                          ))}
+                        </Grid>
+                      </Box>
+                    );
+                  })}
+                  {eligibleEvents.length > DEFAULT_EVENT_COUNT && (
+                    <Button
+                      size="small"
+                      onClick={() => setShowAllEvents((v) => !v)}
+                      sx={{ alignSelf: 'center' }}
+                    >
+                      {showAllEvents ? '收起' : `显示更早的活动（共 ${eligibleEvents.length} 次）`}
+                    </Button>
+                  )}
+                </Stack>
               )
             )}
 
@@ -235,7 +264,7 @@ function FullCards() {
               <Stack spacing={2.5}>
                 {/* Recipient header */}
                 <Stack direction="row" spacing={1.5} alignItems="center">
-                  <Avatar sx={{ width: 44, height: 44 }}>{who[0]}</Avatar>
+                  <Avatar src={whoAvatar ?? undefined} sx={{ width: 44, height: 44 }}>{who[0]}</Avatar>
                   <Box>
                     <Typography fontWeight={700} variant="subtitle1">给 {who}</Typography>
                     <Typography variant="caption" color="text.secondary">{whoCtx ?? ''}</Typography>

@@ -422,8 +422,16 @@ export interface DiscoverPageData {
   externalEvents: RecommendationItem[];
 }
 
+export interface EligibleEvent {
+  eventId: string;
+  title: string;
+  startsAt: string | null;
+  people: { id: string; name: string; avatar?: string | null }[];
+}
+
 export interface CardsPageData {
   people: { id?: string; name: string; ctx: string; badge?: string }[];
+  eligibleEvents: EligibleEvent[];
   quickMessages: string[];
   myCards: CardReceived[];
   sentCards: CardReceived[];

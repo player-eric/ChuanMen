@@ -15,6 +15,7 @@ interface AvaProps {
 
 /** Extract the first non-emoji character from a string for avatar display */
 export function firstNonEmoji(str: string): string {
+  if (!str) return '?';
   const match = str.match(/[^\p{Extended_Pictographic}\u{FE00}-\u{FE0F}\u{200D}\u{200B}\u{20E3}]/u);
   if (match) return match[0];
   // All emoji — return first full character via spread
