@@ -516,11 +516,11 @@ export function FeedActivity({ name, title, date, location, spots, total, people
 
 /* ═══ FeedCard ═══ */
 interface FeedCardProps extends InteractionProps {
-  from: string; to: string; message: string; photo?: string; navTarget?: string;
+  from: string; to: string; message: string; photo?: string; stamp?: string; navTarget?: string;
   time?: string; visibility?: string;
 }
 
-export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, comments, newComments, commentCount, time, visibility }: FeedCardProps) {
+export function FeedCard({ from, to, message, photo, stamp, navTarget, likes, likedBy, comments, newComments, commentCount, time, visibility }: FeedCardProps) {
   const c = useColors();
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -539,7 +539,7 @@ export function FeedCard({ from, to, message, photo, navTarget, likes, likedBy, 
             {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}{visibility === 'public' ? ' · 🌐 公开' : visibility === 'private' ? ' · 🔒 私密' : ''}</div>}
           </div>
         </div>
-        <PostCard from={from} to={to} message={message} stamp="🎬" photo={photo} layout="horizontal" />
+        <PostCard from={from} to={to} message={message} stamp={stamp} photo={photo} layout="horizontal" />
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
     </Card>

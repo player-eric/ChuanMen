@@ -159,6 +159,7 @@ function buildFeedItems(data: any): any[] {
       to: p.to?.name ?? '',
       message: p.message ?? '',
       photo: p.photoUrl || undefined,
+      stamp: (p.tags as any[])?.[0]?.value ?? undefined,
       time: p.createdAt ? timeAgo(p.createdAt) : '',
       visibility: p.visibility ?? 'public',
       likes: p.likes ?? 0,
