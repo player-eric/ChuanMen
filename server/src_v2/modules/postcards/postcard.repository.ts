@@ -111,9 +111,12 @@ export class PostcardRepository {
       orderBy: { event: { startsAt: 'desc' } },
     });
 
-    // Also include events the user hosted (hosts don't have EventSignup records)
+    // Also include events the user hosted or co-hosted (they don't have EventSignup records)
     const hostedEvents = await this.prisma.event.findMany({
-      where: { hostId: userId, startsAt: { gte: sixMonthsAgo, lte: new Date() } },
+      where: {
+        startsAt: { gte: sixMonthsAgo, lte: new Date() },
+        OR: [{ hostId: userId }, { coHosts: { some: { userId } } }],
+      },
       select: { id: true, title: true, startsAt: true },
       orderBy: { startsAt: 'desc' },
     });
@@ -140,16 +143,25 @@ export class PostcardRepository {
       },
     });
 
-    // Also include hosts of events the user participated in (they're co-attendees too)
-    const eventHostIds = new Set<string>();
+    // Also include hosts and co-hosts of events (they don't have EventSignup records)
     const eventsWithHosts = await this.prisma.event.findMany({
-      where: { id: { in: myEventIds }, hostId: { not: userId } },
-      select: { id: true, hostId: true, host: { select: { id: true, name: true, avatar: true } } },
+      where: { id: { in: myEventIds } },
+      select: {
+        id: true,
+        hostId: true,
+        host: { select: { id: true, name: true, avatar: true } },
+        coHosts: { select: { userId: true, user: { select: { id: true, name: true, avatar: true } } } },
+      },
     });
     for (const e of eventsWithHosts) {
-      eventHostIds.add(e.hostId);
-      // Add host as a co-signup equivalent
-      coSignups.push({ userId: e.hostId, eventId: e.id, user: e.host });
+      if (e.hostId !== userId) {
+        coSignups.push({ userId: e.hostId, eventId: e.id, user: e.host });
+      }
+      for (const ch of e.coHosts) {
+        if (ch.userId !== userId) {
+          coSignups.push({ userId: ch.userId, eventId: e.id, user: ch.user });
+        }
+      }
     }
 
     // Build per-event people map
