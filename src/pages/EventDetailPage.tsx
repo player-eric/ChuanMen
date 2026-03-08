@@ -428,7 +428,11 @@ export default function EventDetailPage() {
     }
   };
 
-  const phase = phaseLabel[event.phase] ?? phaseLabel.open;
+  const eventStarted = (event as any).startsAt && new Date((event as any).startsAt) < new Date();
+  const effectivePhase = (eventStarted && ['invite', 'open', 'closed'].includes(event.phase))
+    ? phaseLabel.ended
+    : (phaseLabel[event.phase] ?? phaseLabel.open);
+  const phase = effectivePhase;
   const hostId: string = (loadedEvent as any)?.hostId ?? '';
   const isHost = Boolean(user?.id && hostId && user.id === hostId);
   const isCoHost = Boolean(user?.id && event.coHostIds?.includes(user.id));
