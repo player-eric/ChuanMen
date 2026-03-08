@@ -199,17 +199,17 @@ export async function runAgentCycle(app: FastifyInstance) {
         });
       }
 
-      // Award +4 to host (host bonus only, no attend credit)
+      // Award +6 to host (attend +2, host bonus +4)
       await prisma.user.update({
         where: { id: event.hostId },
-        data: { postcardCredits: { increment: 4 } },
+        data: { postcardCredits: { increment: 6 } },
       });
 
-      // Award +4 to each co-host (same as host, no attend credit)
+      // Award +6 to each co-host (attend +2, host bonus +4)
       if (coHostIds.length > 0) {
         await prisma.user.updateMany({
           where: { id: { in: coHostIds } },
-          data: { postcardCredits: { increment: 4 } },
+          data: { postcardCredits: { increment: 6 } },
         });
       }
 
@@ -220,13 +220,26 @@ export async function runAgentCycle(app: FastifyInstance) {
 
       // Send credit notification emails (best effort)
       try {
-        // Notify participants & co-hosts (+2)
+        // Notify regular participants (+2)
+        const coHostIdSet = new Set(coHostIds);
         for (const s of allParticipants) {
+          if (coHostIdSet.has(s.userId)) continue;
           if (s.user?.email) {
             await sendEmail({
               to: s.user.email,
               subject: `【串门儿】参加「${event.title}」获得感谢卡额度 +2`,
               text: `Hi ${s.user.name}，\n\n感谢你参加「${event.title}」！你获得了 2 张感谢卡额度，快去给一起参加的小伙伴寄张感谢卡吧 ✉️\n\n寄感谢卡：https://chuanmener.club/cards\n\n— 串门儿`,
+            });
+          }
+        }
+        // Notify co-hosts (+6)
+        for (const ch of event.coHosts ?? []) {
+          if (ch.userId === event.hostId) continue;
+          if (ch.user?.email) {
+            await sendEmail({
+              to: ch.user.email,
+              subject: `【串门儿】协办「${event.title}」获得感谢卡额度 +6`,
+              text: `Hi ${ch.user.name}，\n\n感谢你协办「${event.title}」！作为 Co-Host 你获得了 6 张感谢卡额度（参加 +2，Host 奖励 +4）。快去给参与的小伙伴寄张感谢卡吧 ✉️\n\n寄感谢卡：https://chuanmener.club/cards\n\n— 串门儿`,
             });
           }
         }
