@@ -180,6 +180,7 @@ function buildFeedItems(data: any): any[] {
       title: m.title,
       year: String(m.year ?? ''),
       dir: m.director ?? '',
+      poster: m.poster || undefined,
       votes: m._count?.votes ?? 0,
       time,
       navTarget: `/discover/movies/${m.id}`,

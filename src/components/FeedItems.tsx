@@ -548,11 +548,11 @@ export function FeedCard({ from, to, message, photo, stamp, navTarget, likes, li
 
 /* ═══ FeedMovie ═══ */
 interface FeedMovieProps extends InteractionProps {
-  name: string; title: string; year: string; dir: string; votes: number;
+  name: string; title: string; year: string; dir: string; poster?: string; votes: number;
   navTarget?: string; time?: string;
 }
 
-export function FeedMovie({ name, title, year, dir, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedMovieProps) {
+export function FeedMovie({ name, title, year, dir, poster, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedMovieProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -570,7 +570,7 @@ export function FeedMovie({ name, title, year, dir, votes: initV, navTarget, lik
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <Poster title={title} w={52} h={72} />
+          <Poster title={title} src={poster} w={52} h={72} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
             <div style={{ fontSize: 12, color: c.text3, marginTop: 2 }}>{year}  {dir}</div>
@@ -663,10 +663,10 @@ export function FeedProposal({ name, title, votes: initV, interested, navTarget,
 /* ═══ FeedCompactMovie ═══ */
 interface FeedCompactMovieProps extends InteractionProps {
   name: string; title: string; year: string; dir: string;
-  votes: number; time: string; navTarget?: string;
+  poster?: string; votes: number; time: string; navTarget?: string;
 }
 
-export function FeedCompactMovie({ name, title, year, dir, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactMovieProps) {
+export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactMovieProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -676,7 +676,7 @@ export function FeedCompactMovie({ name, title, year, dir, votes: initV, time, n
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
       <div onClick={goNav} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: goNav ? 'pointer' : 'default' }}>
-        <Poster title={title} w={36} h={50} />
+        <Poster title={title} src={poster} w={36} h={50} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
           <div style={{ fontSize: 12, color: c.text3, marginTop: 1 }}>{year}  {dir}</div>
@@ -793,11 +793,11 @@ export function FeedRecommendation({ name, title, category, categoryIcon, coverU
 
 /* ═══ FeedBook ═══ */
 interface FeedBookProps extends InteractionProps {
-  name: string; title: string; year: string; author: string; votes: number;
+  name: string; title: string; year: string; author: string; coverUrl?: string; votes: number;
   navTarget?: string; time?: string;
 }
 
-export function FeedBook({ name, title, year, author, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedBookProps) {
+export function FeedBook({ name, title, year, author, coverUrl, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedBookProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -815,7 +815,7 @@ export function FeedBook({ name, title, year, author, votes: initV, navTarget, l
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <Poster title={title} w={52} h={72} />
+          <Poster title={title} src={coverUrl} w={52} h={72} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
             <div style={{ fontSize: 12, color: c.text3, marginTop: 2 }}>{year} · {author}</div>
@@ -1052,10 +1052,10 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
 /* ═══ FeedCompactBook ═══ */
 interface FeedCompactBookProps extends InteractionProps {
   name: string; title: string; year: string; author: string;
-  votes: number; time: string; navTarget?: string;
+  coverUrl?: string; votes: number; time: string; navTarget?: string;
 }
 
-export function FeedCompactBook({ name, title, year, author, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactBookProps) {
+export function FeedCompactBook({ name, title, year, author, coverUrl, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactBookProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -1065,7 +1065,7 @@ export function FeedCompactBook({ name, title, year, author, votes: initV, time,
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
       <div onClick={goNav} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: goNav ? 'pointer' : 'default' }}>
-        <Poster title={title} w={36} h={50} />
+        <Poster title={title} src={coverUrl} w={36} h={50} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
           <div style={{ fontSize: 12, color: c.text3, marginTop: 1 }}>{year} · {author}</div>
