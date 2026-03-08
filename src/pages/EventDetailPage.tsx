@@ -2193,7 +2193,7 @@ export default function EventDetailPage() {
                         variant="outlined"
                         onClick={() => setHostInvitedPeople((prev) => [...prev, m.name])}
                       >
-                        邀请
+                        {event.phase === 'ended' ? '添加' : '邀请'}
                       </Button>
                     </Stack>
                   ))}
@@ -2240,13 +2240,10 @@ export default function EventDetailPage() {
                           await updateEvent(eventId, { capacity: newCapacity });
                           setEvent((prev) => prev ? { ...prev, total: newCapacity } : prev);
                         }
+                        await inviteToEvent(eventId, userIds, user.id);
                         if (event.phase === 'ended' || directSignup) {
-                          for (const uid of userIds) {
-                            await signupEvent(eventId, uid);
-                          }
                           setFlash({ open: true, severity: 'success', message: `已${directSignup ? '报名' : '添加'} ${userIds.length} 人` });
                         } else {
-                          await inviteToEvent(eventId, userIds, user.id);
                           setFlash({ open: true, severity: 'success', message: `已邀请 ${userIds.length} 人` });
                         }
                         await refreshEvent();
