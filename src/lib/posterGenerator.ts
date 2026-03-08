@@ -92,8 +92,22 @@ export async function generateEventPoster(params: PosterParams): Promise<Blob> {
 
   const tpl = templates[params.eventTag] ?? templates.other;
 
-  // 1. Gradient background
-  drawGradientBg(ctx, W, H, tpl.sceneKey);
+  // 0. Pre-load cover image (needed before background decision)
+  let coverImg: HTMLImageElement | null = null;
+  if (params.coverImageUrl) {
+    try {
+      coverImg = await loadImage(params.coverImageUrl);
+    } catch (err) {
+      console.warn('Poster: cover image load failed, using text-only layout', err);
+    }
+  }
+
+  // 1. Background: blurred cover if available, otherwise gradient
+  if (coverImg) {
+    drawBlurredImageBg(ctx, W, H, coverImg);
+  } else {
+    drawGradientBg(ctx, W, H, tpl.sceneKey);
+  }
 
   // 2. Vignette (edge darkening)
   drawVignette(ctx, W, H);
@@ -103,16 +117,6 @@ export async function generateEventPoster(params: PosterParams): Promise<Blob> {
 
   // 4. Theme atmosphere — event-type decorations across entire poster
   drawThemeAtmosphere(ctx, W, H, tpl.accent, params.eventTag);
-
-  // 5. Try to load cover image
-  let coverImg: HTMLImageElement | null = null;
-  if (params.coverImageUrl) {
-    try {
-      coverImg = await loadImage(params.coverImageUrl);
-    } catch (err) {
-      console.warn('Poster: cover image load failed, using text-only layout', err);
-    }
-  }
 
   if (coverImg) {
     drawLayoutWithImage(ctx, W, H, tpl, params, coverImg);
@@ -942,6 +946,41 @@ function imgFromSrc(src: string): Promise<HTMLImageElement> {
 }
 
 /* ── Depth & atmosphere layers ── */
+
+/** Blurred cover image as background (replaces gradient when cover exists) */
+function drawBlurredImageBg(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  img: HTMLImageElement,
+) {
+  const BLEED = 80; // extra px to avoid bright edges from blur
+  ctx.save();
+  ctx.filter = 'blur(40px)';
+  // Cover-fit: scale image to fill canvas, cropping excess
+  const imgR = img.width / img.height;
+  const canvasR = w / h;
+  let sw: number, sh: number, sx: number, sy: number;
+  if (imgR > canvasR) {
+    // Image wider — crop sides
+    sh = img.height;
+    sw = sh * canvasR;
+    sx = (img.width - sw) / 2;
+    sy = 0;
+  } else {
+    // Image taller — crop top/bottom
+    sw = img.width;
+    sh = sw / canvasR;
+    sx = 0;
+    sy = (img.height - sh) / 2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, -BLEED, -BLEED, w + BLEED * 2, h + BLEED * 2);
+  ctx.filter = 'none';
+  // Dark overlay for text contrast
+  ctx.fillStyle = 'rgba(0,0,0,0.50)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
 
 function drawGradientBg(ctx: CanvasRenderingContext2D, w: number, h: number, sceneKey: string) {
   const gradientStr = photos[sceneKey] ?? photos.coffee;

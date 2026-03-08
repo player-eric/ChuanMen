@@ -264,7 +264,7 @@ interface FeedTaskSummary {
 
 interface FeedActivityProps extends InteractionProps {
   name: string; title: string; date: string; location: string;
-  spots: number; total?: number; people: string[]; signupUserIds?: string[]; film?: string; filmPoster?: string; scene?: string;
+  spots: number; total?: number; people: (string | { name: string; avatar?: string | null })[]; signupUserIds?: string[]; film?: string; filmPoster?: string; scene?: string;
   navTarget?: string;
   /** 'feed' = full card with signup/actions (default); 'list' = compact list card for EventsPage */
   mode?: 'feed' | 'list';

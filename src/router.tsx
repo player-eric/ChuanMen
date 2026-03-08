@@ -100,23 +100,24 @@ function buildFeedItems(data: any): any[] {
     const allSignups = (e.signups ?? []) as any[];
     const feedOccupying = allSignups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
     const feedWaitlist = allSignups.filter((s: any) => s.status === 'waitlist');
-    const feedCoHostNames: string[] = (e.coHosts ?? []).map((ch: any) => ch.user?.name).filter(Boolean);
+    const feedCoHosts: { name: string; avatar?: string }[] = (e.coHosts ?? []).map((ch: any) => ({ name: ch.user?.name, avatar: ch.user?.avatar })).filter((x: any) => x.name);
     // People displayed: host + co-hosts + accepted/offered (invited hidden)
     const feedAccepted = allSignups.filter((s: any) => ['accepted', 'offered'].includes(s.status));
-    const people = feedAccepted.map((s: any) => s.user?.name).filter(Boolean);
+    const people: { name: string; avatar?: string }[] = feedAccepted.map((s: any) => ({ name: s.user?.name, avatar: s.user?.avatar })).filter((x: any) => x.name);
     // Host 默认也是参与者之一
-    if (hostName && !people.includes(hostName)) {
-      people.unshift(hostName);
+    const hostAvatar = e.host?.avatar ?? undefined;
+    if (hostName && !people.some(p => p.name === hostName)) {
+      people.unshift({ name: hostName, avatar: hostAvatar });
     }
-    for (const chName of feedCoHostNames) {
-      if (chName && !people.includes(chName)) people.push(chName);
+    for (const ch of feedCoHosts) {
+      if (ch.name && !people.some(p => p.name === ch.name)) people.push(ch);
     }
     // Build task summary for feed card
     const feedTasks = ((e as any).tasks ?? []).map((t: any) => ({
       role: t.role,
       claimerName: t.claimedBy?.name ?? undefined,
     }));
-    const feedHostSlots = 1 + feedCoHostNames.length;
+    const feedHostSlots = 1 + feedCoHosts.length;
     addToDate(sortKey, sortLabel, {
       _key: `activity-${e.id}`,
       type: 'activity',
@@ -398,14 +399,16 @@ function mapApiEvent(e: any): any {
 
   // People displayed: host + co-hosts + accepted/offered only (invited hidden from display)
   const accepted = signups.filter((s: any) => ['accepted', 'offered'].includes(s.status));
-  const people = accepted.map((s: any) => s.user?.name ?? s.userName ?? '?');
+  const people: { name: string; avatar?: string }[] = accepted.map((s: any) => ({ name: s.user?.name ?? s.userName ?? '?', avatar: s.user?.avatar }));
   // Host 默认也是参与者之一
-  if (hostName && hostName !== '?' && !people.includes(hostName)) {
-    people.unshift(hostName);
+  const hostAvatar = typeof e.host === 'string' ? undefined : e.host?.avatar;
+  if (hostName && hostName !== '?' && !people.some(p => p.name === hostName)) {
+    people.unshift({ name: hostName, avatar: hostAvatar });
   }
   // Add co-hosts to people list
-  for (const name of coHostNames) {
-    if (name && !people.includes(name)) people.push(name);
+  for (const ch of (e.coHosts ?? []) as any[]) {
+    const chName = ch.user?.name;
+    if (chName && !people.some((p: any) => p.name === chName)) people.push({ name: chName, avatar: ch.user?.avatar });
   }
 
   // Collect signup user IDs for visibility checks (invite phase) — include all non-removed

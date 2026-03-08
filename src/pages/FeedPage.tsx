@@ -239,7 +239,7 @@ function RecapBanner({ items, onSnack }: { items: FeedItem[]; onSnack: (msg: str
 
   // Build participants list by zipping signupUserIds and people names
   const signupUserIds: string[] = (target as any).signupUserIds ?? [];
-  const peopleNames: string[] = target.people ?? [];
+  const peopleNames: string[] = (target.people ?? []).map((p: any) => typeof p === 'string' ? p : p.name);
   const participants = signupUserIds.map((id, i) => ({ id, name: peopleNames[i] ?? '?' }));
 
   // Extract eventId from navTarget (e.g. "/events/abc123" → "abc123")

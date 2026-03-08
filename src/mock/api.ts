@@ -187,9 +187,10 @@ export async function fetchProfileData(): Promise<ProfilePageData> {
 
   // Recent closest — from people who attended events in last 3 months AND share movie taste
   const recentEventPeople = new Set<string>();
-  for (const e of allEvents.filter((ev) => ev.phase === 'ended' && (ev.people.includes(userName) || ev.host === userName))) {
+  for (const e of allEvents.filter((ev) => ev.phase === 'ended' && (ev.people.some((p: any) => (typeof p === 'string' ? p : p.name) === userName) || ev.host === userName))) {
     for (const p of e.people) {
-      if (p !== userName) recentEventPeople.add(p);
+      const name = typeof p === 'string' ? p : p.name;
+      if (name !== userName) recentEventPeople.add(name);
     }
   }
   const recentOthers = others.filter((m) => recentEventPeople.has(m.name));

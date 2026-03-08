@@ -16,6 +16,7 @@ interface AvaProps {
 /** Extract the first non-emoji character from a string for avatar display */
 export function firstNonEmoji(str: string): string {
   if (!str) return '?';
+  if (typeof str !== 'string') str = String(str);
   const match = str.match(/[^\p{Extended_Pictographic}\u{FE00}-\u{FE0F}\u{200D}\u{200B}\u{20E3}]/u);
   if (match) return match[0];
   // All emoji — return first full character via spread
@@ -61,7 +62,7 @@ export function Ava({ name: rawName, src, size = 28, border, badge, onTap }: Ava
 
 /* ═══ AvatarStack ═══ */
 interface AvaStackProps {
-  names: string[];
+  names: (string | { name: string; avatar?: string | null })[];
   size?: number;
 }
 
@@ -69,11 +70,15 @@ export function AvaStack({ names, size = 22 }: AvaStackProps) {
   const c = useColors();
   return (
     <div style={{ display: 'flex' }}>
-      {names.slice(0, 5).map((n, i) => (
-        <div key={i} style={{ marginLeft: i ? -6 : 0, zIndex: 5 - i }}>
-          <Ava name={n} size={size} border />
-        </div>
-      ))}
+      {names.slice(0, 5).map((item, i) => {
+        const n = typeof item === 'string' ? item : item.name;
+        const src = typeof item === 'string' ? undefined : (item.avatar ?? undefined);
+        return (
+          <div key={i} style={{ marginLeft: i ? -6 : 0, zIndex: 5 - i }}>
+            <Ava name={n} src={src} size={size} border />
+          </div>
+        );
+      })}
       {names.length > 5 && (
         <div
           style={{

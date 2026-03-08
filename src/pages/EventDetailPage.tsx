@@ -47,6 +47,10 @@ import { useTaskPresets } from '@/hooks/useTaskPresets';
 import { eventTagToChinese } from '@/lib/mappings';
 import { generateEventPoster, downloadBlob, resolveEventTag } from '@/lib/posterGenerator';
 
+/** Extract name string from people item (supports both legacy string and {name,avatar} object) */
+const pName = (p: string | { name: string; avatar?: string }): string => typeof p === 'string' ? p : p.name;
+const pAvatar = (p: string | { name: string; avatar?: string }): string | undefined => typeof p === 'string' ? undefined : p.avatar;
+
 const foodLabel: Record<FoodOption, string> = {
   potluck: 'Potluck · 每人带一道菜',
   host_cook: 'Host 准备',
@@ -1143,12 +1147,15 @@ export default function EventDetailPage() {
             {(isHost || isCoHost || isAdmin) ? (
               /* Host/co-host/admin view: list with remove buttons */
               <Stack spacing={0.5}>
-                {event.people.map((name) => {
+                {event.people.map((p) => {
+                  const name = pName(p);
+                  const avatar = pAvatar(p);
                   const memberId = allMembers.find((m) => m.name === name)?.id;
                   const isNameCoHost = event.coHosts?.includes(name) ?? false;
                   return (
                     <Stack key={name} direction="row" alignItems="center" spacing={1}>
                       <Avatar
+                        src={avatar}
                         sx={{ cursor: 'pointer', width: 34, height: 34, ...((name === event.host || isNameCoHost) ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
                         onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
                       >
@@ -1267,11 +1274,14 @@ export default function EventDetailPage() {
               /* Normal view: clickable avatar row */
               <Stack spacing={0.5}>
                 <Stack direction="row" gap={0.5} alignItems="center" flexWrap="wrap">
-                  {(showAllPeople ? event.people : event.people.slice(0, 8)).map((name) => {
+                  {(showAllPeople ? event.people : event.people.slice(0, 8)).map((p) => {
+                    const name = pName(p);
+                    const avatar = pAvatar(p);
                     const isNameCoHost = event.coHosts?.includes(name) ?? false;
                     return (
                       <Tooltip key={name} title={name} arrow>
                         <Avatar
+                          src={avatar}
                           sx={{ cursor: 'pointer', width: 34, height: 34, ...((name === event.host || isNameCoHost) ? { border: '2px solid', borderColor: 'primary.main' } : {}) }}
                           onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
                         >
@@ -2173,7 +2183,7 @@ export default function EventDetailPage() {
                 (event.signupDetails ?? []).filter((s) => s.status === 'invited').map((s) => s.userId),
               );
               const filtered = allMembers.filter((m) => {
-                if (event.people.includes(m.name)) return false;
+                if (event.people.some(p => pName(p) === m.name)) return false;
                 if (invitedIds.has(m.id)) return false;
                 if (hostInvitedPeople.includes(m.name)) return false;
                 if (hq && !m.name.toLowerCase().includes(hq)) return false;
