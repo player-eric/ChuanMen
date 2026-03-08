@@ -104,15 +104,27 @@ export class PostcardRepository {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    // Get events the user participated in
+    // Get events the user participated in (via signup)
     const mySignups = await this.prisma.eventSignup.findMany({
       where: { userId, event: { startsAt: { gte: sixMonthsAgo } }, ...participatedFilter },
       select: { eventId: true, event: { select: { id: true, title: true, startsAt: true } } },
       orderBy: { event: { startsAt: 'desc' } },
     });
-    if (!mySignups.length) return [];
 
-    const myEventIds = mySignups.map((s) => s.eventId);
+    // Also include events the user hosted (hosts don't have EventSignup records)
+    const hostedEvents = await this.prisma.event.findMany({
+      where: { hostId: userId, startsAt: { gte: sixMonthsAgo, lte: new Date() } },
+      select: { id: true, title: true, startsAt: true },
+      orderBy: { startsAt: 'desc' },
+    });
+
+    // Merge and deduplicate event IDs
+    const eventMap = new Map<string, { id: string; title: string; startsAt: Date | null }>();
+    for (const e of hostedEvents) eventMap.set(e.id, e);
+    for (const s of mySignups) eventMap.set(s.eventId, s.event);
+    if (!eventMap.size) return [];
+
+    const myEventIds = Array.from(eventMap.keys());
 
     // Find other users who participated in those events
     const coSignups = await this.prisma.eventSignup.findMany({
@@ -128,6 +140,18 @@ export class PostcardRepository {
       },
     });
 
+    // Also include hosts of events the user participated in (they're co-attendees too)
+    const eventHostIds = new Set<string>();
+    const eventsWithHosts = await this.prisma.event.findMany({
+      where: { id: { in: myEventIds }, hostId: { not: userId } },
+      select: { id: true, hostId: true, host: { select: { id: true, name: true, avatar: true } } },
+    });
+    for (const e of eventsWithHosts) {
+      eventHostIds.add(e.hostId);
+      // Add host as a co-signup equivalent
+      coSignups.push({ userId: e.hostId, eventId: e.id, user: e.host });
+    }
+
     // Build per-event people map
     const eventPeopleMap = new Map<string, Set<string>>();
     const userMap = new Map<string, { id: string; name: string; avatar: string | null }>();
@@ -137,19 +161,21 @@ export class PostcardRepository {
       if (!userMap.has(s.userId)) userMap.set(s.userId, { id: s.user.id, name: s.user.name, avatar: s.user.avatar });
     }
 
-    // Build grouped result, ordered by event date desc (already sorted from mySignups)
-    const seenEventIds = new Set<string>();
+    // Build grouped result, ordered by event date desc
+    const sortedEvents = Array.from(eventMap.values()).sort((a, b) => {
+      const ta = a.startsAt?.getTime() ?? 0;
+      const tb = b.startsAt?.getTime() ?? 0;
+      return tb - ta;
+    });
     const events: { eventId: string; title: string; startsAt: string | null; people: { id: string; name: string; avatar: string | null }[] }[] = [];
-    for (const s of mySignups) {
-      if (seenEventIds.has(s.eventId)) continue;
-      seenEventIds.add(s.eventId);
-      const peopleIds = eventPeopleMap.get(s.eventId);
+    for (const evt of sortedEvents) {
+      const peopleIds = eventPeopleMap.get(evt.id);
       if (!peopleIds?.size) continue;
       events.push({
-        eventId: s.event.id,
-        title: s.event.title,
-        startsAt: s.event.startsAt?.toISOString() ?? null,
-        people: Array.from(peopleIds).map((uid) => userMap.get(uid)!),
+        eventId: evt.id,
+        title: evt.title,
+        startsAt: evt.startsAt?.toISOString() ?? null,
+        people: Array.from(peopleIds).map((uid) => userMap.get(uid)!).filter(Boolean),
       });
     }
     return events;
