@@ -363,7 +363,7 @@ export default function EventDetailPage() {
         if (eventTasks.length > 0 && event.phase !== 'ended') {
           setTaskClaimOpen(true);
         } else {
-          setFlash({ open: true, severity: 'success', message: event.phase === 'ended' ? '已添加参与记录' : '报名参加成功' });
+          setFlash({ open: true, severity: 'success', message: '报名参加成功' });
         }
       }
       await refreshEvent();
@@ -2019,7 +2019,7 @@ export default function EventDetailPage() {
               <Box sx={{ textAlign: 'center', py: 1.2, borderRadius: 2, bgcolor: 'success.main', opacity: 0.15 }}>
                 <Typography sx={{ color: 'success.main', fontWeight: 700, fontSize: 14, opacity: 1 }}>✓ 已参与</Typography>
               </Box>
-            ) : (
+            ) : event.phase !== 'ended' ? (
               /* Not signed up: action button */
               <Button
                 variant="contained"
@@ -2030,17 +2030,15 @@ export default function EventDetailPage() {
               >
                 {!user
                   ? '登录后可报名'
-                  : event.phase === 'ended'
-                    ? '我也参加了'
-                    : myStatus === 'waitlist'
-                      ? `等位中 · 第${((event.signupDetails ?? []).filter(s => s.status === 'waitlist').findIndex(s => s.userId === user.id) + 1) || '?'}位`
-                      : myStatus === 'invited'
-                        ? '接受邀请'
-                        : event.spots <= 0
-                          ? '加入等位'
-                          : '报名参加'}
+                  : myStatus === 'waitlist'
+                    ? `等位中 · 第${((event.signupDetails ?? []).filter(s => s.status === 'waitlist').findIndex(s => s.userId === user.id) + 1) || '?'}位`
+                    : myStatus === 'invited'
+                      ? '接受邀请'
+                      : event.spots <= 0
+                        ? '加入等位'
+                        : '报名参加'}
               </Button>
-            )}
+            ) : null}
           </Box>
         )}
 
