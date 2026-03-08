@@ -25,6 +25,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
+import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import BlockRoundedIcon from '@mui/icons-material/BlockRounded';
@@ -75,6 +77,7 @@ interface MemberRow {
   announcedAt: string;
   announcedEndAt: string;
   hostCandidate: boolean;
+  lastActiveAt: string | null;
 }
 
 function mapUser(u: any): MemberRow {
@@ -98,13 +101,28 @@ function mapUser(u: any): MemberRow {
     announcedAt: u.announcedAt ?? '',
     announcedEndAt: u.announcedEndAt ?? '',
     hostCandidate: u.hostCandidate ?? false,
+    lastActiveAt: u.lastActiveAt ?? null,
   };
+}
+
+function formatLastActive(iso: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / 86_400_000);
+  if (diffDays === 0) return '今天';
+  if (diffDays === 1) return '昨天';
+  if (diffDays < 30) return `${diffDays}天前`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}个月前`;
+  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short' });
 }
 
 export default function AdminMembersPage() {
   const [tab, setTab] = useState(0);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [sortActive, setSortActive] = useState<'asc' | 'desc' | null>(null);
   const [loading, setLoading] = useState(true);
   const [allUsers, setAllUsers] = useState<MemberRow[]>([]);
 
@@ -154,6 +172,14 @@ export default function AdminMembersPage() {
     if (roleFilter !== 'all' && m.role !== roleFilter) return false;
     return true;
   });
+
+  const sorted = sortActive
+    ? [...filtered].sort((a, b) => {
+        const ta = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
+        const tb = b.lastActiveAt ? new Date(b.lastActiveAt).getTime() : 0;
+        return sortActive === 'desc' ? tb - ta : ta - tb;
+      })
+    : filtered;
 
   // ── Helpers ──
   const updateUserLocal = (id: string, patch: Partial<MemberRow>) => {
@@ -297,7 +323,7 @@ export default function AdminMembersPage() {
           <Card>
             <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
               {/* Header */}
-              <Box sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr 1fr 100px', gap: 1, px: 2, py: 1.5, bgcolor: 'action.hover' }}>
+              <Box sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr 100px', gap: 1, px: 2, py: 1.5, bgcolor: 'action.hover' }}>
                 <Typography variant="caption" fontWeight={700}>成员</Typography>
                 <Typography variant="caption" fontWeight={700}>邮箱</Typography>
                 <Typography variant="caption" fontWeight={700}>角色</Typography>
@@ -305,19 +331,28 @@ export default function AdminMembersPage() {
                 <Typography variant="caption" fontWeight={700}>状态</Typography>
                 <Typography variant="caption" fontWeight={700}>Host</Typography>
                 <Typography variant="caption" fontWeight={700}>活动</Typography>
+                <Stack
+                  direction="row" spacing={0.25} alignItems="center"
+                  sx={{ cursor: 'pointer', userSelect: 'none' }}
+                  onClick={() => setSortActive((prev) => prev === 'desc' ? 'asc' : prev === 'asc' ? null : 'desc')}
+                >
+                  <Typography variant="caption" fontWeight={700}>最近活跃</Typography>
+                  {sortActive === 'desc' && <ArrowDownwardRoundedIcon sx={{ fontSize: 14 }} />}
+                  {sortActive === 'asc' && <ArrowUpwardRoundedIcon sx={{ fontSize: 14 }} />}
+                </Stack>
                 <Typography variant="caption" fontWeight={700}>操作</Typography>
               </Box>
               <Divider />
 
-              {filtered.length === 0 && (
+              {sorted.length === 0 && (
                 <Box sx={{ px: 2, py: 3, textAlign: 'center' }}>
                   <Typography color="text.secondary">暂无成员</Typography>
                 </Box>
               )}
 
-              {filtered.map((m, i) => (
+              {sorted.map((m, i) => (
                 <Box key={m.id}>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr auto', md: '2fr 2fr 1fr 1fr 1fr 1fr 1fr 100px' }, gap: 1, px: 2, py: 1.5, alignItems: 'center' }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr auto', md: '2fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr 100px' }, gap: 1, px: 2, py: 1.5, alignItems: 'center' }}>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <Avatar sx={{ width: 32, height: 32 }}>{firstNonEmoji(m.name)}</Avatar>
                       <Box>
@@ -355,6 +390,7 @@ export default function AdminMembersPage() {
                     </Box>
                     <Typography variant="body2" sx={{ display: { xs: 'none', md: 'block' } }}>{m.hostCount}</Typography>
                     <Typography variant="body2" sx={{ display: { xs: 'none', md: 'block' } }}>{m.eventCount}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>{formatLastActive(m.lastActiveAt)}</Typography>
                     <Stack direction="row" spacing={0.5}>
                       <IconButton size="small" onClick={() => openEdit(m)}>
                         <EditRoundedIcon fontSize="small" />
@@ -369,7 +405,7 @@ export default function AdminMembersPage() {
                       </IconButton>
                     </Stack>
                   </Box>
-                  {i < filtered.length - 1 && <Divider />}
+                  {i < sorted.length - 1 && <Divider />}
                 </Box>
               ))}
             </CardContent>
