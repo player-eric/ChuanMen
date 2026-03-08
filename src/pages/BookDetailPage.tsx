@@ -108,9 +108,26 @@ export default function BookDetailPage() {
             sx={{
               position: 'relative',
               height: 280,
-              background: poster.bg,
+              overflow: 'hidden',
+              background: coverUrl ? 'none' : poster.bg,
             }}
           >
+            {/* Blurred background layer */}
+            {coverUrl && (
+              <Box
+                component="img"
+                src={coverUrl}
+                sx={{ position: 'absolute', inset: -20, width: 'calc(100% + 40px)', height: 'calc(100% + 40px)', objectFit: 'cover', filter: 'blur(20px) brightness(0.5)' }}
+              />
+            )}
+            {/* Sharp cover — fully visible, no cropping */}
+            {coverUrl && (
+              <Box
+                component="img"
+                src={coverUrl}
+                sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            )}
             <Box
               sx={{
                 position: 'absolute',
