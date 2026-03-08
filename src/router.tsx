@@ -158,6 +158,7 @@ function buildFeedItems(data: any): any[] {
       from: p.from?.name ?? '',
       to: p.to?.name ?? '',
       message: p.message ?? '',
+      photo: p.photoUrl || undefined,
       time: p.createdAt ? timeAgo(p.createdAt) : '',
       visibility: p.visibility ?? 'public',
       likes: p.likes ?? 0,

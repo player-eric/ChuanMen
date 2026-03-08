@@ -46,7 +46,7 @@ export class PostcardRepository {
         message: input.message,
         eventId: input.eventId,
         eventCtx: input.eventCtx ?? '',
-        visibility: input.visibility ?? 'private',
+        visibility: input.visibility ?? 'public',
         photoUrl: input.photoUrl ?? '',
         tags: input.tags?.length
           ? { create: input.tags.map((value) => ({ value })) }

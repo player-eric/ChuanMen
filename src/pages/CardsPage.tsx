@@ -379,8 +379,8 @@ function FullCards() {
                 </Box>
 
                 <RadioGroup row value={isPrivate ? 'private' : 'public'} onChange={(event) => setIsPrivate(event.target.value === 'private')}>
-                  <FormControlLabel value="private" control={<Radio size="small" />} label={<Stack direction="row" spacing={0.5} alignItems="center"><LockRoundedIcon sx={{ fontSize: 16 }} /><span>仅彼此可见</span></Stack>} />
                   <FormControlLabel value="public" control={<Radio size="small" />} label={<Stack direction="row" spacing={0.5} alignItems="center"><PublicRoundedIcon sx={{ fontSize: 16 }} /><span>公开到动态流</span></Stack>} />
+                  <FormControlLabel value="private" control={<Radio size="small" />} label={<Stack direction="row" spacing={0.5} alignItems="center"><LockRoundedIcon sx={{ fontSize: 16 }} /><span>仅彼此可见</span></Stack>} />
                 </RadioGroup>
 
                 <Stack direction="row" spacing={1}>
