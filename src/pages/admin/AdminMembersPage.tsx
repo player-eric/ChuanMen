@@ -124,7 +124,8 @@ export default function AdminMembersPage() {
   const [tab, setTab] = useState(0);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [sortActive, setSortActive] = useState<'asc' | 'desc' | null>(null);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(true);
   const [allUsers, setAllUsers] = useState<MemberRow[]>([]);
 
@@ -175,11 +176,32 @@ export default function AdminMembersPage() {
     return true;
   });
 
-  const sorted = sortActive
+  const toggleSort = (key: string) => {
+    if (sortKey === key) {
+      if (sortDir === 'desc') setSortDir('asc');
+      else { setSortKey(null); setSortDir('desc'); }
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  };
+
+  const sorted = sortKey
     ? [...filtered].sort((a, b) => {
-        const ta = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
-        const tb = b.lastActiveAt ? new Date(b.lastActiveAt).getTime() : 0;
-        return sortActive === 'desc' ? tb - ta : ta - tb;
+        let cmp = 0;
+        switch (sortKey) {
+          case 'name': cmp = a.name.localeCompare(b.name, 'zh'); break;
+          case 'role': cmp = a.role.localeCompare(b.role); break;
+          case 'host': cmp = a.hostCount - b.hostCount; break;
+          case 'event': cmp = a.eventCount - b.eventCount; break;
+          case 'active': {
+            const ta = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
+            const tb = b.lastActiveAt ? new Date(b.lastActiveAt).getTime() : 0;
+            cmp = ta - tb;
+            break;
+          }
+        }
+        return sortDir === 'desc' ? -cmp : cmp;
       })
     : filtered;
 
@@ -326,22 +348,18 @@ export default function AdminMembersPage() {
             <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
               {/* Header */}
               <Box sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr 100px', gap: 1, px: 2, py: 1.5, bgcolor: 'action.hover' }}>
-                <Typography variant="caption" fontWeight={700}>成员</Typography>
-                <Typography variant="caption" fontWeight={700}>邮箱</Typography>
-                <Typography variant="caption" fontWeight={700}>角色</Typography>
-                <Typography variant="caption" fontWeight={700}>运营身份</Typography>
-                <Typography variant="caption" fontWeight={700}>状态</Typography>
-                <Typography variant="caption" fontWeight={700}>Host</Typography>
-                <Typography variant="caption" fontWeight={700}>活动</Typography>
-                <Stack
-                  direction="row" spacing={0.25} alignItems="center"
-                  sx={{ cursor: 'pointer', userSelect: 'none' }}
-                  onClick={() => setSortActive((prev) => prev === 'desc' ? 'asc' : prev === 'asc' ? null : 'desc')}
-                >
-                  <Typography variant="caption" fontWeight={700}>最近活跃</Typography>
-                  {sortActive === 'desc' && <ArrowDownwardRoundedIcon sx={{ fontSize: 14 }} />}
-                  {sortActive === 'asc' && <ArrowUpwardRoundedIcon sx={{ fontSize: 14 }} />}
-                </Stack>
+                {([['name', '成员'], [null, '邮箱'], ['role', '角色'], [null, '运营身份'], [null, '状态'], ['host', 'Host'], ['event', '活动'], ['active', '最近活跃']] as const).map(([key, label]) => (
+                  <Stack
+                    key={label}
+                    direction="row" spacing={0.25} alignItems="center"
+                    sx={key ? { cursor: 'pointer', userSelect: 'none' } : undefined}
+                    onClick={key ? () => toggleSort(key) : undefined}
+                  >
+                    <Typography variant="caption" fontWeight={700}>{label}</Typography>
+                    {key && sortKey === key && sortDir === 'desc' && <ArrowDownwardRoundedIcon sx={{ fontSize: 14 }} />}
+                    {key && sortKey === key && sortDir === 'asc' && <ArrowUpwardRoundedIcon sx={{ fontSize: 14 }} />}
+                  </Stack>
+                ))}
                 <Typography variant="caption" fontWeight={700}>操作</Typography>
               </Box>
               <Divider />
