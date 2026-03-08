@@ -10,13 +10,18 @@ WHERE "startsAt" <= NOW()
 
 -- Step 2: Recalculate postcardCredits for every user
 -- Only count events from March 2026 onwards (when credit system launched)
--- Formula: 4 (base) + 2 per attended event + 4 extra per hosted event - postcards sent
+-- Formula: 4 (base) + 2 per attended event + 4 extra per hosted/co-hosted event - postcards sent
 WITH attend_credits AS (
-  -- +2 for each event attended (accepted signup, event started, not cancelled, at least 2 participants)
+  -- +2 for each event attended (excluding host and co-hosts — they only get host/co-host bonus)
   SELECT es."userId", COUNT(DISTINCT es."eventId") * 2 AS credits
   FROM "EventSignup" es
   JOIN "Event" e ON e."id" = es."eventId"
   WHERE es."status" = 'accepted'
+    AND es."userId" != e."hostId"
+    AND NOT EXISTS (
+      SELECT 1 FROM "EventCoHost" ec
+      WHERE ec."eventId" = e."id" AND ec."userId" = es."userId"
+    )
     AND e."startsAt" >= '2026-03-01'
     AND e."startsAt" <= NOW()
     AND e."phase" != 'cancelled'
@@ -39,6 +44,21 @@ host_credits AS (
     ) >= 1
   GROUP BY e."hostId"
 ),
+cohost_credits AS (
+  -- +4 extra for each event co-hosted (same criteria as host)
+  SELECT ec."userId", COUNT(*) * 4 AS credits
+  FROM "EventCoHost" ec
+  JOIN "Event" e ON e."id" = ec."eventId"
+  WHERE e."startsAt" >= '2026-03-01'
+    AND e."startsAt" <= NOW()
+    AND e."phase" != 'cancelled'
+    AND ec."userId" != e."hostId"
+    AND (
+      SELECT COUNT(*) FROM "EventSignup" es
+      WHERE es."eventId" = e."id" AND es."status" = 'accepted' AND es."userId" != e."hostId"
+    ) >= 1
+  GROUP BY ec."userId"
+),
 cards_sent AS (
   SELECT "fromId" AS "userId", COUNT(*) AS cnt
   FROM "Postcard"
@@ -48,6 +68,7 @@ UPDATE "User" u
 SET "postcardCredits" = 4
   + COALESCE((SELECT credits FROM attend_credits ac WHERE ac."userId" = u."id"), 0)
   + COALESCE((SELECT credits FROM host_credits hc WHERE hc."userId" = u."id"), 0)
+  + COALESCE((SELECT credits FROM cohost_credits cc WHERE cc."userId" = u."id"), 0)
   - COALESCE((SELECT cnt FROM cards_sent cs WHERE cs."userId" = u."id"), 0);
 
 -- Ensure no negative credits

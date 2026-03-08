@@ -184,17 +184,34 @@ export async function runAgentCycle(app: FastifyInstance) {
 
       const allParticipantIds = allParticipants.map((s) => s.userId);
 
-      // Award +2 credits to each participant (including co-hosts)
-      await prisma.user.updateMany({
-        where: { id: { in: allParticipantIds } },
-        data: { postcardCredits: { increment: 2 } },
-      });
+      // Co-host IDs (excluding primary host)
+      const coHostIds = (event.coHosts ?? [])
+        .map((ch) => ch.userId)
+        .filter((id) => id !== event.hostId);
+      const hostAndCoHostIds = new Set([event.hostId, ...coHostIds]);
 
-      // Award +2 (attend) + 4 (host bonus) = +6 to host
+      // Award +2 credits to regular participants (excluding host and co-hosts)
+      const regularParticipantIds = allParticipantIds.filter((id) => !hostAndCoHostIds.has(id));
+      if (regularParticipantIds.length > 0) {
+        await prisma.user.updateMany({
+          where: { id: { in: regularParticipantIds } },
+          data: { postcardCredits: { increment: 2 } },
+        });
+      }
+
+      // Award +4 to host (host bonus only, no attend credit)
       await prisma.user.update({
         where: { id: event.hostId },
-        data: { postcardCredits: { increment: 6 } },
+        data: { postcardCredits: { increment: 4 } },
       });
+
+      // Award +4 to each co-host (same as host, no attend credit)
+      if (coHostIds.length > 0) {
+        await prisma.user.updateMany({
+          where: { id: { in: coHostIds } },
+          data: { postcardCredits: { increment: 4 } },
+        });
+      }
 
       await prisma.event.update({
         where: { id: event.id },
