@@ -157,9 +157,39 @@ export default function MovieDetailPage() {
             sx={{
               position: 'relative',
               height: 280,
-              background: poster.bg,
+              overflow: 'hidden',
+              background: posterUrl ? 'none' : poster.bg,
             }}
           >
+            {/* Blurred background layer — fills the box with a zoomed, blurred copy */}
+            {posterUrl && (
+              <Box
+                component="img"
+                src={posterUrl}
+                sx={{
+                  position: 'absolute',
+                  inset: -20,
+                  width: 'calc(100% + 40px)',
+                  height: 'calc(100% + 40px)',
+                  objectFit: 'cover',
+                  filter: 'blur(20px) brightness(0.5)',
+                }}
+              />
+            )}
+            {/* Sharp poster — fully visible, no cropping */}
+            {posterUrl && (
+              <Box
+                component="img"
+                src={posterUrl}
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                }}
+              />
+            )}
             {/* Gradient overlay at bottom */}
             <Box
               sx={{

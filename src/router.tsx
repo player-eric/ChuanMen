@@ -250,6 +250,7 @@ function buildFeedItems(data: any): any[] {
       title: r.title,
       category: cat,
       categoryIcon: categoryIcons[cat] ?? '📖',
+      coverUrl: r.coverUrl || undefined,
       votes: r.voteCount ?? r._count?.votes ?? 0,
       time,
       navTarget: `/discover/recommendations/${r.id}`,

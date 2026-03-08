@@ -748,10 +748,10 @@ export function FeedCompactProposal({ name, title, votes: initV, interested, tim
 /* ═══ FeedRecommendation (compact) ═══ */
 interface FeedRecommendationProps extends InteractionProps {
   name: string; title: string; category: string; categoryIcon: string;
-  votes: number; time: string; navTarget?: string;
+  coverUrl?: string; votes: number; time: string; navTarget?: string;
 }
 
-export function FeedRecommendation({ name, title, category, categoryIcon, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedRecommendationProps) {
+export function FeedRecommendation({ name, title, category, categoryIcon, coverUrl, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedRecommendationProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -761,9 +761,13 @@ export function FeedRecommendation({ name, title, category, categoryIcon, votes:
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
       <div onClick={goNav} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: goNav ? 'pointer' : 'default' }}>
-        <div style={{ width: 36, height: 36, borderRadius: 8, background: c.s2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-          {categoryIcon}
-        </div>
+        {coverUrl ? (
+          <img src={coverUrl} alt="" style={{ width: 36, height: 48, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: c.s2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+            {categoryIcon}
+          </div>
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
           <div style={{ fontSize: 11, color: c.text3, marginTop: 2 }}>

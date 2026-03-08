@@ -117,6 +117,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           include: {
             from: { select: { id: true, name: true, avatar: true } },
             to: { select: { id: true, name: true, avatar: true } },
+            tags: true,
           },
         }),
 
