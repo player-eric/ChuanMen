@@ -273,16 +273,20 @@ export function renderPostcardBlock(opts: PostcardBlockOptions): string {
   const initial = fromName.charAt(0);
   const hue = fromName.charCodeAt(0) * 37 % 360;
   const POSTCARD_BG_URL = 'https://chuanmener.club/postcard-bg.png';
+  const BASE_URL = 'https://chuanmener.club';
 
-  const photoUrl = photo ? escapeAttr(photo) : POSTCARD_BG_URL;
-  const leftBgStyle = `background-image:url('${photoUrl}');background-size:cover;background-position:center;`;
-  const leftBgColor = photo ? '' : ' bgcolor="#C4915A"';
+  // Convert relative photo URLs to absolute (email clients need full URLs)
+  const absPhoto = photo && photo.startsWith('/') ? `${BASE_URL}${photo}` : photo;
 
-  const thankYouHtml = !photo
+  // When photo exists, use <img> tag (email clients don't support background-image reliably)
+  // When no photo, use bgcolor fallback with Thank You text
+  const hasPhoto = !!absPhoto;
+
+  const thankYouHtml = !hasPhoto
     ? `<div style="font-size:20px;font-style:italic;font-weight:600;color:rgba(255,255,255,0.55);letter-spacing:0.05em;font-family:Georgia,'Noto Serif SC',serif;">Thank You</div>`
     : '';
 
-  const watermarkHtml = !photo
+  const watermarkHtml = !hasPhoto
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="opacity:0.25;" align="right">
         <tr>
           <td style="width:14px;height:14px;border-radius:3px;background:rgba(224,216,206,0.09);text-align:center;vertical-align:middle;font-size:7px;font-weight:800;color:rgba(224,216,206,0.38);line-height:14px;">串</td>
@@ -292,19 +296,30 @@ export function renderPostcardBlock(opts: PostcardBlockOptions): string {
       </table>`
     : '';
 
-  const eventLineHtml = eventCtx
+  // With photo: eventCtx moves to right side (above fromName); without photo: stays on left
+  const eventLineOnLeft = !hasPhoto && eventCtx
     ? `<div style="font-size:10px;color:#ffffff;font-family:${FONT_STACK};margin-top:6px;">&#x1F4CD; ${escapeHtml(eventCtx)}</div>`
     : '';
+  const eventLineOnRight = hasPhoto && eventCtx
+    ? `<div style="font-size:10px;color:#9A9088;font-family:${FONT_STACK};margin-bottom:4px;">&#x1F4CD; ${escapeHtml(eventCtx)}</div>`
+    : '';
+
+  // Left side: <img> for photo, bgcolor + Thank You for no photo
+  const leftTd = hasPhoto
+    ? `<td width="45%" height="320" valign="top" style="padding:0;">
+      <img src="${escapeAttr(absPhoto)}" width="216" height="320" alt="" style="display:block;width:100%;height:320px;object-fit:cover;" />
+    </td>`
+    : `<td width="45%" height="320" valign="top" align="center" bgcolor="#C4915A">
+      <table role="presentation" width="100%" height="320" cellpadding="0" cellspacing="0">
+        <tr><td height="140" style="line-height:0;font-size:0;">&nbsp;</td></tr>
+        <tr><td align="center" valign="middle">${thankYouHtml}${eventLineOnLeft}</td></tr>
+        <tr><td height="140" valign="bottom" style="padding:0 8px 10px;">${watermarkHtml}</td></tr>
+      </table>
+    </td>`;
 
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" align="center" style="max-width:480px;border-radius:16px;overflow:hidden;border-collapse:separate;border:1px solid rgba(212,165,116,0.15);" bgcolor="#1E1C1A">
   <tr>
-    <td width="45%" height="320" valign="top" align="center"${leftBgColor} background="${photoUrl}" style="${leftBgStyle}">
-      <table role="presentation" width="100%" height="320" cellpadding="0" cellspacing="0">
-        <tr><td height="140" style="line-height:0;font-size:0;">&nbsp;</td></tr>
-        <tr><td align="center" valign="middle">${thankYouHtml}${eventLineHtml}</td></tr>
-        <tr><td height="140" valign="bottom" style="padding:0 8px 10px;">${watermarkHtml}</td></tr>
-      </table>
-    </td>
+    ${leftTd}
     <td height="320" valign="top" bgcolor="#1E1C1A" style="background:linear-gradient(165deg,#1E1C1A,#161412);">
       <table role="presentation" width="100%" height="320" cellpadding="0" cellspacing="0">
         <tr><td valign="top" style="padding:14px 14px 0;">
@@ -319,6 +334,7 @@ export function renderPostcardBlock(opts: PostcardBlockOptions): string {
           <p style="margin:6px 0 0;font-size:14px;font-style:italic;line-height:1.7;color:#E0D8CE;font-family:${FONT_STACK};">${escapeHtml(message)}</p>
         </td></tr>
         <tr><td valign="bottom" style="padding:14px;">
+          ${eventLineOnRight}
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td valign="middle" style="font-size:14px;font-weight:600;color:#E0D8CE;font-family:${FONT_STACK};">
