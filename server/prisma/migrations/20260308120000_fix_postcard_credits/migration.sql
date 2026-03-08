@@ -22,7 +22,7 @@ WITH attend_credits AS (
       SELECT 1 FROM "EventCoHost" ec
       WHERE ec."eventId" = e."id" AND ec."userId" = es."userId"
     )
-    AND e."startsAt" >= '2026-03-01'
+    AND e."createdAt" >= '2026-03-06'
     AND e."startsAt" <= NOW()
     AND e."phase" != 'cancelled'
     AND (
@@ -35,7 +35,7 @@ host_credits AS (
   -- +4 extra for each event hosted (event started, not cancelled, at least 1 participant besides host)
   SELECT e."hostId" AS "userId", COUNT(*) * 4 AS credits
   FROM "Event" e
-  WHERE e."startsAt" >= '2026-03-01'
+  WHERE e."createdAt" >= '2026-03-06'
     AND e."startsAt" <= NOW()
     AND e."phase" != 'cancelled'
     AND (
@@ -49,7 +49,7 @@ cohost_credits AS (
   SELECT ec."userId", COUNT(*) * 4 AS credits
   FROM "EventCoHost" ec
   JOIN "Event" e ON e."id" = ec."eventId"
-  WHERE e."startsAt" >= '2026-03-01'
+  WHERE e."createdAt" >= '2026-03-06'
     AND e."startsAt" <= NOW()
     AND e."phase" != 'cancelled'
     AND ec."userId" != e."hostId"
