@@ -59,8 +59,9 @@ import {
   fetchRecommendationByIdApi,
   fetchAnnouncementsApi,
   fetchCoAttendees,
+  fetchSiteConfig,
 } from '@/lib/domainApi';
-import { eventTagToScene, hostMilestoneBadge } from '@/lib/mappings';
+import { eventTagToScene, hostMilestoneBadge, type HostBadgeTier } from '@/lib/mappings';
 
 /* ── Loader helpers (call real backend) ── */
 
@@ -160,8 +161,8 @@ function buildFeedItems(data: any): any[] {
       type: 'card',
       from: p.from?.name ?? '',
       to: p.to?.name ?? '',
-      fromAvatar: p.from?.avatar ?? undefined,
-      toAvatar: p.to?.avatar ?? undefined,
+      fromAvatar: p.from?.avatar || undefined,
+      toAvatar: p.to?.avatar || undefined,
       message: p.message ?? '',
       photo: p.photoUrl || undefined,
       stamp: (p.tags as any[])?.[0]?.value ?? undefined,
@@ -768,6 +769,8 @@ function mapApiCard(c: any): any {
     id: c.id,
     from: typeof c.from === 'string' ? c.from : c.from?.name ?? '?',
     to: typeof c.to === 'string' ? c.to : c.to?.name ?? '?',
+    fromAvatar: (typeof c.from === 'object' ? c.from?.avatar : undefined) || undefined,
+    toAvatar: (typeof c.to === 'object' ? c.to?.avatar : undefined) || undefined,
     message: c.message ?? '',
     stamp: c.tags?.[0]?.value ?? c.stamp ?? '',
     date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '',
@@ -843,12 +846,13 @@ function isBirthdayWeek(birthday: string): boolean {
   return Math.min(diff, wrapDiff) <= 3;
 }
 
-function mapApiMember(m: any) {
+function mapApiMember(m: any, badgeTiers?: HostBadgeTier[]) {
   const raw = m.mutual ?? {};
   const hostCount = m.host ?? m.hostCount ?? 0;
   // Birthday badge overrides host milestone badge during birthday week
   const birthdayStr = m.birthday ? (typeof m.birthday === 'string' ? m.birthday : new Date(m.birthday).toISOString()) : '';
   const hasBirthdayBadge = birthdayStr && !m.hideBirthday && isBirthdayWeek(birthdayStr);
+  const tier = hostMilestoneBadge(hostCount, badgeTiers);
   return {
     ...m,
     titles: Array.isArray(m.titles)
@@ -857,7 +861,8 @@ function mapApiMember(m: any) {
         ? m.socialTitles.map((t: any) => (typeof t === 'string' ? t : t.value))
         : [],
     host: hostCount,
-    badge: hasBirthdayBadge ? '🎂' : (m.badge ?? hostMilestoneBadge(hostCount)?.emoji),
+    badge: hasBirthdayBadge ? '🎂' : (m.badge ?? tier?.emoji),
+    badgeLabel: tier?.label,
     mutual: {
       evtCount: raw.evtCount ?? 0,
       cards: raw.cards ?? raw.cardCount ?? 0,
@@ -871,10 +876,22 @@ function mapApiMember(m: any) {
   };
 }
 
+/** Fetch host badge tiers from SiteConfig (with fallback to defaults) */
+async function fetchBadgeTiers(): Promise<HostBadgeTier[] | undefined> {
+  try {
+    return await fetchSiteConfig<HostBadgeTier[]>('hostBadgeTiers');
+  } catch {
+    return undefined;
+  }
+}
+
 async function membersLoader() {
   try {
-    const raw = await fetchMembersApi() as any[];
-    const members = raw.map(mapApiMember);
+    const [raw, tiers] = await Promise.all([
+      fetchMembersApi() as Promise<any[]>,
+      fetchBadgeTiers(),
+    ]);
+    const members = raw.map(m => mapApiMember(m, tiers));
     return { members };
   } catch {
     return { members: [] };
@@ -893,8 +910,11 @@ async function memberDetailLoader({ params }: { params: Record<string, string | 
     } catch { /* ignore */ }
   }
   try {
-    // Use the same profile API as ProfilePage, but queried by name
-    return await fetchProfileByNameApi(name, viewerId);
+    const [profile, tiers] = await Promise.all([
+      fetchProfileByNameApi(name, viewerId),
+      fetchBadgeTiers(),
+    ]);
+    return { ...profile as any, _badgeTiers: tiers };
   } catch {
     return null;
   }

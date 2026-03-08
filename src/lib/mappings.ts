@@ -41,8 +41,11 @@ export const roleLabelMap: Record<string, string> = {
   member: '成员',
 };
 
-/** Host milestone badge tiers (descending order) */
-const HOST_BADGE_TIERS: { min: number; emoji: string; label: string }[] = [
+/** Host milestone badge tier shape */
+export type HostBadgeTier = { min: number; emoji: string; label: string };
+
+/** Default host badge tiers — used as fallback when SiteConfig is unavailable */
+export const DEFAULT_HOST_BADGE_TIERS: HostBadgeTier[] = [
   { min: 20, emoji: '👑', label: 'Host 传奇' },
   { min: 10, emoji: '🔥', label: 'Host 大神' },
   { min: 5, emoji: '⭐', label: 'Host 之星' },
@@ -50,6 +53,6 @@ const HOST_BADGE_TIERS: { min: number; emoji: string; label: string }[] = [
 ];
 
 /** Get host milestone badge emoji + label for a given host count */
-export function hostMilestoneBadge(count: number): { emoji: string; label: string } | undefined {
-  return HOST_BADGE_TIERS.find((t) => count >= t.min);
+export function hostMilestoneBadge(count: number, tiers?: HostBadgeTier[]): { emoji: string; label: string } | undefined {
+  return (tiers ?? DEFAULT_HOST_BADGE_TIERS).find((t) => count >= t.min);
 }

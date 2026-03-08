@@ -33,8 +33,11 @@ import {
   fetchMembersWithTitles,
   grantUserTitle,
   revokeUserTitle,
+  fetchSiteConfig,
+  updateSiteConfig,
   type TitleRuleRow,
 } from '@/lib/domainApi';
+import { DEFAULT_HOST_BADGE_TIERS, type HostBadgeTier } from '@/lib/mappings';
 
 /* ── PRD 11.1.6 ── 称号管理 ── */
 
@@ -66,6 +69,13 @@ export default function AdminTitlesPage() {
   const [selectedMember, setSelectedMember] = useState<MemberWithTitles | null>(null);
   const [grantTitleValue, setGrantTitleValue] = useState<string | null>(null);
 
+  /* ── Tab 2: Host badge tiers state ── */
+  const [badgeTiers, setBadgeTiers] = useState<HostBadgeTier[]>([]);
+  const [editBadgeIdx, setEditBadgeIdx] = useState<number | null>(null);
+  const [badgeForm, setBadgeForm] = useState<HostBadgeTier>({ min: 1, emoji: '', label: '' });
+  const [addBadgeOpen, setAddBadgeOpen] = useState(false);
+  const [badgeSaving, setBadgeSaving] = useState(false);
+
   const filteredMembers = searchName
     ? members.filter(m => m.name.toLowerCase().includes(searchName.toLowerCase()))
     : members;
@@ -73,12 +83,14 @@ export default function AdminTitlesPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [t, hc, m] = await Promise.all([
+      const [t, hc, m, bt] = await Promise.all([
         fetchTitleRules(),
         fetchTitleHoldersCount().catch(() => ({} as Record<string, number>)),
         fetchMembersWithTitles().catch(() => [] as MemberWithTitles[]),
+        fetchSiteConfig<HostBadgeTier[]>('hostBadgeTiers').catch(() => null),
       ]);
       setTitles(t); setHoldersMap(hc); setMembers(m);
+      setBadgeTiers(bt ?? DEFAULT_HOST_BADGE_TIERS);
     } catch (e) { console.error('Failed to load titles', e); }
     finally { setLoading(false); }
   };
@@ -132,6 +144,35 @@ export default function AdminTitlesPage() {
     catch (e) { console.error(e); }
   };
 
+  /* ── Host badge tier helpers ── */
+  const saveBadgeTiers = async (tiers: HostBadgeTier[]) => {
+    setBadgeSaving(true);
+    try {
+      const sorted = [...tiers].sort((a, b) => b.min - a.min);
+      await updateSiteConfig('hostBadgeTiers', sorted);
+      setBadgeTiers(sorted);
+    } catch (e) { console.error(e); }
+    finally { setBadgeSaving(false); }
+  };
+
+  const handleSaveBadgeEdit = () => {
+    if (editBadgeIdx === null || !badgeForm.emoji || !badgeForm.label) return;
+    const next = [...badgeTiers];
+    next[editBadgeIdx] = { ...badgeForm };
+    saveBadgeTiers(next);
+    setEditBadgeIdx(null);
+  };
+
+  const handleAddBadge = () => {
+    if (!badgeForm.emoji || !badgeForm.label || badgeForm.min < 1) return;
+    saveBadgeTiers([...badgeTiers, { ...badgeForm }]);
+    setAddBadgeOpen(false);
+  };
+
+  const handleDeleteBadge = (idx: number) => {
+    saveBadgeTiers(badgeTiers.filter((_, i) => i !== idx));
+  };
+
   /* ── Form dialog (shared for create & edit) ── */
   const formDialog = (open: boolean, title: string, onSave: () => void, onClose: () => void) => (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -167,9 +208,13 @@ export default function AdminTitlesPage() {
         <Tabs value={tab} onChange={(_, v) => setTab(v)}>
           <Tab label={`称号列表 (${titles.length})`} />
           <Tab label="授予管理" />
+          <Tab label="Host 徽章" />
         </Tabs>
         {tab === 0 && (
           <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openCreate}>新增称号</Button>
+        )}
+        {tab === 2 && (
+          <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => { setBadgeForm({ min: 1, emoji: '', label: '' }); setAddBadgeOpen(true); }}>新增徽章</Button>
         )}
       </Stack>
 
@@ -247,6 +292,66 @@ export default function AdminTitlesPage() {
           </Card>
         </Stack>
       )}
+
+      {/* ═══ Tab 2: Host badge tiers ═══ */}
+      {tab === 2 && (
+        <Card>
+          <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
+            <Box sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: '80px 2fr 3fr 100px', gap: 1, px: 2, py: 1.5, bgcolor: 'action.hover' }}>
+              <Typography variant="caption" fontWeight={700}>Emoji</Typography>
+              <Typography variant="caption" fontWeight={700}>标签</Typography>
+              <Typography variant="caption" fontWeight={700}>最低 Host 次数</Typography>
+              <Typography variant="caption" fontWeight={700}>操作</Typography>
+            </Box>
+            <Divider />
+            {badgeTiers.map((t, i) => (
+              <Box key={i}>
+                {editBadgeIdx === i ? (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '80px 2fr 3fr 100px' }, gap: 1, px: 2, py: 1, alignItems: 'center' }}>
+                    <TextField size="small" value={badgeForm.emoji} onChange={e => setBadgeForm(f => ({ ...f, emoji: e.target.value }))} placeholder="👑" sx={{ width: 70 }} />
+                    <TextField size="small" value={badgeForm.label} onChange={e => setBadgeForm(f => ({ ...f, label: e.target.value }))} placeholder="Host 传奇" />
+                    <TextField size="small" type="number" value={badgeForm.min} onChange={e => setBadgeForm(f => ({ ...f, min: Number(e.target.value) }))} slotProps={{ htmlInput: { min: 1 } }} />
+                    <Stack direction="row" spacing={0.5}>
+                      <Button size="small" variant="contained" onClick={handleSaveBadgeEdit} disabled={badgeSaving}>保存</Button>
+                      <Button size="small" onClick={() => setEditBadgeIdx(null)}>取消</Button>
+                    </Stack>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr auto', md: '80px 2fr 3fr 100px' }, gap: 1, px: 2, py: 1.5, alignItems: 'center' }}>
+                    <Typography fontSize={20}>{t.emoji}</Typography>
+                    <Typography variant="body2" fontWeight={600}>{t.label}</Typography>
+                    <Typography variant="body2" color="text.secondary">{t.min} 次及以上</Typography>
+                    <Stack direction="row" spacing={0.5}>
+                      <IconButton size="small" onClick={() => { setEditBadgeIdx(i); setBadgeForm({ ...t }); }}><EditRoundedIcon fontSize="small" /></IconButton>
+                      <IconButton size="small" color="error" onClick={() => handleDeleteBadge(i)}><DeleteRoundedIcon fontSize="small" /></IconButton>
+                    </Stack>
+                  </Box>
+                )}
+                {i < badgeTiers.length - 1 && <Divider />}
+              </Box>
+            ))}
+            {badgeTiers.length === 0 && <Typography color="text.secondary" sx={{ p: 3, textAlign: 'center' }}>暂无徽章配置</Typography>}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Add badge dialog ── */}
+      <Dialog open={addBadgeOpen} onClose={() => setAddBadgeOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>新增 Host 徽章</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Stack direction="row" spacing={2}>
+              <TextField label="Emoji" value={badgeForm.emoji} onChange={e => setBadgeForm(f => ({ ...f, emoji: e.target.value }))} size="small" sx={{ width: 100 }} placeholder="🌟" />
+              <TextField label="标签" value={badgeForm.label} onChange={e => setBadgeForm(f => ({ ...f, label: e.target.value }))} size="small" fullWidth placeholder="Host 达人" />
+            </Stack>
+            <TextField label="最低 Host 次数" type="number" value={badgeForm.min} onChange={e => setBadgeForm(f => ({ ...f, min: Number(e.target.value) }))} size="small" slotProps={{ htmlInput: { min: 1 } }} />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddBadgeOpen(false)}>取消</Button>
+          <Button variant="contained" onClick={handleAddBadge} disabled={!badgeForm.emoji || !badgeForm.label || badgeForm.min < 1}>添加</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ── Create dialog ── */}
       {formDialog(createOpen, '新增称号', handleSaveCreate, () => setCreateOpen(false))}

@@ -409,10 +409,12 @@ function FullCards() {
             )}
 
             {step === 2 && who && (
-              <Stack spacing={2}>
+              <Stack spacing={2} sx={{ px: { md: '20%' } }}>
                 <PostCard
                   from={user.name ?? '我'}
                   to={who}
+                  fromAvatar={user.avatar || undefined}
+                  toAvatar={whoAvatar || undefined}
                   message={msg}
                   stamp={stamp || '✉'}
                   photo={photoPreview ? `url(${photoPreview}) ${photoPos}/cover no-repeat` : undefined}
@@ -490,6 +492,8 @@ function FullCards() {
                   <PostCard
                     from={card.from}
                     to={user?.name ?? '我'}
+                    fromAvatar={card.fromAvatar}
+                    toAvatar={card.toAvatar}
                     message={card.message}
                     stamp={card.stamp}
                     date={card.date}
@@ -528,6 +532,8 @@ function FullCards() {
                   <PostCard
                     from={card.from}
                     to={(card as any).to ?? '...'}
+                    fromAvatar={card.fromAvatar}
+                    toAvatar={(card as any).toAvatar}
                     message={card.message}
                     stamp={card.stamp}
                     date={card.date}

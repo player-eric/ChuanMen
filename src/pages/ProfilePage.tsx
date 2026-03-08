@@ -750,6 +750,8 @@ export default function ProfilePage() {
                       <PostCard
                         from={card.from}
                         to={user?.name ?? 'Yuan'}
+                        fromAvatar={card.fromAvatar}
+                        toAvatar={user?.avatar || undefined}
                         message={card.message}
                         stamp={card.stamp}
                         date={card.date}
@@ -777,6 +779,8 @@ export default function ProfilePage() {
                       <PostCard
                         from={user?.name ?? 'Yuan'}
                         to={card.from === (user?.name ?? 'Yuan') ? '' : card.from}
+                        fromAvatar={user?.avatar || undefined}
+                        toAvatar={card.fromAvatar}
                         message={card.message}
                         stamp={card.stamp}
                         date={card.date}

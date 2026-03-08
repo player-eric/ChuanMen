@@ -53,7 +53,7 @@ export default function MemberDetailPage() {
   const tasteCount = mutual?.tasteCount ?? mutual?.movies?.length ?? 0;
   const hasMutual = mutual && (mutual.evtCount > 0 || tasteCount > 0 || mutual.cards > 0);
   const hostCount = raw.stats?.hostCount ?? member.hostCount ?? 0;
-  const badgeTier = hostMilestoneBadge(hostCount);
+  const badgeTier = hostMilestoneBadge(hostCount, raw._badgeTiers);
   const memberBadge = badgeTier?.emoji;
   const isOwnProfile = user?.id === member.id;
   const statsHidden = !isOwnProfile && member.hideStats;
@@ -556,6 +556,8 @@ export default function MemberDetailPage() {
                       <PostCard
                         from={card.from}
                         to={member.name}
+                        fromAvatar={card.fromAvatar}
+                        toAvatar={member.avatar || undefined}
                         message={card.message}
                         stamp={card.stamp}
                         date={card.date}
@@ -582,6 +584,8 @@ export default function MemberDetailPage() {
                       <PostCard
                         from={member.name}
                         to={(card as any).to ?? ''}
+                        fromAvatar={member.avatar || undefined}
+                        toAvatar={(card as any).toAvatar}
                         message={card.message}
                         stamp={card.stamp}
                         date={card.date}

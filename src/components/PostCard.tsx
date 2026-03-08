@@ -9,6 +9,8 @@ import { Ava, Stamp } from './Atoms';
 interface PostCardProps {
   from: string;
   to: string;
+  fromAvatar?: string;
+  toAvatar?: string;
   message: string;
   stamp?: string;
   date?: string;
@@ -23,7 +25,7 @@ interface PostCardProps {
   onToggleVisibility?: () => void;
 }
 
-export function PostCard({ from, to, message, stamp = '✉', date, photo, isPrivate = false, showVisibility = false, layout = 'vertical', eventCtx, onToggleVisibility }: PostCardProps) {
+export function PostCard({ from, to, fromAvatar, toAvatar, message, stamp = '✉', date, photo, isPrivate = false, showVisibility = false, layout = 'vertical', eventCtx, onToggleVisibility }: PostCardProps) {
   const c = useColors();
   const navigate = useNavigate();
   const defaultBg = 'linear-gradient(135deg, #D4A574 0%, #C4915A 40%, #B07D48 100%)';
@@ -98,7 +100,7 @@ export function PostCard({ from, to, message, stamp = '✉', date, photo, isPriv
           onClick={() => goMember(from)}
           sx={{ cursor: 'pointer', '&:hover': { opacity: 0.7 } }}
         >
-          <Ava name={from} size={18} />
+          <Ava name={from} src={fromAvatar} size={18} />
           <Typography variant="body2" sx={{ fontWeight: 600, color: c.ink }}>{from}</Typography>
         </Stack>
         <Stack direction="row" spacing={0.75} alignItems="center">

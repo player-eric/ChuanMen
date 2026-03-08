@@ -539,7 +539,7 @@ export function FeedCard({ from, to, fromAvatar, toAvatar, message, photo, stamp
             {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}{visibility === 'public' ? ' · 🌐 公开' : visibility === 'private' ? ' · 🔒 私密' : ''}</div>}
           </div>
         </div>
-        <PostCard from={from} to={to} message={message} stamp={stamp} photo={photo} layout="horizontal" />
+        <PostCard from={from} to={to} fromAvatar={fromAvatar} toAvatar={toAvatar} message={message} stamp={stamp} photo={photo} layout="horizontal" />
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
     </Card>
