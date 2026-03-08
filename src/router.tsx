@@ -60,7 +60,7 @@ import {
   fetchAnnouncementsApi,
   fetchCoAttendees,
 } from '@/lib/domainApi';
-import { eventTagToScene } from '@/lib/mappings';
+import { eventTagToScene, hostMilestoneBadge } from '@/lib/mappings';
 
 /* ── Loader helpers (call real backend) ── */
 
@@ -160,6 +160,8 @@ function buildFeedItems(data: any): any[] {
       type: 'card',
       from: p.from?.name ?? '',
       to: p.to?.name ?? '',
+      fromAvatar: p.from?.avatar ?? undefined,
+      toAvatar: p.to?.avatar ?? undefined,
       message: p.message ?? '',
       photo: p.photoUrl || undefined,
       stamp: (p.tags as any[])?.[0]?.value ?? undefined,
@@ -180,6 +182,7 @@ function buildFeedItems(data: any): any[] {
       _key: `movie-${m.id}`,
       type: 'compactMovie',
       name: m.recommendedBy?.name ?? '',
+      avatar: m.recommendedBy?.avatar ?? undefined,
       title: m.title,
       year: String(m.year ?? ''),
       dir: m.director ?? '',
@@ -251,6 +254,7 @@ function buildFeedItems(data: any): any[] {
       _key: `rec-${r.id}`,
       type: 'compactRecommendation',
       name: r.author?.name ?? '',
+      avatar: r.author?.avatar ?? undefined,
       title: r.title,
       category: cat,
       categoryIcon: categoryIcons[cat] ?? '📖',
@@ -308,6 +312,7 @@ function buildFeedItems(data: any): any[] {
       _key: `proposal-${p.id}`,
       type: 'compactProposal',
       name: p.author?.name ?? '',
+      avatar: p.author?.avatar ?? undefined,
       title: p.title,
       votes: p._count?.votes ?? 0,
       interested: [],
@@ -821,14 +826,7 @@ async function profileLoader() {
   }
 }
 
-/** Host milestone badge based on host count */
-function hostMilestoneBadge(count: number): string | undefined {
-  if (count >= 20) return '👑';
-  if (count >= 10) return '🔥';
-  if (count >= 5) return '⭐';
-  if (count >= 1) return '🏠';
-  return undefined;
-}
+/** Host milestone badge — delegates to shared mappings.ts */
 
 /** Check if a birthday falls within ±3 days of today */
 function isBirthdayWeek(birthday: string): boolean {
@@ -859,7 +857,7 @@ function mapApiMember(m: any) {
         ? m.socialTitles.map((t: any) => (typeof t === 'string' ? t : t.value))
         : [],
     host: hostCount,
-    badge: hasBirthdayBadge ? '🎂' : (m.badge ?? hostMilestoneBadge(hostCount)),
+    badge: hasBirthdayBadge ? '🎂' : (m.badge ?? hostMilestoneBadge(hostCount)?.emoji),
     mutual: {
       evtCount: raw.evtCount ?? 0,
       cards: raw.cards ?? raw.cardCount ?? 0,

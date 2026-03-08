@@ -40,3 +40,16 @@ export const roleLabelMap: Record<string, string> = {
   host: 'Host',
   member: '成员',
 };
+
+/** Host milestone badge tiers (descending order) */
+const HOST_BADGE_TIERS: { min: number; emoji: string; label: string }[] = [
+  { min: 20, emoji: '👑', label: 'Host 传奇' },
+  { min: 10, emoji: '🔥', label: 'Host 大神' },
+  { min: 5, emoji: '⭐', label: 'Host 之星' },
+  { min: 1, emoji: '🏠', label: 'Host' },
+];
+
+/** Get host milestone badge emoji + label for a given host count */
+export function hostMilestoneBadge(count: number): { emoji: string; label: string } | undefined {
+  return HOST_BADGE_TIERS.find((t) => count >= t.min);
+}

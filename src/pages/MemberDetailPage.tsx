@@ -28,6 +28,7 @@ import { Poster } from '@/components/Poster';
 import { EmptyState } from '@/components/EmptyState';
 import { useColors } from '@/hooks/useColors';
 import { photos } from '@/theme';
+import { hostMilestoneBadge } from '@/lib/mappings';
 
 const sceneEmoji: Record<string, string> = {
   movieNight: '🎬',
@@ -52,7 +53,8 @@ export default function MemberDetailPage() {
   const tasteCount = mutual?.tasteCount ?? mutual?.movies?.length ?? 0;
   const hasMutual = mutual && (mutual.evtCount > 0 || tasteCount > 0 || mutual.cards > 0);
   const hostCount = raw.stats?.hostCount ?? member.hostCount ?? 0;
-  const memberBadge = hostCount >= 20 ? '👑' : hostCount >= 10 ? '🔥' : hostCount >= 5 ? '⭐' : hostCount >= 1 ? '🏠' : undefined;
+  const badgeTier = hostMilestoneBadge(hostCount);
+  const memberBadge = badgeTier?.emoji;
   const isOwnProfile = user?.id === member.id;
   const statsHidden = !isOwnProfile && member.hideStats;
   const activityHidden = !isOwnProfile && member.hideActivity;
@@ -181,7 +183,7 @@ export default function MemberDetailPage() {
                 {memberBadge && (
                   <Chip
                     size="small"
-                    label={`${memberBadge} ${hostCount >= 20 ? 'Host 传奇' : hostCount >= 10 ? 'Host 大神' : hostCount >= 5 ? 'Host 之星' : 'Host'}`}
+                    label={`${memberBadge} ${badgeTier?.label}`}
                     sx={{
                       height: 22,
                       fontSize: 11,

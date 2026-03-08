@@ -516,11 +516,11 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
 
 /* ═══ FeedCard ═══ */
 interface FeedCardProps extends InteractionProps {
-  from: string; to: string; message: string; photo?: string; stamp?: string; navTarget?: string;
+  from: string; to: string; fromAvatar?: string; toAvatar?: string; message: string; photo?: string; stamp?: string; navTarget?: string;
   time?: string; visibility?: string;
 }
 
-export function FeedCard({ from, to, message, photo, stamp, navTarget, likes, likedBy, comments, newComments, commentCount, time, visibility }: FeedCardProps) {
+export function FeedCard({ from, to, fromAvatar, toAvatar, message, photo, stamp, navTarget, likes, likedBy, comments, newComments, commentCount, time, visibility }: FeedCardProps) {
   const c = useColors();
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -530,7 +530,7 @@ export function FeedCard({ from, to, message, photo, stamp, navTarget, likes, li
     <Card glow>
       <div onClick={goNav} style={{ padding: 14, cursor: goNav ? 'pointer' : 'default' }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <Ava name={from} size={32} onTap={() => goMember(from)} />
+          <Ava name={from} src={fromAvatar} size={32} onTap={() => goMember(from)} />
           <div>
             <div style={{ fontSize: 14 }}>
               <b onClick={(e) => { e.stopPropagation(); goMember(from); }} style={{ cursor: 'pointer' }}>{from}</b> 给{' '}
@@ -548,11 +548,11 @@ export function FeedCard({ from, to, message, photo, stamp, navTarget, likes, li
 
 /* ═══ FeedMovie ═══ */
 interface FeedMovieProps extends InteractionProps {
-  name: string; title: string; year: string; dir: string; poster?: string; votes: number;
+  name: string; avatar?: string; title: string; year: string; dir: string; poster?: string; votes: number;
   navTarget?: string; time?: string;
 }
 
-export function FeedMovie({ name, title, year, dir, poster, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedMovieProps) {
+export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedMovieProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -563,7 +563,7 @@ export function FeedMovie({ name, title, year, dir, poster, votes: initV, navTar
     <Card>
       <div style={{ padding: 14, cursor: goNav ? 'pointer' : undefined }} onClick={goNav}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <Ava name={name} size={32} onTap={() => goMember(name)} />
+          <Ava name={name} src={avatar} size={32} onTap={() => goMember(name)} />
           <div>
             <div style={{ fontSize: 14 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 推荐了一部电影</div>
             {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}</div>}
@@ -616,11 +616,11 @@ export function FeedMilestone({ text, emoji, likes, likedBy, comments, newCommen
 
 /* ═══ FeedProposal ═══ */
 interface FeedProposalProps extends InteractionProps {
-  name: string; title: string; votes: number; interested: string[];
+  name: string; avatar?: string; title: string; votes: number; interested: string[];
   navTarget?: string; time?: string;
 }
 
-export function FeedProposal({ name, title, votes: initV, interested, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedProposalProps) {
+export function FeedProposal({ name, avatar, title, votes: initV, interested, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedProposalProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -631,7 +631,7 @@ export function FeedProposal({ name, title, votes: initV, interested, navTarget,
     <Card>
       <div style={{ padding: 14, cursor: goNav ? 'pointer' : undefined }} onClick={goNav}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <Ava name={name} size={32} onTap={() => goMember(name)} />
+          <Ava name={name} src={avatar} size={32} onTap={() => goMember(name)} />
           <div>
             <div style={{ fontSize: 14 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 提了一个活动创意</div>
             {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}</div>}
@@ -662,7 +662,7 @@ export function FeedProposal({ name, title, votes: initV, interested, navTarget,
 
 /* ═══ FeedCompactMovie ═══ */
 interface FeedCompactMovieProps extends InteractionProps {
-  name: string; title: string; year: string; dir: string;
+  name: string; avatar?: string; title: string; year: string; dir: string;
   poster?: string; votes: number; time: string; navTarget?: string;
 }
 
@@ -703,11 +703,11 @@ export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV,
 
 /* ═══ FeedCompactProposal ═══ */
 interface FeedCompactProposalProps extends InteractionProps {
-  name: string; title: string; votes: number;
+  name: string; avatar?: string; title: string; votes: number;
   interested: string[]; time: string; navTarget?: string;
 }
 
-export function FeedCompactProposal({ name, title, votes: initV, interested, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactProposalProps) {
+export function FeedCompactProposal({ name, avatar, title, votes: initV, interested, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactProposalProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -722,7 +722,7 @@ export function FeedCompactProposal({ name, title, votes: initV, interested, tim
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <Ava name={name} size={18} onTap={() => goMember(name)} />
+            <Ava name={name} src={avatar} size={18} onTap={() => goMember(name)} />
             <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ fontSize: 12, color: c.text3, cursor: 'pointer' }}>{name}</span>
             <span style={{ fontSize: 12, color: c.text3 }}>· {time}</span>
             <AvaStack names={interested} size={16} />
@@ -747,7 +747,7 @@ export function FeedCompactProposal({ name, title, votes: initV, interested, tim
 
 /* ═══ FeedRecommendation (compact) ═══ */
 interface FeedRecommendationProps extends InteractionProps {
-  name: string; title: string; category: string; categoryIcon: string;
+  name: string; avatar?: string; title: string; category: string; categoryIcon: string;
   coverUrl?: string; votes: number; time: string; navTarget?: string;
 }
 
@@ -793,11 +793,11 @@ export function FeedRecommendation({ name, title, category, categoryIcon, coverU
 
 /* ═══ FeedBook ═══ */
 interface FeedBookProps extends InteractionProps {
-  name: string; title: string; year: string; author: string; coverUrl?: string; votes: number;
+  name: string; avatar?: string; title: string; year: string; author: string; coverUrl?: string; votes: number;
   navTarget?: string; time?: string;
 }
 
-export function FeedBook({ name, title, year, author, coverUrl, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedBookProps) {
+export function FeedBook({ name, avatar, title, year, author, coverUrl, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedBookProps) {
   const c = useColors();
   const [v, setV] = useState(false);
   const navigate = useNavigate();
@@ -808,7 +808,7 @@ export function FeedBook({ name, title, year, author, coverUrl, votes: initV, na
     <Card>
       <div style={{ padding: 14, cursor: goNav ? 'pointer' : undefined }} onClick={goNav}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <Ava name={name} size={32} onTap={() => goMember(name)} />
+          <Ava name={name} src={avatar} size={32} onTap={() => goMember(name)} />
           <div>
             <div style={{ fontSize: 14 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 推荐了一本书</div>
             {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}</div>}
@@ -844,12 +844,12 @@ export function FeedBook({ name, title, year, author, coverUrl, votes: initV, na
 
 /* ═══ FeedSmallGroup ═══ */
 interface FeedSmallGroupProps extends InteractionProps {
-  name: string; title: string; date: string; location: string;
+  name: string; avatar?: string; title: string; date: string; location: string;
   weekNumber: number; people: string[]; signupUserIds?: string[]; capacity: number;
   description?: string; isHome?: boolean; isPrivate?: boolean; navTarget?: string;
 }
 
-export function FeedSmallGroup({ name, title, date, location, weekNumber, people, signupUserIds, capacity, isPrivate, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedSmallGroupProps) {
+export function FeedSmallGroup({ name, avatar, title, date, location, weekNumber, people, signupUserIds, capacity, isPrivate, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedSmallGroupProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -887,7 +887,7 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
       <Card>
         <div style={{ padding: 14 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Ava name={name} size={32} onTap={() => goMember(name)} />
+            <Ava name={name} src={avatar} size={32} onTap={() => goMember(name)} />
             <div>
               <div style={{ fontSize: 14 }}><b onClick={() => goMember(name)} style={{ cursor: 'pointer' }}>{name}</b> 发起了私密局</div>
               <div style={{ fontSize: 12, color: c.text3 }}>{date}</div>
@@ -903,7 +903,7 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
     <Card>
       <div onClick={goNav} style={{ cursor: goNav ? 'pointer' : 'default', padding: 14 }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <span onClick={(e) => { e.stopPropagation(); goMember(name); }}><Ava name={name} size={32} badge="🎲" /></span>
+          <span onClick={(e) => { e.stopPropagation(); goMember(name); }}><Ava name={name} src={avatar} size={32} badge="🎲" /></span>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14 }}><b onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</b> 发起了小聚</div>
             <div style={{ fontSize: 12, color: c.text3 }}>Host · {date}</div>
@@ -951,12 +951,12 @@ export function FeedSmallGroup({ name, title, date, location, weekNumber, people
 
 /* ═══ FeedCompactSmallGroup ═══ */
 interface FeedCompactSmallGroupProps extends InteractionProps {
-  name: string; title: string; date: string; location: string;
+  name: string; avatar?: string; title: string; date: string; location: string;
   weekNumber: number; people: string[]; signupUserIds?: string[]; capacity: number;
   time: string; isPrivate?: boolean; navTarget?: string;
 }
 
-export function FeedCompactSmallGroup({ name, title, date, location, weekNumber, people, signupUserIds, capacity, time, isPrivate, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactSmallGroupProps) {
+export function FeedCompactSmallGroup({ name, avatar, title, date, location, weekNumber, people, signupUserIds, capacity, time, isPrivate, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactSmallGroupProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(false);
@@ -1016,7 +1016,7 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <Ava name={name} size={18} onTap={() => goMember(name)} />
+            <Ava name={name} src={avatar} size={18} onTap={() => goMember(name)} />
             <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ fontSize: 12, color: c.text3, cursor: 'pointer' }}>{name}</span>
             <span style={{ fontSize: 12, color: c.text3 }}>· {time}</span>
             <AvaStack names={people} size={16} />
@@ -1051,7 +1051,7 @@ export function FeedCompactSmallGroup({ name, title, date, location, weekNumber,
 
 /* ═══ FeedCompactBook ═══ */
 interface FeedCompactBookProps extends InteractionProps {
-  name: string; title: string; year: string; author: string;
+  name: string; avatar?: string; title: string; year: string; author: string;
   coverUrl?: string; votes: number; time: string; navTarget?: string;
 }
 
@@ -1106,6 +1106,7 @@ type ActionNoticeAction = 'event_join' | 'photo_upload' | 'movie_nominate' | 'mo
 interface FeedActionNoticeProps extends InteractionProps {
   action: ActionNoticeAction;
   name: string;
+  avatar?: string;
   targetTitle: string;
   time: string;
   detail?: string;
@@ -1133,7 +1134,7 @@ const actionConfig: Record<ActionNoticeAction, { emoji: string; text: (p: FeedAc
 };
 
 export function FeedActionNotice(props: FeedActionNoticeProps) {
-  const { action, name, time, photoUrls, navTarget, likes, likedBy, comments, newComments, commentCount } = props;
+  const { action, name, avatar, time, photoUrls, navTarget, likes, likedBy, comments, newComments, commentCount } = props;
   const c = useColors();
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -1143,7 +1144,7 @@ export function FeedActionNotice(props: FeedActionNoticeProps) {
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
       <div onClick={goNav} style={{ display: 'flex', gap: 8, padding: '10px 12px', cursor: goNav ? 'pointer' : 'default', alignItems: 'flex-start' }}>
-        <Ava name={name} size={24} onTap={() => goMember(name)} />
+        <Ava name={name} src={avatar} size={24} onTap={() => goMember(name)} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13 }}>
             {cfg.emoji}{' '}{cfg.text(props)}
