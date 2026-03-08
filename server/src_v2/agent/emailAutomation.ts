@@ -25,13 +25,14 @@ export async function sendPostEventRecap(
 
   const now = new Date();
   const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-  const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  // Find events that ended 2-6 hours ago (use startsAt + 4h as default end estimate)
+  // Find events that ended (phase changed) within the last 24 hours
+  // Use updatedAt as proxy for when phase changed to 'ended'
   const recentlyEnded = await prisma.event.findMany({
     where: {
       phase: 'ended',
-      startsAt: { gte: new Date(sixHoursAgo.getTime() - 4 * 60 * 60 * 1000), lte: new Date(twoHoursAgo.getTime() - 4 * 60 * 60 * 1000) },
+      updatedAt: { gte: twentyFourHoursAgo },
     },
     include: {
       host: { select: { name: true } },

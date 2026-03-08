@@ -18,6 +18,33 @@ export async function runAgentCycle(app: FastifyInstance) {
   const prisma = app.prisma;
   const log = app.log;
 
+  // Phase 0: Auto-end events that have passed their start time + duration
+  try {
+    const now = new Date();
+    // Events still in active phases but startsAt is past
+    // Use endsAt if set, otherwise startsAt + 4h as default end estimate
+    const overdue = await prisma.event.findMany({
+      where: {
+        phase: { in: ['open', 'closed', 'invite'] },
+        startsAt: { lt: new Date(now.getTime() - 4 * 60 * 60 * 1000) }, // at least 4h past start
+      },
+      select: { id: true, title: true, startsAt: true, endsAt: true },
+    });
+
+    for (const event of overdue) {
+      const effectiveEnd = event.endsAt ?? new Date(event.startsAt.getTime() + 4 * 60 * 60 * 1000);
+      if (now > effectiveEnd) {
+        await prisma.event.update({
+          where: { id: event.id },
+          data: { phase: 'ended' },
+        });
+        log.info(`Agent: auto-ended event "${event.title}" (id: ${event.id})`);
+      }
+    }
+  } catch (err) {
+    log.error({ err }, 'Agent: auto-end events failed');
+  }
+
   // Phase 1: Content automation (each try/catch)
   let milestones: string[] = [];
   try {
