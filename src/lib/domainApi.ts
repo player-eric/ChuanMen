@@ -86,9 +86,10 @@ export async function uploadMedia(
   category: MediaCategory,
   ownerId?: string,
 ): Promise<{ publicUrl: string; asset: MediaAsset }> {
+  const contentType = file.type || 'application/octet-stream';
   const params = new URLSearchParams({
     category,
-    contentType: file.type,
+    contentType,
     fileSize: String(file.size),
   });
   if (ownerId) params.set('ownerId', ownerId);
@@ -96,7 +97,7 @@ export async function uploadMedia(
   const arrayBuffer = await file.arrayBuffer();
   const response = await fetch(getApiUrl(`/api/media/upload?${params}`), {
     method: 'POST',
-    headers: { 'Content-Type': file.type },
+    headers: { 'Content-Type': contentType },
     body: arrayBuffer,
   });
   const data = await response.json().catch(() => null);

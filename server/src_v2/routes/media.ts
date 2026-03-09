@@ -123,8 +123,8 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     const contentType = q.contentType || (request.headers['content-type'] as string) || 'application/octet-stream';
     const fileSize = Number(q.fileSize) || 0;
 
-    // Validate
-    if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
+    // Validate — allow application/octet-stream as fallback (mobile browsers may omit type)
+    if (!ALLOWED_IMAGE_TYPES.includes(contentType) && contentType !== 'application/octet-stream') {
       return reply.badRequest(`不支持的文件类型: ${contentType}。允许: ${ALLOWED_IMAGE_TYPES.join(', ')}`);
     }
     if (fileSize > MAX_FILE_SIZE) {

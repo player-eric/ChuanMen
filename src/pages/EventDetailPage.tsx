@@ -1931,6 +1931,7 @@ export default function EventDetailPage() {
                 if (!user || !eventId) return;
                 setIsUploading(true);
                 const uploaded: EventPhoto[] = [];
+                let lastError = '';
                 try {
                   for (const item of uploadPreviews) {
                     try {
@@ -1944,14 +1945,18 @@ export default function EventDetailPage() {
                         createdAt: '刚刚',
                       });
                     } catch (err) {
+                      lastError = err instanceof Error ? err.message : String(err);
                       console.error('Photo upload failed:', err);
                     }
                   }
                   if (uploaded.length > 0) {
                     setPhotos((prev) => [...prev, ...uploaded]);
-                    setFlash({ open: true, severity: 'success', message: `上传成功，已添加 ${uploaded.length} 张照片` });
+                    const msg = uploaded.length < uploadPreviews.length
+                      ? `已上传 ${uploaded.length}/${uploadPreviews.length} 张，部分失败: ${lastError}`
+                      : `上传成功，已添加 ${uploaded.length} 张照片`;
+                    setFlash({ open: true, severity: uploaded.length < uploadPreviews.length ? 'warning' : 'success', message: msg });
                   } else {
-                    setFlash({ open: true, severity: 'error', message: '上传失败，请重试' });
+                    setFlash({ open: true, severity: 'error', message: `上传失败: ${lastError || '未知错误'}` });
                   }
                 } finally {
                   uploadPreviews.forEach((item) => URL.revokeObjectURL(item.preview));

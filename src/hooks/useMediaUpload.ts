@@ -53,8 +53,8 @@ export function useMediaUpload(options: UseMediaUploadOptions): UseMediaUploadRe
 
   const upload = useCallback(
     async (file: File): Promise<{ publicUrl: string; asset: MediaAsset } | null> => {
-      // Validate
-      if (!accept.includes(file.type)) {
+      // Validate — allow empty type (some mobile browsers omit it)
+      if (file.type && !accept.includes(file.type)) {
         const msg = `不支持的文件类型: ${file.type}`;
         setError(msg);
         onError?.(new Error(msg));
