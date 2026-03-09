@@ -616,7 +616,6 @@ async function main() {
         userStatus: UserStatus.approved,
         bio: admin.bio || notionBio,
         city: admin.city,
-        location: admin.city,
         wechatId: admin.wechatId,
       },
     });
@@ -664,7 +663,6 @@ async function main() {
         userStatus: UserStatus.approved,
         wechatId: wechat,
         city,
-        location: city,
         bio,
         createdAt: created || new Date(),
       },
@@ -856,7 +854,7 @@ async function main() {
       event = await prisma.event.create({
         data: {
           id: eventId,
-          title, hostId, startsAt: date, tags, location, capacity,
+          title, hostId, startsAt: date, tags, location, city: location, capacity,
           phase: EventPhase.ended, status: EventStatus.completed,
           recorderUserId,
           description: eventDescription,
@@ -1260,7 +1258,7 @@ async function seedEmailRulesAndTemplates() {
     { ruleId: 'P3-E', variantKey: 'default', subject: '【串门儿】{userName}，大家想念你组的局了', body: '你好 {userName}，\n\n好久没看到你组活动了，好多人都在问呢！\n\n之前你组的活动大家都玩得特别开心。如果最近有时间和想法，随时再来一次吧，我们都期待着 🙌' },
     { ruleId: 'P4-A', variantKey: 'default', subject: '【串门儿】{milestoneTitle}', body: '你好 {userName}，\n\n告诉你一个好消息——{milestoneTitle} 🎉\n\n这是咱们每个人一起做到的，感谢你一直以来的参与和支持！' },
     { ruleId: 'P4-C', variantKey: 'default', subject: '【串门儿】谢谢你，{userName}！', body: '你好 {userName}，\n\n谢谢你上个月为大家组织的活动！每一次的精心准备大家都看在眼里 ❤️\n\n有你在，串门儿才这么有意思。期待你下次的精彩活动！' },
-    { ruleId: 'DIGEST', variantKey: 'default', subject: '{date} · 串门儿社区近况', body: '你好，来看看最近串门儿都发生了什么吧 👀\n\n{digestContent}\n\n有感兴趣的就来参加吧～' },
+    { ruleId: 'DIGEST', variantKey: 'default', subject: '{date} · 串门儿社区近况', body: '你好，来看看最近串门儿都发生了什么吧 👀\n\n有感兴趣的就来参加吧～' },
   ];
 
   for (const t of templates) {

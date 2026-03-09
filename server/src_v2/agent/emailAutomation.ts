@@ -248,7 +248,7 @@ export async function sendUnclaimedTaskReminder(
     const eligible = await filterByRefId(
       prisma,
       candidates.map((u) => u.id),
-      'P0-B',
+      'P0-C',
       refId,
     );
 
@@ -258,13 +258,13 @@ export async function sendUnclaimedTaskReminder(
     for (const user of candidates) {
       if (!eligible.has(user.id)) continue;
       try {
-        await sendEmail({
+        const result = await sendEmail({
           to: user.email,
           subject: `${event.title}还差一个${firstTask.role}，你来吗？`,
           text: `Hi ${user.name}，\n\n${event.title}还有分工没人认领：\n\n${unclaimedTasks.map((t) => `- ${t.role}${t.description ? `：${t.description}` : ''}`).join('\n')}\n\n认领一个分工${taskDesc}？\n\n查看活动：https://chuanmener.club/events/${event.id}\n\n— 串门儿`,
         });
         await prisma.emailLog.create({
-          data: { userId: user.id, ruleId: 'P0-B', refId, messageId: null },
+          data: { userId: user.id, ruleId: 'P0-C', refId, messageId: result.MessageId },
         });
         sent++;
       } catch (err) {
@@ -899,12 +899,15 @@ export async function sendDailyDigest(
   log: FastifyBaseLogger,
 ): Promise<number> {
   const rule = await prisma.emailRule.findUnique({ where: { id: 'DIGEST' } });
-  if (!rule?.enabled) return 0;
+  if (!rule?.enabled) {
+    log.info(`DIGEST: rule ${rule ? 'disabled' : 'missing'}, skipping`);
+    return 0;
+  }
 
   // Check if there's any global content first (skip per-user queries if nothing happened)
   const globalSections = await buildDigestSections(prisma);
   if (!globalSections) {
-    log.info('DIGEST: no content, skipping');
+    log.info('DIGEST: no content in last 24h, skipping');
     return 0;
   }
 
@@ -922,6 +925,8 @@ export async function sendDailyDigest(
     rule.cooldownDays,
   );
 
+  log.info(`DIGEST: ${candidates.length} candidates, ${eligible.size} eligible after cooldown`);
+
   const date = new Date().toISOString().split('T')[0];
   let sent = 0;
 
@@ -935,7 +940,7 @@ export async function sendDailyDigest(
       const result = await sendTemplatedEmail(prisma, {
         to: user.email,
         ruleId: 'DIGEST',
-        variables: { date },
+        variables: { date, digestContent: '' },
         htmlBlock: digestHtml,
         ctaLabel: '查看完整动态',
         ctaUrl: 'https://chuanmener.club',
