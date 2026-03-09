@@ -19,10 +19,18 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     return events.map((e) => ({ ...e, likeCount: likeMap.get(e.id) ?? 0, commentCount: commentMap.get(e.id) ?? 0 }));
   }
 
-  app.get('/', async () => {
+  app.get('/', async (request) => {
+    const userId = request.headers['x-user-id'] as string | undefined;
     const events = await service.listEvents();
+    // Filter out invite-phase events unless user is host or has a signup
+    const visible = events.filter((e: any) => {
+      if (e.phase !== 'invite') return true;
+      if (!userId) return false;
+      if (e.hostId === userId) return true;
+      return e.signups?.some((s: any) => s.userId === userId);
+    });
     // Strip detailed address from list — only city is public
-    return withInteractionCounts(events.map((e) => ({ ...e, address: '', location: '' })));
+    return withInteractionCounts(visible.map((e) => ({ ...e, address: '', location: '' })));
   });
 
   // Past/completed events - must come before /:id

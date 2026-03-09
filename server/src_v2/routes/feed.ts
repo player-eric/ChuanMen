@@ -512,8 +512,16 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       postcardCredits = u?.postcardCredits ?? undefined;
     }
 
+    // Filter out invite-phase events unless user is host or has a signup
+    const visibleEvents = events.filter((e) => {
+      if (e.phase !== 'invite') return true;
+      if (!userId) return false;
+      if (e.hostId === userId) return true;
+      return e.signups.some((s) => s.userId === userId);
+    });
+
     // Compute activity hint + real activityAt per event, then sort & trim
-    const enrichedEvents = events.map((e) => {
+    const enrichedEvents = visibleEvents.map((e) => {
       const base = { ...withInteraction(e), photoCount: e.recapPhotoUrls?.length ?? 0 };
       const latestComment = latestCommentMap.get(e.id);
       const latestSignup = latestSignupMap.get(e.id);
