@@ -1954,7 +1954,7 @@ export default function EventDetailPage() {
                     const msg = uploaded.length < uploadPreviews.length
                       ? `已上传 ${uploaded.length}/${uploadPreviews.length} 张，部分失败: ${lastError}`
                       : `上传成功，已添加 ${uploaded.length} 张照片`;
-                    setFlash({ open: true, severity: uploaded.length < uploadPreviews.length ? 'warning' : 'success', message: msg });
+                    setFlash({ open: true, severity: uploaded.length < uploadPreviews.length ? 'error' : 'success', message: msg });
                   } else {
                     setFlash({ open: true, severity: 'error', message: `上传失败: ${lastError || '未知错误'}` });
                   }
