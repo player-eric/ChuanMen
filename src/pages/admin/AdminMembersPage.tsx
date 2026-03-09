@@ -63,7 +63,9 @@ interface MemberRow {
   email: string;
   role: string;
   userStatus: string;
-  location: string;
+  city: string;
+  state: string;
+  zipCode: string;
   bio: string;
   selfAsFriend: string;
   idealFriend: string;
@@ -87,7 +89,9 @@ function mapUser(u: any): MemberRow {
     email: u.email ?? '',
     role: u.role ?? 'member',
     userStatus: u.userStatus ?? 'applicant',
-    location: u.location ?? u.city ?? '',
+    city: u.city ?? '',
+    state: u.state ?? '',
+    zipCode: u.zipCode ?? '',
     bio: u.bio ?? '',
     selfAsFriend: u.selfAsFriend ?? '',
     idealFriend: u.idealFriend ?? '',
@@ -135,7 +139,10 @@ export default function AdminMembersPage() {
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editRole, setEditRole] = useState('member');
-  const [editLocation, setEditLocation] = useState('');
+  const [editCity, setEditCity] = useState('');
+  const [editState, setEditState] = useState('');
+  const [editZipCode, setEditZipCode] = useState('');
+  const [editBio, setEditBio] = useState('');
   const [editHostCandidate, setEditHostCandidate] = useState(false);
 
   // Applicant detail dialog
@@ -219,7 +226,10 @@ export default function AdminMembersPage() {
     setEditName(m.name);
     setEditEmail(m.email);
     setEditRole(m.role);
-    setEditLocation(m.location);
+    setEditCity(m.city);
+    setEditState(m.state);
+    setEditZipCode(m.zipCode);
+    setEditBio(m.bio);
     setEditHostCandidate(m.hostCandidate);
     setEditOpen(true);
   };
@@ -292,14 +302,20 @@ export default function AdminMembersPage() {
         name: editName,
         email: editEmail,
         role: editRole,
-        location: editLocation,
+        city: editCity,
+        state: editState,
+        zipCode: editZipCode,
+        bio: editBio,
         hostCandidate: editHostCandidate,
       });
       updateUserLocal(selectedMember.id, {
         name: editName,
         email: editEmail,
         role: editRole,
-        location: editLocation,
+        city: editCity,
+        state: editState,
+        zipCode: editZipCode,
+        bio: editBio,
         hostCandidate: editHostCandidate,
       });
     } catch { /* ignore */ }
@@ -459,7 +475,7 @@ export default function AdminMembersPage() {
                     </Stack>
                     <Typography variant="body2" color="text.secondary">{a.bio || '未填写自我介绍'}</Typography>
                     <Stack direction="row" spacing={2} flexWrap="wrap">
-                      {a.location && <Typography variant="caption">📍 {a.location}</Typography>}
+                      {(a.city || a.state) && <Typography variant="caption">📍 {[a.city, a.state].filter(Boolean).join(', ')}</Typography>}
                       {a.referralSource && <Typography variant="caption">🤝 来源：{a.referralSource}</Typography>}
                       <Typography variant="caption" color={daysPending >= 7 ? 'warning.main' : undefined}>📅 {new Date(a.createdAt).toLocaleDateString('zh-CN')}</Typography>
                     </Stack>
@@ -520,7 +536,7 @@ export default function AdminMembersPage() {
                       </Stack>
                       <Typography variant="body2" color="text.secondary">{a.bio || '未填写自我介绍'}</Typography>
                       <Stack direction="row" spacing={2} flexWrap="wrap">
-                        {a.location && <Typography variant="caption">📍 {a.location}</Typography>}
+                        {(a.city || a.state) && <Typography variant="caption">📍 {[a.city, a.state].filter(Boolean).join(', ')}</Typography>}
                         {a.announcedAt && <Typography variant="caption">📅 介绍开始：{new Date(a.announcedAt).toLocaleDateString('zh-CN')}</Typography>}
                         {endDate && <Typography variant="caption">⏰ 到期：{endDate.toLocaleDateString('zh-CN')}</Typography>}
                       </Stack>
@@ -556,7 +572,12 @@ export default function AdminMembersPage() {
               <MenuItem value="host">Host</MenuItem>
               <MenuItem value="member">成员</MenuItem>
             </TextField>
-            <TextField label="位置" value={editLocation} onChange={(e) => setEditLocation(e.target.value)} fullWidth size="small" />
+            <Stack direction="row" spacing={1}>
+              <TextField label="城市" value={editCity} onChange={(e) => setEditCity(e.target.value)} size="small" sx={{ flex: 2 }} />
+              <TextField label="州/省" value={editState} onChange={(e) => setEditState(e.target.value)} size="small" sx={{ flex: 1 }} />
+              <TextField label="邮编" value={editZipCode} onChange={(e) => setEditZipCode(e.target.value)} size="small" sx={{ flex: 1 }} />
+            </Stack>
+            <TextField label="简介" value={editBio} onChange={(e) => setEditBio(e.target.value)} fullWidth size="small" multiline minRows={2} maxRows={6} />
             <FormControlLabel
               control={<Switch checked={editHostCandidate} onChange={(e) => setEditHostCandidate(e.target.checked)} />}
               label="轮值 Host 候选池"
@@ -575,7 +596,7 @@ export default function AdminMembersPage() {
         <DialogContent>
           <Stack spacing={1.5} sx={{ mt: 1 }}>
             <Typography variant="body2"><strong>邮箱：</strong>{applicantDialog?.email}</Typography>
-            <Typography variant="body2"><strong>位置：</strong>{applicantDialog?.location || '未填写'}</Typography>
+            <Typography variant="body2"><strong>位置：</strong>{[applicantDialog?.city, applicantDialog?.state].filter(Boolean).join(', ') || '未填写'}</Typography>
             {applicantDialog?.wechatId && <Typography variant="body2"><strong>微信：</strong>{applicantDialog.wechatId}</Typography>}
             {applicantDialog?.referralSource && <Typography variant="body2"><strong>来源：</strong>{applicantDialog.referralSource}</Typography>}
             <Typography variant="body2"><strong>申请日期：</strong>{applicantDialog?.createdAt ? new Date(applicantDialog.createdAt).toLocaleDateString('zh-CN') : ''}</Typography>
