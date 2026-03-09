@@ -371,9 +371,9 @@ Key models (45+ total in `schema.prisma`):
 ### Manual Tests
 - `docs/test-guide.html` — 15-section UI test checklist. Test account: `cm@gmail.com`
 
-## CRITICAL: Build Before Push
+## CRITICAL: Build & Type-Check Before Push
 
-**NEVER push to remote without a successful local build first.** Before running `git push`, always run `npm run build` from the project root and ensure it completes without errors. A broken build on `main` will break the production deployment on Render.
+**NEVER push to remote without passing type checks and a successful local build first.** Before running `git push`, always run `npx tsc --noEmit` (frontend) and `cd server && npx tsc --noEmit` (backend) to catch type errors, then run `npm run build` from the project root and ensure it completes without errors. A broken build on `main` will break the production deployment on Render.
 
 ## CRITICAL: Email Safety
 

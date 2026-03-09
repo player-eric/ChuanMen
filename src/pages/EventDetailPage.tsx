@@ -190,7 +190,10 @@ export default function EventDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
-  const [editLocation, setEditLocation] = useState('');
+  const [editCity, setEditCity] = useState('');
+  const [editState, setEditState] = useState('');
+  const [editZipCode, setEditZipCode] = useState('');
+  const [editAddress, setEditAddress] = useState('');
   const [editCapacity, setEditCapacity] = useState(0);
   const [editStartsAt, setEditStartsAt] = useState('');
   const [editEndsAt, setEditEndsAt] = useState('');
@@ -277,7 +280,7 @@ export default function EventDetailPage() {
           title: String(item.title ?? ''),
           host: hostName,
           date: new Date(String(item.startsAt ?? new Date().toISOString())).toLocaleString('zh-CN'),
-          location: String(item.location ?? ''),
+          city: String(item.city || item.location || ''),
           scene: 'small-group',
           film: undefined,
           spots: Math.max(0, Number(item.capacity ?? 0) - hostSlots - occupying.length),
@@ -548,9 +551,12 @@ export default function EventDetailPage() {
               </Stack>
               <Stack alignItems="flex-end" spacing={0.25}>
                 <Typography variant="body2" color="text.secondary">📅 {event.date}{event.endDate ? ` — ${event.endDate}` : ''}</Typography>
-                <Typography variant="body2" color="text.secondary">📍 {event.location}</Typography>
-                {event.isHomeEvent && !signedUp && (
-                  <Typography variant="caption" color="text.secondary">🔒 报名后可见完整地址</Typography>
+                <Typography variant="body2" color="text.secondary">📍 {[event.city, event.state].filter(Boolean).join(', ')}</Typography>
+                {signedUp && event.address && (
+                  <Typography variant="caption" color="success.main">📍 {event.address}</Typography>
+                )}
+                {!signedUp && (
+                  <Typography variant="caption" color="text.secondary">🔒 报名后可见具体地址</Typography>
                 )}
               </Stack>
             </Stack>
@@ -565,7 +571,10 @@ export default function EventDetailPage() {
                   onClick={() => {
                     setEditTitle(event.title);
                     setEditDesc(event.desc);
-                    setEditLocation(event.location);
+                    setEditCity(event.city);
+                    setEditState(event.state ?? '');
+                    setEditZipCode(event.zipCode ?? '');
+                    setEditAddress(event.address ?? '');
                     setEditCapacity(event.total);
                     setEditStartsAt((loadedEvent as any)?.startsAt ? new Date((loadedEvent as any).startsAt).toISOString().slice(0, 16) : '');
                     setEditEndsAt((loadedEvent as any)?.endsAt ? new Date((loadedEvent as any).endsAt).toISOString().slice(0, 16) : '');
@@ -678,7 +687,7 @@ export default function EventDetailPage() {
                         const blob = await generateEventPoster({
                           title: event.title,
                           date: event.date,
-                          location: event.location,
+                          location: [event.city, event.state].filter(Boolean).join(', '),
                           hostName: event.host,
                           eventTag,
                           coverImageUrl,
@@ -720,7 +729,7 @@ export default function EventDetailPage() {
                       const blob = await generateEventPoster({
                         title: event.title,
                         date: event.date,
-                        location: event.location,
+                        location: [event.city, event.state].filter(Boolean).join(', '),
                         hostName: event.host,
                         eventTag,
                         coverImageUrl,
@@ -751,9 +760,9 @@ export default function EventDetailPage() {
 
             {/* 4. Additional info */}
             <Stack spacing={0.75} sx={{ mb: 2 }}>
-              {event.isHomeEvent && signedUp && event.locationPrivate && (
+              {signedUp && event.address && (
                 <Typography variant="caption" color="success.main">
-                  📍 {event.locationPrivate}
+                  📍 {event.address}{event.zipCode ? ` ${event.zipCode}` : ''}
                 </Typography>
               )}
               {event.inviteDeadline && (
@@ -2072,11 +2081,17 @@ export default function EventDetailPage() {
                 onChange={(e) => setEditTitle(e.target.value)}
                 fullWidth
               />
+              <Stack direction="row" spacing={1}>
+                <TextField label="城市" value={editCity} onChange={(e) => setEditCity(e.target.value)} sx={{ flex: 2 }} />
+                <TextField label="州" value={editState} onChange={(e) => setEditState(e.target.value)} sx={{ flex: 1 }} />
+                <TextField label="邮编" value={editZipCode} onChange={(e) => setEditZipCode(e.target.value)} sx={{ flex: 1 }} />
+              </Stack>
               <TextField
-                label="地点"
-                value={editLocation}
-                onChange={(e) => setEditLocation(e.target.value)}
+                label="具体地址（报名后可见）"
+                value={editAddress}
+                onChange={(e) => setEditAddress(e.target.value)}
                 fullWidth
+                helperText="仅报名成功的参与者可见"
               />
               <TextField
                 label="总人数上限（含 Host）"
@@ -2135,7 +2150,10 @@ export default function EventDetailPage() {
                   const payload: Record<string, unknown> = {};
                   if (editTitle.trim() !== event.title) payload.title = editTitle.trim();
                   if (editDesc !== event.desc) payload.description = editDesc;
-                  if (editLocation !== event.location) payload.location = editLocation;
+                  if (editCity !== event.city) payload.city = editCity;
+                  if (editState !== (event.state ?? '')) payload.state = editState;
+                  if (editZipCode !== (event.zipCode ?? '')) payload.zipCode = editZipCode;
+                  if (editAddress !== (event.address ?? '')) payload.address = editAddress;
                   if (editCapacity !== event.total) payload.capacity = editCapacity;
                   if (editStartsAt) payload.startsAt = editStartsAt;
                   if (editEndsAt) payload.endsAt = editEndsAt;
@@ -2147,7 +2165,10 @@ export default function EventDetailPage() {
                       ...prev,
                       title: editTitle.trim() || prev.title,
                       desc: editDesc ?? prev.desc,
-                      location: editLocation || prev.location,
+                      city: editCity || prev.city,
+                      state: editState || prev.state,
+                      zipCode: editZipCode || prev.zipCode,
+                      address: editAddress || prev.address,
                       total: editCapacity || prev.total,
                       spots: Math.max(0, (editCapacity || prev.total) - (1 + (prev.coHosts?.length ?? 0)) - (prev.signupDetails ?? []).filter((s) => ['accepted', 'invited', 'offered'].includes(s.status)).length),
                       date: editStartsAt ? new Date(editStartsAt).toLocaleString('zh-CN') : prev.date,

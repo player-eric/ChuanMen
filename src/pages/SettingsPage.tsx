@@ -33,7 +33,9 @@ export default function SettingsPage() {
 
   // Profile fields
   const [displayName, setDisplayName] = useState(user?.name ?? '');
-  const [location, setLocation] = useState(user?.location ?? '');
+  const [city, setCity] = useState(user?.city ?? '');
+  const [state, setState] = useState(user?.state ?? '');
+  const [zipCode, setZipCode] = useState(user?.zipCode ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [selfAsFriend, setSelfAsFriend] = useState(user?.selfAsFriend ?? '');
   const [idealFriend, setIdealFriend] = useState(user?.idealFriend ?? '');
@@ -128,7 +130,9 @@ export default function SettingsPage() {
         name: displayName || undefined,
         avatar: avatarUrl || undefined,
         coverImageUrl: coverUrl || undefined,
-        location: location || undefined,
+        city: city || undefined,
+        state: state || undefined,
+        zipCode: zipCode || undefined,
         bio: bio || undefined,
         selfAsFriend: selfAsFriend || undefined,
         idealFriend: idealFriend || undefined,
@@ -205,7 +209,18 @@ export default function SettingsPage() {
             />
 
             <TextField label="显示名" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-            <TextField label="城市/地区" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="如 Edison, NJ" />
+            <Stack direction="row" spacing={1}>
+              <TextField label="城市" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Edison" autoComplete="address-level2" sx={{ flex: 2 }} />
+              <TextField label="州" value={state} onChange={(e) => setState(e.target.value)} placeholder="NJ" autoComplete="address-level1" sx={{ flex: 1 }} />
+              <TextField label="邮编" value={zipCode} onChange={(e) => setZipCode(e.target.value)} placeholder="08820" autoComplete="postal-code" sx={{ flex: 1 }} />
+            </Stack>
+            <TextField
+              label="家庭地址"
+              value={homeAddress}
+              onChange={(e) => setHomeAddress(e.target.value)}
+              autoComplete="street-address"
+              helperText="仅在你作为 Host 发起在家活动时，向报名成功的参与者公开"
+            />
             <TextField label="自我介绍" multiline minRows={2} value={bio} onChange={(e) => setBio(e.target.value)} />
             <TextField label="你觉得自己是一个什么样的朋友？" multiline minRows={2} value={selfAsFriend} onChange={(e) => setSelfAsFriend(e.target.value)} />
             <TextField label="你最好的朋友是什么样子的？" multiline minRows={2} value={idealFriend} onChange={(e) => setIdealFriend(e.target.value)} />
@@ -263,12 +278,6 @@ export default function SettingsPage() {
               value={defaultHouseRules}
               onChange={(e) => setDefaultHouseRules(e.target.value)}
               helperText="发起在家活动时自动填入，可在活动创建时修改"
-            />
-            <TextField
-              label="家庭地址"
-              value={homeAddress}
-              onChange={(e) => setHomeAddress(e.target.value)}
-              helperText="仅在你作为 Host 发起在家活动时，向报名成功的参与者公开"
             />
           </Stack>
         </CardContent>

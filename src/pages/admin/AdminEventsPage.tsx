@@ -60,7 +60,7 @@ export default function AdminEventsPage() {
 
   const [formTitle, setFormTitle] = useState('');
   const [formDate, setFormDate] = useState('');
-  const [formLocation, setFormLocation] = useState('');
+  const [formCity, setFormCity] = useState('');
   const [formType, setFormType] = useState('movie');
   const [formCapacity, setFormCapacity] = useState(8);
   const [formDesc, setFormDesc] = useState('');
@@ -82,8 +82,8 @@ export default function AdminEventsPage() {
   const handleCreate = async () => {
     if (!formTitle || !formDate || !user?.id) return;
     try {
-      await createEvent({ title: formTitle, hostId: user.id, location: formLocation, startsAt: new Date(formDate).toISOString(), capacity: formCapacity, description: formDesc, tags: [formType as any] });
-      setCreateOpen(false); setFormTitle(''); setFormDate(''); setFormLocation(''); setFormDesc('');
+      await createEvent({ title: formTitle, hostId: user.id, city: formCity, startsAt: new Date(formDate).toISOString(), capacity: formCapacity, description: formDesc, tags: [formType as any] });
+      setCreateOpen(false); setFormTitle(''); setFormDate(''); setFormCity(''); setFormDesc('');
       loadData();
     } catch (e) { console.error('Create event failed', e); }
   };
@@ -148,7 +148,7 @@ export default function AdminEventsPage() {
                     </Stack>
                     <Box sx={{ display: { xs: 'none', md: 'block' } }}>
                       <Typography variant="body2">{dateStr}</Typography>
-                      <Typography variant="caption" color="text.secondary">{evt.location}</Typography>
+                      <Typography variant="caption" color="text.secondary">{evt.city || evt.location}</Typography>
                     </Box>
                     <Typography variant="body2" sx={{ display: { xs: 'none', md: 'block' } }}>{`${signupCount}/${evt.capacity}`}</Typography>
                     <Box sx={{ display: { xs: 'none', md: 'block' } }}>
@@ -217,7 +217,7 @@ export default function AdminEventsPage() {
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField label="活动名称" fullWidth size="small" value={formTitle} onChange={e => setFormTitle(e.target.value)} />
             <TextField label="日期时间" fullWidth size="small" type="datetime-local" value={formDate} onChange={e => setFormDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField label="地点" fullWidth size="small" value={formLocation} onChange={e => setFormLocation(e.target.value)} />
+            <TextField label="城市" fullWidth size="small" value={formCity} onChange={e => setFormCity(e.target.value)} />
             <TextField label="活动类型" select fullWidth size="small" value={formType} onChange={e => setFormType(e.target.value)}>
               <MenuItem value="movie">电影夜</MenuItem>
               <MenuItem value="chuanmen">茶话会/分享会</MenuItem>
@@ -241,7 +241,7 @@ export default function AdminEventsPage() {
           <Stack spacing={1} sx={{ mt: 1 }}>
             <Typography variant="body2"><strong>Host：</strong>{detailEvent?.host?.name ?? '—'}</Typography>
             <Typography variant="body2"><strong>时间：</strong>{detailEvent?.startsAt ? new Date(detailEvent.startsAt).toLocaleString('zh-CN') : ''}</Typography>
-            <Typography variant="body2"><strong>地点：</strong>{detailEvent?.location}</Typography>
+            <Typography variant="body2"><strong>城市：</strong>{detailEvent?.city || detailEvent?.location}</Typography>
             <Typography variant="body2"><strong>人数：</strong>{detailEvent ? `${detailEvent._count?.signups ?? 0}/${detailEvent.capacity}` : ''}</Typography>
             <Typography variant="body2"><strong>阶段：</strong>{detailEvent?.phase === 'invite' ? '私人邀请中' : '公开报名中'}</Typography>
           </Stack>

@@ -13,7 +13,9 @@ export interface AuthUser {
   avatar?: string;
   bio?: string;
   role?: string;
-  location?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
   selfAsFriend?: string;
   idealFriend?: string;
   participationPlan?: string;
@@ -43,7 +45,9 @@ export interface RegisterPayload {
 export interface ApplyPayload {
   displayName: string;
   email: string;
-  location: string;
+  city: string;
+  state?: string;
+  zipCode?: string;
   bio: string;
   selfAsFriend: string;
   idealFriend: string;

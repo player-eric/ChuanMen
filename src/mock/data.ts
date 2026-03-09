@@ -54,7 +54,7 @@ export const membersData: MemberData[] = [
   {
     name: 'Yuan', role: 'admin', host: 6, badge: '🏠',
     titles: ['🎬 选片人', '🔥 氛围担当', '🏠 最佳 Host'],
-    email: 'cm@gmail.com', location: 'Edison, NJ',
+    email: 'cm@gmail.com', city: 'Edison', state: 'NJ',
     bio: '串门儿的运营之一，平时喜欢看电影、做饭、在家招呼朋友。住在 Edison 快两年了，最近迷上了安哲罗普洛斯。',
     selfAsFriend: '话不多，但是在的时候你会觉得很安心。带吃的是基本操作。',
     idealFriend: '不用很外向，但要真诚。能一起安静看完一部电影的那种。',
@@ -65,7 +65,7 @@ export const membersData: MemberData[] = [
   {
     name: '白开水', role: 'host', host: 8, badge: '🏠',
     titles: ['🍳 厨神', '🔥 氛围担当', '🏠 最佳 Host', '🧹 收拾之神'],
-    email: 'bks@example.com', location: 'Edison, NJ',
+    email: 'bks@example.com', city: 'Edison', state: 'NJ',
     bio: '喜欢在家里布置一个温暖的小影院，每次有朋友来都很开心。做饭是减压方式，擅长川菜和日料。',
     selfAsFriend: '靠谱，话不多但什么都愿意帮忙。你搬家我第一个到。',
     idealFriend: '真诚、不装、能一起安静待着的人。',
@@ -76,7 +76,7 @@ export const membersData: MemberData[] = [
   {
     name: '大橙子', role: 'admin', host: 5, badge: '🏠',
     titles: ['📸 首席摄影', '⚡ 满满能量'],
-    email: 'dachengzi@example.com', location: 'Jersey City, NJ',
+    email: 'dachengzi@example.com', city: 'Jersey City', state: 'NJ',
     bio: '摄影爱好者，喜欢记录生活中的小确幸。在 JC 住了三年，周末常去 Hudson River 边拍照。',
     selfAsFriend: '热情、爱拍照、随叫随到。朋友圈里你的照片都是我拍的。',
     idealFriend: '有趣的灵魂，不用很外向。一起散步不说话也不尴尬。',
@@ -86,7 +86,7 @@ export const membersData: MemberData[] = [
   },
   {
     name: '星星', role: 'member', host: 0, titles: ['🧊 破冰王', '💬 话题王'],
-    email: 'star@example.com', location: 'Princeton, NJ',
+    email: 'star@example.com', city: 'Princeton', state: 'NJ',
     bio: '社恐但是很想交朋友的矛盾体。在 Princeton 读研，研究方向是计算语言学。养了两只猫。',
     selfAsFriend: '慢热但一旦熟了话超多。记忆力很好，你说过的事我都记得。',
     idealFriend: '耐心、幽默、不嫌我话多。',
@@ -95,7 +95,7 @@ export const membersData: MemberData[] = [
   },
   {
     name: 'Tiffy', role: 'host', host: 3, badge: '🏠', titles: ['🍳 厨神', '🧁 甜品大师'],
-    email: 'tiffy@example.com', location: 'Edison, NJ',
+    email: 'tiffy@example.com', city: 'Edison', state: 'NJ',
     bio: '做饭使我快乐，分享使我更快乐。上海人在新泽西，擅长本帮菜，也在学习意大利菜。梦想开一家小小的私房菜馆。',
     selfAsFriend: '爱做饭、爱分享、爱热闹。你来我家永远有饭吃。',
     idealFriend: '吃货，真诚，能一起探店。吃完还愿意帮忙洗碗的加分。',
@@ -105,7 +105,7 @@ export const membersData: MemberData[] = [
   },
   {
     name: '小鱼', role: 'member', host: 0, titles: [],
-    email: 'xiaoyu@example.com', location: 'New Brunswick, NJ',
+    email: 'xiaoyu@example.com', city: 'New Brunswick', state: 'NJ',
     bio: '刚来新泽西半年，在 Rutgers 读 MBA。还在适应美国生活，想认识更多朋友。',
     selfAsFriend: '安静、好相处、爱观察。带的零食永远比别人多。',
     idealFriend: '有生活经验、愿意分享的人。',
@@ -114,7 +114,7 @@ export const membersData: MemberData[] = [
   },
   {
     name: 'Leo', role: 'member', host: 1, titles: ['🎬 选片人', '🏸 运动达人'],
-    email: 'leo@example.com', location: 'Hoboken, NJ',
+    email: 'leo@example.com', city: 'Hoboken', state: 'NJ',
     bio: '电影发烧友，王家卫铁粉。在 Hoboken 一家投资公司工作。周末常去 Metrograph 看老片。',
     selfAsFriend: '话多、热情、喜欢安利电影。可以聊一整晚。',
     idealFriend: '对任何事物有热情的人，不一定要是电影。',
@@ -123,7 +123,7 @@ export const membersData: MemberData[] = [
   },
   {
     name: 'Mia', role: 'member', host: 0, titles: [],
-    email: 'mia@example.com', location: 'Edison, NJ', hideEmail: true,
+    email: 'mia@example.com', city: 'Edison', state: 'NJ', hideEmail: true,
     bio: '第一次参加这种社群活动，有点紧张但很期待。在一家科技公司做产品经理。喜欢瑜伽和烘焙。',
     selfAsFriend: '温柔、细心、有点完美主义。',
     idealFriend: '善解人意、有正能量的人。',
@@ -132,7 +132,7 @@ export const membersData: MemberData[] = [
   },
   {
     name: '阿德', role: 'member', host: 2, badge: '🏠', titles: ['🎸 音乐达人', '🎉 气氛组长'],
-    email: 'ade@example.com', location: 'Montclair, NJ',
+    email: 'ade@example.com', city: 'Montclair', state: 'NJ',
     bio: '独立音乐人，在 Montclair 有一间小录音棚。吉他弹了十二年，最近在学习萨克斯。',
     selfAsFriend: '有点文艺、有点话痨、有点不着调。但朋友有事一定到。',
     idealFriend: '对生活有好奇心的人。',
@@ -141,7 +141,7 @@ export const membersData: MemberData[] = [
   },
   {
     name: '奶茶', role: 'member', host: 0, titles: ['☕ 暖心担当', '❤️ 社区之心'],
-    email: 'milktea@example.com', location: 'Fort Lee, NJ',
+    email: 'milktea@example.com', city: 'Fort Lee', state: 'NJ',
     bio: '在 Fort Lee 开了一家小奶茶店，每天被奶茶包围但还是喝不腻。大家来了请喝奶茶！',
     selfAsFriend: '开朗、大方、请客狂魔。',
     idealFriend: '不嫌弃我话多、不嫌弃我请客的人。',
@@ -150,7 +150,7 @@ export const membersData: MemberData[] = [
   },
   {
     name: 'Derek', role: 'member', host: 1, titles: ['🥾 户外达人', '🏸 运动达人'],
-    email: 'derek@example.com', location: 'Ridgewood, NJ',
+    email: 'derek@example.com', city: 'Ridgewood', state: 'NJ',
     bio: '户外运动爱好者，跑过三次马拉松。在 Ridgewood 住了五年，熟悉新泽西所有的 hiking trails。',
     selfAsFriend: '精力旺盛、组织力强、永远在路上。',
     idealFriend: '愿意一起走出舒适区的人。',
@@ -159,7 +159,7 @@ export const membersData: MemberData[] = [
   },
   {
     name: '小樱', role: 'member', host: 0, titles: [],
-    email: 'sakura@example.com', location: 'Princeton, NJ', hideEmail: true,
+    email: 'sakura@example.com', city: 'Princeton', state: 'NJ', hideEmail: true,
     bio: '日本文化爱好者，在 Princeton 做博后。喜欢动漫、日料和园艺。周末常去 Mitsuwa 买菜。',
     selfAsFriend: '安静、有耐心、喜欢倾听。',
     idealFriend: '有话聊又不累的人。',
@@ -173,7 +173,7 @@ export const upcomingEvents: EventData[] = [
   {
     id: 'evt-1', title: '周六电影夜 · 花样年华', host: '白开水', date: '2.22 周六 7pm',
     endDate: '2.22 10pm', inviteDeadline: '2.21 6pm',
-    location: 'Edison, NJ', locationPrivate: '123 Maple St, Edison, NJ 08820',
+    city: 'Edison', state: 'NJ', address: '123 Maple St, Edison, NJ 08820',
     isHomeEvent: true, scene: 'movieNight', film: '花样年华', spots: 4, total: 8,
     people: ['白开水', 'Yuan', '大橙子', '星星'], phase: 'open',
     nominations: ['mov-1', 'mov-6', 'mov-3', 'mov-10'],
@@ -197,7 +197,7 @@ export const upcomingEvents: EventData[] = [
   {
     id: 'evt-2', title: 'Potluck · 来我家吃火锅', host: 'Tiffy', date: '2.28 周五 6pm',
     endDate: '2.28 10pm',
-    location: 'Edison, NJ', locationPrivate: '456 Oak Ave, Edison, NJ 08820',
+    city: 'Edison', state: 'NJ', address: '456 Oak Ave, Edison, NJ 08820',
     isHomeEvent: true, scene: 'potluck', spots: 2, total: 8,
     people: ['Tiffy', '大橙子', '星星', 'Yuan', '小鱼', '奶茶'], phase: 'open',
     foodOption: 'potluck',
@@ -218,7 +218,7 @@ export const upcomingEvents: EventData[] = [
   {
     id: 'evt-3', title: 'Spring Hike · Delaware Water Gap', host: '大橙子', date: '3.08 周六 9am',
     endDate: '3.08 4pm',
-    location: 'Delaware Water Gap', scene: 'hike', spots: 6, total: 10,
+    city: 'Delaware Water Gap', scene: 'hike', spots: 6, total: 10,
     people: ['大橙子', 'Yuan', 'Derek', '阿德'], phase: 'invite', invitedBy: '大橙子',
     desc: '春季徒步，中等难度，来回大约 3 小时。拼车从 Jersey City 出发，也可以自驾。',
     tasks: [
@@ -229,7 +229,7 @@ export const upcomingEvents: EventData[] = [
   },
   {
     id: 'evt-5', title: '周末电影夜 · 重庆森林', host: 'Leo', date: '3.15 周六 7pm',
-    location: 'Hoboken, NJ', locationPrivate: '25 River St, Hoboken, NJ 07030',
+    city: 'Hoboken', state: 'NJ', address: '25 River St, Hoboken, NJ 07030',
     isHomeEvent: true, scene: 'movieNight', film: '重庆森林', spots: 5, total: 6,
     people: ['Leo'], phase: 'invite', invitedBy: 'Leo',
     nominations: ['mov-6', 'mov-1', 'mov-7'],
@@ -245,7 +245,7 @@ export const upcomingEvents: EventData[] = [
   {
     id: 'evt-6', title: '咖啡闲聊 · Montclair 小聚', host: '阿德', date: '3.01 周六 2pm',
     endDate: '3.01 5pm',
-    location: 'Montclair, NJ', scene: 'coffee', spots: 3, total: 4,
+    city: 'Montclair', state: 'NJ', scene: 'coffee', spots: 3, total: 4,
     people: ['阿德'], phase: 'open',
     foodOption: 'eat_out', restaurantLocation: 'Watchung Booksellers Café, Montclair',
     desc: '不用主题、不用准备，就是坐下来喝杯咖啡聊聊天。',
@@ -257,7 +257,7 @@ export const upcomingEvents: EventData[] = [
   {
     id: 'evt-7', title: '烘焙下午茶', host: 'Tiffy', date: '3.22 周六 2pm',
     endDate: '3.22 5pm',
-    location: 'Edison, NJ', locationPrivate: '456 Oak Ave, Edison, NJ 08820',
+    city: 'Edison', state: 'NJ', address: '456 Oak Ave, Edison, NJ 08820',
     isHomeEvent: true, scene: 'potluck', spots: 4, total: 6,
     people: ['Tiffy', 'Mia'], phase: 'open',
     foodOption: 'host_cook',
@@ -273,7 +273,7 @@ export const upcomingEvents: EventData[] = [
   {
     id: 'evt-9', title: '周末电影夜 · 惊魂记', host: '白开水', date: '2.28 周五 7pm',
     endDate: '2.28 10pm',
-    location: 'Edison, NJ', locationPrivate: '123 Maple St, Edison, NJ 08820',
+    city: 'Edison', state: 'NJ', address: '123 Maple St, Edison, NJ 08820',
     isHomeEvent: true, scene: 'movieNight', film: '惊魂记', spots: 0, total: 8,
     people: ['白开水', 'Yuan', '大橙子', '星星', 'Tiffy', '小鱼', 'Leo', '阿德'],
     phase: 'closed',
@@ -295,7 +295,7 @@ export const endedEvents: EventData[] = [
   {
     id: 'evt-4', title: '周五电影夜 · 寄生虫', host: '白开水', date: '2.21 周五 7pm',
     endDate: '2.21 10pm',
-    location: 'Edison, NJ', isHomeEvent: true, scene: 'movieNight', film: '寄生虫',
+    city: 'Edison', state: 'NJ', isHomeEvent: true, scene: 'movieNight', film: '寄生虫',
     spots: 0, total: 8,
     people: ['白开水', 'Yuan', '大橙子', '星星', 'Tiffy', '小鱼', 'Leo', 'Mia'],
     phase: 'ended',
@@ -324,7 +324,7 @@ export const endedEvents: EventData[] = [
   {
     id: 'evt-8', title: '日料之夜 · 手卷寿司', host: 'Yuan', date: '2.22 周六 6pm',
     endDate: '2.22 9pm',
-    location: 'Edison, NJ', locationPrivate: '789 Elm St, Edison, NJ 08820',
+    city: 'Edison', state: 'NJ', address: '789 Elm St, Edison, NJ 08820',
     isHomeEvent: true, scene: 'potluck', spots: 0, total: 6,
     people: ['Yuan', '白开水', '小樱', '奶茶', 'Tiffy', '阿德'],
     phase: 'ended',
@@ -347,7 +347,7 @@ export const endedEvents: EventData[] = [
   },
   {
     id: 'evt-100', title: '打羽毛球', host: 'Derek', date: '2.15 周六 10am',
-    location: 'Life Time Fitness, Bridgewater', scene: 'sports', spots: 0, total: 8,
+    city: 'Bridgewater', scene: 'sports', spots: 0, total: 8,
     people: ['Derek', 'Leo', '大橙子', '白开水', '阿德', '小鱼'], phase: 'ended',
     desc: '在 Life Time 包了两个小时场地，单打双打都有。',
     tasks: [
@@ -368,7 +368,7 @@ export const endedEvents: EventData[] = [
 export const cancelledEvents: EventData[] = [
   {
     id: 'evt-101', title: '滑雪 · Mountain Creek', host: 'Derek', date: '2.09 周日 8am',
-    location: 'Mountain Creek, Vernon', scene: 'hike', spots: 0, total: 6,
+    city: 'Vernon', scene: 'hike', spots: 0, total: 6,
     people: ['Derek', 'Yuan', '大橙子'], phase: 'cancelled',
     desc: '下雨了，路面结冰不安全，取消。下次天气好再约！',
   },

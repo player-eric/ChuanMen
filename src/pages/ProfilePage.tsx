@@ -227,9 +227,9 @@ export default function ProfilePage() {
               <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, lineHeight: 1.2 }}>
                 {user?.name ?? 'Yuan'}
               </Typography>
-              {user?.location && (
+              {(user?.city || user?.state) && (
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                  📍 {user.location}
+                  📍 {[user.city, user.state].filter(Boolean).join(', ')}
                 </Typography>
               )}
               <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>

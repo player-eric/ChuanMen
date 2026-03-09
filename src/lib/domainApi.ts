@@ -126,7 +126,11 @@ export async function searchEvents(keyword: string) {
 export async function createEvent(payload: {
   title: string;
   hostId: string;
-  location: string;
+  city: string;
+  state?: string;
+  zipCode?: string;
+  address?: string;
+  location?: string;
   startsAt: string;
   capacity: number;
   description?: string;
@@ -135,7 +139,6 @@ export async function createEvent(payload: {
   isWeeklyLotteryEvent?: boolean;
   isHomeEvent?: boolean;
   houseRules?: string;
-  locationPrivate?: boolean;
   phase?: 'invite' | 'open' | 'ended';
   publishAt?: string;
   recSelectionMode?: string;
@@ -259,7 +262,9 @@ export async function toggleRecommendationVote(recommendationId: string, userId:
 export interface UserSettingsPayload {
   name?: string;
   avatar?: string;
-  location?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
   bio?: string;
   selfAsFriend?: string;
   idealFriend?: string;
@@ -297,6 +302,10 @@ export async function updateEvent(eventId: string, payload: {
   title?: string;
   description?: string;
   titleImageUrl?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  address?: string;
   location?: string;
   capacity?: number;
   status?: string;
@@ -706,7 +715,10 @@ export async function checkEmailStatus(email: string) {
 
 export async function submitApplication(payload: {
   displayName: string;
-  location: string;
+  city: string;
+  state?: string;
+  zipCode?: string;
+  homeAddress?: string;
   bio: string;
   selfAsFriend: string;
   idealFriend: string;

@@ -86,7 +86,7 @@ export async function seedTestUser(overrides: Record<string, any> = {}) {
     name: `测试用户${_userCounter}`,
     email: `test${_userCounter}@example.com`,
     bio: '测试用户简介',
-    location: 'NYC',
+    city: 'NYC',
     role: 'member' as const,
     userStatus: 'approved' as const,
     selfAsFriend: '好朋友',
@@ -108,6 +108,7 @@ export async function seedTestEvent(hostId: string, overrides: Record<string, an
     tags: ['movie'] as any,
     startsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
     location: 'NYC Test Location',
+    city: 'NYC',
     capacity: 10,
     hostId,
     phase: 'open' as any,

@@ -23,7 +23,7 @@ describe('POST /api/users/apply', () => {
       url: '/api/users/apply',
       payload: {
         displayName: '新用户',
-        location: 'NYC',
+        city: 'NYC',
         bio: '我是新用户',
         selfAsFriend: '开朗的朋友',
         idealFriend: '有趣的人',
@@ -52,7 +52,7 @@ describe('POST /api/users/apply', () => {
       url: '/api/users/apply',
       payload: {
         displayName: '重复用户',
-        location: 'NYC',
+        city: 'NYC',
         bio: '我是重复用户',
         selfAsFriend: '开朗的朋友',
         idealFriend: '有趣的人',

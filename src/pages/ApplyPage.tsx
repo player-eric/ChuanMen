@@ -49,7 +49,10 @@ export default function ApplyPage() {
   const [subscribeNewsletter, setSubscribeNewsletter] = useState(true);
   const [form, setForm] = useState({
     displayName: googleProfile?.name ?? '',
-    location: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    homeAddress: '',
     bio: '',
     selfAsFriend: '',
     idealFriend: '',
@@ -66,7 +69,7 @@ export default function ApplyPage() {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
-  const requiredFilled = form.displayName && form.location && form.bio && form.selfAsFriend && form.idealFriend && form.participationPlan.length > 0 && form.email && form.wechatId;
+  const requiredFilled = form.displayName && form.city && form.bio && form.selfAsFriend && form.idealFriend && form.participationPlan.length > 0 && form.email && form.wechatId;
 
   const handleSubmit = async () => {
     if (!requiredFilled || submitting) return;
@@ -134,13 +137,12 @@ export default function ApplyPage() {
         helperText={fieldErrors.displayName}
       />
 
-      <TextField
-        label="你在哪个城市或地区？"
-        required
-        value={form.location}
-        onChange={update('location')}
-        placeholder="如 Edison, NJ"
-      />
+      <Stack direction="row" spacing={1}>
+        <TextField label="城市" required value={form.city} onChange={update('city')} placeholder="Edison" autoComplete="address-level2" sx={{ flex: 2 }} />
+        <TextField label="州" value={form.state} onChange={update('state')} placeholder="NJ" autoComplete="address-level1" sx={{ flex: 1 }} />
+        <TextField label="邮编" value={form.zipCode} onChange={update('zipCode')} placeholder="08820" autoComplete="postal-code" sx={{ flex: 1 }} />
+      </Stack>
+      <TextField label="具体地址" value={form.homeAddress} onChange={update('homeAddress')} placeholder="如 123 Main St, Apt 4B" autoComplete="street-address" helperText="仅活动组织时使用，不会公开" />
 
       <TextField
         label="和大家打个招呼吧"

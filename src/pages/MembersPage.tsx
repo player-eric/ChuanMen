@@ -18,7 +18,7 @@ export default function MembersPage() {
     const q = keyword.trim().toLowerCase();
     if (!q) return members;
     return members.filter((member) => {
-      const searchable = `${member.name} ${member.role} ${member.titles.join(' ')} ${member.bio ?? ''} ${member.location ?? ''}`.toLowerCase();
+      const searchable = `${member.name} ${member.role} ${member.titles.join(' ')} ${member.bio ?? ''} ${member.city ?? ''} ${member.state ?? ''}`.toLowerCase();
       return searchable.includes(q);
     });
   }, [keyword, members]);
@@ -63,8 +63,8 @@ export default function MembersPage() {
                       )}
                     </Box>
                     <Typography fontWeight={700}>{member.name}</Typography>
-                    {member.location && (
-                      <Typography variant="caption" color="text.secondary">{member.location}</Typography>
+                    {(member.city || member.state) && (
+                      <Typography variant="caption" color="text.secondary">{[member.city, member.state].filter(Boolean).join(', ')}</Typography>
                     )}
                     {/* v2.1 §4.9: show email on member wall if not hidden */}
                     {user && member.email && !member.hideEmail && (

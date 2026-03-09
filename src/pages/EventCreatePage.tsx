@@ -67,7 +67,10 @@ export default function EventCreatePage() {
   const [startTime, setStartTime] = useState('');
   const [endDate, setEndDate] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [location, setLocation] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zipCode, setZipCode] = useState('');
+  const [address, setAddress] = useState('');
   const [isHome, setIsHome] = useState(false);
   const [houseRules, setHouseRules] = useState('');
   const [capacity, setCapacity] = useState(lotteryId ? 6 : 8);
@@ -181,8 +184,8 @@ export default function EventCreatePage() {
 
   const onSubmit = async () => {
     if (submitting) return;
-    if (!name.trim() || !startDate || (!isHome && !location.trim())) {
-      setError(isHome ? '请填写名称和日期' : '请填写名称、日期和地点');
+    if (!name.trim() || !startDate || !city.trim()) {
+      setError('请填写名称、日期和城市');
       return;
     }
     if (hostForOther && !selectedHostId) {
@@ -200,7 +203,10 @@ export default function EventCreatePage() {
       const result = await createEvent({
         title: name.trim(),
         hostId: actualHostId,
-        location: isHome ? '(居家)' : location.trim(),
+        city: city.trim(),
+        state: state.trim() || undefined,
+        zipCode: zipCode.trim() || undefined,
+        address: address.trim() || undefined,
         startsAt: combineDT(startDate, startTime || '19:00'),
         capacity,
         description,
@@ -215,7 +221,6 @@ export default function EventCreatePage() {
         isWeeklyLotteryEvent: lotteryId ? true : undefined,
         isHomeEvent: isHome || undefined,
         houseRules: isHome && houseRules.trim() ? houseRules.trim() : undefined,
-        locationPrivate: isHome || undefined,
         proposalId: fromProposal?.id,
         tasks: validTasks.length > 0 ? validTasks : undefined,
       });
@@ -406,24 +411,20 @@ export default function EventCreatePage() {
             label="在我家"
           />
 
-          {isHome ? (
-            <TextField
-              label="完整地址（仅报名后可见）"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              fullWidth
-              placeholder="报名成功后参与者可见"
-              helperText="选填，报名后才会展示给参与者"
-            />
-          ) : (
-            <TextField
-              label="地点"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              fullWidth
-              required
-            />
-          )}
+          <Stack direction="row" spacing={1}>
+            <TextField label="城市" value={city} onChange={(e) => setCity(e.target.value)} required autoComplete="address-level2" sx={{ flex: 2 }} />
+            <TextField label="州" value={state} onChange={(e) => setState(e.target.value)} autoComplete="address-level1" sx={{ flex: 1 }} placeholder="NJ" />
+            <TextField label="邮编" value={zipCode} onChange={(e) => setZipCode(e.target.value)} autoComplete="postal-code" sx={{ flex: 1 }} placeholder="08820" />
+          </Stack>
+          <TextField
+            label="具体地址（报名后可见）"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            fullWidth
+            autoComplete="street-address"
+            helperText="仅报名成功的参与者可见"
+            placeholder={isHome ? '如: 123 Main St, Apt 4B' : '如: 456 Oak Ave'}
+          />
 
           {isHome && (
             <TextField

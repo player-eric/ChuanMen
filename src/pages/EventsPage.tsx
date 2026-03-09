@@ -165,7 +165,7 @@ export default function EventsPage() {
                     hostAvatar={evt.hostAvatar}
                     title={evt.title}
                     date={evt.date}
-                    location={evt.location}
+                    location={evt.city}
                     spots={evt.spots}
                     total={evt.total}
                     people={evt.people}
@@ -347,7 +347,7 @@ export default function EventsPage() {
                       name={evt.host}
                       title={evt.title}
                       date={evt.date}
-                      location={evt.location}
+                      location={evt.city}
                       spots={evt.spots}
                       people={evt.people}
                       film={evt.film}

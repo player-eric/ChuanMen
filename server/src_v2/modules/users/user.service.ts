@@ -16,7 +16,10 @@ const createUserSchema = z.object({
 // v2.1: Application submission schema
 const applySchema = z.object({
   displayName: z.string().min(1),
-  location: z.string().min(1),
+  city: z.string().min(1),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
+  homeAddress: z.string().optional(),
   bio: z.string().min(1),
   selfAsFriend: z.string().min(1),
   idealFriend: z.string().min(1),
@@ -35,7 +38,9 @@ const applySchema = z.object({
 const updateSettingsSchema = z.object({
   name: z.string().min(1).optional(),
   avatar: z.string().optional(),
-  location: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
   bio: z.string().optional(),
   selfAsFriend: z.string().optional(),
   idealFriend: z.string().optional(),
@@ -66,7 +71,9 @@ const adminUpdateSchema = z.object({
   email: z.email().optional(),
   role: z.enum(['admin', 'host', 'member']).optional(),
   userStatus: z.enum(['applicant', 'approved', 'rejected', 'banned']).optional(),
-  location: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
   bio: z.string().optional(),
   hostCandidate: z.boolean().optional(),
 });

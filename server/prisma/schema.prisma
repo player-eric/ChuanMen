@@ -154,6 +154,8 @@ model User {
   bio                  String              @default("")
   role                 String              @default("member")
   city                 String              @default("")
+  state                String              @default("")
+  zipCode              String              @default("")
   hostCount            Int                 @default(0)
   participationCount   Int                 @default(0)
   proposalCount        Int                 @default(0)
@@ -284,6 +286,10 @@ model Event {
   titleImageUrl          String                    @default("")
   description            String                    @default("")
   houseRules             String                    @default("")
+  city                   String                    @default("")
+  state                  String                    @default("")
+  zipCode                String                    @default("")
+  address                String                    @default("")
   location               String                    @default("")
   startsAt               DateTime
   endsAt                 DateTime?

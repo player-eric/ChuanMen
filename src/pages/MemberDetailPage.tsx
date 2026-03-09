@@ -174,9 +174,9 @@ export default function MemberDetailPage() {
               <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, lineHeight: 1.2 }}>
                 {member.name}
               </Typography>
-              {(member.location || member.city) && (
+              {(member.city || member.state) && (
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                  📍 {member.location || member.city}
+                  📍 {[member.city, member.state].filter(Boolean).join(', ')}
                 </Typography>
               )}
               <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>

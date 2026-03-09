@@ -19,10 +19,17 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     return events.map((e) => ({ ...e, likeCount: likeMap.get(e.id) ?? 0, commentCount: commentMap.get(e.id) ?? 0 }));
   }
 
-  app.get('/', async () => withInteractionCounts(await service.listEvents()));
+  app.get('/', async () => {
+    const events = await service.listEvents();
+    // Strip detailed address from list — only city is public
+    return withInteractionCounts(events.map((e) => ({ ...e, address: '', location: '' })));
+  });
 
   // Past/completed events - must come before /:id
-  app.get('/past', async () => withInteractionCounts(await service.listPast()));
+  app.get('/past', async () => {
+    const events = await service.listPast();
+    return withInteractionCounts(events.map((e) => ({ ...e, address: '', location: '' })));
+  });
 
   app.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
@@ -37,6 +44,14 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
       .filter(Boolean);
     const hostId = (event as any).hostId;
     const coHostIds = ((event as any).coHosts ?? []).map((ch: any) => ch.userId).filter(Boolean);
+
+    // Strip detailed address (location) unless user is signed up / host / co-host
+    const requesterId = request.headers['x-user-id'] as string | undefined;
+    const isParticipant = requesterId && (
+      requesterId === hostId ||
+      coHostIds.includes(requesterId) ||
+      signupUserIds.includes(requesterId)
+    );
     const acceptedUserIds = [...new Set([...(hostId ? [hostId] : []), ...coHostIds, ...signupUserIds])];
     const attendeeTotal = acceptedUserIds.length;
 
@@ -114,7 +129,13 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    return { ...event, recommendations: enrichedRecs, screenedMovies: enrichedMovies };
+    return {
+      ...event,
+      address: isParticipant ? (event as any).address : '',
+      location: isParticipant ? event.location : '',
+      recommendations: enrichedRecs,
+      screenedMovies: enrichedMovies,
+    };
   });
 
   app.post('/', async (request, reply) => {
@@ -155,7 +176,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     // Snapshot old phase before update (for TXN-1 cancel detection)
     const oldEvent = await app.prisma.event.findUnique({
       where: { id },
-      select: { phase: true, title: true, startsAt: true, location: true, host: { select: { name: true } } },
+      select: { phase: true, title: true, startsAt: true, city: true, location: true, host: { select: { name: true } } },
     });
 
     const updated = await service.updateEvent(id, body);
@@ -163,7 +184,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     // Fire-and-forget: TXN-1 (event cancelled) or TXN-2 (event updated)
     if (oldEvent) {
       const wasCancelled = oldEvent.phase !== 'cancelled' && body.phase === 'cancelled';
-      const wasUpdated = !wasCancelled && (body.startsAt || body.location || body.title);
+      const wasUpdated = !wasCancelled && (body.startsAt || body.location || body.address || body.city || body.title);
 
       if (wasCancelled || wasUpdated) {
         const ruleId = wasCancelled ? 'TXN-1' : 'TXN-2';
@@ -185,7 +206,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
               userName: s.user.name,
               eventTitle: oldEvent.title,
               eventDate,
-              eventLocation: (updated as any).location ?? oldEvent.location ?? '',
+              eventLocation: (updated as any).location || (updated as any).city || oldEvent.location || oldEvent.city || '',
               hostName: oldEvent.host?.name ?? '',
             },
             ctaLabel: wasCancelled ? '查看其他活动' : '查看活动详情',
@@ -230,6 +251,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
       select: {
         title: true,
         startsAt: true,
+        city: true,
         location: true,
         host: { select: { name: true } },
       },
@@ -259,7 +281,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
             hostName: event.host?.name ?? '',
             eventTitle: event.title,
             eventDate,
-            eventLocation: event.location ?? '',
+            eventLocation: event.city || event.location || '',
           },
           ctaLabel: '查看活动并接受邀请',
           ctaUrl: `https://chuanmener.club/events/${id}`,
@@ -303,7 +325,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     if (!result.wasWaitlisted && result.user) {
       const event = await app.prisma.event.findUnique({
         where: { id },
-        select: { title: true, startsAt: true, location: true },
+        select: { title: true, startsAt: true, city: true, location: true },
       });
       if (event && result.user.name) {
         const user = await app.prisma.user.findUnique({
@@ -323,7 +345,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
                 userName: result.user.name,
                 eventTitle: event.title,
                 eventDate,
-                eventLocation: event.location ?? '',
+                eventLocation: event.location || event.city || '',
               },
               ctaLabel: '查看活动详情',
               ctaUrl: `https://chuanmener.club/events/${id}`,
@@ -502,7 +524,10 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Cancelled events list
-  app.get('/cancelled', async () => service.listCancelled());
+  app.get('/cancelled', async () => {
+    const events = await service.listCancelled();
+    return events.map((e) => ({ ...e, address: '', location: '' }));
+  });
 
   // Admin: delete event
   app.delete('/:id', async (request) => {

@@ -115,7 +115,10 @@ export class UserRepository {
   // v2.1: Create applicant from /apply form
   createApplicant(input: {
     displayName: string;
-    location: string;
+    city: string;
+    state?: string;
+    zipCode?: string;
+    homeAddress?: string;
     bio: string;
     selfAsFriend: string;
     idealFriend: string;
@@ -134,7 +137,10 @@ export class UserRepository {
         name: input.displayName,
         email: input.email,
         bio: input.bio,
-        location: input.location,
+        city: input.city,
+        state: input.state ?? '',
+        zipCode: input.zipCode ?? '',
+        homeAddress: input.homeAddress ?? '',
         selfAsFriend: input.selfAsFriend,
         idealFriend: input.idealFriend,
         participationPlan: input.participationPlan,
@@ -153,7 +159,10 @@ export class UserRepository {
   // Reset a rejected user back to applicant with new form data
   resetApplicant(userId: string, input: {
     displayName: string;
-    location: string;
+    city: string;
+    state?: string;
+    zipCode?: string;
+    homeAddress?: string;
     bio: string;
     selfAsFriend: string;
     idealFriend: string;
@@ -173,7 +182,10 @@ export class UserRepository {
         name: input.displayName,
         email: input.email,
         bio: input.bio,
-        location: input.location,
+        city: input.city,
+        state: input.state ?? '',
+        zipCode: input.zipCode ?? '',
+        homeAddress: input.homeAddress ?? '',
         selfAsFriend: input.selfAsFriend,
         idealFriend: input.idealFriend,
         participationPlan: input.participationPlan,
@@ -198,7 +210,9 @@ export class UserRepository {
     data: {
       name?: string;
       avatar?: string;
-      location?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
       bio?: string;
       selfAsFriend?: string;
       idealFriend?: string;

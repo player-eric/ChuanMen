@@ -74,7 +74,7 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
       for (const admin of admins) {
         const rendered = renderEmail({
           subject: `新申请 — ${applicantData.name}`,
-          body: `有新的入社申请：\n\n**${applicantData.name}** (${applicantData.email})\n📍 ${applicantData.location || '未填写'}\n\n**自我介绍：** ${(applicantData.bio || '').slice(0, 200)}${(applicantData.bio || '').length > 200 ? '…' : ''}\n\n请前往管理后台审核。`,
+          body: `有新的入社申请：\n\n**${applicantData.name}** (${applicantData.email})\n📍 ${[applicantData.city, applicantData.state].filter(Boolean).join(', ') || '未填写'}\n\n**自我介绍：** ${(applicantData.bio || '').slice(0, 200)}${(applicantData.bio || '').length > 200 ? '…' : ''}\n\n请前往管理后台审核。`,
           variables: {},
           previewText: `${applicantData.name} 提交了入社申请`,
           ctaLabel: '去审核',

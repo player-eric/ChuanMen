@@ -24,7 +24,8 @@ export interface MemberData {
   idealFriend?: string;
   participationPlan?: string;
   coverImageUrl?: string;
-  location?: string;
+  city?: string;
+  state?: string;
 }
 
 export interface EventPhoto {
@@ -55,8 +56,11 @@ export interface EventData {
   date: string;
   endDate?: string;
   inviteDeadline?: string;
-  location: string;
-  locationPrivate?: string;
+  city: string;
+  state?: string;
+  zipCode?: string;
+  address?: string;
+  location?: string;
   isHomeEvent?: boolean;
   scene: string;
   film?: string;

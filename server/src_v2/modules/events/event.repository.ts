@@ -70,6 +70,10 @@ export class EventRepository {
     title: string;
     hostId: string;
     startsAt: Date;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    address?: string;
     location?: string;
     description?: string;
     tags?: ('movie' | 'chuanmen' | 'holiday' | 'hiking' | 'outdoor' | 'small_group' | 'other')[];
@@ -83,13 +87,16 @@ export class EventRepository {
     isWeeklyLotteryEvent?: boolean;
     isHomeEvent?: boolean;
     houseRules?: string;
-    locationPrivate?: boolean;
   }) {
     return this.prisma.event.create({
       data: {
         title: input.title,
         hostId: input.hostId,
         startsAt: input.startsAt,
+        city: input.city ?? '',
+        state: input.state ?? '',
+        zipCode: input.zipCode ?? '',
+        address: input.address ?? '',
         location: input.location ?? '',
         description: input.description ?? '',
         tags: input.tags ?? ['other'],
@@ -103,7 +110,6 @@ export class EventRepository {
         isWeeklyLotteryEvent: input.isWeeklyLotteryEvent ?? false,
         isHomeEvent: input.isHomeEvent ?? false,
         houseRules: input.houseRules ?? '',
-        locationPrivate: input.locationPrivate ?? false,
       },
     });
   }
@@ -112,6 +118,10 @@ export class EventRepository {
     title?: string;
     description?: string;
     titleImageUrl?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    address?: string;
     location?: string;
     capacity?: number;
     status?: EventStatus;

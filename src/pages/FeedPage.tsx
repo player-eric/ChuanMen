@@ -347,7 +347,7 @@ function ProfileNudgeBanner() {
     const key = `chuanmen.feed.profileNudge.${user.id}`;
     const last = localStorage.getItem(key);
     if (last && Date.now() - Number(last) < 7 * 86400000) return;
-    const fields = [user.avatar, user.bio, user.location, user.coverImageUrl,
+    const fields = [user.avatar, user.bio, user.city, user.coverImageUrl,
                     user.selfAsFriend, user.idealFriend, user.participationPlan, user.birthday];
     if (fields.filter(Boolean).length < 5) setShow(true);
   }, [user]);
@@ -356,7 +356,7 @@ function ProfileNudgeBanner() {
 
   const suggestions: [unknown, string][] = [
     [user.avatar, '上传头像'], [user.bio, '写一句自我介绍'],
-    [user.location, '填写所在城市'], [user.coverImageUrl, '上传封面图'],
+    [user.city, '填写所在城市'], [user.coverImageUrl, '上传封面图'],
   ];
   const hint = suggestions.find(([v]) => !v)?.[1] ?? '完善资料';
 

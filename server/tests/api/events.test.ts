@@ -27,6 +27,7 @@ describe('POST /api/events', () => {
         hostId: host.id,
         startsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         location: 'NYC 某地',
+        city: 'NYC',
         tags: ['movie'],
         capacity: 8,
       },
@@ -319,7 +320,7 @@ describe('DELETE /api/events/:id/photos', () => {
     const prisma = getTestPrisma();
     const event = await prisma.event.create({
       data: {
-        title: '照片测试', hostId: host.id, location: 'NYC',
+        title: '照片测试', hostId: host.id, location: 'NYC', city: 'NYC',
         startsAt: new Date(Date.now() + 86400000), capacity: 10, phase: 'open',
         recapPhotoUrls: ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
       },
@@ -343,7 +344,7 @@ describe('DELETE /api/events/:id/photos', () => {
     const urls = ['https://example.com/1.jpg', 'https://example.com/2.jpg', 'https://example.com/3.jpg'];
     const event = await prisma.event.create({
       data: {
-        title: '多图测试', hostId: host.id, location: 'NYC',
+        title: '多图测试', hostId: host.id, location: 'NYC', city: 'NYC',
         startsAt: new Date(Date.now() + 86400000), capacity: 10, phase: 'open',
         recapPhotoUrls: urls,
       },
