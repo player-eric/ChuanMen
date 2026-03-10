@@ -23,6 +23,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import Masonry from '@mui/lab/Masonry';
 import { useAuth } from '@/auth/AuthContext';
 import type { FeedPageData, FeedItem, LotteryDraw, PersonalNotification } from '@/types';
 import { sendPostcard, acceptLottery, skipLottery, updateHostCandidate } from '@/lib/domainApi';
@@ -89,13 +90,30 @@ function EmptyFeed() {
   );
 }
 
-/* ═══ Grid size helpers ═══ */
-const fullWidth = { xs: 12 } as const;
-const halfWidth = { xs: 12, md: 6 } as const;
+/* ═══ Masonry grouping helpers ═══ */
+const FULL_WIDTH_TYPES = new Set<FeedItem['type']>(['time', 'milestone', 'announcement', 'newMember']);
 
-function gridSizeFor(type: FeedItem['type']) {
-  if (type === 'time' || type === 'milestone' || type === 'announcement' || type === 'newMember') return fullWidth;
-  return halfWidth;
+type FeedGroup = { separator: FeedItem | null; items: FeedItem[] };
+
+function groupFeedItems(items: FeedItem[]): FeedGroup[] {
+  const groups: FeedGroup[] = [];
+  let current: FeedGroup = { separator: null, items: [] };
+
+  for (const item of items) {
+    if (FULL_WIDTH_TYPES.has(item.type)) {
+      // Push current group if it has items
+      if (current.items.length > 0) groups.push(current);
+      // Push the full-width item as its own group with no masonry items
+      groups.push({ separator: item, items: [] });
+      current = { separator: null, items: [] };
+    } else {
+      current.items.push(item);
+    }
+  }
+  // Push remaining items
+  if (current.items.length > 0) groups.push(current);
+
+  return groups;
 }
 
 /* ═══ Quick Postcard Dialog ═══ */
@@ -599,17 +617,20 @@ function FullFeed() {
         </Alert>
       )}
 
-      <Grid container spacing={2}>
-        {items.slice(0, visible).map((item, idx) => (
-          <Grid key={(item as any)._key ?? `fallback-${idx}`} size={gridSizeFor(item.type)} sx={
-            (item.type !== 'time' && item.type !== 'milestone')
-              ? { display: 'grid', '& > *': { minHeight: 0 } }
-              : undefined
-          }>
-            {renderFeedItem(item)}
-          </Grid>
-        ))}
-      </Grid>
+      {groupFeedItems(items.slice(0, visible)).map((group, gi) => (
+        <React.Fragment key={gi}>
+          {group.separator && <Box sx={{ my: 2 }}>{renderFeedItem(group.separator)}</Box>}
+          {group.items.length > 0 && (
+            <Masonry columns={{ xs: 1, md: 2 }} spacing={2}>
+              {group.items.map((item, idx) => (
+                <div key={(item as any)._key ?? `g${gi}-${idx}`}>
+                  {renderFeedItem(item)}
+                </div>
+              ))}
+            </Masonry>
+          )}
+        </React.Fragment>
+      ))}
 
       {/* Sentinel + loading indicator for infinite scroll */}
       <div ref={sentinelRef} />

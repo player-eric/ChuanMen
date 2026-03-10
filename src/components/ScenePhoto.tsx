@@ -1,4 +1,5 @@
-import type { ReactNode, CSSProperties } from 'react';
+import { type ReactNode, type CSSProperties, useContext } from 'react';
+import { ColorModeContext } from '@/AppProviders';
 
 interface Light {
   x: string; y: string; w: number; h: number; color: string; blur: number;
@@ -100,6 +101,87 @@ const scenes: Record<string, SceneDef> = {
   },
 };
 
+/* Light-mode scene variants — warm, muted tones that blend with light backgrounds */
+const scenesLight: Record<string, SceneDef> = {
+  movieNight: {
+    bg: 'linear-gradient(165deg, #e8dff0 0%, #d5c8e0 20%, #c4b0d5 45%, #d0c0dd 70%, #e0d8ea 100%)',
+    lights: [
+      { x: '50%', y: '30%', w: 120, h: 80, color: 'rgba(120,90,180,0.12)', blur: 30 },
+      { x: '50%', y: '35%', w: 60, h: 40, color: 'rgba(160,140,200,0.1)', blur: 15 },
+      { x: '20%', y: '65%', w: 20, h: 30, color: 'rgba(184,120,64,0.18)', blur: 8 },
+      { x: '55%', y: '63%', w: 18, h: 28, color: 'rgba(184,120,64,0.15)', blur: 7 },
+    ],
+    shapes: [{ x: '50%', y: '28%', w: 90, h: 55, r: 4, color: 'rgba(100,80,150,0.15)' }],
+  },
+  potluck: {
+    bg: 'linear-gradient(150deg, #f0e8d8 0%, #e8d8c0 25%, #dcc8a8 45%, #e2d0b4 70%, #ecdcc8 100%)',
+    lights: [
+      { x: '50%', y: '40%', w: 140, h: 100, color: 'rgba(184,120,64,0.12)', blur: 35 },
+      { x: '30%', y: '50%', w: 40, h: 25, color: 'rgba(200,160,80,0.15)', blur: 10 },
+      { x: '55%', y: '45%', w: 50, h: 30, color: 'rgba(200,150,70,0.1)', blur: 12 },
+      { x: '70%', y: '55%', w: 35, h: 20, color: 'rgba(210,180,100,0.12)', blur: 8 },
+    ],
+    shapes: [{ x: '50%', y: '42%', w: 110, h: 18, r: 60, color: 'rgba(150,120,60,0.15)' }],
+  },
+  hike: {
+    bg: 'linear-gradient(175deg, #d8e8e0 0%, #c0d8cc 20%, #a8ccb8 40%, #b8d8c8 60%, #c8e0d4 80%, #d8e8e0 100%)',
+    lights: [
+      { x: '60%', y: '15%', w: 80, h: 80, color: 'rgba(200,180,100,0.1)', blur: 25 },
+      { x: '30%', y: '80%', w: 30, h: 40, color: 'rgba(60,140,80,0.12)', blur: 10 },
+      { x: '70%', y: '75%', w: 25, h: 35, color: 'rgba(60,120,70,0.1)', blur: 8 },
+    ],
+    shapes: [
+      { x: '20%', y: '60%', w: 60, h: 80, r: 0, color: 'rgba(60,120,70,0.15)', tri: true },
+      { x: '65%', y: '55%', w: 80, h: 90, r: 0, color: 'rgba(70,130,75,0.12)', tri: true },
+    ],
+  },
+  cozy: {
+    bg: 'linear-gradient(155deg, #f0e8d8 0%, #e8d8c0 25%, #dcc8a8 45%, #e2d0b4 70%, #ecdcc8 100%)',
+    lights: [
+      { x: '35%', y: '35%', w: 60, h: 60, color: 'rgba(200,150,60,0.15)', blur: 20 },
+      { x: '35%', y: '35%', w: 30, h: 30, color: 'rgba(210,170,80,0.1)', blur: 10 },
+      { x: '65%', y: '60%', w: 100, h: 60, color: 'rgba(184,120,64,0.06)', blur: 25 },
+    ],
+    shapes: [{ x: '33%', y: '30%', w: 22, h: 35, r: 3, color: 'rgba(160,110,50,0.12)' }],
+  },
+  coffee: {
+    bg: 'linear-gradient(150deg, #ece4d4 0%, #e0d4be 25%, #d4c4a8 45%, #dcccb2 70%, #e8dcc8 100%)',
+    lights: [
+      { x: '45%', y: '40%', w: 80, h: 60, color: 'rgba(150,110,60,0.1)', blur: 25 },
+      { x: '45%', y: '40%', w: 30, h: 25, color: 'rgba(180,140,80,0.12)', blur: 10 },
+      { x: '60%', y: '55%', w: 50, h: 30, color: 'rgba(140,100,55,0.08)', blur: 15 },
+    ],
+    shapes: [
+      { x: '45%', y: '42%', w: 22, h: 16, r: 3, color: 'rgba(120,80,40,0.15)' },
+      { x: '45%', y: '48%', w: 8, h: 12, r: 2, color: 'rgba(100,70,35,0.12)' },
+    ],
+  },
+  sports: {
+    bg: 'linear-gradient(160deg, #d8e4e0 0%, #c0d4d0 20%, #a8c8c4 40%, #b4d0c8 60%, #c4dcd4 80%, #d8e4e0 100%)',
+    lights: [
+      { x: '50%', y: '35%', w: 120, h: 80, color: 'rgba(100,140,180,0.08)', blur: 30 },
+      { x: '30%', y: '70%', w: 25, h: 35, color: 'rgba(60,140,100,0.1)', blur: 8 },
+      { x: '70%', y: '65%', w: 20, h: 30, color: 'rgba(60,130,100,0.08)', blur: 7 },
+    ],
+    shapes: [
+      { x: '50%', y: '55%', w: 100, h: 3, r: 2, color: 'rgba(0,0,0,0.06)' },
+      { x: '50%', y: '55%', w: 3, h: 60, r: 2, color: 'rgba(0,0,0,0.04)' },
+    ],
+  },
+  nature: {
+    bg: 'linear-gradient(170deg, #d8e8d8 0%, #c0dcc0 20%, #a8d0a8 40%, #b4d8b4 60%, #c4e0c4 80%, #d8e8d8 100%)',
+    lights: [
+      { x: '55%', y: '20%', w: 70, h: 70, color: 'rgba(200,180,100,0.08)', blur: 25 },
+      { x: '35%', y: '75%', w: 30, h: 40, color: 'rgba(60,140,60,0.12)', blur: 10 },
+      { x: '65%', y: '70%', w: 25, h: 35, color: 'rgba(50,120,60,0.1)', blur: 8 },
+    ],
+    shapes: [
+      { x: '25%', y: '65%', w: 50, h: 70, r: 0, color: 'rgba(50,110,50,0.12)', tri: true },
+      { x: '70%', y: '58%', w: 65, h: 80, r: 0, color: 'rgba(55,115,55,0.1)', tri: true },
+    ],
+  },
+};
+
 interface ScenePhotoProps {
   scene?: string;
   h?: number;
@@ -115,18 +197,22 @@ export function isImageUrl(s?: string | null): s is string {
 }
 
 export function ScenePhoto({ scene = 'movieNight', h = 190, children, style = {}, objectFit = 'cover' }: ScenePhotoProps) {
-  // If scene is a URL, render as an image with a dark fallback background
+  const ctx = useContext(ColorModeContext);
+  const isDark = !ctx || ctx.mode === 'dark';
+
+  // If scene is a URL, render as an image
   if (isImageUrl(scene)) {
     return (
-      <div style={{ width: '100%', height: h, borderRadius: 8, background: '#1a1225', position: 'relative', overflow: 'hidden', ...style }}>
-        <img src={scene} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(20px) brightness(0.4)', transform: 'scale(1.1)' }} />
+      <div style={{ width: '100%', height: h, borderRadius: 8, background: isDark ? '#1a1225' : '#e8e0d4', position: 'relative', overflow: 'hidden', ...style }}>
+        <img src={scene} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: `blur(20px) brightness(${isDark ? 0.4 : 0.85})`, transform: 'scale(1.1)' }} />
         <img src={scene} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit }} />
         {children}
       </div>
     );
   }
 
-  const s = scenes[scene] || scenes.movieNight;
+  const sceneMap = isDark ? scenes : scenesLight;
+  const s = sceneMap[scene] || sceneMap.movieNight || scenes.movieNight;
   return (
     <div style={{ width: '100%', height: h, borderRadius: 8, background: s.bg, position: 'relative', overflow: 'hidden', ...style }}>
       {s.shapes.map((sh, i) => (
@@ -154,7 +240,7 @@ export function ScenePhoto({ scene = 'movieNight', h = 190, children, style = {}
       {/* grain */}
       <div
         style={{
-          position: 'absolute', inset: 0, opacity: 0.12, mixBlendMode: 'screen',
+          position: 'absolute', inset: 0, opacity: isDark ? 0.12 : 0.06, mixBlendMode: isDark ? 'screen' : 'multiply',
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
           backgroundSize: '128px 128px',
         }}

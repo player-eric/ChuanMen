@@ -148,7 +148,7 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
       pendingUserIds: allSignups.filter((s: any) => s.status === 'pending').map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
       film: e.screenedMovies?.[0]?.movie?.title,
       filmPoster: e.screenedMovies?.[0]?.movie?.poster || undefined,
-      scene: eventTagToScene[e.tags?.[0]] ?? e.tags?.[0] ?? '',
+      scene: e.titleImageUrl || eventTagToScene[e.tags?.[0]] || e.tags?.[0] || '',
       navTarget: `/events/${e.id}`,
       phase: e.phase ?? 'open',
       startsAt: e.startsAt ?? '',

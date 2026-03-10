@@ -12,7 +12,7 @@ type ColorModeContextValue = {
 
 const STORAGE_KEY = 'chuanmen-color-mode';
 
-const ColorModeContext = createContext<ColorModeContextValue | null>(null);
+export const ColorModeContext = createContext<ColorModeContextValue | null>(null);
 
 export function useColorMode() {
   const context = useContext(ColorModeContext);

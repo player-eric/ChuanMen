@@ -3,11 +3,11 @@
 export type DesignTokens = { readonly [K in keyof typeof cDark]: string };
 
 const cDark = {
-  bg: '#0C0C0E',
-  s1: '#141416',
-  s2: '#1C1C1F',
-  s3: '#262629',
-  line: '#2A2A2F',
+  bg: '#121214',
+  s1: '#1E1E22',
+  s2: '#26262B',
+  s3: '#2E2E33',
+  line: '#3E3E44',
   text: '#E8E6E2',
   text2: '#9A9894',
   text3: '#5A5854',
