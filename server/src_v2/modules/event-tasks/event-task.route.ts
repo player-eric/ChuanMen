@@ -13,8 +13,13 @@ export const eventTaskRoutes: FastifyPluginAsync = async (app) => {
   /** POST /api/events/:eventId/tasks — batch create tasks */
   app.post('/:eventId/tasks', async (request, reply) => {
     const { eventId } = request.params as { eventId: string };
-    const created = await service.createTasks(eventId, request.body);
-    return reply.code(201).send(created);
+    try {
+      const created = await service.createTasks(eventId, request.body);
+      return reply.code(201).send(created);
+    } catch (err: any) {
+      request.log.error(err, 'Failed to create tasks');
+      return reply.code(400).send({ message: err.message ?? '创建失败' });
+    }
   });
 
   /** PATCH /api/events/:eventId/tasks/:taskId/claim — claim a task */
@@ -42,8 +47,12 @@ export const eventTaskRoutes: FastifyPluginAsync = async (app) => {
   /** POST /api/events/:eventId/tasks/volunteer — self-volunteer a custom task */
   app.post('/:eventId/tasks/volunteer', async (request, reply) => {
     const { eventId } = request.params as { eventId: string };
-    const task = await service.volunteer(eventId, request.body);
-    return reply.code(201).send({ ok: true, task });
+    try {
+      const task = await service.volunteer(eventId, request.body);
+      return reply.code(201).send({ ok: true, task });
+    } catch (err: any) {
+      return reply.code(400).send({ message: err.message ?? '创建失败' });
+    }
   });
 
   /** PATCH /api/events/:eventId/tasks/:taskId — update task (role/description) */

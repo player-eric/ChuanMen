@@ -1579,7 +1579,18 @@ export default function EventDetailPage() {
                   </Button>
                 )}
                 {taskEditing && (
-                  <Button size="small" variant="contained" onClick={() => setTaskEditing(false)}>
+                  <Button size="small" variant="contained" onClick={async () => {
+                    // Auto-save unsaved input before exiting edit mode
+                    if (eventId && newTaskRole.trim()) {
+                      try {
+                        await createEventTasks(eventId, [{ role: newTaskRole.trim(), description: newTaskDesc.trim() || undefined }]);
+                        setNewTaskRole('');
+                        setNewTaskDesc('');
+                        await refreshTasks();
+                      } catch { /* ignore — will show in list if saved */ }
+                    }
+                    setTaskEditing(false);
+                  }}>
                     完成
                   </Button>
                 )}
@@ -1640,8 +1651,10 @@ export default function EventDetailPage() {
                           setNewTaskRole('');
                           setNewTaskDesc('');
                           await refreshTasks();
-                        } catch {
-                          setFlash({ open: true, severity: 'error', message: '添加失败' });
+                          setFlash({ open: true, severity: 'success', message: '分工已添加' });
+                        } catch (err) {
+                          console.error('添加分工失败', err);
+                          setFlash({ open: true, severity: 'error', message: err instanceof Error ? err.message : '添加失败' });
                         }
                       }}
                     >
