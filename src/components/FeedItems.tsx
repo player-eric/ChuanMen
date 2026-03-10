@@ -280,10 +280,11 @@ interface FeedActivityProps extends InteractionProps {
   time?: string;
   activityHint?: string;
   activityHintUser?: string;
+  activityHintComment?: string;
   taskSummary?: FeedTaskSummary[];
 }
 
-export function FeedActivity({ name, hostAvatar, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, hostId, waitlistCount, socialHint, time, activityHint, activityHintUser, taskSummary }: FeedActivityProps) {
+export function FeedActivity({ name, hostAvatar, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, hostId, waitlistCount, socialHint, time, activityHint, activityHintUser, activityHintComment, taskSummary }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
@@ -387,6 +388,16 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
               </div>
               {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}</div>}
             </div>
+          </div>
+        )}
+        {/* Comment preview */}
+        {!isList && activityHint === 'comment' && activityHintComment && (
+          <div style={{
+            fontSize: 13, color: c.text2, marginBottom: 8,
+            padding: '6px 10px', borderRadius: 6, background: c.s2,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          }}>
+            {activityHintComment.replace(/<[^>]*>/g, '')}
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -675,26 +686,31 @@ export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV,
 
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
-      <div onClick={goNav} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: goNav ? 'pointer' : 'default' }}>
-        <Poster title={title} src={poster} w={36} h={50} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
-          <div style={{ fontSize: 12, color: c.text3, marginTop: 1 }}>{year}  {dir}</div>
-          <div style={{ fontSize: 11, color: c.text3, marginTop: 2 }}>
-            <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</span> 推荐 · {time}
+      <div onClick={goNav} style={{ display: 'flex', gap: 14, padding: '14px', cursor: goNav ? 'pointer' : 'default' }}>
+        <Poster title={title} src={poster} w={80} h={115} hideTitle />
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <span style={{ fontSize: 11, color: c.text3, background: c.s2, padding: '2px 6px', borderRadius: 4 }}>🎬 电影</span>
+            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>{title}</div>
+            <div style={{ fontSize: 12, color: c.text3, marginTop: 3 }}>{year}  {dir}</div>
+            <div style={{ fontSize: 12, color: c.text3, marginTop: 4 }}>
+              <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</span> 推荐 · {time}
+            </div>
           </div>
         </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); setV(!v); }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 6, flexShrink: 0,
-            background: v ? c.warm + '15' : c.s2,
-            border: `1px solid ${v ? c.warm + '40' : c.line}`,
-            color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}
-        >
-          ▲ {initV + (v ? 1 : 0)}
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flexShrink: 0 }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setV(!v); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
+              background: v ? c.warm + '15' : c.s2,
+              border: `1px solid ${v ? c.warm + '40' : c.line}`,
+              color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            ▲ {initV + (v ? 1 : 0)}
+          </button>
+        </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact {...extractEntity(navTarget)} />
     </div>
@@ -751,6 +767,10 @@ interface FeedRecommendationProps extends InteractionProps {
   coverUrl?: string; votes: number; time: string; navTarget?: string;
 }
 
+const categoryLabel: Record<string, string> = {
+  movie: '🎬 电影', book: '📖 读书', music: '🎵 音乐', recipe: '🍳 菜谱', place: '📍 好店', external_event: '🎭 演出',
+};
+
 export function FeedRecommendation({ name, title, category, categoryIcon, coverUrl, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedRecommendationProps) {
   const c = useColors();
   const [v, setV] = useState(false);
@@ -760,31 +780,36 @@ export function FeedRecommendation({ name, title, category, categoryIcon, coverU
 
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
-      <div onClick={goNav} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: goNav ? 'pointer' : 'default' }}>
+      <div onClick={goNav} style={{ display: 'flex', gap: 14, padding: '14px', cursor: goNav ? 'pointer' : 'default' }}>
         {coverUrl ? (
-          <img src={coverUrl} alt="" style={{ width: 36, height: 48, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+          <img src={coverUrl} alt="" style={{ width: 80, height: 115, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
         ) : (
-          <div style={{ width: 36, height: 36, borderRadius: 8, background: c.s2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+          <div style={{ width: 80, height: 80, borderRadius: 8, background: c.s2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, flexShrink: 0 }}>
             {categoryIcon}
           </div>
         )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
-          <div style={{ fontSize: 11, color: c.text3, marginTop: 2 }}>
-            <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</span> 推荐 · {time}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <span style={{ fontSize: 11, color: c.text3, background: c.s2, padding: '2px 6px', borderRadius: 4 }}>{categoryLabel[category] ?? categoryIcon}</span>
+            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>{title}</div>
+            <div style={{ fontSize: 12, color: c.text3, marginTop: 4 }}>
+              <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</span> 推荐 · {time}
+            </div>
           </div>
         </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); setV(!v); }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 6, flexShrink: 0,
-            background: v ? c.warm + '15' : c.s2,
-            border: `1px solid ${v ? c.warm + '40' : c.line}`,
-            color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}
-        >
-          ▲ {initV + (v ? 1 : 0)}
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flexShrink: 0 }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setV(!v); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
+              background: v ? c.warm + '15' : c.s2,
+              border: `1px solid ${v ? c.warm + '40' : c.line}`,
+              color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            ▲ {initV + (v ? 1 : 0)}
+          </button>
+        </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
     </div>
@@ -1064,26 +1089,31 @@ export function FeedCompactBook({ name, title, year, author, coverUrl, votes: in
 
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
-      <div onClick={goNav} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: goNav ? 'pointer' : 'default' }}>
-        <Poster title={title} src={coverUrl} w={36} h={50} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
-          <div style={{ fontSize: 12, color: c.text3, marginTop: 1 }}>{year} · {author}</div>
-          <div style={{ fontSize: 11, color: c.text3, marginTop: 2 }}>
-            <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</span> 推荐 · {time}
+      <div onClick={goNav} style={{ display: 'flex', gap: 14, padding: '14px', cursor: goNav ? 'pointer' : 'default' }}>
+        <Poster title={title} src={coverUrl} w={80} h={115} hideTitle />
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <span style={{ fontSize: 11, color: c.text3, background: c.s2, padding: '2px 6px', borderRadius: 4 }}>📖 读书</span>
+            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>{title}</div>
+            <div style={{ fontSize: 12, color: c.text3, marginTop: 3 }}>{year} · {author}</div>
+            <div style={{ fontSize: 12, color: c.text3, marginTop: 4 }}>
+              <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ cursor: 'pointer' }}>{name}</span> 推荐 · {time}
+            </div>
           </div>
         </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); setV(!v); }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 6, flexShrink: 0,
-            background: v ? c.warm + '15' : c.s2,
-            border: `1px solid ${v ? c.warm + '40' : c.line}`,
-            color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}
-        >
-          ▲ {initV + (v ? 1 : 0)}
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flexShrink: 0 }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setV(!v); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
+              background: v ? c.warm + '15' : c.s2,
+              border: `1px solid ${v ? c.warm + '40' : c.line}`,
+              color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            ▲ {initV + (v ? 1 : 0)}
+          </button>
+        </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
     </div>

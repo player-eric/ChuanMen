@@ -24,8 +24,9 @@ import {
   useTheme,
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
-import type { FeedPageData, FeedItem, LotteryDraw } from '@/types';
+import type { FeedPageData, FeedItem, LotteryDraw, PersonalNotification } from '@/types';
 import { sendPostcard, acceptLottery, skipLottery, updateHostCandidate } from '@/lib/domainApi';
+import { useColors } from '@/hooks/useColors';
 import { Ava } from '@/components/Atoms';
 import QuickActionDialog from '@/components/QuickActionDialog';
 import {
@@ -373,13 +374,70 @@ function ProfileNudgeBanner() {
   );
 }
 
+/* ═══ Notification Bar (personal notifications at top) ═══ */
+const notifConfig: Record<string, { emoji: string; text: (n: PersonalNotification) => string }> = {
+  mention:           { emoji: '💬', text: n => `${n.name} 在「${n.targetTitle}」中提到了你` },
+  event_invite:      { emoji: '📩', text: n => `${n.name} 邀请你参加「${n.targetTitle}」` },
+  task_assign:       { emoji: '📋', text: n => `你在「${n.targetTitle}」中被安排了分工${n.detail ? `：${n.detail}` : ''}` },
+  postcard_received: { emoji: '✉️', text: n => `${n.name} 给你寄了一张感谢卡` },
+  waitlist_offered:  { emoji: '🎉', text: n => `「${n.targetTitle}」有名额了，请在 24 小时内确认` },
+  waitlist_approved: { emoji: '✅', text: n => `你已被接纳参加「${n.targetTitle}」` },
+  proposal_realized: { emoji: '💡', text: n => `你感兴趣的创意「${n.targetTitle}」变成活动了` },
+};
+
+function NotificationBar({ notifications }: { notifications: PersonalNotification[] }) {
+  const navigate = useNavigate();
+  const c = useColors();
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+
+  if (notifications.length === 0) return null;
+
+  const visible = notifications.filter((n) => !dismissed.has((n as any)._key ?? `${n.action}-${n.navTarget}-${n.time}`));
+  if (visible.length === 0) return null;
+
+  return (
+    <Stack spacing={0.5} sx={{ mb: 2 }}>
+      {visible.map((n) => {
+        const key = (n as any)._key ?? `${n.action}-${n.navTarget}-${n.time}`;
+        const cfg = notifConfig[n.action];
+        if (!cfg) return null;
+        return (
+          <Box
+            key={key}
+            onClick={() => n.navTarget && navigate(n.navTarget)}
+            sx={{
+              display: 'flex', alignItems: 'center', gap: 1,
+              px: 1.5, py: 0.75, borderRadius: 1.5,
+              bgcolor: c.s1, border: `1px solid ${c.line}`,
+              cursor: n.navTarget ? 'pointer' : 'default',
+              '&:hover': n.navTarget ? { bgcolor: c.s2 } : undefined,
+            }}
+          >
+            <Typography variant="body2" sx={{ flex: 1, fontSize: 13 }}>
+              {cfg.emoji} {cfg.text(n)}
+              <Typography component="span" variant="caption" sx={{ ml: 0.75, color: c.text3 }}>{n.time}</Typography>
+            </Typography>
+            <Box
+              component="span"
+              onClick={(e: React.MouseEvent) => { e.stopPropagation(); setDismissed((prev) => new Set(prev).add(key)); }}
+              sx={{ fontSize: 12, color: c.text3, cursor: 'pointer', px: 0.5, '&:hover': { color: c.text } }}
+            >
+              ✕
+            </Box>
+          </Box>
+        );
+      })}
+    </Stack>
+  );
+}
+
 /* ═══ Full Feed (Timeline) ═══ */
 const PAGE_SIZE = 8;
 
 function FullFeed() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { items, currentLottery, lotteryUserStatus, postcardCredits } = useLoaderData() as FeedPageData;
+  const { items, notifications, currentLottery, lotteryUserStatus, postcardCredits } = useLoaderData() as FeedPageData;
   const [snackMsg, setSnackMsg] = useState('');
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -478,6 +536,7 @@ function FullFeed() {
       <RecapBanner items={items} onSnack={setSnackMsg} />
       <WelcomeBanner />
       <ProfileNudgeBanner />
+      <NotificationBar notifications={notifications ?? []} />
 
       {/* Lottery: drawn person banner */}
       {isDrawnPerson && !lotteryDismissed && (

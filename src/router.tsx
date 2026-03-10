@@ -65,9 +65,17 @@ import { eventTagToScene, hostMilestoneBadge, type HostBadgeTier } from '@/lib/m
 
 /* ── Loader helpers (call real backend) ── */
 
+/** Personal notification action types (shown in top bar, not in timeline) */
+const PERSONAL_ACTIONS = new Set([
+  'mention', 'event_invite', 'task_assign',
+  'postcard_received', 'waitlist_offered', 'waitlist_approved',
+  'proposal_realized',
+]);
+
 /** Transform raw feed API data into FeedItem[] for the timeline */
-function buildFeedItems(data: any): any[] {
+function buildFeedItems(data: any): { items: any[]; personalNotifications: any[] } {
   const items: any[] = [];
+  const personalNotifications: any[] = [];
 
   // Group by date — use YYYY/MM/DD sort key, display MM/DD label
   const dateGroups = new Map<string, any[]>();
@@ -129,6 +137,7 @@ function buildFeedItems(data: any): any[] {
       time: e.activityAt ? timeAgo(e.activityAt) : (e.createdAt ? timeAgo(e.createdAt) : ''),
       activityHint: e.activityHint as string | undefined,
       activityHintUser: e.activityHintUser as string | undefined,
+      activityHintComment: e.activityHintComment as string | undefined,
       hostId: e.host?.id ?? '',
       location: e.city || e.location || '',
       spots: Math.max(0, (e.capacity ?? 8) - feedHostSlots - feedOccupying.length),
@@ -286,23 +295,36 @@ function buildFeedItems(data: any): any[] {
     }, a.createdAt);
   }
 
-  // Personal notifications → actionNotice items
+  // Personal notifications → top bar (personal) or timeline (community)
   for (const n of (data.notifications ?? [])) {
-    const [sk, d] = dateParts(n.createdAt);
-    addToDate(sk, d, {
-      _key: `notice-${n.action}-${n.navTarget ?? ''}-${n.createdAt ?? ''}`,
-      type: 'actionNotice',
-      action: n.action,
-      name: n.name ?? '',
-      targetTitle: n.targetTitle ?? '',
-      detail: n.detail,
-      time: n.createdAt ? timeAgo(n.createdAt) : '',
-      navTarget: n.navTarget,
-      likes: 0,
-      likedBy: [],
-      comments: [],
-      commentCount: 0,
-    }, n.createdAt);
+    if (PERSONAL_ACTIONS.has(n.action)) {
+      personalNotifications.push({
+        _key: `notice-${n.action}-${n.navTarget ?? ''}-${n.createdAt ?? ''}`,
+        action: n.action,
+        name: n.name ?? '',
+        targetTitle: n.targetTitle ?? '',
+        detail: n.detail,
+        time: n.createdAt ? timeAgo(n.createdAt) : '',
+        navTarget: n.navTarget,
+        createdAt: n.createdAt,
+      });
+    } else {
+      const [sk, d] = dateParts(n.createdAt);
+      addToDate(sk, d, {
+        _key: `notice-${n.action}-${n.navTarget ?? ''}-${n.createdAt ?? ''}`,
+        type: 'actionNotice',
+        action: n.action,
+        name: n.name ?? '',
+        targetTitle: n.targetTitle ?? '',
+        detail: n.detail,
+        time: n.createdAt ? timeAgo(n.createdAt) : '',
+        navTarget: n.navTarget,
+        likes: 0,
+        likedBy: [],
+        comments: [],
+        commentCount: 0,
+      }, n.createdAt);
+    }
   }
 
   // Proposals → compactProposal items
@@ -348,7 +370,10 @@ function buildFeedItems(data: any): any[] {
     items.push({ _key: 'welcome', type: 'milestone', text: '欢迎来到串门儿！', emoji: '🎉' });
   }
 
-  return items;
+  // Sort personal notifications by time (most recent first)
+  personalNotifications.sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+
+  return { items, personalNotifications };
 }
 
 function timeAgo(dateStr: string): string {
@@ -368,7 +393,7 @@ async function feedLoader() {
       fetchFeedApi(userId || undefined),
       userId ? fetchCoAttendees(userId).catch(() => []) : Promise.resolve([]),
     ]);
-    const items = buildFeedItems(data);
+    const { items, personalNotifications } = buildFeedItems(data);
     const members = (data as any).members ?? [];
 
     // Inject socialHint into activity items
@@ -386,7 +411,7 @@ async function feedLoader() {
     const lotteryUserStatus = (data as any).lotteryUserStatus ?? null;
     const postcardCredits = (data as any).postcardCredits ?? undefined;
 
-    return { items, members, currentLottery, lotteryUserStatus, postcardCredits };
+    return { items, members, currentLottery, lotteryUserStatus, postcardCredits, notifications: personalNotifications };
   } catch {
     return { items: [], members: [] };
   }
@@ -530,11 +555,12 @@ async function eventsLoader() {
     return {
       coAttendees: coAttendees as { userId: string; name: string; count: number }[],
       upcoming: (events ?? []).map(mapApiEvent),
-      proposals: (proposals ?? []).map((p: any) => ({
+      proposals: (proposals ?? []).filter((p: any) => p.status === 'discussing').map((p: any) => ({
         id: p.id,
         name: p.author?.name ?? p.name ?? '?',
         title: p.title ?? '',
         description: p.description ?? '',
+        status: p.status,
         votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
         interested: Array.isArray(p.votes) ? p.votes.map((v: any) => v.user?.name ?? '?') : p.interested ?? [],
         time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
@@ -678,6 +704,7 @@ async function discoverLoader() {
       dir: s.movie?.director ?? s.director ?? '',
       date: s.event?.startsAt ? new Date(s.event.startsAt).toLocaleDateString('zh-CN') : (s.date ?? ''),
       host: s.event?.host?.name ?? s.host ?? '',
+      poster: s.movie?.poster || undefined,
     }));
     const bookPool = (rawBooks as any[]).map((b: any) => ({
       id: b.id,
@@ -688,6 +715,7 @@ async function discoverLoader() {
       voterIds: (b.votes ?? []).map((v: any) => v.userId ?? v.user?.id).filter(Boolean),
       by: b.author?.name ?? '',
       status: b.status === 'candidate' ? undefined : b.status,
+      coverUrl: b.coverUrl || undefined,
     }));
     return {
       pool, screened, bookPool, bookRead: [],

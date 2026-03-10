@@ -120,6 +120,7 @@ export interface Proposal {
   title: string;
   description?: string;
   descriptionHtml?: string;
+  status?: string;
   votes: number;
   interested: string[];
   time: string;
@@ -146,6 +147,7 @@ export interface MovieScreened {
   dir: string;
   date: string;
   host: string;
+  poster?: string;
 }
 
 export interface BookPool {
@@ -157,6 +159,7 @@ export interface BookPool {
   voterIds: string[];
   status?: string;
   by: string;
+  coverUrl?: string;
 }
 
 export interface BookRead {
@@ -390,9 +393,19 @@ export interface LotteryDraw {
   event?: { id: string; title: string; startsAt?: string } | null;
 }
 
+export interface PersonalNotification {
+  action: string;
+  name: string;
+  targetTitle: string;
+  detail?: string;
+  time: string;
+  navTarget?: string;
+}
+
 export interface FeedPageData {
   members: MemberData[];
   items: FeedItem[];
+  notifications?: PersonalNotification[];
   currentLottery?: LotteryDraw | null;
   lotteryUserStatus?: { hostCandidate: boolean; consecutiveEvents: number } | null;
   postcardCredits?: number;

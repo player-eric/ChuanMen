@@ -276,29 +276,23 @@ function MoviesSection() {
                 <Card>
                   <CardActionArea onClick={() => navigate(`/discover/movies/${m.id}`)}>
                     <CardContent>
-                      <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Poster title={m.title} src={m.poster} w={40} h={56} />
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Box>
-                              <Typography fontWeight={700}>{m.title}</Typography>
-                              <Typography variant="body2" color="text.secondary">{m.year}  {m.dir}</Typography>
-                              <Typography variant="caption" color="text.secondary">{m.by} 推荐</Typography>
-                            </Box>
-                            <Button
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                toggle(m.id);
-                              }}
-                              variant={votes[m.id] ? 'contained' : 'outlined'}
-                              size="small"
-                              disabled={!user}
-                            >
-                              ▲ {m.v + (votes[m.id] && !m.voterIds.includes(user?.id ?? '') ? 1 : !votes[m.id] && m.voterIds.includes(user?.id ?? '') ? -1 : 0)}
-                            </Button>
-                          </Stack>
-                          {m.status && <Chip sx={{ mt: 1 }} size="small" color="success" label={`✓ ${m.status}`} />}
+                      <Stack direction="row" spacing={2} alignItems="stretch">
+                        <Poster title={m.title} src={m.poster} w={72} h={100} hideTitle />
+                        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <Typography fontWeight={700} sx={{ fontSize: 15 }}>{m.title}</Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{m.year}  {m.dir}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{m.by} 推荐</Typography>
+                          {m.status && <Chip sx={{ mt: 0.75, alignSelf: 'flex-start' }} size="small" color="success" label={`✓ ${m.status}`} />}
                         </Box>
+                        <Button
+                          onClick={(event) => { event.stopPropagation(); toggle(m.id); }}
+                          variant={votes[m.id] ? 'contained' : 'outlined'}
+                          size="small"
+                          disabled={!user}
+                          sx={{ alignSelf: 'flex-start', flexShrink: 0 }}
+                        >
+                          ▲ {m.v + (votes[m.id] && !m.voterIds.includes(user?.id ?? '') ? 1 : !votes[m.id] && m.voterIds.includes(user?.id ?? '') ? -1 : 0)}
+                        </Button>
                       </Stack>
                     </CardContent>
                   </CardActionArea>
@@ -328,12 +322,12 @@ function MoviesSection() {
                       disabled={!match}
                     >
                       <CardContent>
-                        <Stack direction="row" spacing={1.5} alignItems="center">
-                          <Poster title={m.title} w={36} h={50} />
-                          <Box>
-                            <Typography fontWeight={700}>{m.title}</Typography>
-                            <Typography variant="body2" color="text.secondary">{m.year}  {m.dir}</Typography>
-                            <Typography variant="caption" color="text.secondary">{m.date}  {m.host} Host</Typography>
+                        <Stack direction="row" spacing={2} alignItems="stretch">
+                          <Poster title={m.title} src={m.poster} w={72} h={100} hideTitle />
+                          <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <Typography fontWeight={700} sx={{ fontSize: 15 }}>{m.title}</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{m.year}  {m.dir}</Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{m.date} · {m.host} Host</Typography>
                           </Box>
                         </Stack>
                       </CardContent>
@@ -545,29 +539,23 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
                 <Card>
                   <CardActionArea onClick={() => navigate(`/discover/books/${b.id}`)}>
                     <CardContent>
-                      <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Poster title={b.title} w={40} h={56} />
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Box>
-                              <Typography fontWeight={700}>{b.title}</Typography>
-                              <Typography variant="body2" color="text.secondary">{b.year} · {b.author}</Typography>
-                              <Typography variant="caption" color="text.secondary">{b.by} 推荐</Typography>
-                            </Box>
-                            <Button
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                toggle(b.id);
-                              }}
-                              variant={votes[b.id] ? 'contained' : 'outlined'}
-                              size="small"
-                              disabled={!user}
-                            >
-                              ▲ {b.v + (votes[b.id] && !b.voterIds.includes(user?.id ?? '') ? 1 : !votes[b.id] && b.voterIds.includes(user?.id ?? '') ? -1 : 0)}
-                            </Button>
-                          </Stack>
-                          {b.status && <Chip sx={{ mt: 1 }} size="small" color="success" label={`✓ ${b.status}`} />}
+                      <Stack direction="row" spacing={2} alignItems="stretch">
+                        <Poster title={b.title} src={b.coverUrl} w={72} h={100} hideTitle />
+                        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <Typography fontWeight={700} sx={{ fontSize: 15 }}>{b.title}</Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{b.year} · {b.author}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{b.by} 推荐</Typography>
+                          {b.status && <Chip sx={{ mt: 0.75, alignSelf: 'flex-start' }} size="small" color="success" label={`✓ ${b.status}`} />}
                         </Box>
+                        <Button
+                          onClick={(event) => { event.stopPropagation(); toggle(b.id); }}
+                          variant={votes[b.id] ? 'contained' : 'outlined'}
+                          size="small"
+                          disabled={!user}
+                          sx={{ alignSelf: 'flex-start', flexShrink: 0 }}
+                        >
+                          ▲ {b.v + (votes[b.id] && !b.voterIds.includes(user?.id ?? '') ? 1 : !votes[b.id] && b.voterIds.includes(user?.id ?? '') ? -1 : 0)}
+                        </Button>
                       </Stack>
                     </CardContent>
                   </CardActionArea>
@@ -591,12 +579,12 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
               <Grid key={i} size={{ xs: 12, md: 6 }}>
                 <Card>
                   <CardContent>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
-                      <Poster title={b.title} w={36} h={50} />
-                      <Box>
-                        <Typography fontWeight={700}>{b.title}</Typography>
-                        <Typography variant="body2" color="text.secondary">{b.year} · {b.author}</Typography>
-                        <Typography variant="caption" color="text.secondary">{b.date} · {b.host} Host</Typography>
+                    <Stack direction="row" spacing={2} alignItems="stretch">
+                      <Poster title={b.title} w={72} h={100} hideTitle />
+                      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <Typography fontWeight={700} sx={{ fontSize: 15 }}>{b.title}</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{b.year} · {b.author}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{b.date} · {b.host} Host</Typography>
                       </Box>
                     </Stack>
                   </CardContent>
@@ -799,32 +787,28 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
               <Card>
                 <CardActionArea onClick={() => navigate(`/discover/music/${r.id}`)}>
                   <CardContent>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Stack direction="row" spacing={2} alignItems="stretch">
                       {r.coverUrl ? (
-                        <img src={r.coverUrl} alt={r.title} style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }} />
+                        <img src={r.coverUrl} alt={r.title} style={{ width: 72, height: 72, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
                       ) : (
-                        <Box sx={{ width: 44, height: 44, borderRadius: 1.5, bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎵</Box>
+                        <Box sx={{ width: 72, height: 72, borderRadius: 1.5, bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 28 }}>🎵</Box>
                       )}
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Box sx={{ minWidth: 0 }}>
-                            <Typography fontWeight={700} noWrap>{r.title}</Typography>
-                            <Typography variant="caption" color="text.secondary">{r.authorName} 推荐</Typography>
-                          </Box>
-                          <Button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              toggle(r.id);
-                            }}
-                            variant={votes[r.id] ? 'contained' : 'outlined'}
-                            size="small"
-                            disabled={!user}
-                            sx={{ ml: 1, flexShrink: 0 }}
-                          >
-                            ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
-                          </Button>
-                        </Stack>
+                      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <Typography fontWeight={700} sx={{ fontSize: 15 }}>{r.title}</Typography>
+                        {r.description && (
+                          <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description}</Typography>
+                        )}
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{r.authorName} 推荐</Typography>
                       </Box>
+                      <Button
+                        onClick={(event) => { event.stopPropagation(); toggle(r.id); }}
+                        variant={votes[r.id] ? 'contained' : 'outlined'}
+                        size="small"
+                        disabled={!user}
+                        sx={{ alignSelf: 'flex-start', flexShrink: 0 }}
+                      >
+                        ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
+                      </Button>
                     </Stack>
                   </CardContent>
                 </CardActionArea>
@@ -939,44 +923,42 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
         )
       ) : (
         <Grid container spacing={1.5}>
-          {sortedItems.map((r) => (
-            <Grid key={r.id} size={{ xs: 12, md: 6 }}>
-              <Card>
-                <CardActionArea onClick={() => navigate(`/discover/${category}/${r.id}`)}>
-                  <CardContent>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
-                      {r.coverUrl && (
-                        <img src={r.coverUrl} alt={r.title} style={{ width: 40, height: 56, borderRadius: 4, objectFit: 'cover' }} />
-                      )}
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Box sx={{ minWidth: 0 }}>
-                            <Typography fontWeight={700} noWrap>{r.title}</Typography>
-                            {r.description && (
-                              <Typography variant="body2" color="text.secondary" noWrap>{r.description}</Typography>
-                            )}
-                            <Typography variant="caption" color="text.secondary">{r.authorName} 推荐</Typography>
-                          </Box>
-                          <Button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              toggle(r.id);
-                            }}
-                            variant={votes[r.id] ? 'contained' : 'outlined'}
-                            size="small"
-                            disabled={!user}
-                            sx={{ ml: 1, flexShrink: 0 }}
-                          >
-                            ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
-                          </Button>
-                        </Stack>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </CardActionArea>
-              </Card>
-            </Grid>
-          ))}
+          {sortedItems.map((r) => {
+            const emojiMap: Record<string, string> = { recipe: '🍜', place: '📍', external_event: '🎭' };
+            return (
+              <Grid key={r.id} size={{ xs: 12, md: 6 }}>
+                <Card>
+                  <CardActionArea onClick={() => navigate(`/discover/${category}/${r.id}`)}>
+                    <CardContent>
+                      <Stack direction="row" spacing={2} alignItems="stretch">
+                        {r.coverUrl ? (
+                          <img src={r.coverUrl} alt={r.title} style={{ width: 72, height: 100, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                        ) : (
+                          <Box sx={{ width: 72, height: 100, borderRadius: 1.5, bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 28 }}>{emojiMap[category] ?? '📌'}</Box>
+                        )}
+                        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <Typography fontWeight={700} sx={{ fontSize: 15 }}>{r.title}</Typography>
+                          {r.description && (
+                            <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description}</Typography>
+                          )}
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{r.authorName} 推荐</Typography>
+                        </Box>
+                        <Button
+                          onClick={(event) => { event.stopPropagation(); toggle(r.id); }}
+                          variant={votes[r.id] ? 'contained' : 'outlined'}
+                          size="small"
+                          disabled={!user}
+                          sx={{ alignSelf: 'flex-start', flexShrink: 0 }}
+                        >
+                          ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
+                        </Button>
+                      </Stack>
+                    </CardContent>
+                  </CardActionArea>
+                </Card>
+              </Grid>
+            );
+          })}
         </Grid>
       )}
     </Box>

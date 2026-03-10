@@ -444,8 +444,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         : [],
       // Latest comment per event (for activity hint — who commented)
       eventIds.length > 0
-        ? prisma.$queryRawUnsafe<{ entityId: string; createdAt: Date; userName: string }[]>(
-            `SELECT DISTINCT ON (c."entityId") c."entityId", c."createdAt", u."name" AS "userName"
+        ? prisma.$queryRawUnsafe<{ entityId: string; createdAt: Date; userName: string; content: string }[]>(
+            `SELECT DISTINCT ON (c."entityId") c."entityId", c."createdAt", u."name" AS "userName", c."content"
              FROM "Comment" c JOIN "User" u ON u.id = c."authorId"
              WHERE c."entityType" = 'event' AND c."entityId" = ANY($1::text[])
              ORDER BY c."entityId", c."createdAt" DESC`,
@@ -465,7 +465,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     ]) as [
       Awaited<ReturnType<typeof prisma.like.findMany<{ where: any; include: { user: { select: { id: true; name: true } } } }>>>,
       { entityType: string; entityId: string; _count: number }[],
-      { entityId: string; createdAt: Date; userName: string }[],
+      { entityId: string; createdAt: Date; userName: string; content: string }[],
       { eventId: string; createdAt: Date; userName: string }[],
     ];
 
@@ -485,9 +485,9 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // Map: eventId → latest comment/signup { at, userName }
-    const latestCommentMap = new Map<string, { at: Date; userName: string }>();
+    const latestCommentMap = new Map<string, { at: Date; userName: string; content: string }>();
     for (const row of latestEventComments) {
-      latestCommentMap.set(row.entityId, { at: row.createdAt, userName: row.userName });
+      latestCommentMap.set(row.entityId, { at: row.createdAt, userName: row.userName, content: row.content });
     }
     const latestSignupMap = new Map<string, { at: Date; userName: string }>();
     for (const row of latestEventSignups) {
@@ -549,7 +549,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       const commentActivityAt = activityHint === 'comment' ? activityHintAt : undefined;
       const realActivityAt = commentActivityAt
         ?? (e.startsAt && e.startsAt <= now ? e.startsAt : e.createdAt);
-      return { ...base, activityHint, activityHintUser, activityAt: realActivityAt };
+      const activityHintComment = activityHint === 'comment' && latestComment ? latestComment.content : undefined;
+      return { ...base, activityHint, activityHintUser, activityHintComment, activityAt: realActivityAt };
     });
     // Sort by real activity time (most recent first) and take top 20
     enrichedEvents.sort((a, b) => b.activityAt.getTime() - a.activityAt.getTime());

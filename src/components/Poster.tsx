@@ -7,9 +7,11 @@ interface PosterProps {
   src?: string;
   w?: number;
   h?: number;
+  /** Hide the title overlay (useful when title is shown separately) */
+  hideTitle?: boolean;
 }
 
-export function Poster({ title, src, w = 48, h = 66 }: PosterProps) {
+export function Poster({ title, src, w = 48, h = 66, hideTitle }: PosterProps) {
   const c = useColors();
   const p = posterData[title] || {
     bg: `linear-gradient(135deg, hsl(${[...title].reduce((a, c) => a + c.charCodeAt(0), 0) % 360}, 30%, 25%), hsl(${([...title].reduce((a, c) => a + c.charCodeAt(0), 0) + 60) % 360}, 25%, 18%))`,
@@ -32,23 +34,27 @@ export function Poster({ title, src, w = 48, h = 66 }: PosterProps) {
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
       )}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 40%, rgba(0,0,0,0.6))' }} />
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <div
-          style={{
-            fontSize: Math.max(7, w * 0.15), fontWeight: 800,
-            color: src ? '#fff' : p.accent, lineHeight: 1.2,
-            textShadow: '0 1px 3px rgba(0,0,0,0.5)',
-          }}
-        >
-          {title}
-        </div>
-        {w > 40 && p.sub && !src && (
-          <div style={{ fontSize: Math.max(5, w * 0.08), color: 'rgba(255,255,255,0.4)', marginTop: 1, lineHeight: 1.2 }}>
-            {p.sub.split('·')[0]}
+      {!hideTitle && (
+        <>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 40%, rgba(0,0,0,0.6))' }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div
+              style={{
+                fontSize: Math.max(7, w * 0.15), fontWeight: 800,
+                color: src ? '#fff' : p.accent, lineHeight: 1.2,
+                textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+              }}
+            >
+              {title}
+            </div>
+            {w > 40 && p.sub && !src && (
+              <div style={{ fontSize: Math.max(5, w * 0.08), color: 'rgba(255,255,255,0.4)', marginTop: 1, lineHeight: 1.2 }}>
+                {p.sub.split('·')[0]}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
