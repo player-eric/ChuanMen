@@ -390,7 +390,9 @@ const notifConfig: Record<string, { emoji: string; text: (n: PersonalNotificatio
 function NotificationBar({ notifications }: { notifications: PersonalNotification[] }) {
   const navigate = useNavigate();
   const c = useColors();
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(() => {
+    try { const raw = localStorage.getItem('chuanmen.feed.notifDismissed'); return raw ? new Set(JSON.parse(raw)) : new Set(); } catch { return new Set(); }
+  });
 
   if (notifications.length === 0) return null;
 
@@ -421,7 +423,7 @@ function NotificationBar({ notifications }: { notifications: PersonalNotificatio
             </Typography>
             <Box
               component="span"
-              onClick={(e: React.MouseEvent) => { e.stopPropagation(); setDismissed((prev) => new Set(prev).add(key)); }}
+              onClick={(e: React.MouseEvent) => { e.stopPropagation(); setDismissed((prev) => { const next = new Set(prev).add(key); localStorage.setItem('chuanmen.feed.notifDismissed', JSON.stringify([...next])); return next; }); }}
               sx={{ fontSize: 12, color: c.text3, cursor: 'pointer', px: 0.5, '&:hover': { color: c.text } }}
             >
               ✕
