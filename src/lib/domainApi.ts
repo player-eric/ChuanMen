@@ -17,7 +17,26 @@ function getApiUrl(path: string): string {
   return path;
 }
 
+function getStoredUserId(): string | null {
+  if (isSSR) return null;
+  try {
+    const raw = localStorage.getItem('chuanmen.auth.user') || sessionStorage.getItem('chuanmen.auth.user');
+    if (!raw) return null;
+    const user = JSON.parse(raw);
+    const id = user?.id;
+    if (typeof id === 'string' && id.length > 20 && !id.startsWith('walkthrough-')) return id;
+  } catch {}
+  return null;
+}
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  // Auto-inject x-user-id for activity tracking (browser only)
+  const userId = getStoredUserId();
+  if (userId) {
+    const headers = new Headers(init?.headers);
+    if (!headers.has('x-user-id')) headers.set('x-user-id', userId);
+    init = { ...init, headers };
+  }
   const response = await fetch(getApiUrl(path), init);
   const data = await response.json().catch(() => null);
   if (!response.ok) {
