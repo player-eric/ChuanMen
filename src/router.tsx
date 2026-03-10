@@ -70,6 +70,7 @@ const PERSONAL_ACTIONS = new Set([
   'mention', 'event_invite', 'task_assign',
   'postcard_received', 'waitlist_offered', 'waitlist_approved',
   'proposal_realized',
+  'application_received', 'application_approved',
 ]);
 
 /** Transform raw feed API data into FeedItem[] for the timeline */
@@ -143,7 +144,8 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
       spots: Math.max(0, (e.capacity ?? 8) - feedHostSlots - feedOccupying.length),
       total: e.capacity ?? 8,
       people,
-      signupUserIds: allSignups.map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
+      signupUserIds: allSignups.filter((s: any) => s.status !== 'pending').map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
+      pendingUserIds: allSignups.filter((s: any) => s.status === 'pending').map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
       film: e.screenedMovies?.[0]?.movie?.title,
       filmPoster: e.screenedMovies?.[0]?.movie?.poster || undefined,
       scene: eventTagToScene[e.tags?.[0]] ?? e.tags?.[0] ?? '',
@@ -153,6 +155,7 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
       isHomeEvent: e.isHomeEvent ?? false,
       isPrivate: e.isPrivate ?? false,
       waitlistCount: feedWaitlist.length,
+      signupMode: e.signupMode || 'direct',
       likes: e.likes ?? 0,
       likedBy: e.likedBy ?? [],
       comments: [],
@@ -429,6 +432,7 @@ function mapApiEvent(e: any): any {
   // Split signups by status
   const occupying = signups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
   const waitlistSignups = signups.filter((s: any) => s.status === 'waitlist');
+  const pendingSignups = signups.filter((s: any) => s.status === 'pending');
 
   // People displayed: host + co-hosts + accepted/offered only (invited hidden from display)
   const accepted = signups.filter((s: any) => ['accepted', 'offered'].includes(s.status));
@@ -445,7 +449,9 @@ function mapApiEvent(e: any): any {
   }
 
   // Collect signup user IDs for visibility checks (invite phase) — include all non-removed
-  const signupUserIds = signups.map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
+  // Pending users are included for visibility but tracked separately
+  const signupUserIds = signups.filter((s: any) => s.status !== 'pending').map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
+  const pendingUserIds = pendingSignups.map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
   if (hostId && !signupUserIds.includes(hostId)) {
     signupUserIds.unshift(hostId);
   }
@@ -453,12 +459,14 @@ function mapApiEvent(e: any): any {
     if (id && !signupUserIds.includes(id)) signupUserIds.push(id);
   }
 
-  // Signup details for host waitlist management
+  // Signup details for host waitlist/application management
   const signupDetails = signups.map((s: any) => ({
     userId: s.user?.id ?? s.userId,
     name: s.user?.name ?? '?',
     status: s.status,
     offeredAt: s.offeredAt ?? undefined,
+    note: s.note || undefined,
+    intendedTaskId: s.intendedTaskId || undefined,
   }));
 
   return {
@@ -524,16 +532,19 @@ function mapApiEvent(e: any): any {
     total: e.capacity ?? 0,
     people,
     signupUserIds,
+    pendingUserIds,
     signupDetails,
     coHosts: coHostNames,
     coHostIds,
     waitlistCount: waitlistSignups.length,
+    pendingCount: pendingSignups.length,
     phase: e.phase ?? 'open',
     desc: e.description ?? '',
     houseRules: e.houseRules || undefined,
     photoCount: e.recapPhotoUrls?.length || undefined,
     commentCount: e.commentCount ?? 0,
     isPrivate: e.isPrivate ?? false,
+    signupMode: e.signupMode || 'direct',
     likeCount: e.likeCount ?? 0,
     tags: e.tags ?? [],
     taskSummary: ((e.tasks ?? []) as any[]).map((t: any) => ({

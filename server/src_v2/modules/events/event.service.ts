@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';
 import type { EventRepository } from './event.repository.js';
 import { sendEmail, sendTemplatedEmail } from '../../services/emailService.js';
+import { renderNotificationEmail } from '../../emails/template.js';
 
 const taskItemSchema = z.object({
   role: z.string().min(1),
@@ -29,6 +30,7 @@ const createEventSchema = z.object({
   isWeeklyLotteryEvent: z.boolean().optional(),
   isHomeEvent: z.boolean().optional(),
   houseRules: z.string().optional(),
+  signupMode: z.enum(['direct', 'application']).optional(),
   proposalId: z.string().optional(),
   tasks: z.array(taskItemSchema).optional(),
 });
@@ -132,9 +134,11 @@ export class EventService {
   async signup(eventId: string, input: unknown) {
     const data = z.object({
       userId: z.string().min(1),
+      note: z.string().max(500).optional(),
+      intendedTaskId: z.string().optional(),
     }).parse(input);
 
-    const result = await this.repository.signup(eventId, data.userId);
+    const result = await this.repository.signup(eventId, data.userId, data.note, data.intendedTaskId);
 
     if (result.wasWaitlisted) {
       // Send waitlist notification (best effort)
@@ -333,6 +337,81 @@ export class EventService {
           to: user.email,
           subject: `${event.title} 等位未通过`,
           text: `Hi ${user.name}，\n\n很遗憾，${event.title} 的等位申请未通过。希望下次活动能见到你！\n\n— 串门儿`,
+        });
+      }
+    } catch { /* best effort */ }
+
+    return result;
+  }
+
+  /** Host or co-host approves an application (pending → accepted) */
+  async hostApproveApplication(eventId: string, userId: string, requesterId: string) {
+    const event = await this.repository.getById(eventId);
+    const requester = await this.prisma.user.findUnique({ where: { id: requesterId }, select: { role: true } });
+    const isAdmin = requester?.role === 'admin';
+    const isHostOrCoHost = event && (event.hostId === requesterId || event.coHosts?.some((ch: any) => ch.userId === requesterId));
+    if (!event || (!isHostOrCoHost && !isAdmin)) {
+      throw new Error('只有 Host 或 Co-Host 可以审批申请');
+    }
+
+    const result = await this.repository.hostApproveApplication(eventId, userId);
+
+    // Notify applicant (best effort)
+    try {
+      if (result.user?.email) {
+        const rendered = renderNotificationEmail({
+          subject: `你的「${event.title}」申请已通过！`,
+          body: `Hi {userName}，\n\n好消息！**{hostName}** 欢迎你参加「**{eventTitle}**」🎉\n\n快来查看活动详情，了解时间地点和分工认领吧。`,
+          variables: {
+            userName: result.user.name ?? '',
+            hostName: event.host?.name ?? '',
+            eventTitle: event.title,
+          },
+          linkLabel: '查看活动详情 →',
+          linkUrl: `https://chuanmener.club/events/${eventId}`,
+        });
+        await sendEmail({
+          to: result.user.email,
+          subject: rendered.subject,
+          text: rendered.text,
+          html: rendered.html,
+        });
+      }
+    } catch { /* best effort */ }
+
+    return result;
+  }
+
+  /** Host or co-host rejects an application (pending → rejected) */
+  async hostRejectApplication(eventId: string, userId: string, requesterId: string) {
+    const event = await this.repository.getById(eventId);
+    const requester = await this.prisma.user.findUnique({ where: { id: requesterId }, select: { role: true } });
+    const isAdmin = requester?.role === 'admin';
+    const isHostOrCoHost = event && (event.hostId === requesterId || event.coHosts?.some((ch: any) => ch.userId === requesterId));
+    if (!event || (!isHostOrCoHost && !isAdmin)) {
+      throw new Error('只有 Host 或 Co-Host 可以审批申请');
+    }
+
+    const result = await this.repository.hostRejectApplication(eventId, userId);
+
+    // Send gentle rejection email (best effort)
+    try {
+      if (result.user?.email) {
+        const rendered = renderNotificationEmail({
+          subject: `关于「${event.title}」的报名`,
+          body: `Hi {userName}，\n\n「**{eventTitle}**」的报名人数较多，这次未能安排你参加。\n\n期待下次活动见到你！`,
+          variables: {
+            userName: result.user.name ?? '',
+            eventTitle: event.title,
+          },
+          linkLabel: '看看其他活动 →',
+          linkUrl: 'https://chuanmener.club/events',
+        });
+        await sendEmail({
+          to: result.user.email,
+          subject: rendered.subject,
+          text: rendered.text,
+          html: rendered.html,
         });
       }
     } catch { /* best effort */ }

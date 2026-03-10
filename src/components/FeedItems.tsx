@@ -7,6 +7,7 @@ import type { EventTaskData } from '@/types';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import type { FeedComment } from '@/types';
 import RichTextEditor, { RichTextViewer, type MentionMember } from './RichTextEditor';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, Box } from '@mui/material';
 import FavoriteBorderRounded from '@mui/icons-material/FavoriteBorderRounded';
 import FavoriteRounded from '@mui/icons-material/FavoriteRounded';
 import ChatBubbleOutlineRounded from '@mui/icons-material/ChatBubbleOutlineRounded';
@@ -276,6 +277,8 @@ interface FeedActivityProps extends InteractionProps {
   commentCount?: number;
   hostId?: string;
   waitlistCount?: number;
+  signupMode?: 'direct' | 'application';
+  pendingUserIds?: string[];
   socialHint?: { name: string; count: number };
   time?: string;
   activityHint?: string;
@@ -284,13 +287,17 @@ interface FeedActivityProps extends InteractionProps {
   taskSummary?: FeedTaskSummary[];
 }
 
-export function FeedActivity({ name, hostAvatar, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, hostId, waitlistCount, socialHint, time, activityHint, activityHintUser, activityHintComment, taskSummary }: FeedActivityProps) {
+export function FeedActivity({ name, hostAvatar, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, hostId, waitlistCount, signupMode, pendingUserIds, socialHint, time, activityHint, activityHintUser, activityHintComment, taskSummary }: FeedActivityProps) {
   const c = useColors();
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
+  const [pending, setPending] = useState(() => Boolean(user?.id && pendingUserIds?.includes(user.id)));
   const [cancelOpen, setCancelOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
   const [claimTasks, setClaimTasks] = useState<EventTaskData[]>([]);
+  const [appDialogOpen, setAppDialogOpen] = useState(false);
+  const [appNote, setAppNote] = useState('');
+  const [appTaskId, setAppTaskId] = useState('');
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
@@ -299,11 +306,13 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
   const isCancelled = phase === 'cancelled';
   const isEnded = phase === 'ended';
   const isHost = Boolean(user?.id && hostId && user.id === hostId);
+  const isApplication = signupMode === 'application';
 
   // Sync signup state when data refreshes
   useEffect(() => {
     setJoined(Boolean(user?.id && signupUserIds?.includes(user.id)));
-  }, [user, signupUserIds]);
+    setPending(Boolean(user?.id && pendingUserIds?.includes(user.id)));
+  }, [user, signupUserIds, pendingUserIds]);
 
   const handleSignup = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -311,8 +320,18 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
       if (goNav) goNav();
       return;
     }
-    if (joined) {
-      if (!isEnded) setCancelOpen(true);
+    if (joined || pending) {
+      if (joined && !isEnded) setCancelOpen(true);
+      if (pending) { if (goNav) goNav(); } // navigate to detail page for pending
+      return;
+    }
+    // Application mode: fetch tasks and open the application note dialog
+    if (isApplication) {
+      try {
+        const tasks = await fetchEventTasks(eventId);
+        setClaimTasks(tasks);
+      } catch { /* ignore */ }
+      setAppDialogOpen(true);
       return;
     }
     try {
@@ -337,6 +356,17 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
     try {
       await cancelSignup(eventId, user.id);
       setJoined(false);
+    } catch { /* ignore */ }
+  };
+
+  const submitApplication = async () => {
+    if (!eventId || !user?.id) return;
+    try {
+      await signupEvent(eventId, user.id, appNote.trim() || undefined, appTaskId || undefined);
+      setPending(true);
+      setAppDialogOpen(false);
+      setAppNote('');
+      setAppTaskId('');
     } catch { /* ignore */ }
   };
 
@@ -482,13 +512,13 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
                 onClick={handleSignup}
                 style={{
                   width: '100%', padding: '9px 0', borderRadius: 8,
-                  background: joined ? c.s2 : c.warm,
-                  border: joined ? `1px solid ${c.green}30` : 'none',
-                  color: joined ? c.green : c.bg,
+                  background: joined ? c.s2 : pending ? c.s2 : c.warm,
+                  border: joined ? `1px solid ${c.green}30` : pending ? `1px solid ${c.warm}30` : 'none',
+                  color: joined ? c.green : pending ? c.warm : c.bg,
                   fontSize: 14, fontWeight: 700, cursor: 'pointer',
                 }}
               >
-                {joined ? '✓ 已报名' : '报名参加'}
+                {joined ? '✓ 已报名' : pending ? '⏳ 申请已提交' : isApplication ? '申请参加' : '报名参加'}
               </button>
             )}
           </>
@@ -506,6 +536,54 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
         onConfirm={confirmCancel}
         onCancel={() => setCancelOpen(false)}
       />
+      {/* Application note dialog */}
+      <Dialog open={appDialogOpen} onClose={() => setAppDialogOpen(false)} maxWidth="xs" fullWidth onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+        <DialogTitle>申请参加</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            给 Host 留言，说说你为什么想参加（选填）
+          </Typography>
+          {claimTasks.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>想认领哪个分工？（选填）</Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
+                {claimTasks.map((t) => (
+                  <Box
+                    key={t.id}
+                    onClick={() => !t.claimedById && setAppTaskId(appTaskId === t.id ? '' : t.id)}
+                    sx={{
+                      px: 1.5, py: 0.5, borderRadius: 2, fontSize: 13, cursor: t.claimedById ? 'default' : 'pointer',
+                      border: '1px solid',
+                      borderColor: appTaskId === t.id ? 'primary.main' : 'divider',
+                      bgcolor: appTaskId === t.id ? 'primary.main' : 'transparent',
+                      color: t.claimedById ? 'text.disabled' : appTaskId === t.id ? 'primary.contrastText' : 'text.primary',
+                      opacity: t.claimedById ? 0.5 : 1,
+                      textDecoration: t.claimedById ? 'line-through' : 'none',
+                    }}
+                  >
+                    {t.role}{t.claimedById ? ` (${t.claimedBy?.name})` : ''}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
+          <TextField
+            label="留言（选填）"
+            multiline
+            minRows={2}
+            maxRows={4}
+            fullWidth
+            value={appNote}
+            onChange={(e) => setAppNote(e.target.value)}
+            inputProps={{ maxLength: 500 }}
+            placeholder="给 Host 留个言..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setAppDialogOpen(false); setAppNote(''); }}>取消</Button>
+          <Button variant="contained" onClick={submitApplication}>提交申请</Button>
+        </DialogActions>
+      </Dialog>
       {claimOpen && eventId && (
         <TaskClaimDialog
           open={claimOpen}

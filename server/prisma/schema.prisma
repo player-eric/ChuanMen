@@ -44,11 +44,17 @@ enum EventStatus {
   cancelled
 }
 
+enum SignupMode {
+  direct
+  application
+}
+
 enum EventSignupStatus {
   invited
   offered
   accepted
   waitlist
+  pending
   declined
   rejected
   cancelled
@@ -312,6 +318,7 @@ model Event {
   isHomeEvent            Boolean                   @default(false)
   locationPrivate        Boolean                   @default(false)
   isPrivate              Boolean                   @default(false)
+  signupMode             SignupMode                @default(direct)
   creditsAwarded         Boolean                   @default(false)
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt
@@ -366,6 +373,7 @@ model EventSignup {
   participated         Boolean           @default(false)
   checkedInAt          DateTime?
   note                 String            @default("")
+  intendedTaskId       String?
   lastReminderSentAt   DateTime?
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt

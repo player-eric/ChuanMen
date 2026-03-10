@@ -79,6 +79,7 @@ export default function EventCreatePage() {
   const [publishDate, setPublishDate] = useState('');
   const [publishTime, setPublishTime] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [signupMode, setSignupMode] = useState<'direct' | 'application'>('direct');
   const [error, setError] = useState('');
   const [snackOpen, setSnackOpen] = useState(false);
 
@@ -218,6 +219,7 @@ export default function EventCreatePage() {
           ? Object.entries(recCatModes).map(([c, m]) => `${c}:${m}`)
           : undefined,
         isPrivate: isPrivate || undefined,
+        signupMode: signupMode === 'application' ? 'application' : undefined,
         isWeeklyLotteryEvent: lotteryId ? true : undefined,
         isHomeEvent: isHome || undefined,
         houseRules: isHome && houseRules.trim() ? houseRules.trim() : undefined,
@@ -768,6 +770,15 @@ export default function EventCreatePage() {
               ) : (
                 <Typography variant="caption" color="text.secondary">
                   发布后立即公开，所有成员可见并报名
+                </Typography>
+              )}
+              <FormControlLabel
+                control={<Switch checked={signupMode === 'application'} onChange={(e) => setSignupMode(e.target.checked ? 'application' : 'direct')} />}
+                label="申请制报名"
+              />
+              {signupMode === 'application' && (
+                <Typography variant="caption" color="text.secondary">
+                  参与者需提交申请留言，由你审批后参加
                 </Typography>
               )}
               <FormControlLabel

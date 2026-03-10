@@ -87,6 +87,7 @@ export class EventRepository {
     isWeeklyLotteryEvent?: boolean;
     isHomeEvent?: boolean;
     houseRules?: string;
+    signupMode?: 'direct' | 'application';
   }) {
     return this.prisma.event.create({
       data: {
@@ -110,6 +111,7 @@ export class EventRepository {
         isWeeklyLotteryEvent: input.isWeeklyLotteryEvent ?? false,
         isHomeEvent: input.isHomeEvent ?? false,
         houseRules: input.houseRules ?? '',
+        signupMode: input.signupMode,
       },
     });
   }
@@ -207,10 +209,10 @@ export class EventRepository {
    * Signup with capacity awareness.
    * Returns the signup record plus `wasWaitlisted` flag.
    */
-  async signup(eventId: string, userId: string) {
+  async signup(eventId: string, userId: string, note?: string, intendedTaskId?: string) {
     const event = await this.prisma.event.findUniqueOrThrow({
       where: { id: eventId },
-      select: { capacity: true, waitlistEnabled: true, phase: true, status: true, startsAt: true },
+      select: { capacity: true, waitlistEnabled: true, phase: true, status: true, startsAt: true, signupMode: true },
     });
 
     // Block self-signup after event has started (host can still invite via inviteUsers)
@@ -231,7 +233,19 @@ export class EventRepository {
         data: { status: 'accepted', ...(isEnded ? { participated: true } : {}) },
         include: { user: { select: { id: true, name: true, avatar: true } } },
       });
-      return { ...signup, wasWaitlisted: false };
+      return { ...signup, wasWaitlisted: false, wasPending: false };
+    }
+
+    // Application mode: set to pending (doesn't occupy capacity)
+    if (event.signupMode === 'application' && !isEnded) {
+      const signup = await this.prisma.eventSignup.upsert({
+        where: { eventId_userId: { eventId, userId } },
+        create: { eventId, userId, status: 'pending', note: note ?? '', intendedTaskId: intendedTaskId ?? null },
+        update: { status: 'pending', note: note ?? '', intendedTaskId: intendedTaskId ?? null },
+        include: { user: { select: { id: true, name: true, avatar: true } } },
+      });
+      this.touchUpdatedAt(eventId);
+      return { ...signup, wasWaitlisted: false, wasPending: true };
     }
 
     const full = await this.isFull(eventId, event.capacity);
@@ -242,13 +256,58 @@ export class EventRepository {
 
     const signup = await this.prisma.eventSignup.upsert({
       where: { eventId_userId: { eventId, userId } },
-      create: { eventId, userId, status, participated: isEnded },
-      update: { status, ...(isEnded ? { participated: true } : {}) },
+      create: { eventId, userId, status, participated: isEnded, note: note ?? '' },
+      update: { status, ...(isEnded ? { participated: true } : {}), ...(note ? { note } : {}) },
       include: { user: { select: { id: true, name: true, avatar: true } } },
     });
 
     this.touchUpdatedAt(eventId);
-    return { ...signup, wasWaitlisted: status === 'waitlist' };
+    return { ...signup, wasWaitlisted: status === 'waitlist', wasPending: false };
+  }
+
+  /** Host approves an application (pending → accepted). */
+  async hostApproveApplication(eventId: string, userId: string) {
+    const signup = await this.prisma.eventSignup.findUniqueOrThrow({
+      where: { eventId_userId: { eventId, userId } },
+    });
+    if (signup.status !== 'pending') throw new Error('只有 pending 状态可以批准');
+
+    // Check capacity before approving
+    const event = await this.prisma.event.findUniqueOrThrow({
+      where: { id: eventId },
+      select: { capacity: true },
+    });
+    const full = await this.isFull(eventId, event.capacity);
+    if (full) throw new Error('活动已满，无法批准更多申请');
+
+    const updated = await this.prisma.eventSignup.update({
+      where: { eventId_userId: { eventId, userId } },
+      data: { status: 'accepted', respondedAt: new Date() },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+
+    // Auto-claim intended task if still available
+    if (signup.intendedTaskId) {
+      await this.prisma.eventTask.updateMany({
+        where: { id: signup.intendedTaskId, eventId, claimedById: null },
+        data: { claimedById: userId },
+      });
+    }
+
+    return updated;
+  }
+
+  /** Host rejects an application (pending → rejected). */
+  async hostRejectApplication(eventId: string, userId: string) {
+    const signup = await this.prisma.eventSignup.findUniqueOrThrow({
+      where: { eventId_userId: { eventId, userId } },
+    });
+    if (signup.status !== 'pending') throw new Error('只有 pending 状态可以拒绝');
+    return this.prisma.eventSignup.update({
+      where: { eventId_userId: { eventId, userId } },
+      data: { status: 'rejected', respondedAt: new Date() },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
   }
 
   async inviteUsers(eventId: string, userIds: string[], invitedById: string) {

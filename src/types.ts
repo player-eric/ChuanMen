@@ -40,13 +40,15 @@ export type EventPhase = 'invite' | 'open' | 'closed' | 'ended' | 'cancelled';
 
 export type FoodOption = 'potluck' | 'host_cook' | 'eat_out' | 'none';
 
-export type SignupStatus = 'invited' | 'offered' | 'accepted' | 'waitlist' | 'declined' | 'rejected' | 'cancelled';
+export type SignupStatus = 'invited' | 'offered' | 'accepted' | 'waitlist' | 'pending' | 'declined' | 'rejected' | 'cancelled';
 
 export interface SignupInfo {
   userId: string;
   name: string;
   status: SignupStatus;
   offeredAt?: string;
+  note?: string;
+  intendedTaskId?: string;
 }
 
 export interface EventData {
@@ -77,6 +79,7 @@ export interface EventData {
   desc: string;
   houseRules?: string;
   isPrivate?: boolean;
+  signupMode?: 'direct' | 'application';
   foodOption?: FoodOption;
   restaurantLocation?: string;
   photoCount?: number;
@@ -88,6 +91,8 @@ export interface EventData {
   photos?: EventPhoto[];
   /** Number of people on the waitlist */
   waitlistCount?: number;
+  /** Number of pending applications */
+  pendingCount?: number;
   /** Current user's signup status */
   mySignupStatus?: SignupStatus;
   /** Offered timestamp (for countdown) */
@@ -281,7 +286,8 @@ export type FeedItem =
             | 'interest_express' | 'film_select'
             | 'mention' | 'event_invite' | 'task_assign'
             | 'postcard_received' | 'waitlist_offered' | 'waitlist_approved'
-            | 'proposal_realized';
+            | 'proposal_realized'
+            | 'application_received' | 'application_approved';
       name: string;
       targetTitle: string;
       time: string;

@@ -34,7 +34,7 @@ import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EditIcon from '@mui/icons-material/Edit';
 import ImageIcon from '@mui/icons-material/Image';
 import type { EventData, EventPhoto, EventTaskData, FoodOption, SignupStatus, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask, addCoHost, removeCoHost, toggleMovieVote, toggleRecommendationVote } from '@/lib/domainApi';
+import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, approveApplication, rejectApplication, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask, addCoHost, removeCoHost, toggleMovieVote, toggleRecommendationVote } from '@/lib/domainApi';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import CommentSection from '@/components/CommentSection';
 import { useAuth } from '@/auth/AuthContext';
@@ -46,6 +46,7 @@ const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 import { useTaskPresets } from '@/hooks/useTaskPresets';
 import { eventTagToChinese } from '@/lib/mappings';
 import { generateEventPoster, downloadBlob, resolveEventTag } from '@/lib/posterGenerator';
+import { useColors } from '@/hooks/useColors';
 
 /** Extract name string from people item (supports both legacy string and {name,avatar} object) */
 const pName = (p: string | { name: string; avatar?: string }): string => typeof p === 'string' ? p : p.name;
@@ -142,6 +143,7 @@ export default function EventDetailPage() {
   const navigate = useNavigate();
   const { eventId } = useParams();
   const { user } = useAuth();
+  const c = useColors();
   const taskPresets = useTaskPresets();
   const loadedEvent = useLoaderData() as EventData | null;
   const [event, setEvent] = useState<EventData | null>(loadedEvent);
@@ -165,6 +167,10 @@ export default function EventDetailPage() {
 
   const [inviteDeclined, setInviteDeclined] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [applicationDialogOpen, setApplicationDialogOpen] = useState(false);
+  const [applicationNote, setApplicationNote] = useState('');
+  const [applicationTaskId, setApplicationTaskId] = useState('');
+  const [capacityBumpTarget, setCapacityBumpTarget] = useState<{ userId: string; name: string } | null>(null);
   const [eventTasks, setEventTasks] = useState<EventTaskData[]>([]);
   const [taskEditing, setTaskEditing] = useState(false);
   const [taskClaimOpen, setTaskClaimOpen] = useState(false);
@@ -350,6 +356,11 @@ export default function EventDetailPage() {
       setCancelDialogOpen(true);
       return;
     }
+    // If already pending (application submitted), show cancel dialog
+    if (myStatus === 'pending') {
+      setCancelDialogOpen(true);
+      return;
+    }
 
     if (!eventId) {
       setMyStatus('accepted');
@@ -359,6 +370,13 @@ export default function EventDetailPage() {
       setFlash({ open: true, severity: 'error', message: '请先登录后再报名' });
       return;
     }
+
+    // Application mode: show dialog to enter note
+    if (event.signupMode === 'application' && myStatus !== 'invited') {
+      setApplicationDialogOpen(true);
+      return;
+    }
+
     try {
       const result = await signupEvent(eventId, user.id);
       if (result.wasWaitlisted) {
@@ -379,6 +397,33 @@ export default function EventDetailPage() {
         open: true,
         severity: 'error',
         message: error instanceof Error ? error.message : '报名失败，请稍后重试',
+      });
+    }
+  };
+
+  /** Submit application with note */
+  const onSubmitApplication = async () => {
+    if (!eventId || !user?.id) return;
+    try {
+      const result = await signupEvent(eventId, user.id, applicationNote.trim() || undefined, applicationTaskId || undefined);
+      if (result.wasPending) {
+        setMyStatus('pending');
+        setFlash({ open: true, severity: 'success', message: '申请已提交，等待审批' });
+      } else if (result.wasWaitlisted) {
+        setMyStatus('waitlist');
+        setFlash({ open: true, severity: 'success', message: '已加入等位名单' });
+      } else {
+        setMyStatus('accepted');
+        setFlash({ open: true, severity: 'success', message: '报名参加成功' });
+      }
+      setApplicationDialogOpen(false);
+      setApplicationNote('');
+      await refreshEvent();
+    } catch (error) {
+      setFlash({
+        open: true,
+        severity: 'error',
+        message: error instanceof Error ? error.message : '申请失败，请稍后重试',
       });
     }
   };
@@ -404,11 +449,14 @@ export default function EventDetailPage() {
       for (const chName of coHostNames) {
         if (chName && !people.includes(chName)) people.push(chName);
       }
+      const pendingSignups = signups.filter((s: any) => s.status === 'pending');
       const signupDetails = signups.map((s: any) => ({
         userId: s.user?.id ?? s.userId,
         name: s.user?.name ?? '?',
         status: s.status,
         offeredAt: s.offeredAt ?? undefined,
+        note: s.note || undefined,
+        intendedTaskId: s.intendedTaskId || undefined,
       }));
       const hostSlots = 1 + coHostNames.length;
       setEvent((prev) => prev ? {
@@ -417,6 +465,8 @@ export default function EventDetailPage() {
         host: hostName,
         spots: Math.max(0, (prev.total ?? 0) - hostSlots - occupying.length),
         waitlistCount: waitlistSignups.length,
+        pendingCount: pendingSignups.length,
+        signupMode: (raw as any).signupMode || 'direct',
         signupDetails,
         coHosts: coHostNames,
         coHostIds,
@@ -438,7 +488,9 @@ export default function EventDetailPage() {
   const eventStarted = (event as any).startsAt && new Date((event as any).startsAt) < new Date();
   const effectivePhase = (eventStarted && ['invite', 'open', 'closed'].includes(event.phase))
     ? phaseLabel.ended
-    : (phaseLabel[event.phase] ?? phaseLabel.open);
+    : event.signupMode === 'application' && event.phase === 'open'
+      ? { label: '申请制', color: 'warning' as const }
+      : (phaseLabel[event.phase] ?? phaseLabel.open);
   const phase = effectivePhase;
   const hostId: string = (loadedEvent as any)?.hostId ?? '';
   const isHost = Boolean(user?.id && hostId && user.id === hostId);
@@ -1424,6 +1476,79 @@ export default function EventDetailPage() {
           );
         })()}
 
+        {/* Host application management panel */}
+        {(isHost || isCoHost || isAdmin) && event.signupMode === 'application' && event.phase !== 'ended' && event.phase !== 'cancelled' && (() => {
+          const pendingPeople = (event.signupDetails ?? []).filter((s) => s.status === 'pending');
+          if (pendingPeople.length === 0) return null;
+          return (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+                  待审批申请 ({pendingPeople.length}人)
+                </Typography>
+                <Stack spacing={1.5}>
+                  {pendingPeople.map((s) => (
+                    <Stack key={s.userId} spacing={0.5}>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Avatar sx={{ width: 30, height: 30 }}>{firstNonEmoji(s.name)}</Avatar>
+                        <Typography variant="body2" sx={{ flex: 1 }}>{s.name}</Typography>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="success"
+                          onClick={async () => {
+                            if (!eventId || !user?.id) return;
+                            try {
+                              await approveApplication(eventId, s.userId, user.id);
+                              setFlash({ open: true, severity: 'success', message: `已通过 ${s.name} 的申请` });
+                              await Promise.all([refreshEvent(), refreshTasks()]);
+                            } catch (err: any) {
+                              const isFull = err?.status === 409;
+                              if (isFull) {
+                                setCapacityBumpTarget({ userId: s.userId, name: s.name });
+                              } else {
+                                setFlash({ open: true, severity: 'error', message: '操作失败' });
+                              }
+                            }
+                          }}
+                        >
+                          通过
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="warning"
+                          onClick={async () => {
+                            if (!eventId || !user?.id) return;
+                            try {
+                              await rejectApplication(eventId, s.userId, user.id);
+                              setFlash({ open: true, severity: 'success', message: `已婉拒 ${s.name}` });
+                              await refreshEvent();
+                            } catch {
+                              setFlash({ open: true, severity: 'error', message: '操作失败' });
+                            }
+                          }}
+                        >
+                          婉拒
+                        </Button>
+                      </Stack>
+                      {(s.note || s.intendedTaskId) && (
+                        <Box sx={{ ml: 5.5 }}>
+                          {s.note && <Typography variant="caption" color="text.secondary">留言：{s.note}</Typography>}
+                          {s.intendedTaskId && (() => {
+                            const task = eventTasks.find(t => t.id === s.intendedTaskId);
+                            return task ? <Typography variant="caption" color="primary">想认领：{task.role}</Typography> : null;
+                          })()}
+                        </Box>
+                      )}
+                    </Stack>
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         {/* 8. Unified tasks (分工) — persisted via API */}
         {(eventTasks.length > 0 || isHost || isCoHost || isAdmin) && (
           <Card>
@@ -2032,7 +2157,30 @@ export default function EventDetailPage() {
         })()}
         {event.phase !== 'cancelled' && myStatus !== 'offered' && (
           <Box>
-            {signedUp && event.phase !== 'ended' ? (
+            {myStatus === 'pending' && event.phase !== 'ended' ? (
+              /* Application pending: show status with cancel option */
+              <Stack spacing={1}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{ flex: 1, textAlign: 'center', py: 1.2, borderRadius: 2, bgcolor: 'warning.main', opacity: 0.15 }}>
+                    <Typography sx={{ color: 'warning.main', fontWeight: 700, fontSize: 14, opacity: 1 }}>申请已提交，等待审批</Typography>
+                  </Box>
+                  <Button size="small" color="inherit" sx={{ color: 'text.secondary', fontSize: 12, flexShrink: 0 }} onClick={() => setCancelDialogOpen(true)}>
+                    撤回申请
+                  </Button>
+                </Stack>
+                {(() => {
+                  const myDetail = (event.signupDetails ?? []).find((s) => s.userId === user?.id);
+                  if (!myDetail?.note && !myDetail?.intendedTaskId) return null;
+                  const task = myDetail.intendedTaskId ? eventTasks.find(t => t.id === myDetail.intendedTaskId) : null;
+                  return (
+                    <Box sx={{ px: 1.5, py: 1, bgcolor: 'action.hover', borderRadius: 2 }}>
+                      {myDetail.note && <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>留言：{myDetail.note}</Typography>}
+                      {task && <Typography variant="body2" color="primary" sx={{ fontSize: 13 }}>想认领：{task.role}</Typography>}
+                    </Box>
+                  );
+                })()}
+              </Stack>
+            ) : signedUp && event.phase !== 'ended' ? (
               /* Already signed up: muted status with cancel option */
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Box sx={{ flex: 1, textAlign: 'center', py: 1.2, borderRadius: 2, bgcolor: 'success.main', opacity: 0.15 }}>
@@ -2062,9 +2210,11 @@ export default function EventDetailPage() {
                     ? `等位中 · 第${((event.signupDetails ?? []).filter(s => s.status === 'waitlist').findIndex(s => s.userId === user.id) + 1) || '?'}位`
                     : myStatus === 'invited'
                       ? '接受邀请'
-                      : event.spots <= 0
-                        ? '加入等位'
-                        : '报名参加'}
+                      : event.signupMode === 'application'
+                        ? '申请参加'
+                        : event.spots <= 0
+                          ? '加入等位'
+                          : '报名参加'}
               </Button>
             ) : null}
           </Box>
@@ -2397,16 +2547,99 @@ export default function EventDetailPage() {
           </DialogActions>
         </Dialog>
 
-        {/* Cancel signup dialog */}
-        <Dialog open={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)}>
-          <DialogTitle>{myStatus === 'waitlist' ? '退出等位？' : '确定要取消报名吗？'}</DialogTitle>
+        {/* Capacity bump dialog (when approve fails due to full) */}
+        <Dialog open={Boolean(capacityBumpTarget)} onClose={() => setCapacityBumpTarget(null)}>
+          <DialogTitle>活动已满</DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary">
-              {myStatus === 'waitlist' ? '退出后你的等位位置将丢失。' : '取消后你的名额将释放给其他人。'}
+              当前活动已满员，是否增加 1 个名额并通过 {capacityBumpTarget?.name} 的申请？
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setCancelDialogOpen(false)}>{myStatus === 'waitlist' ? '继续等位' : '保持报名'}</Button>
+            <Button onClick={() => setCapacityBumpTarget(null)}>取消</Button>
+            <Button
+              variant="contained"
+              onClick={async () => {
+                if (!eventId || !user?.id || !capacityBumpTarget) return;
+                try {
+                  // Increase capacity by 1
+                  const newCapacity = (event?.total ?? 10) + 1;
+                  await updateEvent(eventId, { capacity: newCapacity });
+                  // Retry approve
+                  await approveApplication(eventId, capacityBumpTarget.userId, user.id);
+                  setFlash({ open: true, severity: 'success', message: `已增加名额并通过 ${capacityBumpTarget.name} 的申请` });
+                  setCapacityBumpTarget(null);
+                  await refreshEvent();
+                } catch {
+                  setFlash({ open: true, severity: 'error', message: '操作失败' });
+                  setCapacityBumpTarget(null);
+                }
+              }}
+            >
+              增加名额并通过
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Application note dialog */}
+        <Dialog open={applicationDialogOpen} onClose={() => setApplicationDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>申请参加</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              给 Host 留言，说说你为什么想参加（选填）
+            </Typography>
+            {eventTasks.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>想认领哪个分工？（选填）</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
+                  {eventTasks.map((t) => (
+                    <Box
+                      key={t.id}
+                      onClick={() => !t.claimedById && setApplicationTaskId(applicationTaskId === t.id ? '' : t.id)}
+                      sx={{
+                        px: 1.5, py: 0.5, borderRadius: 2, fontSize: 13, cursor: t.claimedById ? 'default' : 'pointer',
+                        border: '1px solid',
+                        borderColor: applicationTaskId === t.id ? 'primary.main' : 'divider',
+                        bgcolor: applicationTaskId === t.id ? 'primary.main' : 'transparent',
+                        color: t.claimedById ? 'text.disabled' : applicationTaskId === t.id ? 'primary.contrastText' : 'text.primary',
+                        opacity: t.claimedById ? 0.5 : 1,
+                        textDecoration: t.claimedById ? 'line-through' : 'none',
+                      }}
+                    >
+                      {t.role}{t.claimedById ? ` (${t.claimedBy?.name})` : ''}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            )}
+            <TextField
+              label="留言（选填）"
+              multiline
+              minRows={2}
+              maxRows={4}
+              fullWidth
+              value={applicationNote}
+              onChange={(e) => setApplicationNote(e.target.value)}
+              inputProps={{ maxLength: 500 }}
+              placeholder="给 Host 留个言..."
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => { setApplicationDialogOpen(false); setApplicationNote(''); setApplicationTaskId(''); }}>取消</Button>
+            <Button variant="contained" onClick={onSubmitApplication}>提交申请</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Cancel signup dialog */}
+        <Dialog open={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)}>
+          <DialogTitle>{myStatus === 'pending' ? '撤回申请？' : myStatus === 'waitlist' ? '退出等位？' : '确定要取消报名吗？'}</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary">
+              {myStatus === 'pending' ? '撤回后你需要重新提交申请。' : myStatus === 'waitlist' ? '退出后你的等位位置将丢失。' : '取消后你的名额将释放给其他人。'}
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCancelDialogOpen(false)}>{myStatus === 'pending' ? '保持申请' : myStatus === 'waitlist' ? '继续等位' : '保持报名'}</Button>
             <Button
               color="warning"
               onClick={async () => {
@@ -2414,10 +2647,10 @@ export default function EventDetailPage() {
                   try {
                     await cancelSignup(eventId, user.id);
                     setMyStatus(null);
-                    setFlash({ open: true, severity: 'success', message: myStatus === 'waitlist' ? '已退出等位' : '已取消报名' });
+                    setFlash({ open: true, severity: 'success', message: myStatus === 'pending' ? '已撤回申请' : myStatus === 'waitlist' ? '已退出等位' : '已取消报名' });
                     await refreshEvent();
                   } catch {
-                    setFlash({ open: true, severity: 'error', message: '取消报名失败，请稍后重试' });
+                    setFlash({ open: true, severity: 'error', message: '操作失败，请稍后重试' });
                   }
                 } else {
                   setMyStatus(null);
@@ -2425,7 +2658,7 @@ export default function EventDetailPage() {
                 setCancelDialogOpen(false);
               }}
             >
-              {myStatus === 'waitlist' ? '退出等位' : '取消报名'}
+              {myStatus === 'pending' ? '撤回申请' : myStatus === 'waitlist' ? '退出等位' : '取消报名'}
             </Button>
           </DialogActions>
         </Dialog>

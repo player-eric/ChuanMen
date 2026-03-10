@@ -146,6 +146,7 @@ export async function createEvent(payload: {
   recSelectionMode?: string;
   recCategories?: string[];
   isPrivate?: boolean;
+  signupMode?: 'direct' | 'application';
   proposalId?: string;
   tasks?: { role: string; description?: string }[];
 }) {
@@ -168,11 +169,11 @@ export async function getEventById(id: string) {
   return requestJson<EntityMap>(`/api/events/${id}`);
 }
 
-export async function signupEvent(eventId: string, userId: string) {
-  return requestJson<EntityMap & { wasWaitlisted?: boolean }>(`/api/events/${eventId}/signup`, {
+export async function signupEvent(eventId: string, userId: string, note?: string, intendedTaskId?: string) {
+  return requestJson<EntityMap & { wasWaitlisted?: boolean; wasPending?: boolean }>(`/api/events/${eventId}/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId }),
+    body: JSON.stringify({ userId, ...(note ? { note } : {}), ...(intendedTaskId ? { intendedTaskId } : {}) }),
   });
 }
 
@@ -839,6 +840,22 @@ export async function hostApproveWaitlist(eventId: string, userId: string, reque
 /** Host rejects a waitlisted person */
 export async function hostRejectWaitlist(eventId: string, userId: string, requesterId: string) {
   return requestJson<{ ok: boolean }>(`/api/events/${eventId}/waitlist/${userId}/reject`, {
+    method: 'POST',
+    headers: { 'x-user-id': requesterId },
+  });
+}
+
+/** Host approves an application */
+export async function approveApplication(eventId: string, userId: string, requesterId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/application/${userId}/approve`, {
+    method: 'POST',
+    headers: { 'x-user-id': requesterId },
+  });
+}
+
+/** Host rejects an application */
+export async function rejectApplication(eventId: string, userId: string, requesterId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/application/${userId}/reject`, {
     method: 'POST',
     headers: { 'x-user-id': requesterId },
   });

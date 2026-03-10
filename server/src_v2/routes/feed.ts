@@ -282,6 +282,36 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             take: 10,
             orderBy: { offeredAt: 'desc' },
           }),
+          // 8. 收到申请 (application_received — I'm host, someone applied)
+          prisma.eventSignup.findMany({
+            where: {
+              status: 'pending',
+              createdAt: { gte: fourteenDaysAgo },
+              event: { hostId: userId, signupMode: 'application' },
+            },
+            select: {
+              createdAt: true, note: true,
+              user: { select: { id: true, name: true } },
+              event: { select: { id: true, title: true } },
+            },
+            take: 10,
+            orderBy: { createdAt: 'desc' },
+          }),
+          // 9. 申请通过 (application_approved — my application was approved)
+          prisma.eventSignup.findMany({
+            where: {
+              userId,
+              status: 'accepted',
+              respondedAt: { gte: fourteenDaysAgo },
+              event: { signupMode: 'application' },
+            },
+            select: {
+              respondedAt: true,
+              event: { select: { id: true, title: true } },
+            },
+            take: 10,
+            orderBy: { respondedAt: 'desc' },
+          }),
           // 7. 创意变活动 (proposals I voted on that now have a linked event)
           prisma.proposalVote.findMany({
             where: { userId },
@@ -299,7 +329,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             },
           }),
         ])
-      : [[], [], [], [], [], []];
+      : [[], [], [], [], [], [], [], []];
 
     // Normalize notifications into a flat array
     const notifications: {
@@ -312,7 +342,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     }[] = [];
 
     if (userId) {
-      const [mentions, invites, taskAssigns, postcardReceived, waitlistSignups, proposalVotes] = notificationQueries;
+      const [mentions, invites, taskAssigns, postcardReceived, waitlistSignups, applicationReceived, applicationApproved, proposalVotes] = notificationQueries;
 
       // Build a userId→name map from already-fetched members for name lookups
       const memberNameMap = new Map<string, string>();
@@ -382,6 +412,29 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           targetTitle: s.event?.title ?? '',
           navTarget: `/events/${s.event?.id}`,
           createdAt: (s.status === 'offered' ? s.offeredAt : s.respondedAt ?? s.offeredAt)?.toISOString() ?? '',
+        });
+      }
+
+      // 8. Application received (host sees pending applications)
+      for (const s of applicationReceived as any[]) {
+        notifications.push({
+          action: 'application_received',
+          name: s.user?.name ?? '',
+          targetTitle: s.event?.title ?? '',
+          detail: s.note || undefined,
+          navTarget: `/events/${s.event?.id}`,
+          createdAt: s.createdAt?.toISOString() ?? '',
+        });
+      }
+
+      // 9. Application approved (applicant sees approval)
+      for (const s of applicationApproved as any[]) {
+        notifications.push({
+          action: 'application_approved',
+          name: '',
+          targetTitle: s.event?.title ?? '',
+          navTarget: `/events/${s.event?.id}`,
+          createdAt: s.respondedAt?.toISOString() ?? '',
         });
       }
 

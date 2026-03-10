@@ -383,6 +383,8 @@ const notifConfig: Record<string, { emoji: string; text: (n: PersonalNotificatio
   waitlist_offered:  { emoji: '🎉', text: n => `「${n.targetTitle}」有名额了，请在 24 小时内确认` },
   waitlist_approved: { emoji: '✅', text: n => `你已被接纳参加「${n.targetTitle}」` },
   proposal_realized: { emoji: '💡', text: n => `你感兴趣的创意「${n.targetTitle}」变成活动了` },
+  application_received: { emoji: '📋', text: n => `${n.name} 申请参加「${n.targetTitle}」` },
+  application_approved: { emoji: '✅', text: n => `你的「${n.targetTitle}」申请已通过` },
 };
 
 function NotificationBar({ notifications }: { notifications: PersonalNotification[] }) {

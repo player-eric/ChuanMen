@@ -170,6 +170,8 @@ export default function EventsPage() {
                     total={evt.total}
                     people={evt.people}
                     signupUserIds={evt.signupUserIds}
+                    pendingUserIds={evt.pendingUserIds}
+                    signupMode={evt.signupMode}
                     film={evt.film}
                     filmPoster={evt.filmPoster}
                     scene={evt.scene}

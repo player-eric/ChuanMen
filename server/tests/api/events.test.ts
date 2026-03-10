@@ -1078,3 +1078,158 @@ describe('Co-host removal promotes waitlisted', () => {
     expect(promoted!.status).toBe('offered');
   });
 });
+
+describe('Application-based signup', () => {
+  it('creates an event with signupMode=application', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/events',
+      payload: {
+        title: '申请制活动',
+        hostId: host.id,
+        startsAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+        city: 'NYC',
+        capacity: 6,
+        signupMode: 'application',
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().signupMode).toBe('application');
+  });
+
+  it('signup sets status to pending for application mode', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const applicant = await seedTestUser({ name: '申请人' });
+    const prisma = getTestPrisma();
+    const event = await seedTestEvent(host.id, {
+      title: '需要审批的活动',
+      signupMode: 'application',
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/events/${event.id}/signup`,
+      payload: { userId: applicant.id, note: '很想参加！' },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.status).toBe('pending');
+    expect(body.wasPending).toBe(true);
+    expect(body.note).toBe('很想参加！');
+
+    // Verify pending does NOT occupy capacity
+    const signup = await prisma.eventSignup.findUnique({
+      where: { eventId_userId: { eventId: event.id, userId: applicant.id } },
+    });
+    expect(signup!.status).toBe('pending');
+  });
+
+  it('host approves application → accepted', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const applicant = await seedTestUser({ name: '申请人' });
+    const prisma = getTestPrisma();
+    const event = await seedTestEvent(host.id, { signupMode: 'application' });
+    await prisma.eventSignup.create({
+      data: { eventId: event.id, userId: applicant.id, status: 'pending', note: '想来' },
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/events/${event.id}/application/${applicant.id}/approve`,
+      headers: { 'x-user-id': host.id },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().ok).toBe(true);
+
+    const signup = await prisma.eventSignup.findUnique({
+      where: { eventId_userId: { eventId: event.id, userId: applicant.id } },
+    });
+    expect(signup!.status).toBe('accepted');
+  });
+
+  it('host rejects application → rejected', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const applicant = await seedTestUser({ name: '被拒' });
+    const prisma = getTestPrisma();
+    const event = await seedTestEvent(host.id, { signupMode: 'application' });
+    await prisma.eventSignup.create({
+      data: { eventId: event.id, userId: applicant.id, status: 'pending' },
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/events/${event.id}/application/${applicant.id}/reject`,
+      headers: { 'x-user-id': host.id },
+    });
+    expect(res.statusCode).toBe(200);
+
+    const signup = await prisma.eventSignup.findUnique({
+      where: { eventId_userId: { eventId: event.id, userId: applicant.id } },
+    });
+    expect(signup!.status).toBe('rejected');
+  });
+
+  it('approve fails when event is full', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const member = await seedTestUser({ name: '已报名' });
+    const applicant = await seedTestUser({ name: '申请人' });
+    const prisma = getTestPrisma();
+    const event = await seedTestEvent(host.id, { signupMode: 'application', capacity: 2 });
+    // Fill the event (capacity 2 = host + 1 member)
+    await prisma.eventSignup.create({
+      data: { eventId: event.id, userId: member.id, status: 'accepted' },
+    });
+    await prisma.eventSignup.create({
+      data: { eventId: event.id, userId: applicant.id, status: 'pending' },
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/events/${event.id}/application/${applicant.id}/approve`,
+      headers: { 'x-user-id': host.id },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().message).toContain('已满');
+  });
+
+  it('invited user bypasses application mode', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const invited = await seedTestUser({ name: '受邀' });
+    const prisma = getTestPrisma();
+    const event = await seedTestEvent(host.id, { signupMode: 'application' });
+    // Invite the user first
+    await prisma.eventSignup.create({
+      data: { eventId: event.id, userId: invited.id, status: 'invited' },
+    });
+
+    // Signup (accept invite) should bypass application mode
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/events/${event.id}/signup`,
+      payload: { userId: invited.id },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.status).toBe('accepted');
+    expect(body.wasPending).toBe(false);
+  });
+
+  it('non-host cannot approve applications', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const random = await seedTestUser({ name: 'Random' });
+    const applicant = await seedTestUser({ name: '申请人' });
+    const prisma = getTestPrisma();
+    const event = await seedTestEvent(host.id, { signupMode: 'application' });
+    await prisma.eventSignup.create({
+      data: { eventId: event.id, userId: applicant.id, status: 'pending' },
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/events/${event.id}/application/${applicant.id}/approve`,
+      headers: { 'x-user-id': random.id },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+});

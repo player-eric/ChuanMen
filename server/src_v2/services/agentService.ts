@@ -95,6 +95,22 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: weekly lottery draw failed');
   }
 
+  // Phase 1c2: Auto-reject pending applications for ended events (silent, no email)
+  try {
+    const updatedPending = await prisma.eventSignup.updateMany({
+      where: {
+        status: 'pending',
+        event: { phase: 'ended' },
+      },
+      data: { status: 'rejected' },
+    });
+    if (updatedPending.count > 0) {
+      log.info(`Agent: auto-rejected ${updatedPending.count} pending application(s) for ended events`);
+    }
+  } catch (err) {
+    log.error({ err }, 'Agent: auto-reject pending applications failed');
+  }
+
   // Phase 1d: Update consecutiveEvents for recently ended events
   try {
     const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000);

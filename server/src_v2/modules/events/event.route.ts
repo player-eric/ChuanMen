@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { EventRepository } from './event.repository.js';
 import { EventService } from './event.service.js';
 import { sendEmail, sendTemplatedEmail } from '../../services/emailService.js';
+import { renderNotificationEmail } from '../../emails/template.js';
 
 export const eventRoutes: FastifyPluginAsync = async (app) => {
   const service = new EventService(new EventRepository(app.prisma), app.prisma);
@@ -329,8 +330,42 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.params as { id: string };
     const result = await service.signup(id, request.body);
 
-    // Fire-and-forget: TXN-3 signup confirmation (only for accepted, not waitlisted)
-    if (!result.wasWaitlisted && result.user) {
+    // Fire-and-forget: notify host when someone applies (application mode)
+    if (result.wasPending && result.user) {
+      const event = await app.prisma.event.findUnique({
+        where: { id },
+        select: { title: true, hostId: true, host: { select: { name: true, email: true, preferences: true } } },
+      });
+      if (event?.host?.email) {
+        const prefs = event.host.preferences as { emailState?: string } | null;
+        if (prefs?.emailState !== 'unsubscribed') {
+          const note = (request.body as any)?.note ?? '';
+          const rendered = renderNotificationEmail({
+            subject: `${result.user.name} 申请参加「${event.title}」`,
+            body: `Hi {hostName}，\n\n**{applicantName}** 申请参加「**{eventTitle}**」。`,
+            variables: {
+              hostName: event.host.name ?? '',
+              applicantName: result.user.name ?? '',
+              eventTitle: event.title,
+            },
+            linkLabel: '前往活动页审批 →',
+            linkUrl: `https://chuanmener.club/events/${id}`,
+            quote: note || undefined,
+          });
+          sendEmail({
+            to: event.host.email,
+            subject: rendered.subject,
+            text: rendered.text,
+            html: rendered.html,
+          }).catch((err) => {
+            app.log.error({ err }, 'Application notification to host failed');
+          });
+        }
+      }
+    }
+
+    // Fire-and-forget: TXN-3 signup confirmation (only for accepted, not waitlisted/pending)
+    if (!result.wasWaitlisted && !result.wasPending && result.user) {
       const event = await app.prisma.event.findUnique({
         where: { id },
         select: { title: true, startsAt: true, city: true, location: true },
@@ -429,6 +464,33 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     if (!requesterId) return reply.code(400).send({ message: '缺少 x-user-id' });
     try {
       const result = await service.hostRejectWaitlist(id, userId, requesterId);
+      return { ok: true, signup: result };
+    } catch (err: any) {
+      return reply.code(403).send({ message: err.message ?? '操作失败' });
+    }
+  });
+
+  // ── Application: host approves/rejects application ──
+
+  app.post('/:id/application/:userId/approve', async (request, reply) => {
+    const { id, userId } = request.params as { id: string; userId: string };
+    const requesterId = request.headers['x-user-id'] as string;
+    if (!requesterId) return reply.code(400).send({ message: '缺少 x-user-id' });
+    try {
+      const result = await service.hostApproveApplication(id, userId, requesterId);
+      return { ok: true, signup: result };
+    } catch (err: any) {
+      const isFull = err.message?.includes('已满');
+      return reply.code(isFull ? 409 : 403).send({ message: err.message ?? '操作失败' });
+    }
+  });
+
+  app.post('/:id/application/:userId/reject', async (request, reply) => {
+    const { id, userId } = request.params as { id: string; userId: string };
+    const requesterId = request.headers['x-user-id'] as string;
+    if (!requesterId) return reply.code(400).send({ message: '缺少 x-user-id' });
+    try {
+      const result = await service.hostRejectApplication(id, userId, requesterId);
       return { ok: true, signup: result };
     } catch (err: any) {
       return reply.code(403).send({ message: err.message ?? '操作失败' });
