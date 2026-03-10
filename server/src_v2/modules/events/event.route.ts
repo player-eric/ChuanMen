@@ -375,7 +375,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     if (!result.wasWaitlisted && !result.wasPending && result.user) {
       const event = await app.prisma.event.findUnique({
         where: { id },
-        select: { title: true, startsAt: true, city: true, location: true },
+        select: { title: true, startsAt: true, city: true, location: true, hostId: true, host: { select: { name: true, email: true, preferences: true } } },
       });
       if (event && result.user.name) {
         const user = await app.prisma.user.findUnique({
@@ -405,6 +405,32 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
               });
             }).catch((err) => {
               app.log.error({ err, userId: result.userId }, 'TXN-3 signup email failed');
+            });
+          }
+        }
+
+        // Notify host about the direct signup (skip if host signed up for own event)
+        if (event.hostId !== result.userId && event.host?.email) {
+          const hostPrefs = event.host.preferences as { emailState?: string } | null;
+          if (hostPrefs?.emailState !== 'unsubscribed') {
+            const rendered = renderNotificationEmail({
+              subject: `${result.user.name} 已报名「${event.title}」`,
+              body: `Hi {hostName}，\n\n**{userName}** 已报名参加「**{eventTitle}**」。`,
+              variables: {
+                hostName: event.host.name ?? '',
+                userName: result.user.name ?? '',
+                eventTitle: event.title,
+              },
+              linkLabel: '查看活动详情 →',
+              linkUrl: `https://chuanmener.club/events/${id}`,
+            });
+            sendEmail({
+              to: event.host.email,
+              subject: rendered.subject,
+              text: rendered.text,
+              html: rendered.html,
+            }).catch((err) => {
+              app.log.error({ err }, 'Direct signup notification to host failed');
             });
           }
         }

@@ -79,7 +79,7 @@ export default function EventCreatePage() {
   const [publishDate, setPublishDate] = useState('');
   const [publishTime, setPublishTime] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
-  const [signupMode, setSignupMode] = useState<'direct' | 'application'>('direct');
+  const [signupMode, setSignupMode] = useState<'direct' | 'application'>('application');
   const [error, setError] = useState('');
   const [snackOpen, setSnackOpen] = useState(false);
 
@@ -219,7 +219,7 @@ export default function EventCreatePage() {
           ? Object.entries(recCatModes).map(([c, m]) => `${c}:${m}`)
           : undefined,
         isPrivate: isPrivate || undefined,
-        signupMode: signupMode === 'application' ? 'application' : undefined,
+        signupMode,
         isWeeklyLotteryEvent: lotteryId ? true : undefined,
         isHomeEvent: isHome || undefined,
         houseRules: isHome && houseRules.trim() ? houseRules.trim() : undefined,

@@ -72,6 +72,51 @@ export const commentRoutes: FastifyPluginAsync = async (app) => {
       })();
     }
 
+    // Fire-and-forget: notify event host about new comment
+    if (comment.entityType === 'event') {
+      const mentionedIds = extractMentionIds(comment.content);
+      void (async () => {
+        try {
+          const event = await app.prisma.event.findUnique({
+            where: { id: comment.entityId },
+            select: { title: true, hostId: true, host: { select: { name: true, email: true, preferences: true } } },
+          });
+          if (
+            event?.host?.email &&
+            comment.authorId !== event.hostId &&
+            !mentionedIds.includes(event.hostId)
+          ) {
+            const prefs = event.host.preferences as { emailState?: string } | null;
+            if (prefs?.emailState !== 'unsubscribed') {
+              const authorName = comment.author?.name ?? '有人';
+              const commentText = comment.content.replace(/<[^>]*>/g, '').trim();
+              const origin = env.FRONTEND_ORIGIN || 'https://chuanmener.club';
+              const rendered = renderNotificationEmail({
+                subject: `${authorName} 评论了「${event.title}」`,
+                body: `Hi {hostName}，\n\n**{authorName}** 在「**{eventTitle}**」中留下了评论：`,
+                variables: {
+                  hostName: event.host.name ?? '',
+                  authorName,
+                  eventTitle: event.title,
+                },
+                quote: commentText,
+                linkLabel: '查看评论 →',
+                linkUrl: `${origin}/events/${comment.entityId}`,
+              });
+              await sendEmail({
+                to: event.host.email,
+                subject: rendered.subject,
+                text: rendered.text,
+                html: rendered.html,
+              });
+            }
+          }
+        } catch {
+          // Silently fail — host comment notification is best-effort
+        }
+      })();
+    }
+
     return reply.code(201).send(comment);
   });
 

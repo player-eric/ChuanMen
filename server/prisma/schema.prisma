@@ -318,7 +318,7 @@ model Event {
   isHomeEvent            Boolean                   @default(false)
   locationPrivate        Boolean                   @default(false)
   isPrivate              Boolean                   @default(false)
-  signupMode             SignupMode                @default(direct)
+  signupMode             SignupMode                @default(application)
   creditsAwarded         Boolean                   @default(false)
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt
