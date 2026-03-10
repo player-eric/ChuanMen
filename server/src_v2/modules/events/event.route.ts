@@ -185,7 +185,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     // Snapshot old phase before update (for TXN-1 cancel detection)
     const oldEvent = await app.prisma.event.findUnique({
       where: { id },
-      select: { phase: true, title: true, startsAt: true, city: true, location: true, host: { select: { name: true } } },
+      select: { phase: true, title: true, startsAt: true, city: true, location: true, address: true, host: { select: { name: true } } },
     });
 
     const updated = await service.updateEvent(id, body);
@@ -193,7 +193,14 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     // Fire-and-forget: TXN-1 (event cancelled) or TXN-2 (event updated)
     if (oldEvent) {
       const wasCancelled = oldEvent.phase !== 'cancelled' && body.phase === 'cancelled';
-      const wasUpdated = !wasCancelled && (body.startsAt || body.location || body.address || body.city || body.title);
+      // Only treat as "updated" if key fields actually changed (compare with old values)
+      const meaningfulChange =
+        (body.title && body.title !== oldEvent.title) ||
+        (body.startsAt && new Date(body.startsAt).getTime() !== oldEvent.startsAt?.getTime()) ||
+        (body.location && body.location !== oldEvent.location) ||
+        (body.city && body.city !== oldEvent.city) ||
+        (body.address !== undefined && body.address !== (oldEvent as any).address);
+      const wasUpdated = !wasCancelled && meaningfulChange;
 
       if (wasCancelled || wasUpdated) {
         const ruleId = wasCancelled ? 'TXN-1' : 'TXN-2';

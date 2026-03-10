@@ -2343,8 +2343,10 @@ export default function EventDetailPage() {
                   if (editZipCode !== (event.zipCode ?? '')) payload.zipCode = editZipCode;
                   if (editAddress !== (event.address ?? '')) payload.address = editAddress;
                   if (editCapacity !== event.total) payload.capacity = editCapacity;
-                  if (editStartsAt) payload.startsAt = editStartsAt;
-                  if (editEndsAt) payload.endsAt = editEndsAt;
+                  const origStartsAt = (loadedEvent as any)?.startsAt ? new Date((loadedEvent as any).startsAt).toISOString().slice(0, 16) : '';
+                  const origEndsAt = (loadedEvent as any)?.endsAt ? new Date((loadedEvent as any).endsAt).toISOString().slice(0, 16) : '';
+                  if (editStartsAt && editStartsAt !== origStartsAt) payload.startsAt = editStartsAt;
+                  if (editEndsAt && editEndsAt !== origEndsAt) payload.endsAt = editEndsAt;
                   const currentImageUrl = isImageUrl(event.scene) ? event.scene : '';
                   if (editTitleImageUrl !== currentImageUrl) payload.titleImageUrl = editTitleImageUrl;
                   if (editSignupMode !== (event.signupMode ?? 'direct')) payload.signupMode = editSignupMode;
