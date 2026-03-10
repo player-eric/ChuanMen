@@ -319,6 +319,7 @@ export async function updateEvent(eventId: string, payload: {
   recSelectionMode?: string;
   recCategories?: string[];
   isPrivate?: boolean;
+  signupMode?: 'direct' | 'application';
 }) {
   return requestJson<{ ok: boolean; event: EntityMap }>(`/api/events/${eventId}`, {
     method: 'PATCH',
