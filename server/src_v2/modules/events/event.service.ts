@@ -59,7 +59,7 @@ const updateEventSchema = z.object({
 });
 
 const addRecapPhotoSchema = z.object({
-  photoUrl: z.string().url(),
+  photoUrl: z.string().min(1),
   caption: z.string().max(100).optional(),
 });
 

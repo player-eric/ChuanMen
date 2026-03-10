@@ -95,9 +95,11 @@ export async function uploadMedia(
   if (ownerId) params.set('ownerId', ownerId);
 
   const arrayBuffer = await file.arrayBuffer();
+  // Always send as application/octet-stream to avoid mobile browser Content-Type issues
+  // (e.g. image/heic, image/jpg, charset suffixes). Actual type is in query param.
   const response = await fetch(getApiUrl(`/api/media/upload?${params}`), {
     method: 'POST',
-    headers: { 'Content-Type': contentType },
+    headers: { 'Content-Type': 'application/octet-stream' },
     body: arrayBuffer,
   });
   const data = await response.json().catch(() => null);
