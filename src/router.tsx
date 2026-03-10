@@ -144,7 +144,7 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
       spots: Math.max(0, (e.capacity ?? 8) - feedHostSlots - feedOccupying.length),
       total: e.capacity ?? 8,
       people,
-      signupUserIds: allSignups.filter((s: any) => s.status !== 'pending').map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
+      signupUserIds: allSignups.filter((s: any) => s.status === 'accepted').map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
       pendingUserIds: allSignups.filter((s: any) => s.status === 'pending').map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
       film: e.screenedMovies?.[0]?.movie?.title,
       filmPoster: e.screenedMovies?.[0]?.movie?.poster || undefined,
@@ -451,6 +451,7 @@ function mapApiEvent(e: any): any {
   // Collect signup user IDs for visibility checks (invite phase) — include all non-removed
   // Pending users are included for visibility but tracked separately
   const signupUserIds = signups.filter((s: any) => s.status !== 'pending').map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
+  const acceptedSignupUserIds = signups.filter((s: any) => s.status === 'accepted').map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
   const pendingUserIds = pendingSignups.map((s: any) => s.user?.id ?? s.userId).filter(Boolean);
   if (hostId && !signupUserIds.includes(hostId)) {
     signupUserIds.unshift(hostId);
@@ -532,6 +533,7 @@ function mapApiEvent(e: any): any {
     total: e.capacity ?? 0,
     people,
     signupUserIds,
+    acceptedSignupUserIds,
     pendingUserIds,
     signupDetails,
     coHosts: coHostNames,

@@ -186,7 +186,7 @@ export default function EventsPage() {
                     commentCount={evt.commentCount}
                     socialHint={user?.id ? (() => {
                       let best: { name: string; count: number } | undefined;
-                      for (const uid of (evt.signupUserIds ?? [])) {
+                      for (const uid of (evt.acceptedSignupUserIds ?? evt.signupUserIds ?? [])) {
                         if (uid === user.id) continue;
                         const entry = coAttendeeMap.get(uid);
                         if (entry && (!best || entry.count > best.count)) best = entry;
