@@ -204,6 +204,7 @@ export default function EventDetailPage() {
   const [editStartsAt, setEditStartsAt] = useState('');
   const [editEndsAt, setEditEndsAt] = useState('');
   const [editTitleImageUrl, setEditTitleImageUrl] = useState('');
+  const [editSignupMode, setEditSignupMode] = useState<'direct' | 'application'>('direct');
   const [editSaving, setEditSaving] = useState(false);
   const [posterLoading, setPosterLoading] = useState(false);
 
@@ -631,6 +632,7 @@ export default function EventDetailPage() {
                     setEditStartsAt((loadedEvent as any)?.startsAt ? new Date((loadedEvent as any).startsAt).toISOString().slice(0, 16) : '');
                     setEditEndsAt((loadedEvent as any)?.endsAt ? new Date((loadedEvent as any).endsAt).toISOString().slice(0, 16) : '');
                     setEditTitleImageUrl(isImageUrl(event.scene) ? event.scene : '');
+                    setEditSignupMode(event.signupMode ?? 'direct');
                     setEditOpen(true);
                   }}
                 >
@@ -651,6 +653,22 @@ export default function EventDetailPage() {
                   }}
                 >
                   {event.isPrivate ? '🔒 设为公开' : '🔓 设为私密'}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color={event.signupMode === 'application' ? 'warning' : 'inherit'}
+                  onClick={async () => {
+                    if (!eventId) return;
+                    const next = event.signupMode === 'application' ? 'direct' : 'application';
+                    try {
+                      await updateEvent(eventId, { signupMode: next });
+                      setEvent((prev) => prev ? { ...prev, signupMode: next } : prev);
+                      setFlash({ open: true, severity: 'success', message: next === 'application' ? '已开启申请制' : '已切换为直接报名' });
+                    } catch { setFlash({ open: true, severity: 'error', message: '操作失败' }); }
+                  }}
+                >
+                  {event.signupMode === 'application' ? '📋 关闭申请制' : '📋 开启申请制'}
                 </Button>
                 {event.phase === 'invite' && (
                   <Button
@@ -2286,6 +2304,13 @@ export default function EventDetailPage() {
                   <RichTextEditorLazy content={editDesc} onChange={setEditDesc} placeholder="活动说明..." />
                 </Suspense>
               </Box>
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Box>
+                  <Typography variant="body2">申请制报名</Typography>
+                  <Typography variant="caption" color="text.secondary">开启后参与者需提交申请，由你审批</Typography>
+                </Box>
+                <Switch checked={editSignupMode === 'application'} onChange={(_, checked) => setEditSignupMode(checked ? 'application' : 'direct')} />
+              </Stack>
             </Stack>
           </DialogContent>
           <DialogActions>
@@ -2309,6 +2334,7 @@ export default function EventDetailPage() {
                   if (editEndsAt) payload.endsAt = editEndsAt;
                   const currentImageUrl = isImageUrl(event.scene) ? event.scene : '';
                   if (editTitleImageUrl !== currentImageUrl) payload.titleImageUrl = editTitleImageUrl;
+                  if (editSignupMode !== (event.signupMode ?? 'direct')) payload.signupMode = editSignupMode;
                   if (Object.keys(payload).length > 0) {
                     await updateEvent(eventId, payload as any);
                     setEvent((prev) => prev ? {
@@ -2324,6 +2350,7 @@ export default function EventDetailPage() {
                       date: editStartsAt ? new Date(editStartsAt).toLocaleString('zh-CN') : prev.date,
                       endDate: editEndsAt ? new Date(editEndsAt).toLocaleString('zh-CN') : prev.endDate,
                       scene: editTitleImageUrl || prev.scene,
+                      signupMode: editSignupMode,
                     } : prev);
                     setFlash({ open: true, severity: 'success', message: '活动已更新' });
                   }

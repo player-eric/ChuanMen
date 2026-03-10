@@ -58,6 +58,7 @@ const updateEventSchema = z.object({
   recSelectionMode: z.enum(['nominate', 'pick']).optional(),
   recCategories: z.array(z.string()).optional(),
   isPrivate: z.boolean().optional(),
+  signupMode: z.enum(['direct', 'application']).optional(),
 });
 
 const addRecapPhotoSchema = z.object({
