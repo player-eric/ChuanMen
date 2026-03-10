@@ -260,6 +260,25 @@ export default function EventDetailPage() {
     fetchMembersApi().then((m: any[]) => setAllMembers(m)).catch(() => {});
   }, []);
 
+  // Paste image (Ctrl+V) support for upload dialog
+  useEffect(() => {
+    if (!uploadOpen) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+      const files = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith('image/'));
+      if (files.length === 0) return;
+      e.preventDefault();
+      setUploadPreviews((prev) => {
+        const valid = files.slice(0, 9 - prev.length);
+        const newPreviews = valid.map((file) => ({ file, preview: URL.createObjectURL(file), caption: '' }));
+        return [...prev, ...newPreviews].slice(0, 9);
+      });
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [uploadOpen]);
+
   useEffect(() => {
     const run = async () => {
       if (!eventId || loadedEvent) {
@@ -578,21 +597,37 @@ export default function EventDetailPage() {
 
         {/* 1. Scene photo header */}
         <Card sx={{ overflow: 'hidden' }}>
-          <Box sx={{ position: 'relative' }}>
-            <ScenePhoto scene={event.scene} h={200} style={{ borderRadius: 0 }}>
-              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))' }} />
+          {isImageUrl(event.scene) ? (
+            /* Poster hero: blur-fill background + large poster, height adapts to image */
+            <Box sx={{ position: 'relative', overflow: 'hidden' }}>
+              <Box sx={{ position: 'absolute', inset: 0, backgroundImage: `url(${event.scene})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(24px) brightness(0.3)', transform: 'scale(1.3)' }} />
+              <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 40%, rgba(0,0,0,0.6))' }} />
+              <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', py: 2, px: 1 }}>
+                <img src={event.scene} alt="" style={{ width: '100%', maxHeight: 600, objectFit: 'contain', borderRadius: 8, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }} />
+              </Box>
               <Box sx={{ position: 'absolute', bottom: 16, left: 16, right: 16 }}>
                 <Typography variant="h5" fontWeight={700} sx={{ color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
                   {event.title}
                 </Typography>
               </Box>
-              {event.film && (
-                <Box sx={{ position: 'absolute', bottom: 12, right: 16 }}>
-                  <Poster title={event.film} w={40} h={56} />
+            </Box>
+          ) : (
+            <Box sx={{ position: 'relative' }}>
+              <ScenePhoto scene={event.scene} h={200} objectFit="cover" style={{ borderRadius: 0 }}>
+                <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))' }} />
+                <Box sx={{ position: 'absolute', bottom: 16, left: 16, right: 16 }}>
+                  <Typography variant="h5" fontWeight={700} sx={{ color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+                    {event.title}
+                  </Typography>
                 </Box>
-              )}
-            </ScenePhoto>
-          </Box>
+                {event.film && (
+                  <Box sx={{ position: 'absolute', bottom: 12, right: 16 }}>
+                    <Poster title={event.film} w={40} h={56} />
+                  </Box>
+                )}
+              </ScenePhoto>
+            </Box>
+          )}
 
           <CardContent>
             {/* 2. Phase badge + date & location — single row */}
@@ -2008,6 +2043,15 @@ export default function EventDetailPage() {
             {uploadPreviews.length === 0 ? (
               <Box
                 onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onDrop={(e) => {
+                  e.preventDefault(); e.stopPropagation();
+                  const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+                  if (files.length === 0) return;
+                  const valid = files.slice(0, 9);
+                  const newPreviews = valid.map((file) => ({ file, preview: URL.createObjectURL(file), caption: '' }));
+                  setUploadPreviews((prev) => [...prev, ...newPreviews].slice(0, 9));
+                }}
                 sx={{
                   border: '2px dashed',
                   borderColor: 'divider',
@@ -2018,13 +2062,26 @@ export default function EventDetailPage() {
                   '&:hover': { borderColor: 'primary.main' },
                 }}
               >
-                <Typography variant="body1" sx={{ mb: 0.5 }}>点击选择照片</Typography>
+                <Typography variant="body1" sx={{ mb: 0.5 }}>点击、粘贴或拖拽照片到此处</Typography>
                 <Typography variant="caption" color="text.secondary">
                   最多选择 9 张，单张不超过 10MB
                 </Typography>
               </Box>
             ) : (
-              <Stack spacing={2}>
+              <Stack
+                spacing={2}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onDrop={(e) => {
+                  e.preventDefault(); e.stopPropagation();
+                  const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+                  if (files.length === 0) return;
+                  setUploadPreviews((prev) => {
+                    const valid = files.slice(0, 9 - prev.length);
+                    const newPreviews = valid.map((file) => ({ file, preview: URL.createObjectURL(file), caption: '' }));
+                    return [...prev, ...newPreviews].slice(0, 9);
+                  });
+                }}
+              >
                 <Box
                   sx={{
                     display: 'grid',

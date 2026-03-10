@@ -34,7 +34,7 @@ function extractEntity(navTarget?: string): { entityType: string; entityId: stri
   return undefined;
 }
 import { PostCard } from './PostCard';
-import { ScenePhoto } from './ScenePhoto';
+import { ScenePhoto, isImageUrl } from './ScenePhoto';
 
 /* ═══════════════════════════════════════════════════════════
  * Font-size scale (aligned with MUI Typography defaults)
@@ -383,25 +383,9 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
   return (
     <Card>
       <div onClick={goNav} style={{ cursor: goNav ? 'pointer' : 'default', opacity: isList && isCancelled ? 0.6 : 1 }}>
-      {scene && (
-          <ScenePhoto scene={scene} h={90}>
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(transparent, rgba(0,0,0,0.45))' }} />
-            <div style={{ position: 'absolute', top: 8, right: 10, display: 'flex', gap: 6 }}>
-              {isList && pc ? (
-                <div style={{ padding: '3px 8px', background: `${pc.bg}`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, fontWeight: 600, color: pc.fg }}>{pc.label}</div>
-              ) : (
-                <div style={{ padding: '3px 8px', background: `${c.s2}cc`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, color: c.text2 }}>{date}</div>
-              )}
-              {isPrivate && (
-                <div style={{ padding: '3px 8px', background: `${c.warm}25`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, fontWeight: 600, color: c.warm }}>🔒 私密</div>
-              )}
-            </div>
-            {film && <div style={{ position: 'absolute', bottom: 8, left: 10 }}>{filmPoster ? <img src={filmPoster} alt={film} style={{ width: 32, height: 44, borderRadius: 4, objectFit: 'cover' }} /> : <Poster title={film} w={32} h={44} />}</div>}
-          </ScenePhoto>
-      )}
-      <div style={{ padding: 14 }}>
-        {/* Feed mode: author header */}
-        {!isList && (
+      {/* Feed mode: author header (always full-width, above both layouts) */}
+      {!isList && (
+        <div style={{ padding: '14px 14px 0' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <span onClick={(e) => { e.stopPropagation(); goMember(name); }}><Ava name={name} src={hostAvatar} size={32} badge="🏠" /></span>
             <div style={{ flex: 1 }}>
@@ -419,111 +403,230 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
               {time && <div style={{ fontSize: 12, color: c.text3 }}>{time}</div>}
             </div>
           </div>
-        )}
-        {/* Comment preview */}
-        {!isList && activityHint === 'comment' && activityHintComment && (
-          <div style={{
-            fontSize: 13, color: c.text2, marginBottom: 8,
-            padding: '6px 10px', borderRadius: 6, background: c.s2,
-            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-          }}>
-            {activityHintComment.replace(/<[^>]*>/g, '')}
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, flex: 1 }}>{title}</div>
-          {isHomeEvent && (
-            <div style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: c.warmDim, color: c.warm, flexShrink: 0 }}>🏠 在家</div>
-          )}
-          {isList && !scene && pc && (
-            <div style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: pc.bg, color: pc.fg, flexShrink: 0 }}>{pc.label}</div>
-          )}
-        </div>
-        {!scene && <div style={{ fontSize: 13, color: c.text2, marginBottom: 8 }}>{date} · {location}</div>}
-        {scene && <div style={{ fontSize: 13, color: c.text2, marginBottom: 8 }}>{isList ? `${date} · ${location}` : location}</div>}
-        {!scene && film && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', background: c.s2, borderRadius: 6, marginBottom: 8 }}>
-            {filmPoster ? <img src={filmPoster} alt={film} style={{ width: 20, height: 28, borderRadius: 3, objectFit: 'cover' }} /> : <Poster title={film} w={20} h={28} />}<span style={{ fontSize: 12, color: c.text2 }}>放映 {film}</span>
-          </div>
-        )}
-        {isList && houseRules && (
-          <div style={{ fontSize: 12, color: c.text3, fontStyle: 'italic', marginBottom: 8 }}>🏠 {houseRules}</div>
-        )}
-        {/* List mode: host row */}
-        {isList && (
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
-            <Ava name={name} src={hostAvatar} size={22} onTap={() => goMember(name)} />
-            <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ fontSize: 12, color: c.text3, cursor: 'pointer' }}>{name} Host</span>
-          </div>
-        )}
-        {/* People + spots (both modes) */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <AvaStack names={people} />
-          {isEnded ? (
-            <div style={{ display: 'flex', gap: 8 }}>
-              {photoCount != null && photoCount > 0 && <span style={{ fontSize: 12, color: c.text3 }}>📷 {photoCount}</span>}
+          {/* Comment preview */}
+          {activityHint === 'comment' && activityHintComment && (
+            <div style={{
+              fontSize: 13, color: c.text2, marginBottom: 8,
+              padding: '6px 10px', borderRadius: 6, background: c.s2,
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>
+              {activityHintComment.replace(/<[^>]*>/g, '')}
             </div>
-          ) : !isCancelled && (
-            <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `${total ? `${total - spots}/${total}人 · ` : ''}还剩 ${spots} 位` : (waitlistCount ?? 0) > 0 ? `已满 · ${waitlistCount}人等位` : '已满'}</span>
           )}
         </div>
-        {/* Task summary */}
-        {taskSummary && taskSummary.length > 0 && !isCancelled && (
-          <div style={{ fontSize: 12, color: c.text3, marginBottom: 8, lineHeight: 1.6 }}>
-            分工：{taskSummary.map((t, i) => (
-              <span key={i}>
-                {i > 0 && ' · '}
-                {t.role}{' '}
-                <span style={{ color: t.claimerName ? c.text2 : c.warm, fontWeight: t.claimerName ? 400 : 600 }}>
-                  {t.claimerName || '待认领'}
-                </span>
-              </span>
-            ))}
+      )}
+
+      {isImageUrl(scene) ? (
+        /* ── Poster hero layout: blur-fill bg + centered poster ── */
+        <>
+          <div style={{ position: 'relative', overflow: 'hidden', display: 'flex', justifyContent: 'center', padding: '16px 0' }}>
+            {/* Blurred poster background fill */}
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${scene})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px) brightness(0.5)', transform: 'scale(1.3)' }} />
+            {/* Bottom gradient for text readability */}
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', zIndex: 1 }} />
+            {/* Centered poster — no cropping, auto height */}
+            <img src={scene} alt="" style={{ position: 'relative', zIndex: 2, display: 'block', maxHeight: 220, maxWidth: '85%', objectFit: 'contain', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }} />
+            {/* Chips top-right */}
+            <div style={{ position: 'absolute', top: 8, right: 10, display: 'flex', gap: 6, zIndex: 3 }}>
+              {pc && (
+                <div style={{ padding: '3px 8px', background: `${pc.bg}`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, fontWeight: 600, color: pc.fg }}>{pc.label}</div>
+              )}
+              {isPrivate && (
+                <div style={{ padding: '3px 8px', background: `${c.warm}25`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, fontWeight: 600, color: c.warm }}>🔒 私密</div>
+              )}
+            </div>
+            {/* Title + date overlaid at bottom */}
+            <div style={{ position: 'absolute', bottom: 10, left: 14, right: 14, zIndex: 3 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>{title}</div>
+                {isHomeEvent && (
+                  <div style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: 'rgba(212,165,116,0.25)', color: c.warm, flexShrink: 0 }}>🏠 在家</div>
+                )}
+              </div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{date} · {location}</div>
+            </div>
           </div>
-        )}
-        {/* Ended event: show passive label if user joined */}
-        {isEnded && !isCancelled && user && joined && (
-          <div style={{
-            width: '100%', padding: '9px 0', borderRadius: 8, textAlign: 'center',
-            background: c.s2, border: `1px solid ${c.green}20`,
-            color: c.green, fontSize: 14, fontWeight: 700, opacity: 0.7,
-          }}>
-            ✓ 已参与
-          </div>
-        )}
-        {/* Social hint + signup (skip for ended/cancelled and host) */}
-        {!isEnded && !isCancelled && (
-          <>
-            {socialHint && (
-              <div style={{ background: c.warmDim, borderRadius: 6, padding: '5px 10px', marginBottom: 10, fontSize: 12, color: c.warm }}>
-                {'💡'} {socialHint.name}也报名了（你们一起参加过 {socialHint.count} 次活动）
+          <div style={{ padding: 14 }}>
+            {/* People + spots */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <AvaStack names={people} />
+              {isEnded ? (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {photoCount != null && photoCount > 0 && <span style={{ fontSize: 12, color: c.text3 }}>📷 {photoCount}</span>}
+                </div>
+              ) : !isCancelled && (
+                <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `${total ? `${total - spots}/${total}人 · ` : ''}还剩 ${spots} 位` : (waitlistCount ?? 0) > 0 ? `已满 · ${waitlistCount}人等位` : '已满'}</span>
+              )}
+            </div>
+            {isList && houseRules && (
+              <div style={{ fontSize: 12, color: c.text3, fontStyle: 'italic', marginBottom: 8 }}>🏠 {houseRules}</div>
+            )}
+            {taskSummary && taskSummary.length > 0 && !isCancelled && (
+              <div style={{ fontSize: 12, color: c.text3, marginBottom: 8, lineHeight: 1.6 }}>
+                分工：{taskSummary.map((t, i) => (
+                  <span key={i}>
+                    {i > 0 && ' · '}
+                    {t.role}{' '}
+                    <span style={{ color: t.claimerName ? c.text2 : c.warm, fontWeight: t.claimerName ? 400 : 600 }}>
+                      {t.claimerName || '待认领'}
+                    </span>
+                  </span>
+                ))}
               </div>
             )}
-            {isHost ? (
+            {isEnded && !isCancelled && user && joined && (
               <div style={{
                 width: '100%', padding: '9px 0', borderRadius: 8, textAlign: 'center',
-                background: c.s2, border: `1px solid ${c.warm}20`,
-                color: c.warm, fontSize: 14, fontWeight: 700, opacity: 0.7,
+                background: c.s2, border: `1px solid ${c.green}20`,
+                color: c.green, fontSize: 14, fontWeight: 700, opacity: 0.7,
               }}>
-                我的活动
+                ✓ 已参与
               </div>
-            ) : (
-              <button
-                onClick={handleSignup}
-                style={{
-                  width: '100%', padding: '9px 0', borderRadius: 8,
-                  background: joined ? c.s2 : pending ? c.s2 : c.warm,
-                  border: joined ? `1px solid ${c.green}30` : pending ? `1px solid ${c.warm}30` : 'none',
-                  color: joined ? c.green : pending ? c.warm : c.bg,
-                  fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                {joined ? '✓ 已报名' : pending ? '⏳ 申请已提交' : isApplication ? '申请参加' : '报名参加'}
-              </button>
             )}
-          </>
-        )}
-      </div>
+            {!isEnded && !isCancelled && (
+              <>
+                {socialHint && (
+                  <div style={{ background: c.warmDim, borderRadius: 6, padding: '5px 10px', marginBottom: 10, fontSize: 12, color: c.warm }}>
+                    {'💡'} {socialHint.name}也报名了（你们一起参加过 {socialHint.count} 次活动）
+                  </div>
+                )}
+                {isHost ? (
+                  <div style={{
+                    width: '100%', padding: '9px 0', borderRadius: 8, textAlign: 'center',
+                    background: c.s2, border: `1px solid ${c.warm}20`,
+                    color: c.warm, fontSize: 14, fontWeight: 700, opacity: 0.7,
+                  }}>
+                    我的活动
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleSignup}
+                    style={{
+                      width: '100%', padding: '9px 0', borderRadius: 8,
+                      background: joined ? c.s2 : pending ? c.s2 : c.warm,
+                      border: joined ? `1px solid ${c.green}30` : pending ? `1px solid ${c.warm}30` : 'none',
+                      color: joined ? c.green : pending ? c.warm : c.bg,
+                      fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    {joined ? '✓ 已报名' : pending ? '⏳ 申请已提交' : isApplication ? '申请参加' : '报名参加'}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </>
+      ) : (
+        /* ── Gradient banner layout (unchanged) ── */
+        <>
+          {scene && (
+            <ScenePhoto scene={scene} h={90}>
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(transparent, rgba(0,0,0,0.45))' }} />
+              <div style={{ position: 'absolute', top: 8, right: 10, display: 'flex', gap: 6 }}>
+                {isList && pc ? (
+                  <div style={{ padding: '3px 8px', background: `${pc.bg}`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, fontWeight: 600, color: pc.fg }}>{pc.label}</div>
+                ) : (
+                  <div style={{ padding: '3px 8px', background: `${c.s2}cc`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, color: c.text2 }}>{date}</div>
+                )}
+                {isPrivate && (
+                  <div style={{ padding: '3px 8px', background: `${c.warm}25`, backdropFilter: 'blur(8px)', borderRadius: 5, fontSize: 11, fontWeight: 600, color: c.warm }}>🔒 私密</div>
+                )}
+              </div>
+              {film && <div style={{ position: 'absolute', bottom: 8, left: 10 }}>{filmPoster ? <img src={filmPoster} alt={film} style={{ width: 32, height: 44, borderRadius: 4, objectFit: 'cover' }} /> : <Poster title={film} w={32} h={44} />}</div>}
+            </ScenePhoto>
+          )}
+          <div style={{ padding: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, flex: 1 }}>{title}</div>
+              {isHomeEvent && (
+                <div style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: c.warmDim, color: c.warm, flexShrink: 0 }}>🏠 在家</div>
+              )}
+              {isList && !scene && pc && (
+                <div style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: pc.bg, color: pc.fg, flexShrink: 0 }}>{pc.label}</div>
+              )}
+            </div>
+            {!scene && <div style={{ fontSize: 13, color: c.text2, marginBottom: 8 }}>{date} · {location}</div>}
+            {scene && <div style={{ fontSize: 13, color: c.text2, marginBottom: 8 }}>{isList ? `${date} · ${location}` : location}</div>}
+            {!scene && film && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', background: c.s2, borderRadius: 6, marginBottom: 8 }}>
+                {filmPoster ? <img src={filmPoster} alt={film} style={{ width: 20, height: 28, borderRadius: 3, objectFit: 'cover' }} /> : <Poster title={film} w={20} h={28} />}<span style={{ fontSize: 12, color: c.text2 }}>放映 {film}</span>
+              </div>
+            )}
+            {isList && houseRules && (
+              <div style={{ fontSize: 12, color: c.text3, fontStyle: 'italic', marginBottom: 8 }}>🏠 {houseRules}</div>
+            )}
+            {isList && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
+                <Ava name={name} src={hostAvatar} size={22} onTap={() => goMember(name)} />
+                <span onClick={(e) => { e.stopPropagation(); goMember(name); }} style={{ fontSize: 12, color: c.text3, cursor: 'pointer' }}>{name} Host</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <AvaStack names={people} />
+              {isEnded ? (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {photoCount != null && photoCount > 0 && <span style={{ fontSize: 12, color: c.text3 }}>📷 {photoCount}</span>}
+                </div>
+              ) : !isCancelled && (
+                <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `${total ? `${total - spots}/${total}人 · ` : ''}还剩 ${spots} 位` : (waitlistCount ?? 0) > 0 ? `已满 · ${waitlistCount}人等位` : '已满'}</span>
+              )}
+            </div>
+            {taskSummary && taskSummary.length > 0 && !isCancelled && (
+              <div style={{ fontSize: 12, color: c.text3, marginBottom: 8, lineHeight: 1.6 }}>
+                分工：{taskSummary.map((t, i) => (
+                  <span key={i}>
+                    {i > 0 && ' · '}
+                    {t.role}{' '}
+                    <span style={{ color: t.claimerName ? c.text2 : c.warm, fontWeight: t.claimerName ? 400 : 600 }}>
+                      {t.claimerName || '待认领'}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            )}
+            {isEnded && !isCancelled && user && joined && (
+              <div style={{
+                width: '100%', padding: '9px 0', borderRadius: 8, textAlign: 'center',
+                background: c.s2, border: `1px solid ${c.green}20`,
+                color: c.green, fontSize: 14, fontWeight: 700, opacity: 0.7,
+              }}>
+                ✓ 已参与
+              </div>
+            )}
+            {!isEnded && !isCancelled && (
+              <>
+                {socialHint && (
+                  <div style={{ background: c.warmDim, borderRadius: 6, padding: '5px 10px', marginBottom: 10, fontSize: 12, color: c.warm }}>
+                    {'💡'} {socialHint.name}也报名了（你们一起参加过 {socialHint.count} 次活动）
+                  </div>
+                )}
+                {isHost ? (
+                  <div style={{
+                    width: '100%', padding: '9px 0', borderRadius: 8, textAlign: 'center',
+                    background: c.s2, border: `1px solid ${c.warm}20`,
+                    color: c.warm, fontSize: 14, fontWeight: 700, opacity: 0.7,
+                  }}>
+                    我的活动
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleSignup}
+                    style={{
+                      width: '100%', padding: '9px 0', borderRadius: 8,
+                      background: joined ? c.s2 : pending ? c.s2 : c.warm,
+                      border: joined ? `1px solid ${c.green}30` : pending ? `1px solid ${c.warm}30` : 'none',
+                      color: joined ? c.green : pending ? c.warm : c.bg,
+                      fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    {joined ? '✓ 已报名' : pending ? '⏳ 申请已提交' : isApplication ? '申请参加' : '报名参加'}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </>
+      )}
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
       <ConfirmDialog

@@ -105,6 +105,7 @@ interface ScenePhotoProps {
   h?: number;
   children?: ReactNode;
   style?: CSSProperties;
+  objectFit?: 'cover' | 'contain';
 }
 
 /** Check if a string is an image URL (absolute or relative) rather than a scene key */
@@ -113,12 +114,13 @@ export function isImageUrl(s?: string | null): s is string {
   return s.startsWith('http') || s.startsWith('/api/media/');
 }
 
-export function ScenePhoto({ scene = 'movieNight', h = 190, children, style = {} }: ScenePhotoProps) {
+export function ScenePhoto({ scene = 'movieNight', h = 190, children, style = {}, objectFit = 'cover' }: ScenePhotoProps) {
   // If scene is a URL, render as an image with a dark fallback background
   if (isImageUrl(scene)) {
     return (
       <div style={{ width: '100%', height: h, borderRadius: 8, background: '#1a1225', position: 'relative', overflow: 'hidden', ...style }}>
-        <img src={scene} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={scene} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(20px) brightness(0.4)', transform: 'scale(1.1)' }} />
+        <img src={scene} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit }} />
         {children}
       </div>
     );
