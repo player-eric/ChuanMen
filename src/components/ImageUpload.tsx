@@ -66,11 +66,13 @@ export function ImageUpload({
     [disabled, isUploading, upload],
   );
 
-  // Paste support — listen on the container
+  // Paste support — listen on document so Ctrl+V works anywhere on the page
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    if (disabled) return;
     const onPaste = (e: ClipboardEvent) => {
+      // Don't intercept paste in text inputs/textareas
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
       const file = Array.from(e.clipboardData?.files ?? []).find((f) =>
         f.type.startsWith('image/'),
       );
@@ -79,9 +81,9 @@ export function ImageUpload({
         handleFile(file);
       }
     };
-    el.addEventListener('paste', onPaste);
-    return () => el.removeEventListener('paste', onPaste);
-  }, [handleFile]);
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [handleFile, disabled]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {

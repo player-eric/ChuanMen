@@ -53,7 +53,7 @@ export default function RecommendationDetailPage() {
   const [voters, setVoters] = useState<{ id: string; name: string }[]>([]);
   const [coverUrl, setCoverUrl] = useState('');
 
-  const { pickFile, isUploading: coverUploading } = useMediaUpload({
+  const { pickFile, upload: uploadCover, isUploading: coverUploading } = useMediaUpload({
     category: 'cover',
     ownerId: user?.id,
     onSuccess: async (url) => {
@@ -63,6 +63,21 @@ export default function RecommendationDetailPage() {
       }
     },
   });
+
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+      const file = Array.from(e.clipboardData?.files ?? []).find((f) => f.type.startsWith('image/'));
+      if (file && !coverUploading) {
+        e.preventDefault();
+        setCoverUrl(URL.createObjectURL(file));
+        uploadCover(file);
+      }
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [coverUploading, uploadCover]);
 
   useEffect(() => {
     if (!recommendationId) return;

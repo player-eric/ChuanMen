@@ -58,7 +58,7 @@ export default function MovieDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [posterState, setPosterState] = useState<string>(raw?.poster ?? '');
 
-  const { pickFile: pickPoster, isUploading: posterUploading } = useMediaUpload({
+  const { pickFile: pickPoster, upload: uploadPoster, isUploading: posterUploading } = useMediaUpload({
     category: 'cover',
     ownerId: user?.id,
     onSuccess: async (url) => {
@@ -68,6 +68,22 @@ export default function MovieDetailPage() {
       }
     },
   });
+
+  // Ctrl+V paste image to upload poster
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+      const file = Array.from(e.clipboardData?.files ?? []).find((f) => f.type.startsWith('image/'));
+      if (file && !posterUploading) {
+        e.preventDefault();
+        setPosterState(URL.createObjectURL(file));
+        uploadPoster(file);
+      }
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [posterUploading, uploadPoster]);
 
   if (!raw) {
     return (

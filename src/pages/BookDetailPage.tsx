@@ -49,7 +49,7 @@ export default function BookDetailPage() {
   const [coverUrl, setCoverUrl] = useState<string>(() => (raw as any)?.coverUrl ?? '');
 
   const bookIdForUpload = raw && 'id' in raw ? String((raw as any).id) : '';
-  const { pickFile: pickCover, isUploading: coverUploading } = useMediaUpload({
+  const { pickFile: pickCover, upload: uploadCover, isUploading: coverUploading } = useMediaUpload({
     category: 'cover',
     ownerId: user?.id,
     onSuccess: async (url) => {
@@ -59,6 +59,21 @@ export default function BookDetailPage() {
       }
     },
   });
+
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+      const file = Array.from(e.clipboardData?.files ?? []).find((f) => f.type.startsWith('image/'));
+      if (file && !coverUploading) {
+        e.preventDefault();
+        setCoverUrl(URL.createObjectURL(file));
+        uploadCover(file);
+      }
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [coverUploading, uploadCover]);
 
   if (!raw) {
     return (
