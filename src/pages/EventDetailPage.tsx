@@ -524,7 +524,7 @@ export default function EventDetailPage() {
       : `url(${url}) center/cover no-repeat`;
 
   return (
-    <Box sx={{ maxWidth: 680, mx: 'auto' }}>
+    <Box sx={{ maxWidth: isImageUrl(event.scene) ? 800 : 680, mx: 'auto' }}>
       <Stack spacing={2}>
         <IconButton onClick={() => navigate('/events')} size="small" sx={{ alignSelf: 'flex-start' }}><ArrowBackRoundedIcon /></IconButton>
         <Snackbar
@@ -603,7 +603,7 @@ export default function EventDetailPage() {
               <Box sx={{ position: 'absolute', inset: 0, backgroundImage: `url(${event.scene})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(24px) brightness(0.3)', transform: 'scale(1.3)' }} />
               <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 40%, rgba(0,0,0,0.6))' }} />
               <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', py: 2, px: 1 }}>
-                <img src={event.scene} alt="" style={{ width: '100%', maxHeight: 600, objectFit: 'contain', borderRadius: 8, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }} />
+                <img src={event.scene} alt="" style={{ width: '100%', maxHeight: 720, objectFit: 'contain', borderRadius: 8, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }} />
               </Box>
               <Box sx={{ position: 'absolute', bottom: 16, left: 16, right: 16 }}>
                 <Typography variant="h5" fontWeight={700} sx={{ color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
