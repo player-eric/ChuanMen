@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
-import { Box, Button, Card, CardContent, IconButton, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, Chip, IconButton, Stack, Typography } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import type { Proposal } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
@@ -41,7 +41,10 @@ export default function ProposalDetailPage() {
     );
   }
 
-  const isAuthor = user?.name === raw.name;
+  const isAuthor = user?.id === raw.authorId || user?.name === raw.name;
+  const isAdmin = user?.role === 'admin';
+  const canEditStatus = isAuthor || isAdmin;
+  const [status, setStatus] = useState(raw?.status ?? 'discussing');
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
 
   const handleToggleInterest = async () => {
@@ -68,6 +71,24 @@ export default function ProposalDetailPage() {
             <Typography variant="h5" fontWeight={800} sx={{ mb: 1.5 }}>
               {'💡'} {raw.title}
             </Typography>
+            {/* Status chips */}
+            <Stack direction="row" spacing={0.75} sx={{ mb: 1.5 }}>
+              {([['discussing', '讨论中'], ['scheduled', '已排期'], ['completed', '已完成'], ['cancelled', '已取消']] as const).map(([key, label]) => (
+                <Chip
+                  key={key}
+                  label={label}
+                  size="small"
+                  color={status === key ? ({ discussing: 'warning', scheduled: 'success', completed: 'default', cancelled: 'error' } as const)[key] : 'default'}
+                  variant={status === key ? 'filled' : 'outlined'}
+                  clickable={canEditStatus}
+                  onClick={canEditStatus ? async () => {
+                    setStatus(key);
+                    try { await updateProposal(String(raw.id), { status: key }); } catch { setStatus(status); }
+                  } : undefined}
+                  sx={!canEditStatus && status !== key ? { display: 'none' } : undefined}
+                />
+              ))}
+            </Stack>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <Ava name={raw.name} size={36} onTap={() => goMember(raw.name)} />
               <Box>

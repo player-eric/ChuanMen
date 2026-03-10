@@ -48,6 +48,7 @@ export default function EventsPage() {
   const [searchedItems, setSearchedItems] = useState<Record<string, unknown>[]>([]);
   const [searchError, setSearchError] = useState('');
   const [interested, setInterested] = useState<Record<string, boolean>>({});
+  const [statusFilter, setStatusFilter] = useState<'all' | 'discussing' | 'scheduled' | 'completed'>('discussing');
 
   useEffect(() => {
     if (tab !== 'ideas') return;
@@ -218,7 +219,19 @@ export default function EventsPage() {
               ),
             }}
           />
-          <Box sx={{ textAlign: 'right' }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack direction="row" spacing={0.75}>
+              {([['all', '全部'], ['discussing', '讨论中'], ['scheduled', '已排期'], ['completed', '已完成']] as const).map(([key, label]) => {
+                const count = key === 'all' ? data.proposals.length : data.proposals.filter((p) => p.status === key).length;
+                return (
+                  <Chip key={key} label={`${label} (${count})`} size="small"
+                    color={statusFilter === key ? 'primary' : 'default'}
+                    variant={statusFilter === key ? 'filled' : 'outlined'}
+                    onClick={() => setStatusFilter(key)}
+                  />
+                );
+              })}
+            </Stack>
             <Button
               variant="contained"
               size="small"
@@ -228,7 +241,7 @@ export default function EventsPage() {
             >
               添加创意
             </Button>
-          </Box>
+          </Stack>
 
           {searchError && <Alert severity="error">{searchError}</Alert>}
 
@@ -255,7 +268,7 @@ export default function EventsPage() {
             />
           )}
 
-          {data.proposals.map((proposal) => {
+          {data.proposals.filter((p) => statusFilter === 'all' || p.status === statusFilter).map((proposal) => {
             const v = interested[proposal.id] ?? false;
             return (
               <Card key={proposal.id} sx={{ borderRadius: 2, cursor: 'pointer' }}
@@ -268,10 +281,16 @@ export default function EventsPage() {
                     <span style={{ fontSize: 12, color: c.text3 }}>· {proposal.time}</span>
                   </div>
 
-                  {/* Title */}
-                  <div
-                    style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}
-                  >{'💡'} {proposal.title}</div>
+                  {/* Title + status */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, flex: 1, minWidth: 0 }}>{'💡'} {proposal.title}</div>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, padding: '1px 8px', borderRadius: 4, whiteSpace: 'nowrap',
+                      ...({ discussing: { background: c.warm + '18', color: c.warm },
+                            scheduled: { background: c.green + '20', color: c.green },
+                          }[proposal.status ?? 'discussing'] ?? { background: c.text3 + '20', color: c.text3 }),
+                    }}>{{ discussing: '讨论中', scheduled: '已排期', completed: '已完成', cancelled: '已取消' }[proposal.status ?? 'discussing'] ?? proposal.status}</span>
+                  </div>
 
                   {/* Interested people + action buttons on one row */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -298,6 +317,7 @@ export default function EventsPage() {
                       >
                         {v ? '✓ 感兴趣' : '感兴趣'} · {proposal.votes + (v ? 1 : 0)}
                       </button>
+                      {proposal.status !== 'scheduled' && (
                       <button
                         onClick={(e) => { e.stopPropagation(); user && navigate('/events/new', { state: { fromProposal: { id: String(proposal.id), title: proposal.title, descriptionHtml: proposal.descriptionHtml ?? '' } } }); }}
                         style={{
@@ -311,6 +331,7 @@ export default function EventsPage() {
                       >
                         我来组织
                       </button>
+                      )}
                     </div>
                   </div>
                 </div>

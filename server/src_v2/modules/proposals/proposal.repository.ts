@@ -9,7 +9,7 @@ export class ProposalRepository {
       include: {
         author: { select: { id: true, name: true, avatar: true } },
         votes: { include: { user: { select: { id: true, name: true } } } },
-        _count: { select: { votes: true } },
+        _count: { select: { votes: true, events: true } },
       },
     });
   }

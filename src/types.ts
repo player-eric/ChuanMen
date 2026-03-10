@@ -122,6 +122,7 @@ export interface PastEvent {
 export interface Proposal {
   id: string;
   name: string;
+  authorId?: string;
   title: string;
   description?: string;
   descriptionHtml?: string;

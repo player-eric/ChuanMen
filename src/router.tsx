@@ -566,16 +566,21 @@ async function eventsLoader() {
     return {
       coAttendees: coAttendees as { userId: string; name: string; count: number }[],
       upcoming: (events ?? []).map(mapApiEvent),
-      proposals: (proposals ?? []).filter((p: any) => p.status === 'discussing').map((p: any) => ({
-        id: p.id,
-        name: p.author?.name ?? p.name ?? '?',
-        title: p.title ?? '',
-        description: p.description ?? '',
-        status: p.status,
-        votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
-        interested: Array.isArray(p.votes) ? p.votes.map((v: any) => v.user?.name ?? '?') : p.interested ?? [],
-        time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
-      })),
+      proposals: (proposals ?? []).map((p: any) => {
+        // Derive effective status: if DB says discussing but has linked events, treat as scheduled
+        const hasEvents = (p._count?.events ?? 0) > 0;
+        const effectiveStatus = (p.status === 'discussing' && hasEvents) ? 'scheduled' : (p.status ?? 'discussing');
+        return {
+          id: p.id,
+          name: p.author?.name ?? p.name ?? '?',
+          title: p.title ?? '',
+          description: p.description ?? '',
+          status: effectiveStatus,
+          votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
+          interested: Array.isArray(p.votes) ? p.votes.map((v: any) => v.user?.name ?? '?') : p.interested ?? [],
+          time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
+        };
+      }),
       past: (past ?? []).map((e: any) => {
         const signupCount = e._count?.signups ?? e.people ?? 0;
         const pastCoHostCount = (e.coHosts ?? []).length;
@@ -649,9 +654,11 @@ async function proposalDetailLoader({ params }: { params: Record<string, string 
     return {
       id: p.id,
       name: p.author?.name ?? p.name ?? '?',
+      authorId: p.author?.id ?? p.authorId ?? '',
       title: p.title ?? '',
       description: p.description ?? '',
       descriptionHtml: p.descriptionHtml ?? p.description ?? '',
+      status: p.status ?? 'discussing',
       votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
       interested: Array.isArray(p.votes) ? p.votes.map((v: any) => v.user?.name ?? '?') : p.interested ?? [],
       time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
