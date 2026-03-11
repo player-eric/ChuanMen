@@ -5,6 +5,8 @@ import {
   Card,
   CardActionArea,
   CardContent,
+  Chip,
+  Collapse,
   Grid,
   Stack,
   Typography,
@@ -14,25 +16,16 @@ import EventRoundedIcon from '@mui/icons-material/EventRounded';
 import EmailRoundedIcon from '@mui/icons-material/EmailRounded';
 import MarkEmailReadRoundedIcon from '@mui/icons-material/MarkEmailReadRounded';
 import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
+import TrendingDownRoundedIcon from '@mui/icons-material/TrendingDownRounded';
 import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
 import MailRoundedIcon from '@mui/icons-material/MailRounded';
 import CampaignRoundedIcon from '@mui/icons-material/CampaignRounded';
 import MilitaryTechRoundedIcon from '@mui/icons-material/MilitaryTechRounded';
 import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
-import { fetchAdminStats, type AdminStats } from '@/lib/domainApi';
-
-/* ── PRD 11.1.8 ── 数据看板 ── */
-
-const tagLabel: Record<string, string> = {
-  movie: '电影夜',
-  chuanmen: '串门儿',
-  holiday: '节日',
-  hiking: '徒步',
-  outdoor: '户外',
-  small_group: '小聚',
-  other: '其他',
-};
+import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
+import { fetchAdminStats, type AdminStats, type MiniMember } from '@/lib/domainApi';
+import { Ava } from '@/components/Atoms';
 
 const quickLinks = [
   { label: '成员管理', icon: <PeopleRoundedIcon />, to: '/admin/members' },
@@ -47,14 +40,92 @@ const quickLinks = [
   { label: '社群信息编辑', icon: <EditNoteRoundedIcon />, to: '/admin/community-info' },
 ];
 
-function StatGrid({ title, items }: { title: string; items: { label: string; value: string; sub?: string; color?: string }[] }) {
+// ── Helpers ──
+
+function Trend({ value, prev, suffix = '%' }: { value: number; prev: number; suffix?: string }) {
+  const diff = value - prev;
+  if (diff === 0) return null;
+  const up = diff > 0;
+  return (
+    <Stack direction="row" spacing={0.3} alignItems="center" sx={{ color: up ? 'success.main' : 'error.main' }}>
+      {up ? <TrendingUpRoundedIcon sx={{ fontSize: 14 }} /> : <TrendingDownRoundedIcon sx={{ fontSize: 14 }} />}
+      <Typography variant="caption" sx={{ fontWeight: 600 }}>
+        {up ? '+' : ''}{diff}{suffix} vs 上月
+      </Typography>
+    </Stack>
+  );
+}
+
+function MemberChips({ members, label }: { members: MiniMember[]; label?: string }) {
+  if (members.length === 0) return null;
+  return (
+    <Box sx={{ mt: 0.5 }}>
+      {label && <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>{label}</Typography>}
+      <Stack direction="row" flexWrap="wrap" gap={0.5}>
+        {members.map(m => (
+          <Chip key={m.id} size="small" avatar={<Ava name={m.name} src={m.avatar ?? undefined} size={20} />}
+            label={m.name} variant="outlined" sx={{ height: 26 }} />
+        ))}
+      </Stack>
+    </Box>
+  );
+}
+
+function FunnelBar({ label, count, max, sub, labelWidth = 56 }: { label: string; count: number; max: number; sub?: string; labelWidth?: number }) {
+  return (
+    <Stack direction="row" spacing={1} alignItems="center" sx={{ height: 22 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ width: labelWidth, textAlign: 'right', flexShrink: 0, whiteSpace: 'nowrap' }}>
+        {label}
+      </Typography>
+      <Box sx={{
+        height: 16, width: `${Math.max(12, (count / Math.max(max, 1)) * 100)}%`,
+        bgcolor: 'primary.main', borderRadius: 0.5,
+        display: 'flex', alignItems: 'center', px: 0.75, minWidth: 28,
+      }}>
+        <Typography sx={{ fontSize: 11, color: 'primary.contrastText', fontWeight: 700 }}>{count}</Typography>
+      </Box>
+      {sub && <Typography sx={{ fontSize: 11 }} color="text.secondary">{sub}</Typography>}
+    </Stack>
+  );
+}
+
+/** Pure-CSS sparkline bar chart for DAU trend */
+function DauChart({ data }: { data: { date: string; count: number }[] }) {
+  const max = Math.max(...data.map(d => d.count), 1);
+  return (
+    <Card sx={{ p: 2 }}>
+      <Typography variant="subtitle2" fontWeight={700} mb={1}>
+        每日活跃（14 天）
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: 80 }}>
+        {data.map(d => (
+          <Box key={d.date} sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Typography sx={{ fontSize: 10, fontWeight: 600, mb: 0.25, color: 'text.primary' }}>
+              {d.count || ''}
+            </Typography>
+            <Box sx={{
+              width: '100%', maxWidth: 28,
+              height: Math.max(4, (d.count / max) * 56),
+              bgcolor: 'primary.main', borderRadius: 0.5, opacity: 0.85,
+            }} />
+            <Typography sx={{ fontSize: 9, mt: 0.25, color: 'text.secondary' }}>
+              {d.date.slice(3)}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+    </Card>
+  );
+}
+
+function StatGrid({ title, items }: { title: string; items: { label: string; value: string; sub?: string }[] }) {
   return (
     <Card sx={{ p: 2 }}>
       <Typography variant="subtitle2" fontWeight={700} mb={1.5}>{title}</Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 2 }}>
         {items.map(s => (
           <Box key={s.label}>
-            <Typography variant="h5" fontWeight={700} sx={{ color: s.color }}>{s.value}</Typography>
+            <Typography variant="h5" fontWeight={700}>{s.value}</Typography>
             <Typography variant="caption" color="text.secondary">{s.label}</Typography>
             {s.sub && <Typography variant="caption" display="block" sx={{ opacity: 0.6 }}>{s.sub}</Typography>}
           </Box>
@@ -75,10 +146,14 @@ function formatRelativeTime(iso: string) {
   return `${Math.floor(days / 7)} 周前`;
 }
 
+// ── Main Page ──
+
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandAway, setExpandAway] = useState(false);
+  const [expandNew, setExpandNew] = useState(false);
 
   useEffect(() => {
     fetchAdminStats()
@@ -87,136 +162,228 @@ export default function AdminDashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const topStats = stats
-    ? [
-        { label: '总成员数', value: String(stats.totalMembers), delta: '', color: '#1976d2' },
-        { label: '待处理申请', value: String(stats.pendingApplicants), delta: '', color: '#ed6c02' },
-        { label: '总活动数', value: String(stats.totalEvents), delta: `本月 ${stats.monthEvents}`, color: '#2e7d32' },
-        { label: '本月感谢卡', value: String(stats.monthCards), delta: `总计 ${stats.totalCards}`, color: '#0097a7' },
-      ]
-    : [];
+  if (loading) return <Typography>加载中…</Typography>;
+  if (!stats) return <Typography color="error">加载失败</Typography>;
 
-  const activityStats = stats
-    ? [
-        { label: '本月活动', value: String(stats.monthEvents) },
-        { label: '活跃 Host', value: String(stats.monthActiveHosts), sub: '本月' },
-        { label: 'Waitlist 比例', value: `${stats.waitlistPercent}%`, sub: stats.waitlistPercent > 20 ? '供给不足信号' : '供给正常' },
-        { label: '活动类型', value: `${stats.distinctTagCount} 种`, sub: stats.topTags.map(t => tagLabel[t] || t).join('·') },
-      ]
-    : [];
+  const { activity, onboarding, memberDistribution, hostEvolution, leaderboard, eventMetrics } = stats;
 
-  const cardStats = stats
-    ? [
-        { label: '感谢卡总量', value: String(stats.totalCards), sub: `本月 +${stats.monthCards}` },
-        { label: '公开/私密', value: `${stats.publicCards}/${stats.privateCards}`, sub: `${stats.publicPercent}% 公开` },
-      ]
-    : [];
+  // ── KPI Cards ──
+  const kpiCards = [
+    {
+      label: '活动参与率',
+      value: `${activity.participationRate}%`,
+      sub: <Trend value={activity.participationRate} prev={activity.prevParticipationRate} />,
+      color: '#2e7d32',
+    },
+    {
+      label: '回头率',
+      value: `${activity.returnRate}%`,
+      sub: <Typography variant="caption" color="text.secondary">连续活跃</Typography>,
+      color: '#1976d2',
+    },
+    {
+      label: 'DAU / MAU',
+      value: `${activity.dau} / ${activity.mau}`,
+      sub: <Typography variant="caption" color="text.secondary">
+        占总成员 {activity.totalApproved > 0 ? Math.round((activity.mau / activity.totalApproved) * 100) : 0}%
+      </Typography>,
+      color: '#7b1fa2',
+    },
+    {
+      label: stats.pendingApplicants > 0 ? '待处理' : '总成员',
+      value: String(stats.pendingApplicants > 0 ? stats.pendingApplicants : stats.totalMembers),
+      sub: stats.pendingApplicants > 0
+        ? <Typography variant="caption" sx={{ color: '#ed6c02', fontWeight: 600 }}>待审核申请</Typography>
+        : <Typography variant="caption" color="text.secondary">已批准成员</Typography>,
+      color: stats.pendingApplicants > 0 ? '#ed6c02' : '#0097a7',
+    },
+  ];
 
-  const memberActivity = stats
-    ? [
-        { label: '本月参加活动', value: `${stats.monthParticipants} 人` },
-        { label: '本月 Host', value: `${stats.monthActiveHosts} 人` },
-        { label: '本月推荐电影', value: `${stats.monthMovieRecommenders} 人` },
-        { label: '新人首次参与率', value: `${stats.newMemberParticipationRate}%` },
-      ]
-    : [];
+  // Onboarding funnel
+  const funnelSteps = [
+    { label: '申请', count: onboarding.applied },
+    { label: '批准', count: onboarding.approved, sub: onboarding.avgApprovalDays > 0 ? `均 ${onboarding.avgApprovalDays}天` : undefined },
+    { label: '登录', count: onboarding.loggedIn },
+    { label: '报名', count: onboarding.signedUp },
+    { label: '参加', count: onboarding.attended },
+    { label: '互动', count: onboarding.interacted },
+  ];
+  const funnelMax = Math.max(...funnelSteps.map(s => s.count), 1);
 
-  const emailStatsItems = stats
-    ? [
-        { label: '正常接收', value: String(stats.emailStats.active) },
-        { label: '降频 (weekly)', value: String(stats.emailStats.weekly) },
-        { label: '已暂停', value: String(stats.emailStats.stopped) },
-        { label: '退订', value: String(stats.emailStats.unsubscribed) },
-      ]
-    : [];
+  // Host funnel
+  const hostFunnel = [
+    { stage: '活跃参与者（3+次）', count: stats.hostFunnel.activeParticipants3 },
+    { stage: 'Co-Host', count: stats.hostFunnel.firstCoHosts },
+    { stage: '独立 Host', count: stats.hostFunnel.soloHosts },
+    { stage: 'Host 5+次', count: stats.hostFunnel.veteranHosts },
+  ];
+  const hostMax = Math.max(...hostFunnel.map(s => s.count), 1);
 
-  const hostFunnel = stats
-    ? [
-        { stage: '活跃参与者（≥3 次）', count: stats.hostFunnel.activeParticipants3 },
-        { stage: '首次 Co-Host', count: stats.hostFunnel.firstCoHosts },
-        { stage: '独立 Host', count: stats.hostFunnel.soloHosts },
-        { stage: 'Host ≥ 5 次', count: stats.hostFunnel.veteranHosts },
-      ]
-    : [];
-  const funnelMax = hostFunnel.length > 0 ? Math.max(hostFunnel[0].count, 1) : 1;
+  // Activity stats (trimmed)
+  const activityStats = [
+    { label: '本月活动', value: String(stats.monthEvents), sub: `上月 ${eventMetrics.prevMonthEvents}` },
+    { label: '场均参与', value: String(eventMetrics.avgAttendance), sub: '人' },
+    { label: 'Waitlist', value: `${stats.waitlistPercent}%`, sub: stats.waitlistPercent > 20 ? '供需信号' : '正常' },
+    { label: '感谢卡', value: String(stats.monthCards), sub: `${stats.publicPercent}% 公开` },
+  ];
+
+  const emailStatsItems = [
+    { label: '正常接收', value: String(stats.emailStats.active) },
+    { label: '降频', value: String(stats.emailStats.weekly) },
+    { label: '已暂停', value: String(stats.emailStats.stopped) },
+    { label: '退订', value: String(stats.emailStats.unsubscribed) },
+  ];
 
   return (
-    <Stack spacing={3}>
-      {loading && <Typography>加载中…</Typography>}
+    <Stack spacing={2.5}>
+      {/* ── KPI Cards ── */}
+      <Grid container spacing={2}>
+        {kpiCards.map(s => (
+          <Grid key={s.label} size={{ xs: 6, md: 3 }}>
+            <Card>
+              <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                <Typography variant="caption" color="text.secondary">{s.label}</Typography>
+                <Typography variant="h4" fontWeight={700} sx={{ color: s.color }}>{s.value}</Typography>
+                {s.sub}
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
 
-      {/* Top Stats */}
-      {!loading && stats && (
-        <Grid container spacing={2}>
-          {topStats.map(s => (
-            <Grid key={s.label} size={{ xs: 6, md: 3 }}>
-              <Card>
-                <CardContent>
-                  <Typography variant="caption" color="text.secondary">{s.label}</Typography>
-                  <Typography variant="h4" fontWeight={700} sx={{ color: s.color }}>{s.value}</Typography>
-                  {s.delta && (
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <TrendingUpRoundedIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                      <Typography variant="caption" color="text.secondary">{s.delta}</Typography>
-                    </Stack>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
+      {/* ── DAU Trend ── */}
+      <DauChart data={stats.dauTrend} />
+
+      {/* ── Onboarding + Member Distribution side by side ── */}
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ p: 2, height: '100%' }}>
+            <Typography variant="subtitle2" fontWeight={700} mb={1}>新人漏斗（60 天）</Typography>
+            <Stack spacing={0.25}>
+              {funnelSteps.map(step => (
+                <FunnelBar key={step.label} label={step.label} count={step.count} max={funnelMax} sub={step.sub} />
+              ))}
+            </Stack>
+            {onboarding.stuckAfterApproval.length > 0 && (
+              <MemberChips members={onboarding.stuckAfterApproval} label="批准后未登录：" />
+            )}
+            {onboarding.stuckAfterLogin.length > 0 && (
+              <MemberChips members={onboarding.stuckAfterLogin} label="登录后未报名：" />
+            )}
+            {onboarding.stuckAfterSignup.length > 0 && (
+              <MemberChips members={onboarding.stuckAfterSignup} label="报名后未参加：" />
+            )}
+          </Card>
         </Grid>
-      )}
-
-      {/* Category Stats */}
-      {!loading && stats && (
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <StatGrid title="📅 活动供给" items={activityStats} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <StatGrid title="✉ 感谢卡" items={cardStats} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <StatGrid title="👥 成员活跃" items={memberActivity} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <StatGrid title="📧 Email 频率" items={emailStatsItems} />
-          </Grid>
-        </Grid>
-      )}
-
-      {/* Host Funnel */}
-      {!loading && stats && (
-        <Card sx={{ p: 2 }}>
-          <Typography variant="subtitle2" fontWeight={700} mb={1.5}>🏠 Host 培养漏斗</Typography>
-          <Stack spacing={1}>
-            {hostFunnel.map((step, i) => (
-              <Stack key={step.stage} direction="row" spacing={2} alignItems="center">
-                <Box
-                  sx={{
-                    height: 24,
-                    width: `${Math.max(20, (step.count / funnelMax) * 100)}%`,
-                    bgcolor: 'primary.main',
-                    borderRadius: 1,
-                    opacity: 1 - i * 0.15,
-                    display: 'flex',
-                    alignItems: 'center',
-                    px: 1,
-                  }}
-                >
-                  <Typography variant="caption" sx={{ color: 'primary.contrastText', fontWeight: 700 }}>
-                    {step.count}
-                  </Typography>
-                </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                  {step.stage}
-                </Typography>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ p: 2, height: '100%' }}>
+            <Typography variant="subtitle2" fontWeight={700} mb={1}>成员活跃分布</Typography>
+            <Stack spacing={0.75}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#4caf50', flexShrink: 0 }} />
+                <Typography variant="body2">活跃（7天内）</Typography>
+                <Typography variant="body2" fontWeight={700}>{memberDistribution.active}</Typography>
               </Stack>
-            ))}
-          </Stack>
-        </Card>
-      )}
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#2196f3', flexShrink: 0 }} />
+                <Typography variant="body2">偶尔（7-30天）</Typography>
+                <Typography variant="body2" fontWeight={700}>{memberDistribution.occasional}</Typography>
+              </Stack>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ cursor: 'pointer' }}
+                onClick={() => setExpandAway(v => !v)}>
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#bdbdbd', flexShrink: 0 }} />
+                <Typography variant="body2">暂别（30天+）</Typography>
+                <Typography variant="body2" fontWeight={700}>{memberDistribution.away.length}</Typography>
+                <ExpandMoreRoundedIcon sx={{ fontSize: 14, transform: expandAway ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
+              </Stack>
+              <Collapse in={expandAway}>
+                <MemberChips members={memberDistribution.away} />
+              </Collapse>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ cursor: 'pointer' }}
+                onClick={() => setExpandNew(v => !v)}>
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#ff9800', flexShrink: 0 }} />
+                <Typography variant="body2">新成员（60天内）</Typography>
+                <Typography variant="body2" fontWeight={700}>{memberDistribution.newMembers.length}</Typography>
+                <ExpandMoreRoundedIcon sx={{ fontSize: 14, transform: expandNew ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
+              </Stack>
+              <Collapse in={expandNew}>
+                <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
+                  {memberDistribution.newMembers.map(m => (
+                    <Chip key={m.id} size="small"
+                      avatar={<Ava name={m.name} src={m.avatar ?? undefined} size={20} />}
+                      label={`${m.name} · ${m.funnelStage}`} variant="outlined" sx={{ height: 26 }} />
+                  ))}
+                </Stack>
+              </Collapse>
+            </Stack>
+          </Card>
+        </Grid>
+      </Grid>
 
-      {/* Quick links */}
+      {/* ── Host Evolution + Leaderboard ── */}
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ p: 2, height: '100%' }}>
+            <Typography variant="subtitle2" fontWeight={700} mb={1}>Host 进化追踪</Typography>
+            <Stack spacing={0.25}>
+              {hostFunnel.map(step => (
+                <FunnelBar key={step.stage} label={step.stage} count={step.count} max={hostMax} labelWidth={100} />
+              ))}
+            </Stack>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              本月 <strong>{hostEvolution.uniqueHostsThisMonth}</strong> 位 Host
+              {hostEvolution.uniqueHostsPrevMonth > 0 && ` (上月 ${hostEvolution.uniqueHostsPrevMonth})`}
+            </Typography>
+            {hostEvolution.firstTimeHosts.length > 0 && (
+              <MemberChips members={hostEvolution.firstTimeHosts} label="新晋 Host：" />
+            )}
+            {hostEvolution.readyToHost.length > 0 && (
+              <MemberChips members={hostEvolution.readyToHost} label="准备好了（3+次，未Host）：" />
+            )}
+          </Card>
+        </Grid>
+        {leaderboard.length > 0 && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Card sx={{ p: 2, height: '100%' }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={1}>贡献者 Top 10（本月）</Typography>
+              <Stack spacing={0.5}>
+                {leaderboard.map((entry, i) => (
+                  <Stack key={entry.id} direction="row" spacing={1} alignItems="center"
+                    sx={{ py: 0.25, borderBottom: i < leaderboard.length - 1 ? 1 : 0, borderColor: 'divider' }}>
+                    <Typography variant="body2" fontWeight={700} sx={{ width: 18, textAlign: 'center', color: i < 3 ? 'primary.main' : 'text.secondary' }}>
+                      {i + 1}
+                    </Typography>
+                    <Ava name={entry.name} src={entry.avatar ?? undefined} size={24} />
+                    <Typography variant="body2" fontWeight={600} sx={{ minWidth: 50 }}>{entry.name}</Typography>
+                    <Typography variant="body2" fontWeight={700} color="primary.main">{entry.score}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+                      {[
+                        entry.breakdown.events > 0 && `${entry.breakdown.events}活动`,
+                        entry.breakdown.hosted > 0 && `${entry.breakdown.hosted}Host`,
+                        entry.breakdown.postcards > 0 && `${entry.breakdown.postcards}卡`,
+                        entry.breakdown.comments > 0 && `${entry.breakdown.comments}评论`,
+                        entry.breakdown.recommendations > 0 && `${entry.breakdown.recommendations}推荐`,
+                      ].filter(Boolean).join(' · ')}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            </Card>
+          </Grid>
+        )}
+      </Grid>
+
+      {/* ── Activity & Email ── */}
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <StatGrid title="活动与内容" items={activityStats} />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <StatGrid title="Email 频率" items={emailStatsItems} />
+        </Grid>
+      </Grid>
+
+      {/* ── Quick Links ── */}
       <Typography variant="subtitle2" fontWeight={700}>快捷入口</Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 1.5 }}>
         {quickLinks.map(link => (
@@ -231,15 +398,15 @@ export default function AdminDashboardPage() {
         ))}
       </Box>
 
-      {/* Recent activity */}
-      {!loading && stats && stats.recentActivity.length > 0 && (
+      {/* ── Recent Activity ── */}
+      {stats.recentActivity.length > 0 && (
         <Card>
           <CardContent>
-            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 2 }}>📋 最近动态</Typography>
-            <Stack spacing={1.5}>
+            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>最近动态</Typography>
+            <Stack spacing={1}>
               {stats.recentActivity.map((action, i) => (
                 <Stack key={i} direction="row" justifyContent="space-between" alignItems="center"
-                  sx={{ py: 0.5, borderBottom: i < stats.recentActivity.length - 1 ? 1 : 0, borderColor: 'divider' }}>
+                  sx={{ py: 0.25, borderBottom: i < stats.recentActivity.length - 1 ? 1 : 0, borderColor: 'divider' }}>
                   <Typography variant="body2">{action.text}</Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', ml: 2 }}>{formatRelativeTime(action.time)}</Typography>
                 </Stack>
@@ -248,11 +415,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       )}
-
-      {/* Data export hint */}
-      <Typography variant="caption" color="text.secondary" textAlign="center">
-        数据导出功能（CSV）将在后续版本中启用
-      </Typography>
     </Stack>
   );
 }

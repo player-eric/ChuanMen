@@ -112,6 +112,7 @@ export async function seedTestEvent(hostId: string, overrides: Record<string, an
     capacity: 10,
     hostId,
     phase: 'open' as any,
+    signupMode: 'direct' as any,
   };
   return prisma.event.create({ data: { ...defaults, ...overrides } });
 }

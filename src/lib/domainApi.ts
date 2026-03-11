@@ -1298,6 +1298,8 @@ export async function deleteEventTask(eventId: string, taskId: string) {
    Admin: Dashboard Stats
    ═══════════════════════════════════════════════════════════════ */
 
+export type MiniMember = { id: string; name: string; avatar: string | null; lastActiveAt: string | null; approvedAt: string | null };
+
 export interface AdminStats {
   totalMembers: number;
   pendingApplicants: number;
@@ -1337,6 +1339,56 @@ export interface AdminStats {
   };
   // Recent activity
   recentActivity: { text: string; time: string }[];
+
+  // ── Deep engagement metrics ──
+  activity: {
+    dau: number;
+    mau: number;
+    totalApproved: number;
+    participationRate: number;
+    prevParticipationRate: number;
+    returnRate: number;
+  };
+
+  onboarding: {
+    applied: number;
+    approved: number;
+    avgApprovalDays: number;
+    loggedIn: number;
+    signedUp: number;
+    attended: number;
+    interacted: number;
+    stuckAfterApproval: MiniMember[];
+    stuckAfterLogin: MiniMember[];
+    stuckAfterSignup: MiniMember[];
+  };
+
+  memberDistribution: {
+    active: number;
+    occasional: number;
+    away: MiniMember[];
+    newMembers: (MiniMember & { funnelStage: string })[];
+  };
+
+  hostEvolution: {
+    readyToHost: MiniMember[];
+    firstTimeHosts: MiniMember[];
+    uniqueHostsThisMonth: number;
+    uniqueHostsPrevMonth: number;
+  };
+
+  leaderboard: {
+    id: string; name: string; avatar: string | null;
+    score: number;
+    breakdown: { events: number; hosted: number; postcards: number; comments: number; recommendations: number };
+  }[];
+
+  eventMetrics: {
+    avgAttendance: number;
+    prevMonthEvents: number;
+  };
+
+  dauTrend: { date: string; count: number }[];
 }
 
 export async function fetchAdminStats() {
