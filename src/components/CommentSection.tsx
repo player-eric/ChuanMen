@@ -35,7 +35,7 @@ export default function CommentSection({ entityType, entityId }: CommentSectionP
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [members, setMembers] = useState<MentionMember[]>([]);
   const [canSend, setCanSend] = useState(false);
-  const editorRef = useRef<{ clear: () => void; getHTML: () => string } | null>(null);
+  const editorRef = useRef<{ clear: () => void; getHTML: () => string; insertImage: (src: string) => void } | null>(null);
 
   // Load comments
   useEffect(() => {
@@ -71,6 +71,11 @@ export default function CommentSection({ entityType, entityId }: CommentSectionP
           setMembers(
             list
               .filter((m: any) => m.userStatus === 'approved')
+              .sort((a: any, b: any) => {
+                const ta = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
+                const tb = b.lastActiveAt ? new Date(b.lastActiveAt).getTime() : 0;
+                return tb - ta;
+              })
               .map((m: any) => ({
                 id: m.id,
                 name: m.name ?? '',

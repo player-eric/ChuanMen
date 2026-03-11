@@ -70,6 +70,11 @@ function useFeedMembers() {
       if (Array.isArray(list)) {
         _membersCache = list
           .filter((m: any) => m.userStatus === 'approved')
+          .sort((a: any, b: any) => {
+            const ta = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
+            const tb = b.lastActiveAt ? new Date(b.lastActiveAt).getTime() : 0;
+            return tb - ta;
+          })
           .map((m: any) => ({ id: m.id, name: m.name ?? '', avatar: m.avatar ?? undefined }));
         setMembers(_membersCache);
       }
@@ -90,7 +95,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   const [localComments, setLocalComments] = useState(comments ?? []);
   const [canSend, setCanSend] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const editorRef = useRef<{ clear: () => void; getHTML: () => string } | null>(null);
+  const editorRef = useRef<{ clear: () => void; getHTML: () => string; insertImage: (src: string) => void } | null>(null);
   const members = useFeedMembers();
 
   // Load persisted comments from API when section is first expanded

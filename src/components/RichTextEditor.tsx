@@ -2,10 +2,14 @@ import React, { useCallback, useEffect, useRef, useState, forwardRef, useImperat
 import { useEditor, EditorContent, ReactRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
+import { Extension } from '@tiptap/react';
+import { Plugin } from '@tiptap/pm/state';
 import Mention from '@tiptap/extension-mention';
 import type { SuggestionProps, SuggestionKeyDownProps } from '@tiptap/suggestion';
 import { useNavigate } from 'react-router';
 import { useColors } from '@/hooks/useColors';
+import { cDark, cLight } from '@/theme';
 
 /* ═══ Types ═══ */
 export interface MentionMember {
@@ -60,6 +64,9 @@ interface MentionListRef {
 
 const MentionList = forwardRef<MentionListRef, MentionListProps>(
   function MentionList(props, ref) {
+    const isDark = typeof window !== 'undefined'
+      && localStorage.getItem('chuanmen-color-mode') !== 'light';
+    const c = isDark ? cDark : cLight;
     const [selectedIndex, setSelectedIndex] = useState(0);
 
     useEffect(() => setSelectedIndex(0), [props.items]);
@@ -92,10 +99,10 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
     return (
       <div
         style={{
-          background: '#1c1c1f',
-          border: '1px solid #333',
+          background: c.s1,
+          border: `1px solid ${c.line}`,
           borderRadius: 8,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
           overflow: 'hidden',
           maxHeight: 240,
           overflowY: 'auto',
@@ -115,7 +122,7 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
               padding: '8px 12px',
               border: 'none',
               background: index === selectedIndex ? 'rgba(78,154,241,0.15)' : 'transparent',
-              color: '#e0e0e0',
+              color: c.text,
               cursor: 'pointer',
               fontSize: 14,
               textAlign: 'left',
@@ -126,9 +133,7 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
                 width: 24,
                 height: 24,
                 borderRadius: '50%',
-                background: item.avatar
-                  ? `url(${item.avatar}) center/cover`
-                  : `hsl(${item.name.charCodeAt(0) * 37 % 360}, 50%, 45%)`,
+                background: `hsl(${item.name.charCodeAt(0) * 37 % 360}, 50%, 45%)`,
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -136,9 +141,18 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
                 color: '#fff',
                 flexShrink: 0,
                 overflow: 'hidden',
+                position: 'relative',
               }}
             >
-              {!item.avatar && (item.name[0] ?? '?')}
+              {item.name[0] ?? '?'}
+              {item.avatar && (
+                <img
+                  src={item.avatar}
+                  alt=""
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              )}
             </span>
             <span style={{ fontWeight: 500 }}>{item.name}</span>
           </button>
@@ -149,13 +163,20 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
 );
 
 /* ═══ RichTextEditor ═══ */
+export interface RichTextEditorHandle {
+  clear: () => void;
+  getHTML: () => string;
+  insertImage: (src: string) => void;
+}
+
 interface RichTextEditorProps {
   content: string;
   onChange: (html: string) => void;
   placeholder?: string;
   members?: MentionMember[];
   compact?: boolean;
-  editorRef?: React.MutableRefObject<{ clear: () => void; getHTML: () => string } | null>;
+  editorRef?: React.MutableRefObject<RichTextEditorHandle | null>;
+  onUploadImage?: (file: File) => Promise<string>;
 }
 
 export default function RichTextEditor({
@@ -165,10 +186,12 @@ export default function RichTextEditor({
   members,
   compact,
   editorRef,
+  onUploadImage,
 }: RichTextEditorProps) {
   const c = useColors();
   const [focused, setFocused] = useState(false);
   const membersRef = useRef<MentionMember[]>(members ?? []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Keep ref in sync so the suggestion closure always sees latest members
   useEffect(() => {
@@ -180,6 +203,31 @@ export default function RichTextEditor({
     extensions: [
       StarterKit,
       Link.configure({ openOnClick: false }),
+      Image.configure({ inline: false, allowBase64: false }),
+      Extension.create({
+        name: 'imageDrop',
+        addProseMirrorPlugins() {
+          return [new Plugin({
+            props: {
+              handleDrop(view, event) {
+                const url = event.dataTransfer?.getData('text/uri-list');
+                if (url && /\.(jpg|jpeg|png|gif|webp)/i.test(url)) {
+                  event.preventDefault();
+                  const { schema, tr } = view.state;
+                  const node = schema.nodes.image?.create({ src: url });
+                  if (!node) return false;
+                  const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
+                  if (pos != null) {
+                    view.dispatch(tr.insert(pos, node));
+                    return true;
+                  }
+                }
+                return false;
+              },
+            },
+          })];
+        },
+      }),
       Mention.configure({
         HTMLAttributes: { class: 'mention' },
         suggestion: {
@@ -255,6 +303,7 @@ export default function RichTextEditor({
       editorRef.current = {
         clear: () => editor.commands.clearContent(),
         getHTML: () => editor.getHTML(),
+        insertImage: (src: string) => editor.chain().focus().setImage({ src }).run(),
       };
     }
   }, [editor, editorRef]);
@@ -270,6 +319,16 @@ export default function RichTextEditor({
       editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
     }
   }, [editor]);
+
+  const handleImageUpload = useCallback(async (file: File) => {
+    if (!editor || !onUploadImage) return;
+    try {
+      const src = await onUploadImage(file);
+      editor.chain().focus().setImage({ src }).run();
+    } catch (err) {
+      console.error('Image upload failed:', err);
+    }
+  }, [editor, onUploadImage]);
 
   if (!editor) return null;
 
@@ -306,7 +365,25 @@ export default function RichTextEditor({
             </>
           )}
           <TBtn active={editor.isActive('link')} onClick={setLink} accentBg={accentBg}>Link</TBtn>
+          {onUploadImage && (
+            <TBtn onClick={() => fileInputRef.current?.click()} accentBg={accentBg}>
+              {'📷'}
+            </TBtn>
+          )}
         </div>
+      )}
+      {onUploadImage && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleImageUpload(file);
+            e.target.value = '';
+          }}
+        />
       )}
 
       {/* Editor */}
@@ -344,6 +421,15 @@ export default function RichTextEditor({
           }
           .tiptap.ProseMirror a { color: ${c.blue}; text-decoration: underline; }
           .tiptap.ProseMirror p { margin: 4px 0; }
+          .tiptap.ProseMirror img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 8px 0;
+            cursor: default;
+          }
+          .tiptap.ProseMirror img.ProseMirror-selectednode {
+            outline: 2px solid ${c.blue};
+          }
           .tiptap.ProseMirror .mention {
             color: ${c.blue};
             background: ${c.blue}15;
@@ -404,6 +490,7 @@ export function RichTextViewer({ html }: { html: string }) {
           color: ${c.text2};
         }
         .rich-text-viewer a { color: ${c.blue}; text-decoration: underline; }
+        .rich-text-viewer img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
         .rich-text-viewer p { margin: 4px 0; }
         .rich-text-viewer strong { font-weight: 700; }
         .rich-text-viewer .mention,
