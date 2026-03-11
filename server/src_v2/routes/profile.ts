@@ -158,6 +158,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           id: true,
           title: true,
           recapPhotoUrls: true,
+          description: true,
           startsAt: true,
         },
       }),
@@ -254,15 +255,18 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
       pastEvents,
       postcardsSent,
       postcardsReceived,
-      galleryPhotos: galleryEvents.flatMap((e) =>
-        e.recapPhotoUrls.map((url, i) => ({
-          id: `${e.id}-${i}`,
-          url,
-          eventId: e.id,
-          eventTitle: e.title,
-          createdAt: e.startsAt.toISOString(),
-        })),
-      ),
+      galleryPhotos: galleryEvents.flatMap((e) => {
+        const desc = e.description ?? '';
+        return e.recapPhotoUrls
+          .filter((url) => !desc.includes(url))
+          .map((url, i) => ({
+            id: `${e.id}-${i}`,
+            url,
+            eventId: e.id,
+            eventTitle: e.title,
+            createdAt: e.startsAt.toISOString(),
+          }));
+      }),
       isOwnProfile,
       mutual,
     };

@@ -3,8 +3,6 @@ import { useEditor, EditorContent, ReactRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import { Extension } from '@tiptap/react';
-import { Plugin } from '@tiptap/pm/state';
 import Mention from '@tiptap/extension-mention';
 import type { SuggestionProps, SuggestionKeyDownProps } from '@tiptap/suggestion';
 import { useNavigate } from 'react-router';
@@ -204,30 +202,6 @@ export default function RichTextEditor({
       StarterKit,
       Link.configure({ openOnClick: false }),
       Image.configure({ inline: false, allowBase64: false }),
-      Extension.create({
-        name: 'imageDrop',
-        addProseMirrorPlugins() {
-          return [new Plugin({
-            props: {
-              handleDrop(view, event) {
-                const url = event.dataTransfer?.getData('text/uri-list');
-                if (url && /\.(jpg|jpeg|png|gif|webp)/i.test(url)) {
-                  event.preventDefault();
-                  const { schema, tr } = view.state;
-                  const node = schema.nodes.image?.create({ src: url });
-                  if (!node) return false;
-                  const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
-                  if (pos != null) {
-                    view.dispatch(tr.insert(pos, node));
-                    return true;
-                  }
-                }
-                return false;
-              },
-            },
-          })];
-        },
-      }),
       Mention.configure({
         HTMLAttributes: { class: 'mention' },
         suggestion: {

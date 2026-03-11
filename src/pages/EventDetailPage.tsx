@@ -40,7 +40,7 @@ import CommentSection from '@/components/CommentSection';
 import { useAuth } from '@/auth/AuthContext';
 import { ScenePhoto, isImageUrl } from '@/components/ScenePhoto';
 import { Poster } from '@/components/Poster';
-import { RichTextViewer } from '@/components/RichTextEditor';
+import { RichTextViewer, type RichTextEditorHandle } from '@/components/RichTextEditor';
 import { ImageUpload } from '@/components/ImageUpload';
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 import { useTaskPresets } from '@/hooks/useTaskPresets';
@@ -196,6 +196,8 @@ export default function EventDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
+  const descEditorRef = useRef<RichTextEditorHandle | null>(null);
+  const [embeddedUrls, setEmbeddedUrls] = useState<Set<string>>(new Set());
   const [editCity, setEditCity] = useState('');
   const [editState, setEditState] = useState('');
   const [editZipCode, setEditZipCode] = useState('');
@@ -668,6 +670,12 @@ export default function EventDetailPage() {
                     setEditEndsAt((loadedEvent as any)?.endsAt ? new Date((loadedEvent as any).endsAt).toISOString().slice(0, 16) : '');
                     setEditTitleImageUrl(isImageUrl(event.scene) ? event.scene : '');
                     setEditSignupMode(event.signupMode ?? 'direct');
+                    // Pre-populate embedded URLs from existing description
+                    const alreadyEmbedded = new Set<string>();
+                    for (const p of photos) {
+                      if (event.desc.includes(p.url)) alreadyEmbedded.add(p.url);
+                    }
+                    setEmbeddedUrls(alreadyEmbedded);
                     setEditOpen(true);
                   }}
                 >
@@ -2371,8 +2379,52 @@ export default function EventDetailPage() {
               <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>说明</Typography>
                 <Suspense fallback={<div style={{ minHeight: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>加载编辑器...</div>}>
-                  <RichTextEditorLazy content={editDesc} onChange={setEditDesc} placeholder="活动说明..." />
+                  <RichTextEditorLazy
+                    content={editDesc}
+                    onChange={setEditDesc}
+                    placeholder="活动说明..."
+                    editorRef={descEditorRef}
+                    onUploadImage={async (file) => {
+                      const { publicUrl } = await uploadMedia(file, 'event-image', user!.id);
+                      return publicUrl;
+                    }}
+                  />
                 </Suspense>
+                {photos.filter((p) => !embeddedUrls.has(p.url)).length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      点击 + 将照片插入到描述中
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
+                      {photos.filter((p) => !embeddedUrls.has(p.url)).map((p) => (
+                        <Box key={p.id} sx={{ position: 'relative' }}>
+                          <Box
+                            sx={{
+                              width: 56, height: 56, borderRadius: 1,
+                              backgroundImage: `url(${p.url})`, backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                            }}
+                          />
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              descEditorRef.current?.insertImage(p.url);
+                              setEmbeddedUrls((prev) => new Set(prev).add(p.url));
+                            }}
+                            sx={{
+                              position: 'absolute', bottom: -4, right: -4,
+                              bgcolor: 'primary.main', color: '#fff',
+                              width: 20, height: 20,
+                              '&:hover': { bgcolor: 'primary.dark' },
+                            }}
+                          >
+                            <AddIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                )}
               </Box>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Box>
@@ -2425,6 +2477,14 @@ export default function EventDetailPage() {
                       signupMode: editSignupMode,
                     } : prev);
                     setFlash({ open: true, severity: 'success', message: '活动已更新' });
+                  }
+                  // Move newly embedded photos out of the recap album
+                  const newlyEmbedded = photos.filter((p) => embeddedUrls.has(p.url));
+                  if (newlyEmbedded.length > 0) {
+                    for (const p of newlyEmbedded) {
+                      try { await removeEventRecapPhoto(eventId, p.url); } catch { /* ignore */ }
+                    }
+                    setPhotos((prev) => prev.filter((p) => !embeddedUrls.has(p.url)));
                   }
                   setEditOpen(false);
                 } catch {
