@@ -674,10 +674,10 @@ function FullFeed() {
               disabled={!canInteract}
               onClick={item.action}
               sx={{
-                bgcolor: 'rgba(30,30,30,0.75)',
-                color: '#fff',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(30,30,30,0.75)' : 'rgba(255,255,255,0.92)',
+                color: theme.palette.mode === 'dark' ? '#fff' : '#1C1B18',
                 border: '1px solid',
-                borderColor: 'rgba(212,165,116,0.6)',
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(212,165,116,0.6)' : 'rgba(0,0,0,0.10)',
                 borderRadius: 999,
                 px: 2,
                 py: 0.5,
@@ -687,8 +687,12 @@ function FullFeed() {
                 fontSize: 13,
                 fontWeight: 500,
                 backdropFilter: 'blur(8px)',
+                boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 2px 8px rgba(0,0,0,0.08)',
                 gap: 0.75,
-                '&:hover': { bgcolor: 'rgba(50,50,50,0.88)', borderColor: 'rgba(212,165,116,0.85)' },
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(50,50,50,0.88)' : 'rgba(255,255,255,0.95)',
+                  borderColor: theme.palette.mode === 'dark' ? 'rgba(212,165,116,0.85)' : 'rgba(0,0,0,0.15)',
+                },
               }}
             >
               <span style={{ fontSize: 14, lineHeight: 1 }}>{item.icon}</span>

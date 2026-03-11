@@ -7,7 +7,7 @@ import type { EventTaskData } from '@/types';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import type { FeedComment } from '@/types';
 import RichTextEditor, { RichTextViewer, type MentionMember } from './RichTextEditor';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, Box } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, Box, useTheme } from '@mui/material';
 import FavoriteBorderRounded from '@mui/icons-material/FavoriteBorderRounded';
 import FavoriteRounded from '@mui/icons-material/FavoriteRounded';
 import ChatBubbleOutlineRounded from '@mui/icons-material/ChatBubbleOutlineRounded';
@@ -294,6 +294,7 @@ interface FeedActivityProps extends InteractionProps {
 
 export function FeedActivity({ name, hostAvatar, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, hostId, waitlistCount, signupMode, pendingUserIds, socialHint, time, activityHint, activityHintUser, activityHintComment, taskSummary }: FeedActivityProps) {
   const c = useColors();
+  const isLight = useTheme().palette.mode === 'light';
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
   const [pending, setPending] = useState(() => Boolean(user?.id && pendingUserIds?.includes(user.id)));
@@ -482,8 +483,8 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
             {isEnded && !isCancelled && user && joined && (
               <div style={{
                 width: '100%', padding: '9px 0', borderRadius: 8, textAlign: 'center',
-                background: c.s2, border: `1px solid ${c.green}20`,
-                color: c.green, fontSize: 14, fontWeight: 700, opacity: 0.7,
+                background: isLight ? c.green + '30' : c.s2, border: `1px solid ${c.green}${isLight ? '60' : '40'}`,
+                color: c.green, fontSize: 14, fontWeight: 700, opacity: isLight ? 1 : 0.7,
               }}>
                 ✓ 已参与
               </div>
@@ -498,8 +499,8 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
                 {isHost ? (
                   <div style={{
                     width: '100%', padding: '9px 0', borderRadius: 8, textAlign: 'center',
-                    background: c.s2, border: `1px solid ${c.warm}20`,
-                    color: c.warm, fontSize: 14, fontWeight: 700, opacity: 0.7,
+                    background: isLight ? c.warm + '28' : c.s2, border: `1px solid ${c.warm}${isLight ? '50' : '40'}`,
+                    color: c.warm, fontSize: 14, fontWeight: 700, opacity: isLight ? 1 : 0.7,
                   }}>
                     我的活动
                   </div>
@@ -508,8 +509,8 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
                     onClick={handleSignup}
                     style={{
                       width: '100%', padding: '9px 0', borderRadius: 8,
-                      background: joined ? c.s2 : pending ? c.s2 : c.warm,
-                      border: joined ? `1px solid ${c.green}30` : pending ? `1px solid ${c.warm}30` : 'none',
+                      background: joined ? (isLight ? c.green + '30' : c.s2) : pending ? (isLight ? c.warm + '28' : c.s2) : c.warm,
+                      border: joined ? `1px solid ${c.green}${isLight ? '60' : '50'}` : pending ? `1px solid ${c.warm}${isLight ? '50' : '50'}` : 'none',
                       color: joined ? c.green : pending ? c.warm : c.bg,
                       fontSize: 14, fontWeight: 700, cursor: 'pointer',
                     }}
@@ -592,8 +593,8 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
             {isEnded && !isCancelled && user && joined && (
               <div style={{
                 width: '100%', padding: '9px 0', borderRadius: 8, textAlign: 'center',
-                background: c.s2, border: `1px solid ${c.green}20`,
-                color: c.green, fontSize: 14, fontWeight: 700, opacity: 0.7,
+                background: isLight ? c.green + '30' : c.s2, border: `1px solid ${c.green}${isLight ? '60' : '40'}`,
+                color: c.green, fontSize: 14, fontWeight: 700, opacity: isLight ? 1 : 0.7,
               }}>
                 ✓ 已参与
               </div>
@@ -608,8 +609,8 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
                 {isHost ? (
                   <div style={{
                     width: '100%', padding: '9px 0', borderRadius: 8, textAlign: 'center',
-                    background: c.s2, border: `1px solid ${c.warm}20`,
-                    color: c.warm, fontSize: 14, fontWeight: 700, opacity: 0.7,
+                    background: isLight ? c.warm + '28' : c.s2, border: `1px solid ${c.warm}${isLight ? '50' : '40'}`,
+                    color: c.warm, fontSize: 14, fontWeight: 700, opacity: isLight ? 1 : 0.7,
                   }}>
                     我的活动
                   </div>
@@ -618,8 +619,8 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
                     onClick={handleSignup}
                     style={{
                       width: '100%', padding: '9px 0', borderRadius: 8,
-                      background: joined ? c.s2 : pending ? c.s2 : c.warm,
-                      border: joined ? `1px solid ${c.green}30` : pending ? `1px solid ${c.warm}30` : 'none',
+                      background: joined ? (isLight ? c.green + '30' : c.s2) : pending ? (isLight ? c.warm + '28' : c.s2) : c.warm,
+                      border: joined ? `1px solid ${c.green}${isLight ? '60' : '50'}` : pending ? `1px solid ${c.warm}${isLight ? '50' : '50'}` : 'none',
                       color: joined ? c.green : pending ? c.warm : c.bg,
                       fontSize: 14, fontWeight: 700, cursor: 'pointer',
                     }}
@@ -1062,6 +1063,7 @@ interface FeedSmallGroupProps extends InteractionProps {
 
 export function FeedSmallGroup({ name, avatar, title, date, location, weekNumber, people, signupUserIds, capacity, isPrivate, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedSmallGroupProps) {
   const c = useColors();
+  const isLight = useTheme().palette.mode === 'light';
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -1136,8 +1138,8 @@ export function FeedSmallGroup({ name, avatar, title, date, location, weekNumber
           onClick={handleSignup}
           style={{
             width: '100%', padding: '9px 0', borderRadius: 8,
-            background: joined ? c.s2 : c.warm,
-            border: joined ? `1px solid ${c.green}30` : 'none',
+            background: joined ? (isLight ? c.green + '30' : c.s2) : c.warm,
+            border: joined ? `1px solid ${c.green}${isLight ? '60' : '30'}` : 'none',
             color: joined ? c.green : c.bg,
             fontSize: 14, fontWeight: 700, cursor: 'pointer',
           }}

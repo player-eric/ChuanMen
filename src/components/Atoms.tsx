@@ -204,8 +204,8 @@ export function Card({ children, glow, style = {}, onClick }: CardProps) {
       onClick={onClick}
       style={{
         background: c.s1, borderRadius: 12,
-        border: `1px solid ${glow ? c.warm + '25' : c.line}`,
-        boxShadow: isLight ? '0 1px 4px rgba(0,0,0,0.07)' : 'none',
+        border: `1px solid ${glow && !isLight ? c.warm + '25' : c.line}`,
+        boxShadow: isLight ? '0 1px 8px rgba(0,0,0,0.10)' : 'none',
         overflow: 'hidden', ...style,
       }}
     >

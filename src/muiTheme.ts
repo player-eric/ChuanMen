@@ -8,7 +8,7 @@ export function createAppTheme(mode: AppColorMode = 'dark') {
   return createTheme({
     palette: {
       mode,
-      primary: { main: '#d4a574' },
+      primary: { main: isDark ? '#d4a574' : '#6A5035' },
       secondary: { main: '#6f9d8f' },
       background: isDark
         ? {
@@ -16,7 +16,7 @@ export function createAppTheme(mode: AppColorMode = 'dark') {
             paper: '#1E1E22',
           }
         : {
-            default: '#FAFAFA',
+            default: '#F7F6F4',
             paper: '#FFFFFF',
           },
       text: isDark
@@ -25,8 +25,8 @@ export function createAppTheme(mode: AppColorMode = 'dark') {
             secondary: '#a6a2a0',
           }
         : {
-            primary: '#2f2822',
-            secondary: '#6f655d',
+            primary: '#1C1B18',
+            secondary: '#4A4640',
           },
     },
     shape: {
@@ -43,7 +43,7 @@ export function createAppTheme(mode: AppColorMode = 'dark') {
       MuiCard: {
         styleOverrides: {
           root: {
-            border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(34,26,20,0.12)',
+            border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.12)',
             backgroundImage: 'none',
           },
         },
@@ -51,10 +51,43 @@ export function createAppTheme(mode: AppColorMode = 'dark') {
       MuiAppBar: {
         styleOverrides: {
           colorTransparent: {
-            backgroundColor: isDark ? '#17171ccc' : '#FAFAFAcc',
+            backgroundColor: isDark ? '#17171ccc' : '#F7F6F4cc',
           },
         },
       },
+      ...(isDark ? {} : {
+        MuiChip: {
+          styleOverrides: {
+            root: {
+              fontWeight: 600,
+            },
+            outlined: {
+              borderColor: 'rgba(0,0,0,0.15)',
+            },
+          },
+        },
+        MuiButton: {
+          styleOverrides: {
+            outlined: {
+              borderColor: 'rgba(0,0,0,0.15)',
+              '&.MuiButton-colorInherit': {
+                borderColor: 'rgba(0,0,0,0.12)',
+                color: '#4A4640',
+              },
+            },
+          },
+        },
+        MuiTab: {
+          styleOverrides: {
+            root: {
+              color: '#7A756E',
+              '&.Mui-selected': {
+                color: '#6A5035',
+              },
+            },
+          },
+        },
+      }),
     },
   });
 }

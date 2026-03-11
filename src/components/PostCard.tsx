@@ -127,7 +127,7 @@ export function PostCard({ from, to, fromAvatar, toAvatar, message, stamp = '✉
 
   if (horiz) {
     return (
-      <Box sx={{ borderRadius: 2, overflow: 'hidden', background: `linear-gradient(165deg, ${c.paper}, ${c.paperDark})`, boxShadow: `0 2px 8px ${c.bg}30`, border: `1px solid ${c.warm}25`, display: 'flex', aspectRatio: '3 / 2' }}>
+      <Box sx={{ borderRadius: 2, overflow: 'hidden', background: `linear-gradient(165deg, ${c.paper}, ${c.paperDark})`, boxShadow: `0 2px 8px ${c.bg}30`, border: `1px solid ${c.line}`, display: 'flex', aspectRatio: '3 / 2' }}>
         {/* Left: photo / banner */}
         <div style={{ width: '45%', flexShrink: 0, background: photoBg || defaultBg, position: 'relative', overflow: 'hidden' }}>
           {bannerDecor}
@@ -145,7 +145,7 @@ export function PostCard({ from, to, fromAvatar, toAvatar, message, stamp = '✉
   }
 
   return (
-    <Box sx={{ borderRadius: 2, overflow: 'hidden', background: `linear-gradient(165deg, ${c.paper}, ${c.paperDark})`, boxShadow: `0 2px 8px ${c.bg}30`, border: `1px solid ${c.warm}25` }}>
+    <Box sx={{ borderRadius: 2, overflow: 'hidden', background: `linear-gradient(165deg, ${c.paper}, ${c.paperDark})`, boxShadow: `0 2px 8px ${c.bg}30`, border: `1px solid ${c.line}` }}>
       {/* Banner area */}
       <div style={{ width: '100%', height: 130, background: photoBg || defaultBg, position: 'relative', overflow: 'hidden' }}>
         {bannerDecor}
