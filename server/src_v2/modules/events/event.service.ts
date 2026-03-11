@@ -150,10 +150,10 @@ export class EventService {
           this.repository.getWaitlistPosition(eventId, data.userId),
         ]);
         if (event && user?.email) {
-          await sendEmail({
+          await sendTemplatedEmail(this.prisma, {
             to: user.email,
-            subject: `${event.title} — 你已加入等位`,
-            text: `Hi ${user.name}，\n\n${event.title} 目前已满，你已加入等位名单（第${pos}位）。有名额空出时我们会通知你。\n\n— 串门儿`,
+            ruleId: 'TXN-8',
+            variables: { userName: user.name, eventTitle: event.title, position: String(pos) },
           });
         }
       } catch { /* email failure should not block signup */ }
@@ -231,10 +231,12 @@ export class EventService {
     if (promoted) {
       try {
         if (promoted.user?.email) {
-          await sendEmail({
+          await sendTemplatedEmail(this.prisma, {
             to: promoted.user.email,
-            subject: `好消息！${event.title} 有名额了`,
-            text: `Hi ${promoted.user.name}，\n\n${event.title} 有一个名额空出了！请在24小时内确认是否参加。\n\n前往活动页面确认：https://chuanmener.club/events/${eventId}\n\n— 串门儿`,
+            ruleId: 'TXN-9',
+            variables: { userName: promoted.user.name, eventTitle: event.title },
+            ctaLabel: '确认参加',
+            ctaUrl: `https://chuanmener.club/events/${eventId}`,
           });
         }
       } catch { /* best effort */ }
@@ -251,10 +253,12 @@ export class EventService {
       const event = await this.prisma.event.findUnique({ where: { id: eventId }, select: { title: true } });
       const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } });
       if (event && user?.email) {
-        await sendEmail({
+        await sendTemplatedEmail(this.prisma, {
           to: user.email,
-          subject: `${event.title} — 报名成功`,
-          text: `Hi ${user.name}，\n\n你已成功报名参加 ${event.title}！期待在活动中见到你。\n\n— 串门儿`,
+          ruleId: 'TXN-10',
+          variables: { userName: user.name, eventTitle: event.title },
+          ctaLabel: '查看活动',
+          ctaUrl: `https://chuanmener.club/events/${eventId}`,
         });
       }
     } catch { /* best effort */ }
@@ -310,10 +314,12 @@ export class EventService {
     try {
       const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } });
       if (user?.email) {
-        await sendEmail({
+        await sendTemplatedEmail(this.prisma, {
           to: user.email,
-          subject: `你已被接纳参加 ${event.title}`,
-          text: `Hi ${user.name}，\n\nHost 已接纳你参加 ${event.title}！期待在活动中见到你。\n\n— 串门儿`,
+          ruleId: 'TXN-11',
+          variables: { userName: user.name, eventTitle: event.title },
+          ctaLabel: '查看活动',
+          ctaUrl: `https://chuanmener.club/events/${eventId}`,
         });
       }
     } catch { /* best effort */ }
@@ -334,10 +340,12 @@ export class EventService {
     try {
       const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } });
       if (user?.email) {
-        await sendEmail({
+        await sendTemplatedEmail(this.prisma, {
           to: user.email,
-          subject: `${event.title} 等位未通过`,
-          text: `Hi ${user.name}，\n\n很遗憾，${event.title} 的等位申请未通过。希望下次活动能见到你！\n\n— 串门儿`,
+          ruleId: 'TXN-12',
+          variables: { userName: user.name, eventTitle: event.title },
+          ctaLabel: '浏览其他活动',
+          ctaUrl: 'https://chuanmener.club/events',
         });
       }
     } catch { /* best effort */ }

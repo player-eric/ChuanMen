@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { sendEmail } from './emailService.js';
+import { sendTemplatedEmail } from './emailService.js';
 import { detectMilestones, generateHostTribute, processAnnouncedUsers } from '../agent/contentAutomation.js';
 import {
   sendPostEventRecap,
@@ -241,10 +241,12 @@ export async function runAgentCycle(app: FastifyInstance) {
         for (const s of allParticipants) {
           if (coHostIdSet.has(s.userId)) continue;
           if (s.user?.email) {
-            await sendEmail({
+            await sendTemplatedEmail(prisma, {
               to: s.user.email,
-              subject: `【串门儿】参加「${event.title}」获得感谢卡额度 +2`,
-              text: `Hi ${s.user.name}，\n\n感谢你参加「${event.title}」！你获得了 2 张感谢卡额度，快去给一起参加的小伙伴寄张感谢卡吧 ✉️\n\n寄感谢卡：https://chuanmener.club/cards\n\n— 串门儿`,
+              ruleId: 'TXN-14',
+              variables: { userName: s.user.name, eventTitle: event.title },
+              ctaLabel: '寄感谢卡',
+              ctaUrl: 'https://chuanmener.club/cards',
             });
           }
         }
@@ -252,19 +254,23 @@ export async function runAgentCycle(app: FastifyInstance) {
         for (const ch of event.coHosts ?? []) {
           if (ch.userId === event.hostId) continue;
           if (ch.user?.email) {
-            await sendEmail({
+            await sendTemplatedEmail(prisma, {
               to: ch.user.email,
-              subject: `【串门儿】协办「${event.title}」获得感谢卡额度 +6`,
-              text: `Hi ${ch.user.name}，\n\n感谢你协办「${event.title}」！作为 Co-Host 你获得了 6 张感谢卡额度（参加 +2，Host 奖励 +4）。快去给参与的小伙伴寄张感谢卡吧 ✉️\n\n寄感谢卡：https://chuanmener.club/cards\n\n— 串门儿`,
+              ruleId: 'TXN-15',
+              variables: { userName: ch.user.name, eventTitle: event.title },
+              ctaLabel: '寄感谢卡',
+              ctaUrl: 'https://chuanmener.club/cards',
             });
           }
         }
         // Notify host (+6)
         if (event.host?.email) {
-          await sendEmail({
+          await sendTemplatedEmail(prisma, {
             to: event.host.email,
-            subject: `【串门儿】发起「${event.title}」获得感谢卡额度 +6`,
-            text: `Hi ${event.host.name}，\n\n感谢你组织「${event.title}」！作为 Host 你获得了 6 张感谢卡额度（参加 +2，Host 奖励 +4）。快去给参与的小伙伴寄张感谢卡吧 ✉️\n\n寄感谢卡：https://chuanmener.club/cards\n\n— 串门儿`,
+            ruleId: 'TXN-16',
+            variables: { userName: event.host.name, eventTitle: event.title },
+            ctaLabel: '寄感谢卡',
+            ctaUrl: 'https://chuanmener.club/cards',
           });
         }
       } catch { /* email failure should not block credit award */ }

@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import type { FastifyBaseLogger } from 'fastify';
-import { sendEmail, sendTemplatedEmail } from '../services/emailService.js';
+import { sendTemplatedEmail } from '../services/emailService.js';
 import { filterByCooldown, filterByRefId, ELIGIBLE_USER_WHERE } from './helpers.js';
 import type { HostTributeResult } from './contentAutomation.js';
 import { renderDigestBlock, type DigestSection } from '../emails/template.js';
@@ -258,10 +258,13 @@ export async function sendUnclaimedTaskReminder(
     for (const user of candidates) {
       if (!eligible.has(user.id)) continue;
       try {
-        const result = await sendEmail({
+        const taskList = unclaimedTasks.map((t) => `- ${t.role}${t.description ? `：${t.description}` : ''}`).join('\n');
+        const result = await sendTemplatedEmail(prisma, {
           to: user.email,
-          subject: `${event.title}还差一个${firstTask.role}，你来吗？`,
-          text: `Hi ${user.name}，\n\n${event.title}还有分工没人认领：\n\n${unclaimedTasks.map((t) => `- ${t.role}${t.description ? `：${t.description}` : ''}`).join('\n')}\n\n认领一个分工${taskDesc}？\n\n查看活动：https://chuanmener.club/events/${event.id}\n\n— 串门儿`,
+          ruleId: 'P0-C',
+          variables: { userName: user.name, eventTitle: event.title, taskRole: firstTask.role, taskList },
+          ctaLabel: '查看活动',
+          ctaUrl: `https://chuanmener.club/events/${event.id}`,
         });
         await prisma.emailLog.create({
           data: { userId: user.id, ruleId: 'P0-C', refId, messageId: result.MessageId },
@@ -1074,10 +1077,12 @@ export async function processWaitlistExpiry(
       // Send expiry notification
       if (offer.user?.email) {
         try {
-          await sendEmail({
+          await sendTemplatedEmail(prisma, {
             to: offer.user.email,
-            subject: `${offer.event.title} 的等位机会已过期`,
-            text: `Hi ${offer.user.name}，\n\n${offer.event.title} 的等位名额已超过24小时未确认，机会已过期。希望下次活动能见到你！\n\n— 串门儿`,
+            ruleId: 'TXN-17',
+            variables: { userName: offer.user.name, eventTitle: offer.event.title },
+            ctaLabel: '浏览其他活动',
+            ctaUrl: 'https://chuanmener.club/events',
           });
         } catch { /* best effort */ }
       }
@@ -1122,10 +1127,12 @@ export async function sendLotteryDrawNotif(
 ): Promise<void> {
   const siteUrl = 'https://chuanmener.club';
   try {
-    await sendEmail({
+    await sendTemplatedEmail(prisma, {
       to: drawnUser.email,
-      subject: `🎲 本周轮到你 Host 啦！`,
-      text: `Hi ${drawnUser.name}，\n\n这周轮到你来组织一次小聚！不用有压力，2-6 个人的小局就好。\n\n可以是：一起喝杯咖啡、散个步、看个电影、或者聊聊天。\n\n👉 前往发起小聚：${siteUrl}\n\n如果这周实在不方便，登录后可以点击跳过，没有任何影响。\n\n— 串门儿`,
+      ruleId: 'LOTTERY-DRAW',
+      variables: { userName: drawnUser.name },
+      ctaLabel: '前往发起小聚',
+      ctaUrl: siteUrl,
     });
     await prisma.emailLog.create({
       data: { userId: drawnUser.id, ruleId: 'LOTTERY-DRAW', refId: `week-${weekNumber}` },
@@ -1170,10 +1177,12 @@ export async function sendConsecutiveEventsReminder(
   for (const user of candidates) {
     if (!eligible.has(user.id)) continue;
     try {
-      await sendEmail({
+      await sendTemplatedEmail(prisma, {
         to: user.email,
-        subject: '你已经是串门儿活跃分子了！',
-        text: `Hi ${user.name}，\n\n你已经连续参加了 3 次活动，大家都很喜欢有你在！\n\n有没有兴趣试试做一次 Host？可以是很简单的小聚，2-6 个人，做点你喜欢的事就好。\n\n👉 前往设置加入轮值候选池：${siteUrl}/settings\n\n完全自愿，没有压力 :)\n\n— 串门儿`,
+        ruleId: 'LOTTERY-3X',
+        variables: { userName: user.name },
+        ctaLabel: '加入轮值候选池',
+        ctaUrl: `${siteUrl}/settings`,
       });
       await prisma.emailLog.create({
         data: { userId: user.id, ruleId: 'LOTTERY-3X' },

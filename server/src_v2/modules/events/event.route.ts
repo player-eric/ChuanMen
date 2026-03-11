@@ -164,10 +164,12 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
       }).then(async (votes) => {
         for (const vote of votes) {
           if (!vote.user.email || vote.user.id === eventResponse.hostId) continue;
-          sendEmail({
+          sendTemplatedEmail(app.prisma, {
             to: vote.user.email,
-            subject: `【串门儿】你感兴趣的创意「${eventResponse.title}」变成活动了！`,
-            text: `Hi ${vote.user.name}，\n\n你之前感兴趣的创意「${eventResponse.title}」已经有人组织啦！快来看看并报名吧。\n\n查看活动：https://chuanmener.club/events/${eventResponse.id}\n\n— 串门儿`,
+            ruleId: 'TXN-13',
+            variables: { userName: vote.user.name, eventTitle: eventResponse.title },
+            ctaLabel: '查看活动',
+            ctaUrl: `https://chuanmener.club/events/${eventResponse.id}`,
           }).catch((err) => {
             app.log.error({ err, userId: vote.user.id }, 'Proposal→event notification failed');
           });
