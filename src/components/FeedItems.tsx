@@ -1423,6 +1423,7 @@ export function FeedNewMember({ phase, id, name, bio, location, selfAsFriend, pa
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(initLikes);
   const [likedNames, setLikedNames] = useState(initLikedBy);
+  const [likesExpanded, setLikesExpanded] = useState(false);
 
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
 
@@ -1514,7 +1515,10 @@ export function FeedNewMember({ phase, id, name, bio, location, selfAsFriend, pa
         </div>
         {likedNames.length > 0 && (
           <div style={{ padding: '0 14px 8px', fontSize: 12, color: c.text3 }}>
-            {likedNames.slice(0, 3).join('、')}{likedNames.length > 3 ? ` 等 ${likedNames.length} 人` : ''} 欢迎
+            {likedNames.length <= 3 || likesExpanded
+              ? <>{likedNames.join('、')} 欢迎</>
+              : <>{likedNames.slice(0, 3).join('、')}<span onClick={() => setLikesExpanded(true)} style={{ cursor: 'pointer', color: c.text2 }}> 等 {likedNames.length} 人</span> 欢迎</>
+            }
           </div>
         )}
       </div>
