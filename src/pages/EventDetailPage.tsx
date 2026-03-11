@@ -1246,6 +1246,86 @@ export default function EventDetailPage() {
           </DialogActions>
         </Dialog>
 
+        {/* 7b. Action button — offer response or signup */}
+        {event.phase !== 'cancelled' && myStatus === 'offered' && user && (() => {
+          const myDetail = (event.signupDetails ?? []).find((s) => s.userId === user.id);
+          const offeredAt = myDetail?.offeredAt ? new Date(myDetail.offeredAt).getTime() : Date.now();
+          return <OfferResponseUI eventId={eventId!} userId={user.id} offeredAt={offeredAt} onDone={async (accepted) => {
+            if (accepted) {
+              setMyStatus('accepted');
+              setFlash({ open: true, severity: 'success', message: '报名成功！' });
+            } else {
+              setMyStatus('declined');
+              setFlash({ open: true, severity: 'success', message: '已放弃名额' });
+            }
+            await refreshEvent();
+          }} />;
+        })()}
+        {event.phase !== 'cancelled' && myStatus !== 'offered' && (
+          <Box>
+            {myStatus === 'pending' && event.phase !== 'ended' ? (
+              /* Application pending: show status with cancel option */
+              <Stack spacing={1}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{ flex: 1, textAlign: 'center', py: 1.2, borderRadius: 2, bgcolor: 'warning.main', opacity: 0.15 }}>
+                    <Typography sx={{ color: 'warning.main', fontWeight: 700, fontSize: 14, opacity: 1 }}>申请已提交，等待审批</Typography>
+                  </Box>
+                  <Button size="small" color="inherit" sx={{ color: 'text.secondary', fontSize: 12, flexShrink: 0 }} onClick={() => setCancelDialogOpen(true)}>
+                    撤回申请
+                  </Button>
+                </Stack>
+                {(() => {
+                  const myDetail = (event.signupDetails ?? []).find((s) => s.userId === user?.id);
+                  if (!myDetail?.note && !myDetail?.intendedTaskId) return null;
+                  const task = myDetail.intendedTaskId ? eventTasks.find(t => t.id === myDetail.intendedTaskId) : null;
+                  return (
+                    <Box sx={{ px: 1.5, py: 1, bgcolor: 'action.hover', borderRadius: 2 }}>
+                      {myDetail.note && <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>留言：{myDetail.note}</Typography>}
+                      {task && <Typography variant="body2" color="primary" sx={{ fontSize: 13 }}>想认领：{task.role}</Typography>}
+                    </Box>
+                  );
+                })()}
+              </Stack>
+            ) : signedUp && event.phase !== 'ended' ? (
+              /* Already signed up: muted status with cancel option */
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Box sx={{ flex: 1, textAlign: 'center', py: 1.2, borderRadius: 2, bgcolor: 'success.main', opacity: 0.15 }}>
+                  <Typography sx={{ color: 'success.main', fontWeight: 700, fontSize: 14, opacity: 1 }}>✓ 已报名</Typography>
+                </Box>
+                <Button size="small" color="inherit" sx={{ color: 'text.secondary', fontSize: 12, flexShrink: 0 }} onClick={() => setCancelDialogOpen(true)}>
+                  取消报名
+                </Button>
+              </Stack>
+            ) : signedUp && event.phase === 'ended' ? (
+              /* Already participated in ended event: passive label */
+              <Box sx={{ textAlign: 'center', py: 1.2, borderRadius: 2, bgcolor: 'success.main', opacity: 0.15 }}>
+                <Typography sx={{ color: 'success.main', fontWeight: 700, fontSize: 14, opacity: 1 }}>✓ 已参与</Typography>
+              </Box>
+            ) : event.phase !== 'ended' ? (
+              /* Not signed up: action button */
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={onSignup}
+                disabled={!user}
+                color={myStatus === 'waitlist' ? 'warning' : myStatus === 'invited' ? 'info' : 'primary'}
+              >
+                {!user
+                  ? '登录后可报名'
+                  : myStatus === 'waitlist'
+                    ? `等位中 · 第${((event.signupDetails ?? []).filter(s => s.status === 'waitlist').findIndex(s => s.userId === user.id) + 1) || '?'}位`
+                    : myStatus === 'invited'
+                      ? '接受邀请'
+                      : event.signupMode === 'application'
+                        ? '申请参加'
+                        : event.spots <= 0
+                          ? '加入等位'
+                          : '报名参加'}
+              </Button>
+            ) : null}
+          </Box>
+        )}
+
         {/* 8. Participants */}
         <Card>
           <CardContent>
@@ -2236,85 +2316,6 @@ export default function EventDetailPage() {
         {/* 9. Comments */}
         {eventId && <CommentSection entityType="event" entityId={eventId} />}
 
-        {/* 10. Action button — offer response or signup */}
-        {event.phase !== 'cancelled' && myStatus === 'offered' && user && (() => {
-          const myDetail = (event.signupDetails ?? []).find((s) => s.userId === user.id);
-          const offeredAt = myDetail?.offeredAt ? new Date(myDetail.offeredAt).getTime() : Date.now();
-          return <OfferResponseUI eventId={eventId!} userId={user.id} offeredAt={offeredAt} onDone={async (accepted) => {
-            if (accepted) {
-              setMyStatus('accepted');
-              setFlash({ open: true, severity: 'success', message: '报名成功！' });
-            } else {
-              setMyStatus('declined');
-              setFlash({ open: true, severity: 'success', message: '已放弃名额' });
-            }
-            await refreshEvent();
-          }} />;
-        })()}
-        {event.phase !== 'cancelled' && myStatus !== 'offered' && (
-          <Box>
-            {myStatus === 'pending' && event.phase !== 'ended' ? (
-              /* Application pending: show status with cancel option */
-              <Stack spacing={1}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Box sx={{ flex: 1, textAlign: 'center', py: 1.2, borderRadius: 2, bgcolor: 'warning.main', opacity: 0.15 }}>
-                    <Typography sx={{ color: 'warning.main', fontWeight: 700, fontSize: 14, opacity: 1 }}>申请已提交，等待审批</Typography>
-                  </Box>
-                  <Button size="small" color="inherit" sx={{ color: 'text.secondary', fontSize: 12, flexShrink: 0 }} onClick={() => setCancelDialogOpen(true)}>
-                    撤回申请
-                  </Button>
-                </Stack>
-                {(() => {
-                  const myDetail = (event.signupDetails ?? []).find((s) => s.userId === user?.id);
-                  if (!myDetail?.note && !myDetail?.intendedTaskId) return null;
-                  const task = myDetail.intendedTaskId ? eventTasks.find(t => t.id === myDetail.intendedTaskId) : null;
-                  return (
-                    <Box sx={{ px: 1.5, py: 1, bgcolor: 'action.hover', borderRadius: 2 }}>
-                      {myDetail.note && <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>留言：{myDetail.note}</Typography>}
-                      {task && <Typography variant="body2" color="primary" sx={{ fontSize: 13 }}>想认领：{task.role}</Typography>}
-                    </Box>
-                  );
-                })()}
-              </Stack>
-            ) : signedUp && event.phase !== 'ended' ? (
-              /* Already signed up: muted status with cancel option */
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Box sx={{ flex: 1, textAlign: 'center', py: 1.2, borderRadius: 2, bgcolor: 'success.main', opacity: 0.15 }}>
-                  <Typography sx={{ color: 'success.main', fontWeight: 700, fontSize: 14, opacity: 1 }}>✓ 已报名</Typography>
-                </Box>
-                <Button size="small" color="inherit" sx={{ color: 'text.secondary', fontSize: 12, flexShrink: 0 }} onClick={() => setCancelDialogOpen(true)}>
-                  取消报名
-                </Button>
-              </Stack>
-            ) : signedUp && event.phase === 'ended' ? (
-              /* Already participated in ended event: passive label */
-              <Box sx={{ textAlign: 'center', py: 1.2, borderRadius: 2, bgcolor: 'success.main', opacity: 0.15 }}>
-                <Typography sx={{ color: 'success.main', fontWeight: 700, fontSize: 14, opacity: 1 }}>✓ 已参与</Typography>
-              </Box>
-            ) : event.phase !== 'ended' ? (
-              /* Not signed up: action button */
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={onSignup}
-                disabled={!user}
-                color={myStatus === 'waitlist' ? 'warning' : myStatus === 'invited' ? 'info' : 'primary'}
-              >
-                {!user
-                  ? '登录后可报名'
-                  : myStatus === 'waitlist'
-                    ? `等位中 · 第${((event.signupDetails ?? []).filter(s => s.status === 'waitlist').findIndex(s => s.userId === user.id) + 1) || '?'}位`
-                    : myStatus === 'invited'
-                      ? '接受邀请'
-                      : event.signupMode === 'application'
-                        ? '申请参加'
-                        : event.spots <= 0
-                          ? '加入等位'
-                          : '报名参加'}
-              </Button>
-            ) : null}
-          </Box>
-        )}
 
         {/* Edit event dialog */}
         <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm" fullWidth>
