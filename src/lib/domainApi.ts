@@ -1389,6 +1389,11 @@ export interface AdminStats {
   };
 
   dauTrend: { date: string; count: number }[];
+
+  recentlyActiveMembers: {
+    id: string; name: string; avatar: string | null; role: string;
+    hostCount: number; participationCount: number; lastActiveAt: string | null;
+  }[];
 }
 
 export async function fetchAdminStats() {

@@ -142,6 +142,7 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
       dauSignups,
       dauLikes,
       dauRecs,
+      allTimeHosts,
     ] = await Promise.all([
       prisma.user.count({ where: { userStatus: 'approved' } }),
       prisma.user.count({ where: { userStatus: 'applicant' } }),
@@ -174,7 +175,7 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
       // All approved members
       prisma.user.findMany({
         where: { userStatus: 'approved' },
-        select: { id: true, name: true, avatar: true, lastActiveAt: true, approvedAt: true, participationCount: true, hostCount: true, createdAt: true },
+        select: { id: true, name: true, avatar: true, lastActiveAt: true, approvedAt: true, participationCount: true, hostCount: true, createdAt: true, role: true },
       }),
       // Recent 60-day applicants/approved for onboarding
       prisma.user.findMany({
@@ -241,6 +242,11 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
       prisma.recommendation.findMany({
         where: { createdAt: { gte: d14ago } },
         select: { authorId: true, createdAt: true },
+      }),
+      // All-time distinct host IDs (for accurate "never hosted" check)
+      prisma.event.findMany({
+        select: { hostId: true },
+        distinct: ['hostId'],
       }),
     ]);
 
@@ -376,8 +382,9 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
       });
 
     // ── Host Evolution ──
+    const allTimeHostIds = new Set(allTimeHosts.map(h => h.hostId));
     const readyToHost: MiniMember[] = allMembers
-      .filter(m => m.participationCount >= 3 && m.hostCount === 0)
+      .filter(m => m.participationCount >= 3 && !allTimeHostIds.has(m.id))
       .map(m => toMini(m as any));
 
     // First-time hosts this month: all their hosting ever is within this month
@@ -504,6 +511,25 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
       ...recentCards.map(c => ({ text: `${c.from.name} 给 ${c.to.name} 寄了感谢卡`, time: c.createdAt.toISOString() })),
     ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 8);
 
+    // ── Recently Active Members (sorted by lastActiveAt desc, nulls last) ──
+    const recentlyActiveMembers = [...allMembers]
+      .sort((a, b) => {
+        if (a.lastActiveAt && b.lastActiveAt) return b.lastActiveAt.getTime() - a.lastActiveAt.getTime();
+        if (a.lastActiveAt) return -1;
+        if (b.lastActiveAt) return 1;
+        return 0;
+      })
+      .slice(0, 50)
+      .map(m => ({
+        id: m.id,
+        name: m.name,
+        avatar: m.avatar || null,
+        role: (m as any).role as string,
+        hostCount: m.hostCount,
+        participationCount: m.participationCount,
+        lastActiveAt: m.lastActiveAt?.toISOString() ?? null,
+      }));
+
     return {
       // Existing fields (preserved for backward compat)
       totalMembers,
@@ -574,6 +600,8 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
       },
 
       dauTrend,
+
+      recentlyActiveMembers,
     };
   });
 };

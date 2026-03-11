@@ -110,6 +110,12 @@ export class EventService {
       }
     }
 
+    // Increment host's hostCount
+    await this.prisma.user.update({
+      where: { id: eventData.hostId },
+      data: { hostCount: { increment: 1 } },
+    });
+
     return { ...created, proposalId };
   }
 
@@ -438,7 +444,16 @@ export class EventService {
     return this.repository.listCancelled();
   }
 
-  delete(id: string) {
-    return this.repository.delete(id);
+  async delete(id: string) {
+    const event = await this.prisma.event.findUnique({ where: { id }, select: { hostId: true } });
+    const result = await this.repository.delete(id);
+    // Decrement host's hostCount
+    if (event) {
+      await this.prisma.user.update({
+        where: { id: event.hostId },
+        data: { hostCount: { decrement: 1 } },
+      });
+    }
+    return result;
   }
 }

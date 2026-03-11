@@ -9,6 +9,12 @@ import {
   Collapse,
   Grid,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Typography,
 } from '@mui/material';
 import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
@@ -90,7 +96,11 @@ function FunnelBar({ label, count, max, sub, labelWidth = 56 }: { label: string;
 }
 
 /** Pure-CSS sparkline bar chart for DAU trend */
-function DauChart({ data }: { data: { date: string; count: number }[] }) {
+function DauChart({ data, selectedDate, onBarClick }: {
+  data: { date: string; count: number }[];
+  selectedDate?: string;
+  onBarClick?: (date: string) => void;
+}) {
   const max = Math.max(...data.map(d => d.count), 1);
   return (
     <Card sx={{ p: 2 }}>
@@ -98,21 +108,26 @@ function DauChart({ data }: { data: { date: string; count: number }[] }) {
         每日活跃（14 天）
       </Typography>
       <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: 80 }}>
-        {data.map(d => (
-          <Box key={d.date} sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Typography sx={{ fontSize: 10, fontWeight: 600, mb: 0.25, color: 'text.primary' }}>
+        {data.map(d => {
+          const selected = selectedDate === d.date;
+          return (
+          <Box key={d.date} onClick={() => onBarClick?.(d.date)}
+            sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+            <Typography sx={{ fontSize: 10, fontWeight: 600, mb: 0.25, color: selected ? 'primary.main' : 'text.primary' }}>
               {d.count || ''}
             </Typography>
             <Box sx={{
               width: '100%', maxWidth: 28,
               height: Math.max(4, (d.count / max) * 56),
-              bgcolor: 'primary.main', borderRadius: 0.5, opacity: 0.85,
+              bgcolor: 'primary.main', borderRadius: 0.5, opacity: selected ? 1 : 0.55,
+              transition: '0.15s',
             }} />
-            <Typography sx={{ fontSize: 9, mt: 0.25, color: 'text.secondary' }}>
+            <Typography sx={{ fontSize: 9, mt: 0.25, color: selected ? 'primary.main' : 'text.secondary', fontWeight: selected ? 700 : 400 }}>
               {d.date.slice(3)}
             </Typography>
           </Box>
-        ))}
+          );
+        })}
       </Box>
     </Card>
   );
@@ -154,6 +169,8 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [expandAway, setExpandAway] = useState(false);
   const [expandNew, setExpandNew] = useState(false);
+  // Filter for right-side member table: 'all' | 'active' | 'occasional' | 'away' | 'MM-DD' (date)
+  const [memberFilter, setMemberFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchAdminStats()
@@ -251,10 +268,133 @@ export default function AdminDashboardPage() {
         ))}
       </Grid>
 
-      {/* ── DAU Trend ── */}
-      <DauChart data={stats.dauTrend} />
+      {/* ── DAU Trend (left) + Recently Active Members (right) ── */}
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <Stack spacing={2}>
+            <DauChart data={stats.dauTrend}
+              selectedDate={memberFilter.includes('-') ? memberFilter : undefined}
+              onBarClick={(date) => setMemberFilter(prev => prev === date ? 'all' : date)} />
+            {/* Member distribution summary */}
+            <Card sx={{ p: 2 }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={1}>成员概览</Typography>
+              <Stack spacing={0.5}>
+                {[
+                  { key: 'all', label: '总成员', value: stats.totalMembers, color: 'text.primary' },
+                  { key: 'active', label: '7天内活跃', value: stats.memberDistribution.active, color: 'success.main' },
+                  { key: 'occasional', label: '偶尔（7-30天）', value: stats.memberDistribution.occasional, color: 'info.main' },
+                  { key: 'away', label: '暂别（30天+）', value: stats.memberDistribution.away.length, color: 'text.secondary' },
+                ].map(row => (
+                  <Stack key={row.key} direction="row" justifyContent="space-between"
+                    onClick={() => setMemberFilter(prev => prev === row.key ? 'all' : row.key)}
+                    sx={{
+                      cursor: 'pointer', borderRadius: 0.5, px: 0.5, mx: -0.5,
+                      bgcolor: memberFilter === row.key && row.key !== 'all' ? 'action.selected' : 'transparent',
+                      '&:hover': { bgcolor: 'action.hover' },
+                    }}>
+                    <Typography variant="body2" color="text.secondary">{row.label}</Typography>
+                    <Typography variant="body2" fontWeight={700} sx={{ color: row.color }}>{row.value}</Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            </Card>
+          </Stack>
+        </Grid>
+        <Grid size={{ xs: 12, md: 5 }}>
+          <Card sx={{ p: 2 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+              <Typography variant="subtitle2" fontWeight={700}>最近活跃成员</Typography>
+              {memberFilter !== 'all' && (
+                <Chip size="small" label={memberFilter.includes('-') ? memberFilter : { active: '7天内', occasional: '7-30天', away: '30天+' }[memberFilter]}
+                  onDelete={() => setMemberFilter('all')} sx={{ height: 22, fontSize: 11 }} />
+              )}
+            </Stack>
+            <TableContainer sx={{ maxHeight: 260, overflow: 'auto' }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>成员</TableCell>
+                    <TableCell align="right">最近活跃</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {stats.recentlyActiveMembers.filter(m => {
+                    if (memberFilter === 'all') return true;
+                    if (!m.lastActiveAt) return memberFilter === 'away';
+                    const ago = Date.now() - new Date(m.lastActiveAt).getTime();
+                    const d7 = 7 * 86400000, d30 = 30 * 86400000;
+                    if (memberFilter === 'active') return ago <= d7;
+                    if (memberFilter === 'occasional') return ago > d7 && ago <= d30;
+                    if (memberFilter === 'away') return ago > d30;
+                    // Date filter (MM-DD): match lastActiveAt date
+                    const mDate = m.lastActiveAt.slice(5, 10); // "MM-DD"
+                    return mDate === memberFilter;
+                  }).map(m => (
+                    <TableRow key={m.id} hover sx={{ '&:last-child td': { border: 0 } }}>
+                      <TableCell>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Ava name={m.name} src={m.avatar ?? undefined} size={28} />
+                          <Typography variant="body2" fontWeight={600}>{m.name}</Typography>
+                        </Stack>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="caption" color="text.secondary">
+                          {m.lastActiveAt ? formatRelativeTime(m.lastActiveAt) : '—'}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Card>
+        </Grid>
+      </Grid>
 
-      {/* ── Onboarding + Member Distribution side by side ── */}
+      {/* ── Quick Links ── */}
+      <Typography variant="subtitle2" fontWeight={700}>快捷入口</Typography>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 1.5 }}>
+        {quickLinks.map(link => (
+          <Card key={link.label}>
+            <CardActionArea onClick={() => navigate(link.to)} sx={{ p: 1.5 }}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                {link.icon}
+                <Typography variant="body2" fontWeight={600}>{link.label}</Typography>
+              </Stack>
+            </CardActionArea>
+          </Card>
+        ))}
+      </Box>
+
+      {/* ── Recent Activity ── */}
+      {stats.recentActivity.length > 0 && (
+        <Card>
+          <CardContent>
+            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>最近动态</Typography>
+            <Stack spacing={1}>
+              {stats.recentActivity.map((action, i) => (
+                <Stack key={i} direction="row" justifyContent="space-between" alignItems="center"
+                  sx={{ py: 0.25, borderBottom: i < stats.recentActivity.length - 1 ? 1 : 0, borderColor: 'divider' }}>
+                  <Typography variant="body2">{action.text}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', ml: 2 }}>{formatRelativeTime(action.time)}</Typography>
+                </Stack>
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Activity & Email ── */}
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <StatGrid title="活动与内容" items={activityStats} />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <StatGrid title="Email 频率" items={emailStatsItems} />
+        </Grid>
+      </Grid>
+
+      {/* ── Onboarding + Member Distribution ── */}
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ p: 2, height: '100%' }}>
@@ -372,49 +512,6 @@ export default function AdminDashboardPage() {
           </Grid>
         )}
       </Grid>
-
-      {/* ── Activity & Email ── */}
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <StatGrid title="活动与内容" items={activityStats} />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <StatGrid title="Email 频率" items={emailStatsItems} />
-        </Grid>
-      </Grid>
-
-      {/* ── Quick Links ── */}
-      <Typography variant="subtitle2" fontWeight={700}>快捷入口</Typography>
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 1.5 }}>
-        {quickLinks.map(link => (
-          <Card key={link.label}>
-            <CardActionArea onClick={() => navigate(link.to)} sx={{ p: 1.5 }}>
-              <Stack direction="row" spacing={1} alignItems="center">
-                {link.icon}
-                <Typography variant="body2" fontWeight={600}>{link.label}</Typography>
-              </Stack>
-            </CardActionArea>
-          </Card>
-        ))}
-      </Box>
-
-      {/* ── Recent Activity ── */}
-      {stats.recentActivity.length > 0 && (
-        <Card>
-          <CardContent>
-            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>最近动态</Typography>
-            <Stack spacing={1}>
-              {stats.recentActivity.map((action, i) => (
-                <Stack key={i} direction="row" justifyContent="space-between" alignItems="center"
-                  sx={{ py: 0.25, borderBottom: i < stats.recentActivity.length - 1 ? 1 : 0, borderColor: 'divider' }}>
-                  <Typography variant="body2">{action.text}</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', ml: 2 }}>{formatRelativeTime(action.time)}</Typography>
-                </Stack>
-              ))}
-            </Stack>
-          </CardContent>
-        </Card>
-      )}
     </Stack>
   );
 }
