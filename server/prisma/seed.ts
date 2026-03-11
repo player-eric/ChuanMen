@@ -1245,7 +1245,7 @@ async function seedEmailRulesAndTemplates() {
     { ruleId: 'TXN-1', variantKey: 'default', subject: '【串门儿】「{eventTitle}」取消了', body: '你好 {userName}，\n\n不好意思通知你一个坏消息——「{eventTitle}」（原定 {eventDate}）取消了 😢\n\n有问题可以直接找 Host {hostName} 聊聊。咱们下次再约！' },
     { ruleId: 'TXN-2', variantKey: 'default', subject: '【串门儿】「{eventTitle}」有更新', body: '你好 {userName}，\n\n「{eventTitle}」的安排有些变动，新的信息如下：\n\n时间：{eventDate}\n地点：{eventLocation}\n\n记得看看有没有影响你的安排哦～' },
     { ruleId: 'TXN-3', variantKey: 'default', subject: '【串门儿】报名成功！「{eventTitle}」等你来', body: '你好 {userName}，\n\n好消息！你已经成功报名「{eventTitle}」啦 🎉\n\n时间：{eventDate}\n地点：{eventLocation}\n\n到时候见！' },
-    { ruleId: 'TXN-4', variantKey: 'default', subject: '欢迎来到串门儿，{userName}！', body: '你好 {userName}，\n\n欢迎加入串门儿这个大家庭！🎉\n\n串门儿是一群朋友通过小型聚会认识彼此、相互支持的地方。看电影、做饭、徒步、桌游……你现在可以：\n• 浏览和报名感兴趣的活动\n• 推荐好看的电影和书\n• 给朋友发一张感谢卡\n\n有什么想法随时跟大家说，这里没什么规矩，交到朋友最重要 😊' },
+    { ruleId: 'TXN-4', variantKey: 'default', subject: '欢迎来到串门儿，{userName}！', body: '你好 {userName}，\n\n欢迎加入串门儿这个大家庭！🎉\n\n串门儿是一群朋友通过小型聚会认识彼此、相互支持的地方。看电影、做饭、徒步、桌游……你现在可以：\n• 浏览和报名感兴趣的活动\n• 推荐好看的电影和书\n• 给朋友发一张感谢卡\n\n👇 扫码加入串门儿微信群，认识大家：\n\n有什么想法随时跟大家说，这里没什么规矩，交到朋友最重要 😊' },
     { ruleId: 'TXN-5', variantKey: 'default', subject: '【串门儿】关于你的申请', body: '你好，\n\n感谢你对串门儿的兴趣。这次我们暂时没能通过你的申请，可能是时机还不太对。\n\n不过这不代表永远拒绝，欢迎之后再来申请，期待有机会认识你 🙂' },
     { ruleId: 'TXN-6', variantKey: 'default', subject: '【串门儿】恭喜中签！🎊', body: '你好 {userName}，\n\n抽签结果出来啦——你中签了！🎊\n\n赶紧去确认一下你的参加意愿吧，位子给你留着呢～' },
     { ruleId: 'TXN-7', variantKey: 'default', subject: '【串门儿】{fromName} 给你寄了一张感谢卡 💌', body: '你好 {toName}，\n\n{fromName} 给你寄了一张感谢卡 💌' },
@@ -1258,6 +1258,13 @@ async function seedEmailRulesAndTemplates() {
     { ruleId: 'P3-E', variantKey: 'default', subject: '【串门儿】{userName}，大家想念你组的局了', body: '你好 {userName}，\n\n好久没看到你组活动了，好多人都在问呢！\n\n之前你组的活动大家都玩得特别开心。如果最近有时间和想法，随时再来一次吧，我们都期待着 🙌' },
     { ruleId: 'P4-A', variantKey: 'default', subject: '【串门儿】{milestoneTitle}', body: '你好 {userName}，\n\n告诉你一个好消息——{milestoneTitle} 🎉\n\n这是咱们每个人一起做到的，感谢你一直以来的参与和支持！' },
     { ruleId: 'P4-C', variantKey: 'default', subject: '【串门儿】谢谢你，{userName}！', body: '你好 {userName}，\n\n谢谢你上个月为大家组织的活动！每一次的精心准备大家都看在眼里 ❤️\n\n有你在，串门儿才这么有意思。期待你下次的精彩活动！' },
+    { ruleId: 'P0-D', variantKey: 'default', subject: '【串门儿】今天见！「{eventTitle}」', body: '你好 {userName}，\n\n提醒一下，「{eventTitle}」就在今天啦！\n\n时间：{eventDate}\n地点：{eventLocation}\n\n准备好了吗？今天见 🤗' },
+    { ruleId: 'P2-A', variantKey: 'default', subject: '【串门儿】新活动来了！{hostName} 组了「{eventTitle}」', body: '你好 {userName}，\n\n{hostName} 刚发布了一个新活动——「{eventTitle}」🎉\n\n时间：{eventDate}\n地点：{eventLocation}\n\n感兴趣的话快去报名吧，名额有限哦～' },
+    { ruleId: 'P2-B', variantKey: 'default', subject: '【串门儿】{authorName} 推荐了「{recTitle}」', body: '你好 {userName}，\n\n{authorName} 刚分享了一个新推荐——「{recTitle}」✨\n\n快去看看有没有兴趣吧～' },
+    { ruleId: 'P3-A', variantKey: 'default', subject: '【串门儿】{userName}，加入一周啦！', body: '你好 {userName}，\n\n不知不觉你加入串门儿已经一周了！还习惯吗？😊\n\n如果还没参加过活动的话，可以看看最近有什么感兴趣的，第一次参加会格外开心哦～\n\n有任何问题随时问，大家都很友善的！' },
+    { ruleId: 'P3-B', variantKey: 'default', subject: '【串门儿】「{eventTitle}」玩得开心吗？', body: '你好 {userName}，\n\n恭喜你参加了第一次串门儿活动「{eventTitle}」！🎉\n\n第一次感觉怎么样？希望你玩得开心！\n\n你可以：\n✉️ 给同伴寄一张感谢卡\n📷 上传活动照片\n💬 留下你的想法\n\n期待在下次活动见到你！' },
+    { ruleId: 'P3-C', variantKey: 'default', subject: '【串门儿】{userName}，最近有这些活动哦', body: '你好 {userName}，\n\n你加入串门儿有几天了，有没有看到感兴趣的活动呀？\n\n最近有这些活动你可能喜欢：{upcomingEvents}\n\n勇敢迈出第一步，大家都很期待认识你 😊' },
+    { ruleId: 'P4-B', variantKey: 'default', subject: '【串门儿】本周新推荐一览 📚', body: '你好 {userName}，\n\n这周社区又有 {newRecCount} 条新推荐啦！\n\n{recList}\n\n快去看看有没有感兴趣的吧～' },
     { ruleId: 'DIGEST', variantKey: 'default', subject: '{date} · 串门儿社区近况', body: '你好，来看看最近串门儿都发生了什么吧 👀\n\n有感兴趣的就来参加吧～' },
   ];
 

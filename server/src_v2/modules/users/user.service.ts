@@ -134,12 +134,16 @@ export class UserService {
         to: user.email,
         ruleId: 'TXN-4',
         variables: {
-          name: user.name,
+          userName: user.name,
           siteUrl,
           loginUrl: `${siteUrl}/login`,
         },
         ctaLabel: '登录串门儿',
         ctaUrl: `${siteUrl}/login`,
+        htmlBlock: `<div style="text-align:center;margin:24px 0 8px;">
+          <p style="font-size:14px;color:#666;">扫码加入串门儿微信群，认识大家 👇</p>
+          <img src="https://chuanmener.club/wechat-qr.jpg" alt="串门儿微信群二维码" style="width:200px;height:200px;border-radius:12px;" />
+        </div>`,
       });
 
       await prisma.emailLog.create({
