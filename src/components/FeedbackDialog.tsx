@@ -2,15 +2,26 @@ import { useState } from 'react';
 import {
   Alert,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Stack,
   TextField,
+  Typography,
 } from '@mui/material';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
 import { submitFeedback } from '@/lib/domainApi';
+
+const CATEGORIES = [
+  { value: 'feature', label: '功能建议' },
+  { value: 'bug', label: 'Bug反馈' },
+  { value: 'activity', label: '活动需求' },
+  { value: 'other', label: '其他' },
+] as const;
+
+type Category = (typeof CATEGORIES)[number]['value'];
 
 interface FeedbackDialogProps {
   open: boolean;
@@ -21,12 +32,15 @@ interface FeedbackDialogProps {
   defaultEmail?: string;
   /** Which page triggered this dialog */
   page?: string;
+  /** Logged-in user ID */
+  authorId?: string;
 }
 
-export function FeedbackDialog({ open, onClose, defaultName = '', defaultEmail = '', page }: FeedbackDialogProps) {
+export function FeedbackDialog({ open, onClose, defaultName = '', defaultEmail = '', page, authorId }: FeedbackDialogProps) {
   const [name, setName] = useState(defaultName);
   const [email, setEmail] = useState(defaultEmail);
   const [message, setMessage] = useState('');
+  const [category, setCategory] = useState<Category>('feature');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +54,9 @@ export function FeedbackDialog({ open, onClose, defaultName = '', defaultEmail =
         name: name.trim(),
         email: email.trim() || undefined,
         message: message.trim(),
+        category,
         page,
+        authorId: authorId || undefined,
       });
       setSent(true);
     } catch {
@@ -57,6 +73,7 @@ export function FeedbackDialog({ open, onClose, defaultName = '', defaultEmail =
       setSent(false);
       setError(null);
       setMessage('');
+      setCategory('feature');
     }, 300);
   };
 
@@ -70,6 +87,21 @@ export function FeedbackDialog({ open, onClose, defaultName = '', defaultEmail =
           </Alert>
         ) : (
           <Stack spacing={2} sx={{ mt: 1 }}>
+            <div>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>分类</Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {CATEGORIES.map((c) => (
+                  <Chip
+                    key={c.value}
+                    label={c.label}
+                    size="small"
+                    variant={category === c.value ? 'filled' : 'outlined'}
+                    color={category === c.value ? 'primary' : 'default'}
+                    onClick={() => setCategory(c.value)}
+                  />
+                ))}
+              </Stack>
+            </div>
             <TextField
               label="你的名字"
               size="small"

@@ -151,18 +151,37 @@ export const emailRoutes: FastifyPluginAsync = async (app) => {
     return reply.send(rendered);
   });
 
-  // ── POST /feedback — send feedback to all admins ─────────
+  // ── POST /feedback — save feedback to DB + send email to admins ─────────
   const feedbackSchema = z.object({
     name: z.string().min(1).max(100),
     email: z.string().email().optional(),
     message: z.string().min(1).max(2000),
-    page: z.string().optional(), // which page the feedback came from
+    category: z.enum(['feature', 'bug', 'activity', 'other']).default('other'),
+    page: z.string().optional(),
+    authorId: z.string().optional(),
   });
 
-  app.post('/feedback', async (request, reply) => {
-    const { name, message, email: senderEmail, page } = safeParse(feedbackSchema, request.body);
+  const categoryLabels: Record<string, string> = {
+    feature: '功能建议', bug: 'Bug反馈', activity: '活动需求', other: '其他',
+  };
 
-    // Find all admin users
+  app.post('/feedback', async (request, reply) => {
+    const { name, message, email: senderEmail, category, page, authorId } =
+      safeParse(feedbackSchema, request.body);
+
+    // Save to DB
+    await app.prisma.feedback.create({
+      data: {
+        authorId: authorId || undefined,
+        name,
+        email: senderEmail || undefined,
+        category,
+        message,
+        page: page || undefined,
+      },
+    });
+
+    // Send email to admins
     const admins = await app.prisma.user.findMany({
       where: { role: 'admin', userStatus: 'approved' },
       select: { email: true, name: true },
@@ -177,8 +196,8 @@ export const emailRoutes: FastifyPluginAsync = async (app) => {
     const pageInfo = page ? `\n来源页面: ${page}` : '';
 
     const rendered = renderEmail({
-      subject: `用户反馈 — ${name}`,
-      body: `收到一条用户反馈：\n\n**发送人：** ${fromInfo}${pageInfo}\n\n**内容：**\n\n${message}`,
+      subject: `用户反馈 [${categoryLabels[category] ?? category}] — ${name}`,
+      body: `收到一条用户反馈：\n\n**分类：** ${categoryLabels[category] ?? category}\n**发送人：** ${fromInfo}${pageInfo}\n\n**内容：**\n\n${message}`,
       variables: {},
       previewText: `${name} 发送了反馈`,
     });

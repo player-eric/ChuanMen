@@ -1,0 +1,15 @@
+echo "🔍 Type-checking frontend..."
+npx tsc --noEmit || exit 1
+
+echo "🔍 Type-checking backend..."
+cd server && npx tsc --noEmit || exit 1
+cd ..
+
+echo "🔍 Checking backward compatibility (Prisma validate)..."
+cd server && npx prisma validate || exit 1
+cd ..
+
+echo "🏗️ Building..."
+npm run build || exit 1
+
+echo "✅ Pre-commit checks passed"

@@ -14,7 +14,8 @@
     "preview": "PORT=4173 NODE_ENV=production node ssr-server.mjs",
     "system:test:up": "npm --prefix server run system:test:up",
     "system:test:down": "npm --prefix server run system:test:down",
-    "system:test:logs": "npm --prefix server run system:test:logs"
+    "system:test:logs": "npm --prefix server run system:test:logs",
+    "prepare": "husky"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -39,6 +40,7 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.21",
+    "husky": "^9.1.7",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.0",

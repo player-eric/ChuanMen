@@ -1399,12 +1399,45 @@ export async function fetchAdminStats() {
    Feedback API
    ═══════════════════════════════════════════════════════════════ */
 
-export async function submitFeedback(payload: { name: string; email?: string; message: string; page?: string }) {
+export async function submitFeedback(payload: {
+  name: string; email?: string; message: string; page?: string;
+  category?: string; authorId?: string;
+}) {
   return requestJson<{ ok: boolean }>('/api/email/feedback', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+}
+
+export async function fetchFeedbackListApi(params?: { status?: string; category?: string; limit?: number; offset?: number }) {
+  const q = new URLSearchParams();
+  if (params?.status) q.set('status', params.status);
+  if (params?.category) q.set('category', params.category);
+  if (params?.limit) q.set('limit', String(params.limit));
+  if (params?.offset) q.set('offset', String(params.offset));
+  const qs = q.toString();
+  return requestJson<{ items: any[]; total: number }>(`/api/feedback${qs ? `?${qs}` : ''}`);
+}
+
+export async function updateFeedbackApi(id: string, data: { status?: string; adminNote?: string }) {
+  return requestJson<any>(`/api/feedback/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function replyFeedbackApi(id: string, message: string) {
+  return requestJson<{ ok: boolean }>(`/api/feedback/${id}/reply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  });
+}
+
+export async function deleteFeedbackApi(id: string) {
+  return requestJson<{ ok: boolean }>(`/api/feedback/${id}`, { method: 'DELETE' });
 }
 
 /** Admin: send email to a single recipient */

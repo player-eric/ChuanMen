@@ -233,6 +233,7 @@ model User {
   emailQueueItems      EmailQueue[]         @relation("EmailQueueUser")
   emailUnsubscribes    EmailUnsubscribe[]   @relation("EmailUnsubUser")
   claimedTasks         EventTask[]
+  feedbacks            Feedback[]
 }
 
 model UserOperatorRole {
@@ -911,4 +912,22 @@ model EmailSuppression {
   addedAt DateTime @default(now())
 }
 
+// ─── User Feedback ───────────────────────────────────────
+model Feedback {
+  id         String   @id @default(cuid())
+  authorId   String?
+  name       String
+  email      String?
+  category   String   // 'feature' | 'bug' | 'activity' | 'other'
+  message    String
+  page       String?
+  status     String   @default("pending") // 'pending' | 'noted' | 'replied' | 'done' | 'wontfix'
+  adminNote  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
+  author     User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+}

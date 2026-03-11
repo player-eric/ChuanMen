@@ -4,6 +4,7 @@ import { authRoutes } from './auth.js';
 import { mediaRoutes } from './media.js';
 import { agentRoutes } from './agent.js';
 import { emailRoutes } from './email.js';
+import { feedbackRoutes } from './feedback.js';
 import { feedRoutes } from './feed.js';
 import { profileRoutes } from './profile.js';
 import { userRoutes } from '../modules/users/user.route.js';
@@ -57,6 +58,7 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
   app.register(profileRoutes, { prefix: '/profile' });
   app.register(mediaRoutes, { prefix: '/media' });
   app.register(emailRoutes, { prefix: '/email' });
+  app.register(feedbackRoutes, { prefix: '/feedback' });
   app.register(agentRoutes, { prefix: '/agent' });
   app.register(titleRuleRoutes, { prefix: '/title-rules' });
   app.register(taskPresetRoutes, { prefix: '/task-presets' });

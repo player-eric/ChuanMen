@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import { firstNonEmoji } from '@/components/Atoms';
+import { FeedbackDialog } from '@/components/FeedbackDialog';
 import {
   AppBar,
   Avatar,
@@ -33,6 +34,7 @@ import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
 import MailRoundedIcon from '@mui/icons-material/MailRounded';
 import CampaignRoundedIcon from '@mui/icons-material/CampaignRounded';
 import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
+import FeedbackRoundedIcon from '@mui/icons-material/FeedbackRounded';
 import { useAuth } from '@/auth/AuthContext';
 
 const drawerWidth = 240;
@@ -48,6 +50,7 @@ const adminNav = [
   { id: 'announcements', icon: <CampaignRoundedIcon />, label: '公告与里程碑' },
   { id: 'email', icon: <MarkEmailReadRoundedIcon />, label: '邮件管理' },
   { id: 'newsletters', icon: <EmailRoundedIcon />, label: '社区通讯' },
+  { id: 'feedback', icon: <FeedbackRoundedIcon />, label: '用户反馈' },
   { id: 'community-info', icon: <EditNoteRoundedIcon />, label: '社群信息编辑' },
   { id: 'settings', icon: <SettingsRoundedIcon />, label: '系统设置' },
 ];
@@ -59,6 +62,7 @@ export default function AdminLayout() {
   const location = useLocation();
   const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   // Guard: only admin can access
   if (!user || user.role !== 'admin') {
@@ -98,6 +102,10 @@ export default function AdminLayout() {
       </List>
       <Divider sx={{ my: 1 }} />
       <List sx={{ px: 1 }}>
+        <ListItemButton onClick={() => { setMobileOpen(false); setFeedbackOpen(true); }}>
+          <ListItemIcon><MailRoundedIcon /></ListItemIcon>
+          <ListItemText primary="联系管理员" />
+        </ListItemButton>
         <ListItemButton onClick={() => navigate('/')}>
           <ListItemIcon><ArrowBackRoundedIcon /></ListItemIcon>
           <ListItemText primary="返回前台" />
@@ -154,6 +162,15 @@ export default function AdminLayout() {
           <Outlet />
         </Box>
       </Box>
+
+      <FeedbackDialog
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        defaultName={user?.name ?? ''}
+        defaultEmail={user?.email ?? ''}
+        page={location.pathname}
+        authorId={user?.id}
+      />
     </Box>
   );
 }

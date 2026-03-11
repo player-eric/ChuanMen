@@ -434,6 +434,7 @@ export default function AppLayout() {
         defaultName={user?.name ?? ''}
         defaultEmail={user?.email ?? ''}
         page={pathname}
+        authorId={user?.id}
       />
     </Box>
   );

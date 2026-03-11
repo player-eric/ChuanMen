@@ -37,6 +37,7 @@ import AdminContentPage from '@/pages/admin/AdminContentPage';
 import AdminCardsPage from '@/pages/admin/AdminCardsPage';
 import AdminAnnouncementsPage from '@/pages/admin/AdminAnnouncementsPage';
 import AdminCommunityInfoPage from '@/pages/admin/AdminCommunityInfoPage';
+import AdminFeedbackPage from '@/pages/admin/AdminFeedbackPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import {
   fetchFeedApi,
@@ -1061,6 +1062,7 @@ export const appRoutes: RouteObject[] = [
       { path: 'announcements', element: <AdminAnnouncementsPage /> },
       { path: 'email', element: <AdminEmailPage /> },
       { path: 'newsletters', element: <AdminNewslettersPage /> },
+      { path: 'feedback', element: <AdminFeedbackPage /> },
       { path: 'community-info', element: <AdminCommunityInfoPage /> },
       { path: 'settings', element: <AdminSettingsPage /> },
     ],
