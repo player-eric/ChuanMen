@@ -168,11 +168,19 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     if (statusErr) return reply.code(statusErr.code).send(statusErr.body);
 
     // Status is 'approved' — login success
-    // Update lastActiveAt
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastActiveAt: new Date() },
-    });
+    // Update lastActiveAt + daily active log
+    const today = new Date().toISOString().slice(0, 10);
+    await Promise.all([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { lastActiveAt: new Date() },
+      }),
+      prisma.dailyActiveLog.upsert({
+        where: { userId_date: { userId: user.id, date: today } },
+        create: { userId: user.id, date: today },
+        update: {},
+      }),
+    ]);
 
     return {
       ok: true,
@@ -291,10 +299,18 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     if (statusErr) return reply.code(statusErr.code).send(statusErr.body);
 
     // 5. Status is 'approved' — login success
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastActiveAt: new Date() },
-    });
+    const todayG = new Date().toISOString().slice(0, 10);
+    await Promise.all([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { lastActiveAt: new Date() },
+      }),
+      prisma.dailyActiveLog.upsert({
+        where: { userId_date: { userId: user.id, date: todayG } },
+        create: { userId: user.id, date: todayG },
+        update: {},
+      }),
+    ]);
 
     return {
       ok: true,

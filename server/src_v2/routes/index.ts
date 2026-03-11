@@ -37,10 +37,18 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
     const now = Date.now();
     if (now - (activeCache.get(userId) ?? 0) < TOUCH_INTERVAL) return;
     activeCache.set(userId, now);
-    app.prisma.user.update({
-      where: { id: userId },
-      data: { lastActiveAt: new Date() },
-    }).catch(() => {});
+    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    Promise.all([
+      app.prisma.user.update({
+        where: { id: userId },
+        data: { lastActiveAt: new Date() },
+      }),
+      app.prisma.dailyActiveLog.upsert({
+        where: { userId_date: { userId, date: today } },
+        create: { userId, date: today },
+        update: {},
+      }),
+    ]).catch(() => {});
   });
 
   app.register(healthRoutes, { prefix: '/health' });
@@ -143,6 +151,8 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
       dauLikes,
       dauRecs,
       allTimeHosts,
+      // Daily active logs (last 14 days) — accurate per-day tracking
+      dauActiveLogs,
     ] = await Promise.all([
       prisma.user.count({ where: { userStatus: 'approved' } }),
       prisma.user.count({ where: { userStatus: 'applicant' } }),
@@ -247,6 +257,11 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
       prisma.event.findMany({
         select: { hostId: true },
         distinct: ['hostId'],
+      }),
+      // Daily active logs (last 14 days)
+      prisma.dailyActiveLog.findMany({
+        where: { date: { gte: d14ago.toISOString().slice(0, 10) } },
+        select: { userId: true, date: true },
       }),
     ]);
 
@@ -468,24 +483,29 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
     // ── DAU Trend (last 14 days) ──
     // Combine activity records (comments, postcards, signups, likes, recs) + lastActiveAt
     // lastActiveAt alone only shows LAST active day per user; activity records capture multiple days
-    const dauTrend: { date: string; count: number }[] = [];
+    const dauTrend: { date: string; count: number; userIds: string[] }[] = [];
     for (let i = 13; i >= 0; i--) {
       const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
       const dayEnd = new Date(dayStart.getTime() + 86400000);
       const inRange = (d: Date) => d >= dayStart && d < dayEnd;
       const dayUsers = new Set<string>();
+      const dateStr = dayStart.toISOString().slice(0, 10); // "YYYY-MM-DD"
+      // DailyActiveLog — most accurate source (tracks all visits)
+      for (const log of dauActiveLogs) { if (log.date === dateStr) dayUsers.add(log.userId); }
+      // Also count content creation activity
       for (const c of dauComments) { if (inRange(c.createdAt)) dayUsers.add(c.authorId); }
       for (const p of dauPostcards) { if (inRange(p.createdAt)) dayUsers.add(p.fromId); }
       for (const s of dauSignups) { if (inRange(s.createdAt)) dayUsers.add(s.userId); }
       for (const l of dauLikes) { if (inRange(l.createdAt)) dayUsers.add(l.userId); }
       for (const r of dauRecs) { if (inRange(r.createdAt)) dayUsers.add(r.authorId); }
-      // Also include users whose lastActiveAt falls on this day (catches browse-only users)
+      // Fallback: lastActiveAt (for users who browsed but no DailyActiveLog entry yet)
       for (const m of allMembers) {
         if (m.lastActiveAt && inRange(m.lastActiveAt)) dayUsers.add(m.id);
       }
       dauTrend.push({
         date: dayStart.toISOString().slice(5, 10), // "MM-DD"
         count: dayUsers.size,
+        userIds: [...dayUsers],
       });
     }
 

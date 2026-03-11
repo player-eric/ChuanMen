@@ -1388,7 +1388,7 @@ export interface AdminStats {
     prevMonthEvents: number;
   };
 
-  dauTrend: { date: string; count: number }[];
+  dauTrend: { date: string; count: number; userIds: string[] }[];
 
   recentlyActiveMembers: {
     id: string; name: string; avatar: string | null; role: string;

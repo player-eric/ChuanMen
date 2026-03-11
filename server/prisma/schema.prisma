@@ -234,6 +234,7 @@ model User {
   emailUnsubscribes    EmailUnsubscribe[]   @relation("EmailUnsubUser")
   claimedTasks         EventTask[]
   feedbacks            Feedback[]
+  dailyActiveLogs      DailyActiveLog[]
 }
 
 model UserOperatorRole {
@@ -792,6 +793,16 @@ model LoginCode {
   createdAt DateTime @default(now())
 
   @@index([email, code])
+}
+
+model DailyActiveLog {
+  id     String   @id @default(cuid())
+  userId String
+  date   String   // "YYYY-MM-DD"
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([date])
 }
 
 model TitleRule {

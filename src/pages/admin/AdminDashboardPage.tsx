@@ -326,9 +326,9 @@ export default function AdminDashboardPage() {
                     if (memberFilter === 'active') return ago <= d7;
                     if (memberFilter === 'occasional') return ago > d7 && ago <= d30;
                     if (memberFilter === 'away') return ago > d30;
-                    // Date filter (MM-DD): match lastActiveAt date
-                    const mDate = m.lastActiveAt.slice(5, 10); // "MM-DD"
-                    return mDate === memberFilter;
+                    // Date filter (MM-DD): use backend userIds for that day
+                    const dayData = stats.dauTrend.find(d => d.date === memberFilter);
+                    return dayData ? dayData.userIds.includes(m.id) : false;
                   }).map(m => (
                     <TableRow key={m.id} hover sx={{ '&:last-child td': { border: 0 } }}>
                       <TableCell>
