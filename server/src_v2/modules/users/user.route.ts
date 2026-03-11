@@ -204,6 +204,8 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
         variables: {
           name: user.name,
         },
+        ctaLabel: '浏览其他活动',
+        ctaUrl: 'https://chuanmener.club/events',
       });
 
       await app.prisma.emailLog.create({

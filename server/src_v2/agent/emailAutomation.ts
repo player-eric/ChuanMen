@@ -480,6 +480,8 @@ export async function sendSilentHostRecall(
         to: user.email,
         ruleId: 'P3-E',
         variables: { userName: user.name },
+        ctaLabel: '发起活动',
+        ctaUrl: 'https://chuanmener.club/events/new',
       });
       await prisma.emailLog.create({
         data: { userId: user.id, ruleId: 'P3-E', messageId: result.MessageId },
@@ -531,6 +533,8 @@ export async function sendEncourageHosting(
         to: user.email,
         ruleId: 'P3-D',
         variables: { userName: user.name },
+        ctaLabel: '发起活动',
+        ctaUrl: 'https://chuanmener.club/events/new',
       });
       await prisma.emailLog.create({
         data: { userId: user.id, ruleId: 'P3-D', messageId: result.MessageId },
@@ -583,6 +587,8 @@ export async function sendMilestoneNotif(
           to: user.email,
           ruleId: 'P4-A',
           variables: { userName: user.name, milestoneTitle },
+          ctaLabel: '查看我的主页',
+          ctaUrl: 'https://chuanmener.club/me',
         });
         await prisma.emailLog.create({
           data: {
@@ -1016,6 +1022,8 @@ export async function sendHostTributeNotif(
         to: user.email,
         ruleId: 'P4-C',
         variables: { userName: user.name },
+        ctaLabel: '查看我的主页',
+        ctaUrl: 'https://chuanmener.club/me',
       });
       await prisma.emailLog.create({
         data: {

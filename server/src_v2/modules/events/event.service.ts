@@ -154,6 +154,8 @@ export class EventService {
             to: user.email,
             ruleId: 'TXN-8',
             variables: { userName: user.name, eventTitle: event.title, position: String(pos) },
+            ctaLabel: '查看活动',
+            ctaUrl: `https://chuanmener.club/events/${eventId}`,
           });
         }
       } catch { /* email failure should not block signup */ }
