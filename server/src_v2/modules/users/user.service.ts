@@ -142,7 +142,7 @@ export class UserService {
         ctaUrl: `${siteUrl}/login`,
         htmlBlock: `<div style="text-align:center;margin:24px 0 8px;">
           <p style="font-size:14px;color:#666;">扫码加入串门儿微信群，认识大家 👇</p>
-          <img src="https://chuanmener.club/wechat-qr.jpg" alt="串门儿微信群二维码" style="width:200px;height:200px;border-radius:12px;" />
+          <img src="https://chuanmener.club/wechat-qr.jpg" alt="串门儿微信群二维码" style="width:320px;border-radius:12px;" />
         </div>`,
       });
 
