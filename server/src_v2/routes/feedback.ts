@@ -121,7 +121,7 @@ export const feedbackRoutes: FastifyPluginAsync = async (app) => {
         });
         emailSent = true;
       } catch (fallbackErr) {
-        app.log.error('Failed to send feedback reply email', fallbackErr);
+        app.log.error(fallbackErr as Error, 'Failed to send feedback reply email');
       }
     }
 
