@@ -92,6 +92,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   const liked = likedProp ?? likedLocal;
   const setLiked = onLike ?? (() => setLikedLocal((v) => !v));
   const [expanded, setExpanded] = useState(defaultExpanded ?? false);
+  const [likesExpanded, setLikesExpanded] = useState(false);
   const [localComments, setLocalComments] = useState(comments ?? []);
   const [canSend, setCanSend] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -181,7 +182,10 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
       {/* Liked-by summary */}
       {likedBy.length > 0 && !expanded && (
         <div style={{ padding: `0 ${px}px 6px`, fontSize: 12, color: c.text3 }}>
-          {likedBy.slice(0, 3).join('、')}{likedBy.length > 3 ? ` 等 ${likedBy.length} 人` : ''} 觉得不错
+          {likedBy.length <= 3 || likesExpanded
+            ? <>{likedBy.join('、')} 觉得不错</>
+            : <>{likedBy.slice(0, 3).join('、')}<span onClick={() => setLikesExpanded(true)} style={{ cursor: 'pointer', color: c.text2 }}> 等 {likedBy.length} 人</span> 觉得不错</>
+          }
         </div>
       )}
 
