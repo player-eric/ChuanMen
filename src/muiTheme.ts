@@ -16,7 +16,7 @@ export function createAppTheme(mode: AppColorMode = 'dark') {
             paper: '#1E1E22',
           }
         : {
-            default: '#f6f1e8',
+            default: '#FAFAFA',
             paper: '#FFFFFF',
           },
       text: isDark
@@ -51,7 +51,7 @@ export function createAppTheme(mode: AppColorMode = 'dark') {
       MuiAppBar: {
         styleOverrides: {
           colorTransparent: {
-            backgroundColor: isDark ? '#17171ccc' : '#fff9f0cc',
+            backgroundColor: isDark ? '#17171ccc' : '#FAFAFAcc',
           },
         },
       },
