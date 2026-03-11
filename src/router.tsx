@@ -146,6 +146,7 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
       people,
       signupUserIds: allSignups.filter((s: any) => s.status === 'accepted').map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
       pendingUserIds: allSignups.filter((s: any) => s.status === 'pending').map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
+      waitlistUserIds: allSignups.filter((s: any) => s.status === 'waitlist' || s.status === 'offered').map((s: any) => s.user?.id ?? s.userId).filter(Boolean),
       film: e.screenedMovies?.[0]?.movie?.title,
       filmPoster: e.screenedMovies?.[0]?.movie?.poster || undefined,
       scene: e.titleImageUrl || eventTagToScene[e.tags?.[0]] || e.tags?.[0] || '',

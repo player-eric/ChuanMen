@@ -284,6 +284,7 @@ interface FeedActivityProps extends InteractionProps {
   waitlistCount?: number;
   signupMode?: 'direct' | 'application';
   pendingUserIds?: string[];
+  waitlistUserIds?: string[];
   socialHint?: { name: string; count: number };
   time?: string;
   activityHint?: string;
@@ -292,12 +293,13 @@ interface FeedActivityProps extends InteractionProps {
   taskSummary?: FeedTaskSummary[];
 }
 
-export function FeedActivity({ name, hostAvatar, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, hostId, waitlistCount, signupMode, pendingUserIds, socialHint, time, activityHint, activityHintUser, activityHintComment, taskSummary }: FeedActivityProps) {
+export function FeedActivity({ name, hostAvatar, title, date, location, spots, total, people, signupUserIds, film, filmPoster, scene, navTarget, likes, likedBy, comments, newComments, mode = 'feed', phase, isHomeEvent, isPrivate, houseRules, photoCount, commentCount, hostId, waitlistCount, signupMode, pendingUserIds, waitlistUserIds, socialHint, time, activityHint, activityHintUser, activityHintComment, taskSummary }: FeedActivityProps) {
   const c = useColors();
   const isLight = useTheme().palette.mode === 'light';
   const { user } = useAuth();
   const [joined, setJoined] = useState(() => Boolean(user?.id && signupUserIds?.includes(user.id)));
   const [pending, setPending] = useState(() => Boolean(user?.id && pendingUserIds?.includes(user.id)));
+  const [waitlisted, setWaitlisted] = useState(() => Boolean(user?.id && waitlistUserIds?.includes(user.id)));
   const [cancelOpen, setCancelOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
   const [claimTasks, setClaimTasks] = useState<EventTaskData[]>([]);
@@ -318,7 +320,8 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
   useEffect(() => {
     setJoined(Boolean(user?.id && signupUserIds?.includes(user.id)));
     setPending(Boolean(user?.id && pendingUserIds?.includes(user.id)));
-  }, [user, signupUserIds, pendingUserIds]);
+    setWaitlisted(Boolean(user?.id && waitlistUserIds?.includes(user.id)));
+  }, [user, signupUserIds, pendingUserIds, waitlistUserIds]);
 
   const handleSignup = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -509,13 +512,13 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
                     onClick={handleSignup}
                     style={{
                       width: '100%', padding: '9px 0', borderRadius: 8,
-                      background: joined ? (isLight ? c.green + '30' : c.s2) : pending ? (isLight ? c.warm + '28' : c.s2) : c.warm,
-                      border: joined ? `1px solid ${c.green}${isLight ? '60' : '50'}` : pending ? `1px solid ${c.warm}${isLight ? '50' : '50'}` : 'none',
-                      color: joined ? c.green : pending ? c.warm : c.bg,
+                      background: joined ? (isLight ? c.green + '30' : c.s2) : (pending || waitlisted) ? (isLight ? c.warm + '28' : c.s2) : c.warm,
+                      border: joined ? `1px solid ${c.green}${isLight ? '60' : '50'}` : (pending || waitlisted) ? `1px solid ${c.warm}${isLight ? '50' : '50'}` : 'none',
+                      color: joined ? c.green : (pending || waitlisted) ? c.warm : c.bg,
                       fontSize: 14, fontWeight: 700, cursor: 'pointer',
                     }}
                   >
-                    {joined ? '✓ 已报名' : pending ? '⏳ 申请已提交' : isApplication ? '申请参加' : '报名参加'}
+                    {joined ? '✓ 已报名' : waitlisted ? '⏳ 等位中' : pending ? '⏳ 申请已提交' : isApplication ? '申请参加' : '报名参加'}
                   </button>
                 )}
               </>
@@ -619,13 +622,13 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
                     onClick={handleSignup}
                     style={{
                       width: '100%', padding: '9px 0', borderRadius: 8,
-                      background: joined ? (isLight ? c.green + '30' : c.s2) : pending ? (isLight ? c.warm + '28' : c.s2) : c.warm,
-                      border: joined ? `1px solid ${c.green}${isLight ? '60' : '50'}` : pending ? `1px solid ${c.warm}${isLight ? '50' : '50'}` : 'none',
-                      color: joined ? c.green : pending ? c.warm : c.bg,
+                      background: joined ? (isLight ? c.green + '30' : c.s2) : (pending || waitlisted) ? (isLight ? c.warm + '28' : c.s2) : c.warm,
+                      border: joined ? `1px solid ${c.green}${isLight ? '60' : '50'}` : (pending || waitlisted) ? `1px solid ${c.warm}${isLight ? '50' : '50'}` : 'none',
+                      color: joined ? c.green : (pending || waitlisted) ? c.warm : c.bg,
                       fontSize: 14, fontWeight: 700, cursor: 'pointer',
                     }}
                   >
-                    {joined ? '✓ 已报名' : pending ? '⏳ 申请已提交' : isApplication ? '申请参加' : '报名参加'}
+                    {joined ? '✓ 已报名' : waitlisted ? '⏳ 等位中' : pending ? '⏳ 申请已提交' : isApplication ? '申请参加' : '报名参加'}
                   </button>
                 )}
               </>

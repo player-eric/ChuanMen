@@ -505,12 +505,12 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             eventIds,
           )
         : [],
-      // Latest signup per event (for activity hint — who signed up, excluding invited)
+      // Latest accepted signup per event (for activity hint — who signed up successfully)
       eventIds.length > 0
         ? prisma.$queryRawUnsafe<{ eventId: string; createdAt: Date; userName: string }[]>(
             `SELECT DISTINCT ON (s."eventId") s."eventId", s."createdAt", u."name" AS "userName"
              FROM "EventSignup" s JOIN "User" u ON u.id = s."userId"
-             WHERE s."eventId" = ANY($1::text[]) AND s."status" NOT IN ('invited','cancelled','declined','rejected')
+             WHERE s."eventId" = ANY($1::text[]) AND s."status" = 'accepted'
              ORDER BY s."eventId", s."createdAt" DESC`,
             eventIds,
           )
@@ -597,10 +597,10 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           activityHint = 'update';
         }
       }
-      // Real activity time: only comments bump sort order; signups show as hint but don't re-sort
+      // Real activity time: comments and signups both bump sort order
       const now = new Date();
-      const commentActivityAt = activityHint === 'comment' ? activityHintAt : undefined;
-      const realActivityAt = commentActivityAt
+      const interactionAt = (activityHint === 'comment' || activityHint === 'signup') ? activityHintAt : undefined;
+      const realActivityAt = interactionAt
         ?? (e.startsAt && e.startsAt <= now ? e.startsAt : e.createdAt);
       const activityHintComment = activityHint === 'comment' && latestComment ? latestComment.content : undefined;
       return { ...base, activityHint, activityHintUser, activityHintComment, activityAt: realActivityAt };
