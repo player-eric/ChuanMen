@@ -49,8 +49,8 @@ const bottomTabs = [
   { id: 'profile', icon: <PersonRoundedIcon />, label: '我', auth: true },
 ];
 
-/** Routes that require login */
-const authPaths = ['/', '/discover', '/events', '/cards', '/profile', '/members', '/settings'];
+/** Public routes that DON'T require login (everything else does) */
+const publicPaths = ['/about', '/apply', '/login', '/register'];
 
 function getTitle(pathname: string): string {
   if (pathname === '/') return '动态';
@@ -129,8 +129,9 @@ export default function AppLayout() {
   const backTarget = getBackTarget(pathname);
   const showBack = isSubRoute(pathname);
 
-  // Guest access: check if current path needs auth
-  const needsAuth = hydrated && !user && authPaths.some((p) => p === '/' ? pathname === '/' : pathname.startsWith(p));
+  // Guest access: everything except public paths requires login
+  const isPublic = publicPaths.some((p) => pathname === p || pathname.startsWith(p + '/'));
+  const needsAuth = hydrated && !user && !isPublic;
 
   // Tabs visible to current user
   const visibleTabs = user ? bottomTabs : [];
