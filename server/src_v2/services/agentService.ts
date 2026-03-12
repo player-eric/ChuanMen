@@ -285,6 +285,24 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: postcard credit award failed');
   }
 
+  // Phase 1f: Auto-mark movies as screened when linked event ends
+  try {
+    const endedWithMovies = await prisma.event.findMany({
+      where: { phase: 'ended', screenedMovies: { some: {} } },
+      select: { id: true, screenedMovies: { select: { movieId: true } } },
+    });
+    const movieIds = [...new Set(endedWithMovies.flatMap(e => e.screenedMovies.map(s => s.movieId)))];
+    if (movieIds.length > 0) {
+      const { count } = await prisma.movie.updateMany({
+        where: { id: { in: movieIds }, status: 'candidate' },
+        data: { status: 'screened' },
+      });
+      if (count > 0) log.info(`Agent: auto-screened ${count} movies from ended events`);
+    }
+  } catch (err) {
+    log.error({ err }, 'Agent: auto-screen movies failed');
+  }
+
   // ── Check global email pause ──
   let emailPaused = false;
   try {

@@ -5,7 +5,8 @@ export class MovieRepository {
 
   list() {
     return this.prisma.movie.findMany({
-      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+      where: { status: 'candidate' },
+      orderBy: [{ createdAt: 'desc' }],
       include: {
         recommendedBy: { select: { id: true, name: true } },
         votes: { include: { user: { select: { id: true, name: true } } } },
@@ -81,7 +82,7 @@ export class MovieRepository {
     return this.prisma.movieScreening.findMany({
       orderBy: { event: { startsAt: 'desc' } },
       include: {
-        movie: { select: { id: true, title: true, year: true, director: true } },
+        movie: { select: { id: true, title: true, year: true, director: true, poster: true } },
         event: { select: { id: true, title: true, startsAt: true, host: { select: { name: true } } } },
       },
     });
