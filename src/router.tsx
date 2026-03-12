@@ -721,14 +721,17 @@ async function discoverLoader() {
       by: m.recommendedBy?.name ?? '',
       poster: m.poster || undefined,
     }));
-    const screened = (rawScreened as any[]).map((s: any) => ({
-      title: s.movie?.title ?? s.title ?? '',
-      year: String(s.movie?.year ?? s.year ?? ''),
-      dir: s.movie?.director ?? s.director ?? '',
-      date: s.event?.startsAt ? new Date(s.event.startsAt).toLocaleDateString('zh-CN') : (s.date ?? ''),
-      host: s.event?.host?.name ?? s.host ?? '',
-      poster: s.movie?.poster || undefined,
-    }));
+    const screened = (rawScreened as any[]).map((s: any) => {
+      const ev = s.screenedEvents?.[0]?.event;
+      return {
+        title: s.title ?? '',
+        year: String(s.year ?? ''),
+        dir: s.director ?? '',
+        date: ev?.startsAt ? new Date(ev.startsAt).toLocaleDateString('zh-CN') : '',
+        host: ev?.host?.name ?? '',
+        poster: s.poster || undefined,
+      };
+    });
     const bookPool = (rawBooks as any[]).map((b: any) => ({
       id: b.id,
       title: b.title ?? '',

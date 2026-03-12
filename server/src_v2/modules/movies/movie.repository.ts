@@ -79,11 +79,17 @@ export class MovieRepository {
   }
 
   screened() {
-    return this.prisma.movieScreening.findMany({
-      orderBy: { event: { startsAt: 'desc' } },
+    return this.prisma.movie.findMany({
+      where: { status: 'screened' },
+      orderBy: { updatedAt: 'desc' },
       include: {
-        movie: { select: { id: true, title: true, year: true, director: true, poster: true } },
-        event: { select: { id: true, title: true, startsAt: true, host: { select: { name: true } } } },
+        screenedEvents: {
+          orderBy: { event: { startsAt: 'desc' } },
+          take: 1,
+          include: {
+            event: { select: { id: true, title: true, startsAt: true, host: { select: { name: true } } } },
+          },
+        },
       },
     });
   }
