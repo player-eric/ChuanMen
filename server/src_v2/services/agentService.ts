@@ -13,6 +13,7 @@ import {
   sendFirstEventFollowup,
 } from '../agent/emailAutomation.js';
 import { drawWeeklyHost, getWeekKey } from '../modules/lottery/lottery.service.js';
+import { parseGlobalConfig } from '../types/emailConfig.js';
 
 export async function runAgentCycle(app: FastifyInstance) {
   const prisma = app.prisma;
@@ -284,13 +285,28 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: postcard credit award failed');
   }
 
+  // ── Check global email pause ──
+  let emailPaused = false;
+  try {
+    const globalCfgRow = await prisma.siteConfig.findUnique({ where: { key: 'emailConfig.global' } });
+    const globalCfg = parseGlobalConfig(globalCfgRow?.value);
+    if (globalCfg.systemPaused) {
+      log.info('Agent: email system is paused globally, skipping all email phases');
+      emailPaused = true;
+    }
+  } catch (err) {
+    log.error({ err }, 'Agent: failed to read global email config, proceeding with emails');
+  }
+
   // Phase 2: Waitlist offer expiry (time-sensitive, run before emails)
+  // Note: waitlist expiry is operational, not email — always runs
   try {
     await processWaitlistExpiry(prisma, log);
   } catch (err) {
     log.error({ err }, 'Agent: processWaitlistExpiry failed');
   }
 
+  if (!emailPaused) {
   // Phase 3: Instant email automation (time-sensitive, event-related)
 
   // P1: Post-event recap (2-6h after event ends)
@@ -343,6 +359,7 @@ export async function runAgentCycle(app: FastifyInstance) {
   } catch (err) {
     log.error({ err }, 'Agent: sendDailyDigest failed');
   }
+  } // end if (!emailPaused)
 
   return { milestones, tribute };
 }

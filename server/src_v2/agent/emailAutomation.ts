@@ -5,6 +5,14 @@ import { filterByCooldown, filterByRefId, ELIGIBLE_USER_WHERE } from './helpers.
 import type { HostTributeResult } from './contentAutomation.js';
 import { renderDigestBlock, type DigestSection } from '../emails/template.js';
 import { EventRepository } from '../modules/events/event.repository.js';
+import {
+  parseDigestConfig,
+  parseGlobalConfig,
+  isWithinSendWindow,
+  isSendDay,
+  type DigestConfig,
+  type DigestSourceConfig,
+} from '../types/emailConfig.js';
 
 // ── Shared types ─────────────────────────────────────────────
 
@@ -611,13 +619,33 @@ export async function sendMilestoneNotif(
 
 // ── DIGEST: Daily community digest ──────────────────────────
 
-async function buildDigestSections(prisma: PrismaClient, userId?: string): Promise<DigestSection[] | null> {
+async function buildDigestSections(
+  prisma: PrismaClient,
+  userId?: string,
+  digestCfg?: DigestConfig,
+): Promise<DigestSection[] | null> {
   const cutoff = new Date();
   cutoff.setTime(cutoff.getTime() - 24 * 60 * 60 * 1000);
 
   const now = new Date();
   const in7Days = new Date();
   in7Days.setDate(in7Days.getDate() + 7);
+
+  // Build a source-enabled lookup and maxItems from config
+  const sources = digestCfg?.sources;
+  const sourceMap = new Map<string, DigestSourceConfig>();
+  if (sources) {
+    for (const s of sources) sourceMap.set(s.key, s);
+  }
+  const isSourceEnabled = (key: string) => {
+    if (!sources) return true; // no config → all enabled
+    const s = sourceMap.get(key);
+    return s ? s.enabled : false;
+  };
+  const sourceMaxItems = (key: string, fallback: number) => {
+    const s = sourceMap.get(key);
+    return s?.maxItems ?? fallback;
+  };
 
   const sections: DigestSection[] = [];
 
@@ -705,104 +733,185 @@ async function buildDigestSections(prisma: PrismaClient, userId?: string): Promi
     }
   }
 
+  // ── Source-driven content sections ──
+  // Each source is only queried if enabled in config.
+  // Sections are collected with their sortOrder for final ordering.
+
+  const sortedSections: { sortOrder: number; section: DigestSection }[] = [];
+
   // 1. New or updated events (created or updated in last 24h, not cancelled)
-  const newEvents = await prisma.event.findMany({
-    where: {
-      phase: { not: 'cancelled' },
-      OR: [
-        { createdAt: { gte: cutoff } },
-        { updatedAt: { gte: cutoff } },
-      ],
-    },
-    select: { id: true, title: true, startsAt: true },
-    orderBy: { startsAt: 'asc' },
-  });
-  if (newEvents.length > 0) {
-    sections.push({
-      icon: '🎬',
-      title: '新活动',
-      items: newEvents.map((e) => {
-        const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
-        return { text: `${e.title}（${d}）`, url: `https://chuanmener.club/events/${e.id}` };
-      }),
+  let newEventIds: string[] = [];
+  if (isSourceEnabled('new_events')) {
+    const newEvents = await prisma.event.findMany({
+      where: {
+        phase: { not: 'cancelled' },
+        OR: [
+          { createdAt: { gte: cutoff } },
+          { updatedAt: { gte: cutoff } },
+        ],
+      },
+      select: { id: true, title: true, startsAt: true },
+      orderBy: { startsAt: 'asc' },
+      take: sourceMaxItems('new_events', 10),
     });
+    newEventIds = newEvents.map((e) => e.id);
+    if (newEvents.length > 0) {
+      sortedSections.push({
+        sortOrder: sourceMap.get('new_events')?.sortOrder ?? 0,
+        section: {
+          icon: '🎬',
+          title: '新活动',
+          items: newEvents.map((e) => {
+            const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+            return { text: `${e.title}（${d}）`, url: `https://chuanmener.club/events/${e.id}` };
+          }),
+        },
+      });
+    }
   }
 
-  // 2. Upcoming events in the next 7 days (open or invite phase)
-  const upcoming = await prisma.event.findMany({
-    where: {
-      startsAt: { gte: now, lte: in7Days },
-      phase: { in: ['open', 'invite'] },
-      id: { notIn: newEvents.map((e) => e.id) },
-    },
-    select: { id: true, title: true, startsAt: true },
-    orderBy: { startsAt: 'asc' },
-  });
-  if (upcoming.length > 0) {
-    sections.push({
-      icon: '📅',
-      title: '即将开始',
-      items: upcoming.map((e) => {
-        const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
-        return { text: `${e.title}（${d}）`, url: `https://chuanmener.club/events/${e.id}` };
-      }),
+  // 2. Upcoming events (signups source — upcoming events in next 7 days)
+  if (isSourceEnabled('signups')) {
+    const upcoming = await prisma.event.findMany({
+      where: {
+        startsAt: { gte: now, lte: in7Days },
+        phase: { in: ['open', 'invite'] },
+        id: { notIn: newEventIds },
+      },
+      select: { id: true, title: true, startsAt: true },
+      orderBy: { startsAt: 'asc' },
+      take: sourceMaxItems('signups', 5),
     });
+    if (upcoming.length > 0) {
+      sortedSections.push({
+        sortOrder: sourceMap.get('signups')?.sortOrder ?? 1,
+        section: {
+          icon: '📅',
+          title: '即将开始',
+          items: upcoming.map((e) => {
+            const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+            return { text: `${e.title}（${d}）`, url: `https://chuanmener.club/events/${e.id}` };
+          }),
+        },
+      });
+    }
   }
 
-  // 3. New recommendations
-  const newRecs = await prisma.recommendation.findMany({
-    where: { createdAt: { gte: cutoff } },
-    select: { title: true },
-  });
-  if (newRecs.length > 0) {
-    sections.push({
-      icon: '📖',
-      title: '新推荐',
-      items: newRecs.map((r) => ({ text: r.title })),
+  // 3. New recommendations (movies source maps here too)
+  if (isSourceEnabled('movies')) {
+    const newRecs = await prisma.recommendation.findMany({
+      where: { createdAt: { gte: cutoff } },
+      select: { title: true },
+      take: sourceMaxItems('movies', 5),
     });
+    if (newRecs.length > 0) {
+      sortedSections.push({
+        sortOrder: sourceMap.get('movies')?.sortOrder ?? 4,
+        section: {
+          icon: '📖',
+          title: '新推荐',
+          items: newRecs.map((r) => ({ text: r.title })),
+        },
+      });
+    }
   }
 
   // 4. New postcards (total count, not per-user)
-  const postcardCount = await prisma.postcard.count({
-    where: { createdAt: { gte: cutoff } },
-  });
-  if (postcardCount > 0) {
-    sections.push({
-      icon: '💌',
-      title: '感谢卡',
-      items: [{ text: `社区本周发出了 ${postcardCount} 张新感谢卡` }],
+  if (isSourceEnabled('postcards')) {
+    const postcardCount = await prisma.postcard.count({
+      where: { createdAt: { gte: cutoff } },
     });
+    if (postcardCount > 0) {
+      sortedSections.push({
+        sortOrder: sourceMap.get('postcards')?.sortOrder ?? 2,
+        section: {
+          icon: '💌',
+          title: '感谢卡',
+          items: [{ text: `社区本周发出了 ${postcardCount} 张新感谢卡` }],
+        },
+      });
+    }
   }
 
   // 5. New members
-  const newMembers = await prisma.user.findMany({
-    where: { createdAt: { gte: cutoff }, userStatus: 'approved' },
-    select: { name: true },
-  });
-  if (newMembers.length > 0) {
-    sections.push({
-      icon: '👥',
-      title: '新成员',
-      items: newMembers.map((u) => ({ text: `${u.name} 加入了串门儿！` })),
+  if (isSourceEnabled('new_members')) {
+    const newMembers = await prisma.user.findMany({
+      where: { createdAt: { gte: cutoff }, userStatus: 'approved' },
+      select: { name: true },
+      take: sourceMaxItems('new_members', 5),
     });
+    if (newMembers.length > 0) {
+      sortedSections.push({
+        sortOrder: sourceMap.get('new_members')?.sortOrder ?? 6,
+        section: {
+          icon: '👥',
+          title: '新成员',
+          items: newMembers.map((u) => ({ text: `${u.name} 加入了串门儿！` })),
+        },
+      });
+    }
   }
 
   // 6. Community announcements (milestones, tributes) from last 24h
-  const announcements = await prisma.announcement.findMany({
-    where: { createdAt: { gte: cutoff } },
-    select: { title: true, body: true },
-    orderBy: { createdAt: 'desc' },
-    take: 3,
-  });
-  if (announcements.length > 0) {
-    sections.push({
-      icon: '🎉',
-      title: '社群动态',
-      items: announcements.map((a) => ({ text: a.title })),
+  if (isSourceEnabled('announcements')) {
+    const announcements = await prisma.announcement.findMany({
+      where: { createdAt: { gte: cutoff } },
+      select: { title: true, body: true },
+      orderBy: { createdAt: 'desc' },
+      take: sourceMaxItems('announcements', 3),
     });
+    if (announcements.length > 0) {
+      sortedSections.push({
+        sortOrder: sourceMap.get('announcements')?.sortOrder ?? 3,
+        section: {
+          icon: '🎉',
+          title: '社群动态',
+          items: announcements.map((a) => ({ text: a.title })),
+        },
+      });
+    }
   }
 
-  // 7. Personal engagement nudge (P3 rules, pick first matching, max 1)
+  // 7. New proposals
+  if (isSourceEnabled('proposals')) {
+    const newProposals = await prisma.proposal.findMany({
+      where: { createdAt: { gte: cutoff }, status: 'discussing' },
+      select: { id: true, title: true },
+      orderBy: { createdAt: 'desc' },
+      take: sourceMaxItems('proposals', 3),
+    });
+    if (newProposals.length > 0) {
+      sortedSections.push({
+        sortOrder: sourceMap.get('proposals')?.sortOrder ?? 5,
+        section: {
+          icon: '💡',
+          title: '新提案',
+          items: newProposals.map((p) => ({
+            text: p.title,
+            url: `https://chuanmener.club/proposals/${p.id}`,
+          })),
+        },
+      });
+    }
+  }
+
+  // Sort by sortOrder and push into sections
+  sortedSections.sort((a, b) => a.sortOrder - b.sortOrder);
+
+  // Apply maxTotalItems across all source sections
+  const maxTotal = digestCfg?.maxTotalItems ?? 999;
+  let totalItems = 0;
+  for (const { section } of sortedSections) {
+    const remaining = maxTotal - totalItems;
+    if (remaining <= 0) break;
+    if (section.items.length > remaining) {
+      section.items = section.items.slice(0, remaining);
+    }
+    totalItems += section.items.length;
+    sections.push(section);
+  }
+
+  // 8. Personal engagement nudge (P3 rules, pick first matching, max 1)
   if (userId) {
     const nudge = await buildPersonalNudge(prisma, userId);
     if (nudge) {
@@ -913,11 +1022,37 @@ export async function sendDailyDigest(
     return 0;
   }
 
-  // Check if there's any global content first (skip per-user queries if nothing happened)
-  const globalSections = await buildDigestSections(prisma);
-  if (!globalSections) {
-    log.info('DIGEST: no content in last 24h, skipping');
+  // ── Load digest config from SiteConfig ──
+  const digestCfgRow = await prisma.siteConfig.findUnique({ where: { key: 'emailConfig.digest' } });
+  const digestCfg = parseDigestConfig(digestCfgRow?.value);
+
+  // ── Time window check: only send within ±15 min of configured sendTime ──
+  if (!isWithinSendWindow(digestCfg.sendTime, digestCfg.timezone)) {
+    log.info(`DIGEST: outside send window (configured: ${digestCfg.sendTime} ${digestCfg.timezone}), skipping`);
     return 0;
+  }
+
+  // ── Frequency check: daily / weekdays / custom ──
+  if (!isSendDay(digestCfg.frequency, digestCfg.customDays, digestCfg.timezone)) {
+    log.info(`DIGEST: not a send day (frequency: ${digestCfg.frequency}), skipping`);
+    return 0;
+  }
+
+  // ── Load global config for maxDailyPerUser ──
+  const globalCfgRow = await prisma.siteConfig.findUnique({ where: { key: 'emailConfig.global' } });
+  const globalCfg = parseGlobalConfig(globalCfgRow?.value);
+
+  // Check if there's any global content first (skip per-user queries if nothing happened)
+  const globalSections = await buildDigestSections(prisma, undefined, digestCfg);
+
+  // skipIfEmpty handling
+  if (!globalSections) {
+    if (digestCfg.skipIfEmpty !== false) {
+      log.info('DIGEST: no content in last 24h and skipIfEmpty=true, skipping');
+      return 0;
+    }
+    // skipIfEmpty === false → send a "no updates" digest
+    log.info('DIGEST: no content but skipIfEmpty=false, will send minimal digest');
   }
 
   // Get eligible users (approved + not unsubscribed)
@@ -934,25 +1069,53 @@ export async function sendDailyDigest(
     rule.cooldownDays,
   );
 
+  // maxDailyPerUser: check how many emails each user received today
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  let dailyLimited: Set<string> | null = null;
+  if (globalCfg.maxDailyPerUser > 0) {
+    const todayLogs = await prisma.emailLog.groupBy({
+      by: ['userId'],
+      where: {
+        userId: { in: candidates.map((u) => u.id) },
+        sentAt: { gte: todayStart },
+      },
+      _count: true,
+    });
+    dailyLimited = new Set(
+      todayLogs
+        .filter((g) => g._count >= globalCfg.maxDailyPerUser)
+        .map((g) => g.userId),
+    );
+  }
+
   log.info(`DIGEST: ${candidates.length} candidates, ${eligible.size} eligible after cooldown`);
 
   const date = new Date().toISOString().split('T')[0];
+  const ctaLabel = digestCfg.ctaLabel || '查看完整动态';
+  const ctaUrl = digestCfg.ctaUrl || 'https://chuanmener.club';
   let sent = 0;
 
   for (const user of candidates) {
     if (!eligible.has(user.id)) continue;
+    if (dailyLimited?.has(user.id)) continue;
     try {
       // Build per-user digest with personal interaction feedback + nudge
-      const personalSections = await buildDigestSections(prisma, user.id);
-      const digestHtml = renderDigestBlock(personalSections ?? globalSections);
+      const personalSections = await buildDigestSections(prisma, user.id, digestCfg);
+
+      // If no content at all, send a minimal "no updates" section
+      const effectiveSections = personalSections ?? globalSections ?? [
+        { icon: '☀️', title: '今日社区', items: [{ text: '今天暂时没有新动态，去串串门吧！' }] },
+      ];
+      const digestHtml = renderDigestBlock(effectiveSections);
 
       const result = await sendTemplatedEmail(prisma, {
         to: user.email,
         ruleId: 'DIGEST',
         variables: { date, digestContent: '' },
         htmlBlock: digestHtml,
-        ctaLabel: '查看完整动态',
-        ctaUrl: 'https://chuanmener.club',
+        ctaLabel,
+        ctaUrl,
       });
       await prisma.emailLog.create({
         data: { userId: user.id, ruleId: 'DIGEST', messageId: result.MessageId },
