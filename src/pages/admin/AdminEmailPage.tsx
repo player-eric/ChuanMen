@@ -1064,6 +1064,18 @@ export default function AdminEmailPage() {
               </Stack>
             </CardContent>
           </Card>
+
+          <Button variant="contained" size="large" sx={{ alignSelf: 'flex-end' }} onClick={async () => {
+            try {
+              await updateDigestConfig(digestConfig);
+              alert('摘要配置已保存');
+            } catch (err) {
+              console.error('Failed to save digest config:', err);
+              alert('保存失败');
+            }
+          }}>
+            保存摘要配置
+          </Button>
         </Stack>
       )}
 
