@@ -370,7 +370,15 @@ export default function AdminEmailPage() {
     fetchEmailSuppressions().then(setSuppressedEmails).catch(() => {});
     // Load global & digest config from API
     fetchGlobalEmailConfig().then((cfg) => { if (cfg) setGlobalConfig(cfg); }).catch(() => {});
-    fetchDigestConfig().then((cfg) => { if (cfg) setDigestConfig(cfg); }).catch(() => {});
+    fetchDigestConfig().then((cfg) => {
+      if (cfg) {
+        // Merge: keep saved sources, append any new default sources not yet in DB
+        const savedKeys = new Set((cfg.sources ?? []).map((s: any) => s.key));
+        const missingSources = defaultDigestConfig.sources.filter(s => !savedKeys.has(s.key));
+        if (missingSources.length > 0) cfg.sources = [...(cfg.sources ?? []), ...missingSources];
+        setDigestConfig(cfg);
+      }
+    }).catch(() => {});
     // Load email stats
     fetchEmailStats().then(setEmailStats).catch(() => {});
   }, [loadUsers]);
