@@ -84,7 +84,8 @@ export function parseGlobalConfig(raw: unknown): GlobalEmailConfig {
 }
 
 /**
- * Check if `now` is within ±15 minutes of the configured send time (in the configured timezone).
+ * Check if `now` is within ±30 minutes of the configured send time (in the configured timezone).
+ * Window is 30 min because agent tick runs every 10 min — 15 min was too tight and could miss.
  */
 export function isWithinSendWindow(
   sendTime: string,
@@ -95,11 +96,12 @@ export function isWithinSendWindow(
   if (isNaN(hours) || isNaN(minutes)) return true; // invalid config → don't block
 
   // Get current time in the configured timezone
+  // Use hourCycle h23 to ensure midnight = 0 (not 24)
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
     hour: 'numeric',
     minute: 'numeric',
-    hour12: false,
+    hourCycle: 'h23',
   });
   const parts = formatter.formatToParts(now);
   const nowHour = parseInt(parts.find((p) => p.type === 'hour')?.value ?? '0');
@@ -109,8 +111,9 @@ export function isWithinSendWindow(
   const targetTotalMin = hours * 60 + minutes;
   const diff = Math.abs(nowTotalMin - targetTotalMin);
 
-  // Handle midnight wrap-around
-  return diff <= 15 || (1440 - diff) <= 15;
+  // Handle midnight wrap-around (e.g. now=23:50, target=00:10 → diff should be 20, not 1420)
+  const WINDOW = 30;
+  return diff <= WINDOW || (1440 - diff) <= WINDOW;
 }
 
 /**

@@ -1147,9 +1147,9 @@ export async function sendDailyDigest(
   const digestCfgRow = await prisma.siteConfig.findUnique({ where: { key: 'emailConfig.digest' } });
   const digestCfg = parseDigestConfig(digestCfgRow?.value);
 
-  // ── Time window check: only send within ±15 min of configured sendTime ──
+  // ── Time window check: only send within ±30 min of configured sendTime ──
   if (!isWithinSendWindow(digestCfg.sendTime, digestCfg.timezone)) {
-    log.info(`DIGEST: outside send window (configured: ${digestCfg.sendTime} ${digestCfg.timezone}), skipping`);
+    log.info(`DIGEST: outside send window (configured: ${digestCfg.sendTime} ${digestCfg.timezone}, now: ${new Date().toISOString()}), skipping`);
     return 0;
   }
 
