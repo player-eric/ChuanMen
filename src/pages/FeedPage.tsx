@@ -403,6 +403,7 @@ const notifConfig: Record<string, { emoji: string; text: (n: PersonalNotificatio
   proposal_realized: { emoji: '💡', text: n => `你感兴趣的创意「${n.targetTitle}」变成活动了` },
   application_received: { emoji: '📋', text: n => `${n.name} 申请参加「${n.targetTitle}」` },
   application_approved: { emoji: '✅', text: n => `你的「${n.targetTitle}」申请已通过` },
+  comment_reply: { emoji: '💬', text: n => `${n.name} 也评论了${n.targetTitle ? `「${n.targetTitle}」` : '你参与的讨论'}` },
 };
 
 function NotificationBar({ notifications }: { notifications: PersonalNotification[] }) {

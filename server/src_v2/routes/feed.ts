@@ -328,8 +328,38 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
               },
             },
           }),
+          // 10. 同讨论有新评论 (someone commented on an entity I also commented on)
+          (async () => {
+            // Find entities this user commented on
+            const myComments = await prisma.comment.findMany({
+              where: { authorId: userId },
+              select: { entityType: true, entityId: true },
+              distinct: ['entityType', 'entityId'],
+            });
+            if (myComments.length === 0) return [];
+            // Find recent comments by others on those same entities
+            const orConditions = myComments.map(c => ({
+              entityType: c.entityType,
+              entityId: c.entityId,
+            }));
+            return prisma.comment.findMany({
+              where: {
+                OR: orConditions,
+                authorId: { not: userId },
+                createdAt: { gte: fourteenDaysAgo },
+                // Exclude comments where user is already @mentioned (they get 'mention' notification)
+                NOT: { mentionedUserIds: { has: userId } },
+              },
+              select: {
+                id: true, entityType: true, entityId: true, createdAt: true,
+                author: { select: { id: true, name: true } },
+              },
+              take: 20,
+              orderBy: { createdAt: 'desc' },
+            });
+          })(),
         ])
-      : [[], [], [], [], [], [], [], []];
+      : [[], [], [], [], [], [], [], [], []];
 
     // Normalize notifications into a flat array
     const notifications: {
@@ -342,7 +372,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     }[] = [];
 
     if (userId) {
-      const [mentions, invites, taskAssigns, postcardReceived, waitlistSignups, applicationReceived, applicationApproved, proposalVotes] = notificationQueries;
+      const [mentions, invites, taskAssigns, postcardReceived, waitlistSignups, applicationReceived, applicationApproved, proposalVotes, coComments] = notificationQueries;
 
       // Build a userId→name map from already-fetched members for name lookups
       const memberNameMap = new Map<string, string>();
@@ -448,6 +478,22 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           targetTitle: v.proposal?.title ?? '',
           navTarget: `/events/${linkedEvent.id}`,
           createdAt: linkedEvent.createdAt?.toISOString() ?? '',
+        });
+      }
+
+      // 10. Co-comment notifications (someone else commented where I also commented)
+      for (const c of coComments as any[]) {
+        let nav = '/';
+        if (c.entityType === 'event') nav = `/events/${c.entityId}`;
+        else if (c.entityType === 'movie') nav = `/discover/movies/${c.entityId}`;
+        else if (c.entityType === 'proposal') nav = `/events/proposals/${c.entityId}`;
+        else if (c.entityType === 'recommendation') nav = `/discover/recommendations/${c.entityId}`;
+        notifications.push({
+          action: 'comment_reply',
+          name: c.author?.name ?? '',
+          targetTitle: entityTitleMap.get(c.entityId) ?? '',
+          navTarget: nav,
+          createdAt: c.createdAt?.toISOString() ?? '',
         });
       }
     }

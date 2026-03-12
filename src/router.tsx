@@ -72,6 +72,7 @@ const PERSONAL_ACTIONS = new Set([
   'postcard_received', 'waitlist_offered', 'waitlist_approved',
   'proposal_realized',
   'application_received', 'application_approved',
+  'comment_reply',
 ]);
 
 /** Transform raw feed API data into FeedItem[] for the timeline */
