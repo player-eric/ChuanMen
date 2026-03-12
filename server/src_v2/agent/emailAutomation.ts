@@ -895,6 +895,127 @@ async function buildDigestSections(
     }
   }
 
+  // 8. Hot discussions (entities with most comments in period)
+  if (isSourceEnabled('comments')) {
+    const recentComments = await prisma.comment.findMany({
+      where: { createdAt: { gte: cutoff } },
+      select: { entityType: true, entityId: true },
+    });
+    // Count comments per entity
+    const entityCounts = new Map<string, { entityType: string; entityId: string; count: number }>();
+    for (const c of recentComments) {
+      const key = `${c.entityType}:${c.entityId}`;
+      const existing = entityCounts.get(key);
+      if (existing) existing.count++;
+      else entityCounts.set(key, { entityType: c.entityType, entityId: c.entityId, count: 1 });
+    }
+    // Sort by count desc, take top N
+    const topEntities = [...entityCounts.values()]
+      .filter(e => e.count >= 2)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, sourceMaxItems('comments', 3));
+
+    if (topEntities.length > 0) {
+      // Fetch titles
+      const items: { text: string; url?: string }[] = [];
+      for (const e of topEntities) {
+        let title = '';
+        if (e.entityType === 'event') {
+          const ev = await prisma.event.findUnique({ where: { id: e.entityId }, select: { title: true } });
+          title = ev?.title ?? '';
+        } else if (e.entityType === 'movie') {
+          const mv = await prisma.movie.findUnique({ where: { id: e.entityId }, select: { title: true } });
+          title = mv?.title ?? '';
+        } else if (e.entityType === 'proposal') {
+          const pr = await prisma.proposal.findUnique({ where: { id: e.entityId }, select: { title: true } });
+          title = pr?.title ?? '';
+        } else if (e.entityType === 'recommendation') {
+          const rc = await prisma.recommendation.findUnique({ where: { id: e.entityId }, select: { title: true } });
+          title = rc?.title ?? '';
+        }
+        if (title) {
+          const pathMap: Record<string, string> = {
+            event: `/events/${e.entityId}`,
+            movie: `/discover/movies/${e.entityId}`,
+            proposal: `/events/proposals/${e.entityId}`,
+            recommendation: `/discover/recommendations/${e.entityId}`,
+          };
+          items.push({
+            text: `「${title}」收到 ${e.count} 条新评论`,
+            url: `https://chuanmener.club${pathMap[e.entityType] ?? '/'}`,
+          });
+        }
+      }
+      if (items.length > 0) {
+        sortedSections.push({
+          sortOrder: sourceMap.get('comments')?.sortOrder ?? 7,
+          section: { icon: '💬', title: '热门讨论', items },
+        });
+      }
+    }
+  }
+
+  // 9. Event recaps (recently ended events with photos)
+  if (isSourceEnabled('event_recap')) {
+    const endedEvents = await prisma.event.findMany({
+      where: {
+        phase: 'ended',
+        updatedAt: { gte: cutoff },
+      },
+      select: { id: true, title: true, startsAt: true, recapPhotoUrls: true },
+      orderBy: { startsAt: 'desc' },
+      take: sourceMaxItems('event_recap', 3),
+    });
+    const recaps = endedEvents.filter(e => (e.recapPhotoUrls as string[])?.length > 0);
+    if (recaps.length > 0) {
+      sortedSections.push({
+        sortOrder: sourceMap.get('event_recap')?.sortOrder ?? 8,
+        section: {
+          icon: '📷',
+          title: '活动回顾',
+          items: recaps.map(e => {
+            const photoCount = (e.recapPhotoUrls as string[]).length;
+            return {
+              text: `「${e.title}」已结束，${photoCount} 张照片已上传`,
+              url: `https://chuanmener.club/events/${e.id}`,
+            };
+          }),
+        },
+      });
+    }
+  }
+
+  // 10. Upcoming birthdays
+  if (isSourceEnabled('birthdays')) {
+    const allApproved = await prisma.user.findMany({
+      where: { userStatus: 'approved', birthday: { not: null }, hideBirthday: false },
+      select: { name: true, birthday: true },
+    });
+    const today = new Date();
+    const birthdayUsers = allApproved.filter(u => {
+      if (!u.birthday) return false;
+      const bd = new Date(u.birthday);
+      const todayMD = (today.getUTCMonth() + 1) * 100 + today.getUTCDate();
+      const bdMD = (bd.getUTCMonth() + 1) * 100 + bd.getUTCDate();
+      const diff = Math.abs(todayMD - bdMD);
+      return diff <= 3 || diff >= 1200; // within 3 days, accounting for year wrap
+    });
+    if (birthdayUsers.length > 0) {
+      sortedSections.push({
+        sortOrder: sourceMap.get('birthdays')?.sortOrder ?? 9,
+        section: {
+          icon: '🎂',
+          title: '本周生日',
+          items: birthdayUsers.slice(0, sourceMaxItems('birthdays', 5)).map(u => {
+            const bd = new Date(u.birthday!);
+            const dateStr = `${bd.getUTCMonth() + 1}/${bd.getUTCDate()}`;
+            return { text: `${u.name}（${dateStr}）` };
+          }),
+        },
+      });
+    }
+  }
+
   // Sort by sortOrder and push into sections
   sortedSections.sort((a, b) => a.sortOrder - b.sortOrder);
 

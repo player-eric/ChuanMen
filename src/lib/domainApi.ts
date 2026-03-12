@@ -944,6 +944,17 @@ export async function fetchEmailLogs(params?: { limit?: number; ruleId?: string 
   );
 }
 
+export interface EmailStats {
+  total: number;
+  today: number;
+  openRate: number;
+  clickRate: number;
+}
+
+export async function fetchEmailStats() {
+  return requestJson<EmailStats>('/api/email/stats');
+}
+
 export async function fetchRecommendationByIdApi(id: string) {
   return requestJson<EntityMap>(`/api/recommendations/${id}`);
 }

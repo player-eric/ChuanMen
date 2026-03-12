@@ -64,6 +64,7 @@ import {
   updateGlobalEmailConfig,
   fetchDigestConfig,
   updateDigestConfig,
+  fetchEmailStats,
   type EmailTemplateRow,
   type EmailLogRow,
   type EmailQueueRow,
@@ -73,6 +74,7 @@ import {
   type GlobalEmailConfig,
   type DigestConfig,
   type DigestSourceConfig,
+  type EmailStats,
 } from '@/lib/domainApi';
 
 /* ═══════════════════════════════════════════════
@@ -171,9 +173,12 @@ const defaultDigestConfig: DigestConfig = {
     { key: 'signups', label: '活动报名动态', enabled: true, sortOrder: 1, maxItems: 2 },
     { key: 'postcards', label: '新感谢卡(公开)', enabled: true, sortOrder: 2, maxItems: 2 },
     { key: 'announcements', label: '社群公告', enabled: true, sortOrder: 3, maxItems: 1 },
-    { key: 'movies', label: '新电影推荐', enabled: true, sortOrder: 4, maxItems: 2 },
+    { key: 'movies', label: '新推荐', enabled: true, sortOrder: 4, maxItems: 2 },
     { key: 'proposals', label: '新提案', enabled: true, sortOrder: 5, maxItems: 1 },
     { key: 'new_members', label: '新成员加入', enabled: true, sortOrder: 6, maxItems: 1 },
+    { key: 'comments', label: '热门讨论', enabled: true, sortOrder: 7, maxItems: 2 },
+    { key: 'event_recap', label: '活动回顾', enabled: true, sortOrder: 8, maxItems: 2 },
+    { key: 'birthdays', label: '本周生日', enabled: true, sortOrder: 9, maxItems: 3 },
   ],
 };
 
@@ -236,6 +241,7 @@ export default function AdminEmailPage() {
   const [usersLoading, setUsersLoading] = useState(false);
   const [emailLogs, setEmailLogs] = useState<EmailLogRow[]>([]);
   const [eventNames, setEventNames] = useState<string[]>([]);
+  const [emailStats, setEmailStats] = useState<EmailStats>({ total: 0, today: 0, openRate: 0, clickRate: 0 });
 
   // Snackbar for send feedback
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
@@ -365,6 +371,8 @@ export default function AdminEmailPage() {
     // Load global & digest config from API
     fetchGlobalEmailConfig().then((cfg) => { if (cfg) setGlobalConfig(cfg); }).catch(() => {});
     fetchDigestConfig().then((cfg) => { if (cfg) setDigestConfig(cfg); }).catch(() => {});
+    // Load email stats
+    fetchEmailStats().then(setEmailStats).catch(() => {});
   }, [loadUsers]);
 
   // Computed values from real data
@@ -1284,10 +1292,10 @@ export default function AdminEmailPage() {
             <Stack spacing={2}>
               {/* Stats */}
               <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap' }}>
-                <StatCard label="总发送" value={342} />
-                <StatCard label="今日" value={28} />
-                <StatCard label="打开率" value="71%" color="success.main" />
-                <StatCard label="点击率" value="34%" color="primary.main" />
+                <StatCard label="总发送" value={emailStats.total} />
+                <StatCard label="今日" value={emailStats.today} />
+                <StatCard label="打开率" value={`${emailStats.openRate}%`} color="success.main" />
+                <StatCard label="点击率" value={`${emailStats.clickRate}%`} color="primary.main" />
               </Stack>
 
               {/* Filters */}

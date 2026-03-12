@@ -378,4 +378,57 @@ export const emailRoutes: FastifyPluginAsync = async (app) => {
     });
     return config.value;
   });
+
+  // ── POST /webhook — Resend webhook for open/click tracking ──
+  app.post('/webhook', async (request, reply) => {
+    const body = request.body as {
+      type: string;
+      data: { email_id?: string; created_at?: string };
+    };
+
+    const { type, data } = body;
+    const messageId = data?.email_id;
+    if (!messageId) return reply.status(200).send({ ok: true });
+
+    const log = await app.prisma.emailLog.findFirst({
+      where: { messageId },
+    });
+    if (!log) return reply.status(200).send({ ok: true });
+
+    const ts = data.created_at ? new Date(data.created_at) : new Date();
+
+    if (type === 'email.opened' && !log.openedAt) {
+      await app.prisma.emailLog.update({
+        where: { id: log.id },
+        data: { openedAt: ts },
+      });
+    } else if (type === 'email.clicked') {
+      await app.prisma.emailLog.update({
+        where: { id: log.id },
+        data: { clickedAt: ts, ...(!log.openedAt ? { openedAt: ts } : {}) },
+      });
+    }
+
+    return reply.status(200).send({ ok: true });
+  });
+
+  // ── GET /stats — computed email stats ──
+  app.get('/stats', async () => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const [total, today, opened, clicked] = await Promise.all([
+      app.prisma.emailLog.count(),
+      app.prisma.emailLog.count({ where: { sentAt: { gte: todayStart } } }),
+      app.prisma.emailLog.count({ where: { openedAt: { not: null } } }),
+      app.prisma.emailLog.count({ where: { clickedAt: { not: null } } }),
+    ]);
+
+    return {
+      total,
+      today,
+      openRate: total > 0 ? Math.round((opened / total) * 100) : 0,
+      clickRate: total > 0 ? Math.round((clicked / total) * 100) : 0,
+    };
+  });
 };
