@@ -58,13 +58,13 @@ export async function sendPostEventRecap(
   let sent = 0;
   for (const event of recentlyEnded) {
     const participants = event.signups
-      .map((s) => s.user)
-      .filter((u): u is UserRow => !!u?.email);
+      .map((s: { user: UserRow | null }) => s.user)
+      .filter((u: UserRow | null): u is UserRow => !!u?.email);
 
     // Filter by refId to avoid duplicate sends per event per user
     const eligible = await filterByRefId(
       prisma,
-      participants.map((u) => u.id),
+      participants.map((u: UserRow) => u.id),
       'P1',
       event.id,
     );

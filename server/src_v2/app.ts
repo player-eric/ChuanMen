@@ -35,7 +35,7 @@ export async function createApp() {
   // Parse image/* content types as raw Buffer (for direct file upload, up to 10MB)
   // Parse image content types as raw Buffer for direct file upload
   app.addContentTypeParser(
-    ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/octet-stream'],
+    ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'image/jpg', 'application/octet-stream'],
     { parseAs: 'buffer', bodyLimit: 10 * 1024 * 1024 },
     (_req, body, done) => { done(null, body); },
   );

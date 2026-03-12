@@ -24,7 +24,7 @@ function getStoredUserId(): string | null {
     if (!raw) return null;
     const user = JSON.parse(raw);
     const id = user?.id;
-    if (typeof id === 'string' && id.length > 20 && !id.startsWith('walkthrough-')) return id;
+    if (typeof id === 'string' && id.length > 20) return id;
   } catch {}
   return null;
 }

@@ -362,7 +362,7 @@ function ProfileNudgeBanner() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    if (!user || user.id.startsWith('walkthrough-')) return;
+    if (!user) return;
     const key = `chuanmen.feed.profileNudge.${user.id}`;
     const last = localStorage.getItem(key);
     if (last && Date.now() - Number(last) < 7 * 86400000) return;

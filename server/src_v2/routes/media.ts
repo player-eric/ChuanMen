@@ -10,6 +10,21 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 /**
+ * Normalize mobile browser content types to standard MIME types.
+ * iOS sends image/heic, image/heif; Android may send image/jpg.
+ * For uploads, we accept these and store as jpeg since browsers convert to jpeg/png on canvas.
+ */
+function normalizeImageType(type: string): string {
+  const map: Record<string, string> = {
+    'image/jpg': 'image/jpeg',
+    'image/heic': 'image/jpeg',
+    'image/heif': 'image/jpeg',
+    'image/bmp': 'image/png',
+  };
+  return map[type.toLowerCase()] ?? type;
+}
+
+/**
  * Category → S3 key prefix mapping.
  * Final key: {prefix}/{ownerId}/{timestamp}-{random}.{ext}
  */
@@ -27,9 +42,12 @@ const categoryPrefixMap: Record<string, string> = {
 function extFromMime(mime: string): string {
   const map: Record<string, string> = {
     'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
     'image/png': 'png',
     'image/webp': 'webp',
     'image/gif': 'gif',
+    'image/heic': 'jpg',
+    'image/heif': 'jpg',
   };
   return map[mime] ?? 'bin';
 }
@@ -67,6 +85,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
    */
   app.post('/presign', async (request, reply) => {
     const payload = presignBody.parse(request.body);
+    payload.contentType = normalizeImageType(payload.contentType);
 
     // Validate content type
     if (!ALLOWED_IMAGE_TYPES.includes(payload.contentType)) {
@@ -120,12 +139,13 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     const q = request.query as Record<string, string>;
     const category = q.category || 'general';
     const ownerId = q.ownerId || undefined;
-    const contentType = q.contentType || (request.headers['content-type'] as string) || 'application/octet-stream';
+    const rawType = q.contentType || (request.headers['content-type'] as string) || 'application/octet-stream';
+    const contentType = normalizeImageType(rawType);
     const fileSize = Number(q.fileSize) || 0;
 
     // Validate — allow application/octet-stream as fallback (mobile browsers may omit type)
     if (!ALLOWED_IMAGE_TYPES.includes(contentType) && contentType !== 'application/octet-stream') {
-      return reply.badRequest(`不支持的文件类型: ${contentType}。允许: ${ALLOWED_IMAGE_TYPES.join(', ')}`);
+      return reply.badRequest(`不支持的文件类型: ${rawType}。允许: ${ALLOWED_IMAGE_TYPES.join(', ')}, image/heic, image/heif`);
     }
     if (fileSize > MAX_FILE_SIZE) {
       return reply.badRequest(`文件过大 (${(fileSize / 1024 / 1024).toFixed(1)} MB)。最大: 10 MB`);
@@ -139,10 +159,17 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     const key = buildKey(category, ownerId, contentType);
     const { publicUrl } = await uploadObject(key, body, contentType);
 
+    // Validate ownerId exists before setting FK (walkthrough/demo users may not exist)
+    let validOwnerId = ownerId;
+    if (ownerId) {
+      const userExists = await app.prisma.user.findUnique({ where: { id: ownerId }, select: { id: true } });
+      if (!userExists) validOwnerId = undefined;
+    }
+
     const asset = await app.prisma.mediaAsset.create({
       data: {
         key,
-        ownerId,
+        ownerId: validOwnerId,
         contentType,
         fileSize: body.length,
         status: 'uploaded',
