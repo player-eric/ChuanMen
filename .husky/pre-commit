@@ -9,6 +9,16 @@ echo "🔍 Checking backward compatibility (Prisma validate)..."
 cd server && npx prisma validate || exit 1
 cd ..
 
+echo "🔍 Checking schema changes have migrations..."
+if git diff --cached --name-only | grep -q "server/prisma/schema.prisma"; then
+  if ! git diff --cached --name-only | grep -q "server/prisma/migrations/"; then
+    echo "❌ schema.prisma changed but no migration file added!"
+    echo "   Run: cd server && npx prisma migrate dev --name <name>"
+    echo "   Or create a manual migration in server/prisma/migrations/"
+    exit 1
+  fi
+fi
+
 echo "🏗️ Building..."
 npm run build || exit 1
 
