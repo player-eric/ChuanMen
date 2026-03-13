@@ -59,9 +59,18 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         where: { movie: { recommendedById: targetId } },
       }),
 
-      // Postcards sent (for non-owner: only public ones)
+      // Postcards sent (for non-owner: only public ones, hide event-linked cards viewer is excluded from)
       prisma.postcard.findMany({
-        where: { fromId: targetId, ...(isOwnProfile ? {} : { visibility: 'public' }) },
+        where: {
+          fromId: targetId,
+          ...(isOwnProfile ? {} : { visibility: 'public' }),
+          ...(viewerId && !isOwnProfile ? {
+            OR: [
+              { eventId: null },
+              { event: { NOT: { visibilityExclusions: { some: { userId: viewerId } } } } },
+            ],
+          } : {}),
+        },
         orderBy: { createdAt: 'desc' },
         take: 10,
         include: {
@@ -70,9 +79,18 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         },
       }),
 
-      // Postcards received (for non-owner: only public ones)
+      // Postcards received (for non-owner: only public ones, hide event-linked cards viewer is excluded from)
       prisma.postcard.findMany({
-        where: { toId: targetId, ...(isOwnProfile ? {} : { visibility: 'public' }) },
+        where: {
+          toId: targetId,
+          ...(isOwnProfile ? {} : { visibility: 'public' }),
+          ...(viewerId && !isOwnProfile ? {
+            OR: [
+              { eventId: null },
+              { event: { NOT: { visibilityExclusions: { some: { userId: viewerId } } } } },
+            ],
+          } : {}),
+        },
         orderBy: { createdAt: 'desc' },
         take: 10,
         include: {
@@ -104,11 +122,12 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         take: 20,
       }),
 
-      // Upcoming events where user is host or signed up
+      // Upcoming events where user is host or signed up (hide events viewer is excluded from)
       prisma.event.findMany({
         where: {
           status: 'scheduled',
           startsAt: { gte: new Date() },
+          ...(viewerId && !isOwnProfile ? { NOT: { visibilityExclusions: { some: { userId: viewerId } } } } : {}),
           OR: [
             { hostId: targetId },
             { signups: { some: { userId: targetId, status: 'accepted' } } },
@@ -121,9 +140,10 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         },
       }),
 
-      // Past events where user participated
+      // Past events where user participated (hide events viewer is excluded from)
       prisma.event.findMany({
         where: {
+          ...(viewerId && !isOwnProfile ? { NOT: { visibilityExclusions: { some: { userId: viewerId } } } } : {}),
           OR: [
             { hostId: targetId, status: 'completed' },
             { signups: { some: { userId: targetId, status: 'accepted' } }, status: 'completed' },
@@ -143,10 +163,11 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         },
       }),
 
-      // Events with photos that user participated in
+      // Events with photos that user participated in (hide events viewer is excluded from)
       prisma.event.findMany({
         where: {
           recapPhotoUrls: { isEmpty: false },
+          ...(viewerId && !isOwnProfile ? { NOT: { visibilityExclusions: { some: { userId: viewerId } } } } : {}),
           OR: [
             { hostId: targetId },
             { signups: { some: { userId: targetId, status: 'accepted' } } },

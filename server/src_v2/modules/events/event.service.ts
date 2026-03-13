@@ -31,8 +31,11 @@ const createEventSchema = z.object({
   isHomeEvent: z.boolean().optional(),
   houseRules: z.string().optional(),
   signupMode: z.enum(['direct', 'application']).optional(),
+  foodOption: z.string().optional(),
+  restaurantLocation: z.string().optional(),
   proposalId: z.string().optional(),
   tasks: z.array(taskItemSchema).optional(),
+  excludedUserIds: z.array(z.string()).optional(),
 });
 
 const inviteUsersSchema = z.object({
@@ -59,6 +62,8 @@ const updateEventSchema = z.object({
   recCategories: z.array(z.string()).optional(),
   isPrivate: z.boolean().optional(),
   signupMode: z.enum(['direct', 'application']).optional(),
+  foodOption: z.string().optional(),
+  restaurantLocation: z.string().optional(),
 });
 
 const addRecapPhotoSchema = z.object({
@@ -81,9 +86,28 @@ export class EventService {
     return this.repository.getById(id);
   }
 
+  async setExclusions(eventId: string, userIds: string[]) {
+    await this.prisma.$transaction([
+      this.prisma.eventVisibilityExclusion.deleteMany({ where: { eventId } }),
+      ...(userIds.length > 0
+        ? [this.prisma.eventVisibilityExclusion.createMany({
+            data: userIds.map(userId => ({ eventId, userId })),
+          })]
+        : []),
+    ]);
+  }
+
+  async getExclusions(eventId: string) {
+    const rows = await this.prisma.eventVisibilityExclusion.findMany({
+      where: { eventId },
+      select: { userId: true },
+    });
+    return rows.map(r => r.userId);
+  }
+
   async createEvent(input: unknown) {
     const data = createEventSchema.parse(input);
-    const { proposalId, tasks: taskItems, ...eventData } = data;
+    const { proposalId, tasks: taskItems, excludedUserIds, ...eventData } = data;
     const created = await this.repository.create(eventData);
 
     // Create tasks if provided, otherwise auto-init from preset based on first tag
@@ -108,6 +132,11 @@ export class EventService {
           });
         }
       }
+    }
+
+    // Set visibility exclusions if provided
+    if (excludedUserIds && excludedUserIds.length > 0) {
+      await this.setExclusions(created.id, excludedUserIds);
     }
 
     // Increment host's hostCount

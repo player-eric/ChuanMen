@@ -321,6 +321,8 @@ model Event {
   locationPrivate        Boolean                   @default(false)
   isPrivate              Boolean                   @default(false)
   signupMode             SignupMode                @default(application)
+  foodOption             String                    @default("")
+  restaurantLocation     String                    @default("")
   creditsAwarded         Boolean                   @default(false)
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt

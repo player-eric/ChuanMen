@@ -166,8 +166,11 @@ export async function createEvent(payload: {
   recCategories?: string[];
   isPrivate?: boolean;
   signupMode?: 'direct' | 'application';
+  foodOption?: string;
+  restaurantLocation?: string;
   proposalId?: string;
   tasks?: { role: string; description?: string }[];
+  excludedUserIds?: string[];
 }) {
   return requestJson<EntityMap>('/api/events', {
     method: 'POST',
@@ -339,6 +342,8 @@ export async function updateEvent(eventId: string, payload: {
   recCategories?: string[];
   isPrivate?: boolean;
   signupMode?: 'direct' | 'application';
+  foodOption?: string;
+  restaurantLocation?: string;
 }) {
   return requestJson<{ ok: boolean; event: EntityMap }>(`/api/events/${eventId}`, {
     method: 'PATCH',
@@ -828,6 +833,20 @@ export async function removeCoHost(eventId: string, userId: string, requesterId:
   return requestJson<{ ok: boolean }>(`/api/events/${eventId}/co-hosts/${userId}`, {
     method: 'DELETE',
     headers: { 'x-user-id': requesterId },
+  });
+}
+
+export async function getEventExclusions(eventId: string, requesterId: string) {
+  return requestJson<{ userIds: string[] }>(`/api/events/${eventId}/exclusions`, {
+    headers: { 'x-user-id': requesterId },
+  });
+}
+
+export async function setEventExclusions(eventId: string, userIds: string[], requesterId: string) {
+  return requestJson<{ ok: boolean }>(`/api/events/${eventId}/exclusions`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'x-user-id': requesterId },
+    body: JSON.stringify({ userIds }),
   });
 }
 

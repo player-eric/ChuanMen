@@ -34,7 +34,7 @@ import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EditIcon from '@mui/icons-material/Edit';
 import ImageIcon from '@mui/icons-material/Image';
 import type { EventData, EventPhoto, EventTaskData, FoodOption, SignupStatus, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, approveApplication, rejectApplication, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask, addCoHost, removeCoHost, toggleMovieVote, toggleRecommendationVote } from '@/lib/domainApi';
+import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, approveApplication, rejectApplication, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask, addCoHost, removeCoHost, toggleMovieVote, toggleRecommendationVote, getEventExclusions, setEventExclusions } from '@/lib/domainApi';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import CommentSection from '@/components/CommentSection';
 import { useAuth } from '@/auth/AuthContext';
@@ -192,6 +192,10 @@ export default function EventDetailPage() {
   // Co-host management dialog state
   const [coHostDialogOpen, setCoHostDialogOpen] = useState(false);
   const [coHostSearch, setCoHostSearch] = useState('');
+  // Visibility exclusion dialog state
+  const [exclusionDialogOpen, setExclusionDialogOpen] = useState(false);
+  const [excludedUserIds, setExcludedUserIds] = useState<string[]>([]);
+  const [exclusionSearch, setExclusionSearch] = useState('');
   // Edit event dialog state
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -207,6 +211,8 @@ export default function EventDetailPage() {
   const [editEndsAt, setEditEndsAt] = useState('');
   const [editTitleImageUrl, setEditTitleImageUrl] = useState('');
   const [editSignupMode, setEditSignupMode] = useState<'direct' | 'application'>('direct');
+  const [editFoodOption, setEditFoodOption] = useState<FoodOption>('none');
+  const [editRestaurantLocation, setEditRestaurantLocation] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [posterLoading, setPosterLoading] = useState(false);
 
@@ -261,6 +267,15 @@ export default function EventDetailPage() {
     });
     fetchMembersApi().then((m: any[]) => setAllMembers(m)).catch(() => {});
   }, []);
+
+  // Load visibility exclusions for host/coHost
+  useEffect(() => {
+    if (!eventId || !user?.id) return;
+    const hostIdVal = (loadedEvent as any)?.hostId ?? '';
+    const coHostIds: string[] = (loadedEvent as any)?.coHostIds ?? [];
+    if (user.id !== hostIdVal && !coHostIds.includes(user.id)) return;
+    getEventExclusions(eventId, user.id).then((res) => setExcludedUserIds(res.userIds)).catch(() => {});
+  }, [eventId, user?.id, loadedEvent]);
 
   // Paste image (Ctrl+V) support for upload dialog
   useEffect(() => {
@@ -670,6 +685,8 @@ export default function EventDetailPage() {
                     setEditEndsAt((loadedEvent as any)?.endsAt ? new Date((loadedEvent as any).endsAt).toISOString().slice(0, 16) : '');
                     setEditTitleImageUrl(isImageUrl(event.scene) ? event.scene : '');
                     setEditSignupMode(event.signupMode ?? 'direct');
+                    setEditFoodOption((event.foodOption as FoodOption) || 'none');
+                    setEditRestaurantLocation(event.restaurantLocation ?? '');
                     // Pre-populate embedded URLs from existing description
                     const alreadyEmbedded = new Set<string>();
                     for (const p of photos) {
@@ -712,6 +729,14 @@ export default function EventDetailPage() {
                   }}
                 >
                   {event.signupMode === 'application' ? '📋 关闭申请制' : '📋 开启申请制'}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color={excludedUserIds.length > 0 ? 'warning' : 'inherit'}
+                  onClick={() => setExclusionDialogOpen(true)}
+                >
+                  {excludedUserIds.length > 0 ? `👁 不可见 (${excludedUserIds.length})` : '👁 不可见名单'}
                 </Button>
                 {event.phase === 'invite' && (
                   <Button
@@ -1331,13 +1356,11 @@ export default function EventDetailPage() {
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
               <Typography variant="subtitle1" fontWeight={700}>参与者</Typography>
-              {event.phase !== 'ended' && event.phase !== 'cancelled' && (
-                <Typography variant="body2" color={event.spots > 0 ? 'success.main' : 'text.secondary'}>
-                  {event.spots > 0
-                    ? `还剩 ${event.spots} 位 · 共 ${event.total - event.spots}/${event.total} 人`
-                    : (event.waitlistCount ?? 0) > 0
-                      ? `已满 · ${event.waitlistCount}人等位`
-                      : '已满'}
+              {event.phase !== 'ended' && event.phase !== 'cancelled' && event.spots <= 0 && (
+                <Typography variant="body2" color="error.main">
+                  {(event.waitlistCount ?? 0) > 0
+                    ? `已满 · ${event.waitlistCount}人等位`
+                    : '已满'}
                 </Typography>
               )}
               {event.phase === 'ended' && (
@@ -2427,6 +2450,35 @@ export default function EventDetailPage() {
                   </Box>
                 )}
               </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>吃什么</Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {([
+                    { value: 'potluck' as FoodOption, label: 'Potluck' },
+                    { value: 'host_cook' as FoodOption, label: 'Host 准备' },
+                    { value: 'eat_out' as FoodOption, label: '出去吃' },
+                    { value: 'none' as FoodOption, label: '不涉及' },
+                  ]).map((opt) => (
+                    <Chip
+                      key={opt.value}
+                      label={opt.label}
+                      onClick={() => setEditFoodOption(opt.value)}
+                      color={editFoodOption === opt.value ? 'primary' : 'default'}
+                      variant={editFoodOption === opt.value ? 'filled' : 'outlined'}
+                    />
+                  ))}
+                </Stack>
+                {editFoodOption === 'eat_out' && (
+                  <TextField
+                    label="餐厅地址"
+                    value={editRestaurantLocation}
+                    onChange={(e) => setEditRestaurantLocation(e.target.value)}
+                    fullWidth
+                    size="small"
+                    sx={{ mt: 1 }}
+                  />
+                )}
+              </Box>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Box>
                   <Typography variant="body2">申请制报名</Typography>
@@ -2460,6 +2512,10 @@ export default function EventDetailPage() {
                   const currentImageUrl = isImageUrl(event.scene) ? event.scene : '';
                   if (editTitleImageUrl !== currentImageUrl) payload.titleImageUrl = editTitleImageUrl;
                   if (editSignupMode !== (event.signupMode ?? 'direct')) payload.signupMode = editSignupMode;
+                  const newFood = editFoodOption === 'none' ? '' : editFoodOption;
+                  if (newFood !== (event.foodOption ?? '')) payload.foodOption = newFood;
+                  const newRestaurant = editFoodOption === 'eat_out' ? editRestaurantLocation.trim() : '';
+                  if (newRestaurant !== (event.restaurantLocation ?? '')) payload.restaurantLocation = newRestaurant;
                   if (Object.keys(payload).length > 0) {
                     await updateEvent(eventId, payload as any);
                     setEvent((prev) => prev ? {
@@ -2476,6 +2532,8 @@ export default function EventDetailPage() {
                       endDate: editEndsAt ? new Date(editEndsAt).toLocaleString('zh-CN') : prev.endDate,
                       scene: editTitleImageUrl || prev.scene,
                       signupMode: editSignupMode,
+                      foodOption: newFood || undefined,
+                      restaurantLocation: newRestaurant || undefined,
                     } : prev);
                     setFlash({ open: true, severity: 'success', message: '活动已更新' });
                   }
@@ -2704,6 +2762,103 @@ export default function EventDetailPage() {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => { setCoHostDialogOpen(false); setCoHostSearch(''); }}>关闭</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Visibility exclusion dialog */}
+        <Dialog open={exclusionDialogOpen} onClose={() => { setExclusionDialogOpen(false); setExclusionSearch(''); }} maxWidth="xs" fullWidth>
+          <DialogTitle>管理不可见名单</DialogTitle>
+          <DialogContent>
+            {excludedUserIds.length > 0 && (
+              <Stack spacing={0.5} sx={{ mb: 2 }}>
+                <Typography variant="caption" color="text.secondary">已屏蔽的成员</Typography>
+                {excludedUserIds.map((uid) => {
+                  const member = allMembers.find((m) => m.id === uid);
+                  const name = member?.name ?? uid;
+                  return (
+                    <Stack key={uid} direction="row" alignItems="center" spacing={1}>
+                      <Avatar sx={{ width: 28, height: 28 }}>{firstNonEmoji(name)}</Avatar>
+                      <Typography variant="body2" sx={{ flex: 1 }}>{name}</Typography>
+                      <IconButton
+                        size="small"
+                        onClick={async () => {
+                          if (!eventId || !user?.id) return;
+                          const newIds = excludedUserIds.filter((id) => id !== uid);
+                          try {
+                            await setEventExclusions(eventId, newIds, user.id);
+                            setExcludedUserIds(newIds);
+                            setFlash({ open: true, severity: 'success', message: `已移除屏蔽 ${name}` });
+                          } catch {
+                            setFlash({ open: true, severity: 'error', message: '操作失败' });
+                          }
+                        }}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  );
+                })}
+              </Stack>
+            )}
+            <TextField
+              autoFocus
+              fullWidth
+              size="small"
+              placeholder="搜索成员..."
+              value={exclusionSearch}
+              onChange={(e) => setExclusionSearch(e.target.value)}
+              sx={{ mb: 1 }}
+            />
+            {(() => {
+              const signedUpIds = (event as any)?.signupDetails?.map((s: any) => s.userId).filter(Boolean) ?? [];
+              const filtered = allMembers.filter((m) => {
+                if (m.id === hostId) return false;
+                if (excludedUserIds.includes(m.id)) return false;
+                if (exclusionSearch && !m.name.toLowerCase().includes(exclusionSearch.toLowerCase())) return false;
+                return true;
+              }).slice(0, 10);
+              return (
+                <Stack spacing={0.5}>
+                  {filtered.map((m) => {
+                    const isSignedUp = signedUpIds.includes(m.id);
+                    return (
+                      <Stack direction="row" key={m.id} justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Avatar sx={{ width: 28, height: 28 }}>{firstNonEmoji(m.name)}</Avatar>
+                          <Typography variant="body2">{m.name}</Typography>
+                          {isSignedUp && <Chip label="已报名" size="small" color="warning" variant="outlined" sx={{ height: 20 }} />}
+                        </Stack>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={async () => {
+                            if (!eventId || !user?.id) return;
+                            const newIds = [...excludedUserIds, m.id];
+                            try {
+                              await setEventExclusions(eventId, newIds, user.id);
+                              setExcludedUserIds(newIds);
+                              setFlash({ open: true, severity: 'success', message: `已屏蔽 ${m.name}` });
+                            } catch {
+                              setFlash({ open: true, severity: 'error', message: '操作失败' });
+                            }
+                          }}
+                        >
+                          屏蔽
+                        </Button>
+                      </Stack>
+                    );
+                  })}
+                  {filtered.length === 0 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ py: 1, textAlign: 'center' }}>
+                      {exclusionSearch ? '未找到匹配成员' : '没有更多可添加的成员'}
+                    </Typography>
+                  )}
+                </Stack>
+              );
+            })()}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => { setExclusionDialogOpen(false); setExclusionSearch(''); }}>关闭</Button>
           </DialogActions>
         </Dialog>
 

@@ -7,7 +7,18 @@ export const movieRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/', async () => service.list());
 
-  app.get('/screened', async () => service.screened());
+  app.get('/screened', async (request) => {
+    const userId = request.headers['x-user-id'] as string | undefined;
+    const movies = await service.screened();
+    if (!userId) return movies;
+    // Filter out screenedEvents the user is excluded from
+    return (movies as any[]).map((m: any) => ({
+      ...m,
+      screenedEvents: m.screenedEvents?.filter((se: any) =>
+        !se.event?.visibilityExclusions?.some((ex: any) => ex.userId === userId),
+      ),
+    }));
+  });
 
   app.get('/search', async (request) => {
     const { q } = request.query as { q?: string };
@@ -24,9 +35,17 @@ export const movieRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+    const userId = request.headers['x-user-id'] as string | undefined;
     const movie = await service.getById(id);
     if (!movie) return reply.notFound('电影不存在');
-    return movie;
+    if (!userId || !(movie as any).screenedEvents?.length) return movie;
+    // Filter out screenedEvents the user is excluded from
+    return {
+      ...movie,
+      screenedEvents: (movie as any).screenedEvents.filter((se: any) =>
+        !se.event?.visibilityExclusions?.some((ex: any) => ex.userId === userId),
+      ),
+    };
   });
 
   app.post('/', async (request) => {

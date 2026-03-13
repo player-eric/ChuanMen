@@ -1233,3 +1233,346 @@ describe('Application-based signup', () => {
     expect(res.statusCode).toBe(403);
   });
 });
+
+describe('Event Visibility Exclusion', () => {
+  it('PUT /api/events/:id/exclusions sets exclusion list', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const excluded = await seedTestUser({ name: '被屏蔽' });
+    const event = await seedTestEvent(host.id);
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: `/api/events/${event.id}/exclusions`,
+      headers: { 'x-user-id': host.id },
+      payload: { userIds: [excluded.id] },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().ok).toBe(true);
+  });
+
+  it('GET /api/events/:id/exclusions returns exclusion list', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const excluded = await seedTestUser({ name: '被屏蔽' });
+    const event = await seedTestEvent(host.id);
+
+    await app.inject({
+      method: 'PUT',
+      url: `/api/events/${event.id}/exclusions`,
+      headers: { 'x-user-id': host.id },
+      payload: { userIds: [excluded.id] },
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/events/${event.id}/exclusions`,
+      headers: { 'x-user-id': host.id },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().userIds).toEqual([excluded.id]);
+  });
+
+  it('non-host cannot access exclusions endpoint', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const other = await seedTestUser({ name: '普通用户' });
+    const event = await seedTestEvent(host.id);
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/events/${event.id}/exclusions`,
+      headers: { 'x-user-id': other.id },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('excluded user cannot see event in list', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const excluded = await seedTestUser({ name: '被屏蔽' });
+    const event = await seedTestEvent(host.id);
+
+    await app.inject({
+      method: 'PUT',
+      url: `/api/events/${event.id}/exclusions`,
+      headers: { 'x-user-id': host.id },
+      payload: { userIds: [excluded.id] },
+    });
+
+    // Excluded user should not see the event
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/events',
+      headers: { 'x-user-id': excluded.id },
+    });
+    expect(res.statusCode).toBe(200);
+    const events = res.json();
+    expect(events.find((e: any) => e.id === event.id)).toBeUndefined();
+  });
+
+  it('excluded user gets 404 on event detail', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const excluded = await seedTestUser({ name: '被屏蔽' });
+    const event = await seedTestEvent(host.id);
+
+    await app.inject({
+      method: 'PUT',
+      url: `/api/events/${event.id}/exclusions`,
+      headers: { 'x-user-id': host.id },
+      payload: { userIds: [excluded.id] },
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/events/${event.id}`,
+      headers: { 'x-user-id': excluded.id },
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('host can still see event even if exclusions exist', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const excluded = await seedTestUser({ name: '被屏蔽' });
+    const event = await seedTestEvent(host.id);
+
+    await app.inject({
+      method: 'PUT',
+      url: `/api/events/${event.id}/exclusions`,
+      headers: { 'x-user-id': host.id },
+      payload: { userIds: [excluded.id] },
+    });
+
+    // Host should still see in list
+    const listRes = await app.inject({
+      method: 'GET',
+      url: '/api/events',
+      headers: { 'x-user-id': host.id },
+    });
+    expect(listRes.json().some((e: any) => e.id === event.id)).toBe(true);
+
+    // Host should still see detail
+    const detailRes = await app.inject({
+      method: 'GET',
+      url: `/api/events/${event.id}`,
+      headers: { 'x-user-id': host.id },
+    });
+    expect(detailRes.statusCode).toBe(200);
+  });
+
+  it('excluded user cannot see event in past list', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const excluded = await seedTestUser({ name: '被屏蔽' });
+    const event = await seedTestEvent(host.id, {
+      status: 'completed',
+      startsAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    });
+
+    await app.inject({
+      method: 'PUT',
+      url: `/api/events/${event.id}/exclusions`,
+      headers: { 'x-user-id': host.id },
+      payload: { userIds: [excluded.id] },
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/events/past',
+      headers: { 'x-user-id': excluded.id },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().find((e: any) => e.id === event.id)).toBeUndefined();
+  });
+
+  it('create event with excludedUserIds', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const excluded = await seedTestUser({ name: '被屏蔽' });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/events',
+      payload: {
+        title: '屏蔽测试活动',
+        hostId: host.id,
+        startsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        city: 'NYC',
+        capacity: 10,
+        excludedUserIds: [excluded.id],
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const eventId = res.json().id;
+
+    // Verify exclusions were created
+    const exRes = await app.inject({
+      method: 'GET',
+      url: `/api/events/${eventId}/exclusions`,
+      headers: { 'x-user-id': host.id },
+    });
+    expect(exRes.json().userIds).toEqual([excluded.id]);
+  });
+
+  it('visibilityExclusions field is stripped from list response', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const event = await seedTestEvent(host.id);
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/events',
+      headers: { 'x-user-id': host.id },
+    });
+    const found = res.json().find((e: any) => e.id === event.id);
+    expect(found).toBeDefined();
+    expect(found.visibilityExclusions).toBeUndefined();
+  });
+
+  it('event with recent comment is still hidden from excluded user in feed', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const excluded = await seedTestUser({ name: '被屏蔽' });
+    const commenter = await seedTestUser({ name: '评论者' });
+    const event = await seedTestEvent(host.id);
+
+    // Exclude user
+    await app.inject({
+      method: 'PUT',
+      url: `/api/events/${event.id}/exclusions`,
+      headers: { 'x-user-id': host.id },
+      payload: { userIds: [excluded.id] },
+    });
+
+    // Add a comment to the event (this triggers it appearing in feed via activeEventIds)
+    const prisma = getTestPrisma();
+    await prisma.comment.create({
+      data: {
+        entityType: 'event',
+        entityId: event.id,
+        authorId: commenter.id,
+        content: '好期待！',
+      },
+    });
+
+    // Excluded user should not see the event in feed
+    const feedRes = await app.inject({
+      method: 'GET',
+      url: `/api/feed?userId=${excluded.id}`,
+    });
+    expect(feedRes.statusCode).toBe(200);
+    const feedEvents = feedRes.json().events;
+    expect(feedEvents.find((e: any) => e.id === event.id)).toBeUndefined();
+  });
+
+  it('postcard linked to excluded event is hidden from feed', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const excluded = await seedTestUser({ name: '被屏蔽' });
+    const sender = await seedTestUser({ name: '寄卡人' });
+    const receiver = await seedTestUser({ name: '收卡人' });
+    const event = await seedTestEvent(host.id, {
+      status: 'completed',
+      startsAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    });
+
+    // Exclude user from event
+    await app.inject({
+      method: 'PUT',
+      url: `/api/events/${event.id}/exclusions`,
+      headers: { 'x-user-id': host.id },
+      payload: { userIds: [excluded.id] },
+    });
+
+    // Create a public postcard linked to the event
+    const prisma = getTestPrisma();
+    await prisma.postcard.create({
+      data: {
+        fromId: sender.id,
+        toId: receiver.id,
+        message: '谢谢你来参加活动！',
+        visibility: 'public',
+        eventId: event.id,
+      },
+    });
+
+    // Excluded user should not see the postcard in feed
+    const feedRes = await app.inject({
+      method: 'GET',
+      url: `/api/feed?userId=${excluded.id}`,
+    });
+    expect(feedRes.statusCode).toBe(200);
+    const feedPostcards = feedRes.json().postcards;
+    const linkedCard = feedPostcards.find((p: any) => p.eventId === event.id);
+    expect(linkedCard).toBeUndefined();
+  });
+
+  it('profile hides excluded events from viewer', async () => {
+    const host = await seedTestUser({ name: 'ProfileHost' });
+    const participant = await seedTestUser({ name: '参与者' });
+    const excluded = await seedTestUser({ name: '被屏蔽' });
+    const event = await seedTestEvent(host.id, {
+      title: '屏蔽Profile活动',
+      status: 'completed',
+      startsAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    });
+
+    // Participant accepted the event
+    const prisma = getTestPrisma();
+    await prisma.eventSignup.create({
+      data: { eventId: event.id, userId: participant.id, status: 'accepted' },
+    });
+
+    // Exclude viewer from event
+    await app.inject({
+      method: 'PUT',
+      url: `/api/events/${event.id}/exclusions`,
+      headers: { 'x-user-id': host.id },
+      payload: { userIds: [excluded.id] },
+    });
+
+    // Excluded user viewing participant's profile should not see the event
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/profile?userId=${participant.id}`,
+      headers: { 'x-user-id': excluded.id },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.pastEvents.find((e: any) => e.id === event.id)).toBeUndefined();
+  });
+
+  it('movie screenedEvents filtered for excluded user', async () => {
+    const host = await seedTestUser({ name: 'Host' });
+    const excluded = await seedTestUser({ name: '被屏蔽' });
+    const event = await seedTestEvent(host.id, {
+      status: 'completed',
+      startsAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    });
+
+    // Create a movie and link it to the event
+    const movie = await seedTestMovie(host.id, { status: 'screened' });
+    const prisma = getTestPrisma();
+    await prisma.movieScreening.create({
+      data: { eventId: event.id, movieId: movie.id },
+    });
+
+    // Exclude user from event
+    await app.inject({
+      method: 'PUT',
+      url: `/api/events/${event.id}/exclusions`,
+      headers: { 'x-user-id': host.id },
+      payload: { userIds: [excluded.id] },
+    });
+
+    // Excluded user: movie detail should not show the event in screenedEvents
+    const movieRes = await app.inject({
+      method: 'GET',
+      url: `/api/movies/${movie.id}`,
+      headers: { 'x-user-id': excluded.id },
+    });
+    expect(movieRes.statusCode).toBe(200);
+    const screenedEvents = movieRes.json().screenedEvents;
+    expect(screenedEvents.find((se: any) => se.event?.id === event.id)).toBeUndefined();
+
+    // Non-excluded user should see the event
+    const otherUser = await seedTestUser({ name: '普通用户' });
+    const movieRes2 = await app.inject({
+      method: 'GET',
+      url: `/api/movies/${movie.id}`,
+      headers: { 'x-user-id': otherUser.id },
+    });
+    expect(movieRes2.json().screenedEvents.find((se: any) => se.event?.id === event.id)).toBeDefined();
+  });
+});

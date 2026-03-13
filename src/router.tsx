@@ -550,6 +550,8 @@ function mapApiEvent(e: any): any {
     commentCount: e.commentCount ?? 0,
     isPrivate: e.isPrivate ?? false,
     signupMode: e.signupMode || 'direct',
+    foodOption: e.foodOption || undefined,
+    restaurantLocation: e.restaurantLocation || undefined,
     likeCount: e.likeCount ?? 0,
     tags: e.tags ?? [],
     taskSummary: ((e.tasks ?? []) as any[]).map((t: any) => ({

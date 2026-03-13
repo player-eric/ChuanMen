@@ -79,6 +79,9 @@ export default function EventCreatePage() {
   const [publishDate, setPublishDate] = useState('');
   const [publishTime, setPublishTime] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [excludedUserIds, setExcludedUserIds] = useState<string[]>([]);
+  const [exclusionDialogOpen, setExclusionDialogOpen] = useState(false);
+  const [exclusionSearch, setExclusionSearch] = useState('');
   const [signupMode, setSignupMode] = useState<'direct' | 'application'>('application');
   const [error, setError] = useState('');
   const [snackOpen, setSnackOpen] = useState(false);
@@ -223,8 +226,11 @@ export default function EventCreatePage() {
         isWeeklyLotteryEvent: lotteryId ? true : undefined,
         isHomeEvent: isHome || undefined,
         houseRules: isHome && houseRules.trim() ? houseRules.trim() : undefined,
+        foodOption: foodOption !== 'none' ? foodOption : undefined,
+        restaurantLocation: foodOption === 'eat_out' && restaurantLocation.trim() ? restaurantLocation.trim() : undefined,
         proposalId: fromProposal?.id,
         tasks: validTasks.length > 0 ? validTasks : undefined,
+        excludedUserIds: excludedUserIds.length > 0 ? excludedUserIds : undefined,
       });
       const newEventId = String((result as any).id ?? '');
       // Complete lottery draw if this is a lottery event
@@ -475,6 +481,21 @@ export default function EventCreatePage() {
                 />
               ))}
             </Stack>
+            {foodOption === 'potluck' && !tasks.some((t) => t.role === '带一道菜') && (
+              <Button
+                size="small"
+                sx={{ mt: 1 }}
+                onClick={() => {
+                  const slots = Array.from({ length: Math.max(1, capacity - 1) }, () => ({
+                    role: '带一道菜',
+                    description: '',
+                  }));
+                  setTasks((prev) => [...prev, ...slots]);
+                }}
+              >
+                + 添加「带一道菜」分工（{Math.max(1, capacity - 1)} 个槽位）
+              </Button>
+            )}
             {foodOption === 'eat_out' && (
               <TextField
                 label="餐厅地址"
@@ -739,59 +760,127 @@ export default function EventCreatePage() {
 
           <Box>
             <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>公开设置</Typography>
-            <Stack spacing={1.5}>
-              <FormControlLabel
-                control={<Switch checked={delayPublish} onChange={(e) => setDelayPublish(e.target.checked)} />}
+            <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mb: 1 }}>
+              <Chip
                 label="延时公开"
+                size="small"
+                variant={delayPublish ? 'filled' : 'outlined'}
+                color={delayPublish ? 'primary' : 'default'}
+                onClick={() => setDelayPublish(!delayPublish)}
               />
-              {delayPublish ? (
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>公开时间</Typography>
-                  <Stack direction="row" spacing={1.5}>
-                    <TextField
-                      type="date"
-                      InputLabelProps={{ shrink: true }}
-                      value={publishDate}
-                      onChange={(e) => setPublishDate(e.target.value)}
-                      sx={{ flex: 2 }}
-                    />
-                    <TextField
-                      type="time"
-                      InputLabelProps={{ shrink: true }}
-                      value={publishTime}
-                      onChange={(e) => setPublishTime(e.target.value)}
-                      sx={{ flex: 1 }}
-                    />
-                  </Stack>
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                    到达设定时间后自动公开报名
-                  </Typography>
-                </Box>
-              ) : (
-                <Typography variant="caption" color="text.secondary">
-                  发布后立即公开，所有成员可见并报名
-                </Typography>
-              )}
-              <FormControlLabel
-                control={<Switch checked={signupMode === 'application'} onChange={(e) => setSignupMode(e.target.checked ? 'application' : 'direct')} />}
-                label="申请制报名"
+              <Chip
+                label="申请制"
+                size="small"
+                variant={signupMode === 'application' ? 'filled' : 'outlined'}
+                color={signupMode === 'application' ? 'primary' : 'default'}
+                onClick={() => setSignupMode(signupMode === 'application' ? 'direct' : 'application')}
               />
-              {signupMode === 'application' && (
-                <Typography variant="caption" color="text.secondary">
-                  参与者需提交申请留言，由你审批后参加
-                </Typography>
-              )}
-              <FormControlLabel
-                control={<Switch checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} />}
+              <Chip
                 label="私密活动"
+                size="small"
+                variant={isPrivate ? 'filled' : 'outlined'}
+                color={isPrivate ? 'primary' : 'default'}
+                onClick={() => setIsPrivate(!isPrivate)}
               />
-              {isPrivate && (
-                <Typography variant="caption" color="text.secondary">
-                  私密活动不会在社区动态中显示详情，仅显示"xx 发起了私密活动"
-                </Typography>
-              )}
+              <Chip
+                label={`不可见名单${excludedUserIds.length > 0 ? ` (${excludedUserIds.length})` : ''}`}
+                size="small"
+                variant={excludedUserIds.length > 0 ? 'filled' : 'outlined'}
+                color={excludedUserIds.length > 0 ? 'warning' : 'default'}
+                onClick={() => setExclusionDialogOpen(true)}
+              />
             </Stack>
+            {delayPublish && (
+              <Box sx={{ mb: 1 }}>
+                <Stack direction="row" spacing={1.5}>
+                  <TextField
+                    type="date"
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    value={publishDate}
+                    onChange={(e) => setPublishDate(e.target.value)}
+                    sx={{ flex: 2 }}
+                  />
+                  <TextField
+                    type="time"
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    value={publishTime}
+                    onChange={(e) => setPublishTime(e.target.value)}
+                    sx={{ flex: 1 }}
+                  />
+                </Stack>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  到达设定时间后自动公开报名
+                </Typography>
+              </Box>
+            )}
           </Box>
+
+          {/* Exclusion picker dialog */}
+          <Dialog open={exclusionDialogOpen} onClose={() => { setExclusionDialogOpen(false); setExclusionSearch(''); }} maxWidth="xs" fullWidth>
+            <DialogTitle>设置不可见名单</DialogTitle>
+            <DialogContent>
+              {excludedUserIds.length > 0 && (
+                <Stack spacing={0.5} sx={{ mb: 2 }}>
+                  <Typography variant="caption" color="text.secondary">已屏蔽的成员</Typography>
+                  {excludedUserIds.map((uid) => {
+                    const member = allMembers.find((m) => m.id === uid);
+                    const mName = member?.name ?? uid;
+                    return (
+                      <Stack key={uid} direction="row" alignItems="center" spacing={1}>
+                        <Avatar sx={{ width: 28, height: 28 }}>{firstNonEmoji(mName)}</Avatar>
+                        <Typography variant="body2" sx={{ flex: 1 }}>{mName}</Typography>
+                        <IconButton size="small" onClick={() => setExcludedUserIds((prev) => prev.filter((id) => id !== uid))}>
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
+                    );
+                  })}
+                </Stack>
+              )}
+              <TextField
+                autoFocus
+                fullWidth
+                size="small"
+                placeholder="搜索成员..."
+                value={exclusionSearch}
+                onChange={(e) => setExclusionSearch(e.target.value)}
+                sx={{ mb: 1 }}
+              />
+              {(() => {
+                const filtered = allMembers.filter((m) => {
+                  if (m.id === user?.id) return false;
+                  if (excludedUserIds.includes(m.id)) return false;
+                  if (exclusionSearch && !m.name.toLowerCase().includes(exclusionSearch.toLowerCase())) return false;
+                  return true;
+                }).slice(0, 10);
+                return (
+                  <Stack spacing={0.5}>
+                    {filtered.map((m) => (
+                      <Stack direction="row" key={m.id} justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Avatar sx={{ width: 28, height: 28 }}>{firstNonEmoji(m.name)}</Avatar>
+                          <Typography variant="body2">{m.name}</Typography>
+                        </Stack>
+                        <Button size="small" variant="outlined" onClick={() => setExcludedUserIds((prev) => [...prev, m.id])}>
+                          屏蔽
+                        </Button>
+                      </Stack>
+                    ))}
+                    {filtered.length === 0 && (
+                      <Typography variant="body2" color="text.secondary" sx={{ py: 1, textAlign: 'center' }}>
+                        {exclusionSearch ? '未找到匹配成员' : '没有更多可添加的成员'}
+                      </Typography>
+                    )}
+                  </Stack>
+                );
+              })()}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => { setExclusionDialogOpen(false); setExclusionSearch(''); }}>完成</Button>
+            </DialogActions>
+          </Dialog>
 
           <Box>
             <Button variant="contained" onClick={onSubmit} size="large" disabled={submitting}>

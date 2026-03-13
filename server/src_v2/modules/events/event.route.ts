@@ -25,25 +25,43 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     const events = await service.listEvents();
     // Filter out invite-phase events unless user is host or has a signup
     const visible = events.filter((e: any) => {
+      // Hide from excluded users (host/coHost always see their own events)
+      if (userId && e.hostId !== userId && !e.coHosts?.some((ch: any) => ch.userId === userId)) {
+        if (e.visibilityExclusions?.some((ex: any) => ex.userId === userId)) return false;
+      }
       if (e.phase !== 'invite') return true;
       if (!userId) return false;
       if (e.hostId === userId) return true;
       return e.signups?.some((s: any) => s.userId === userId);
     });
-    // Strip detailed address from list — only city is public
-    return withInteractionCounts(visible.map((e) => ({ ...e, address: '', location: '' })));
+    // Strip detailed address and visibilityExclusions from list
+    return withInteractionCounts(visible.map(({ visibilityExclusions, ...e }: any) => ({ ...e, address: '', location: '' })));
   });
 
   // Past/completed events - must come before /:id
-  app.get('/past', async () => {
+  app.get('/past', async (request) => {
+    const userId = request.headers['x-user-id'] as string | undefined;
     const events = await service.listPast();
-    return withInteractionCounts(events.map((e) => ({ ...e, address: '', location: '' })));
+    const visible = events.filter((e: any) => {
+      if (!userId) return true;
+      if (e.hostId === userId || e.coHosts?.some((ch: any) => ch.userId === userId)) return true;
+      return !e.visibilityExclusions?.some((ex: any) => ex.userId === userId);
+    });
+    return withInteractionCounts(visible.map(({ visibilityExclusions, ...e }: any) => ({ ...e, address: '', location: '' })));
   });
 
   app.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const event = await service.getEventById(id);
     if (!event) return reply.notFound('活动不存在');
+
+    // Check exclusion: blocked users get 404 (unless host/coHost)
+    const requestUserId = request.headers['x-user-id'] as string | undefined;
+    if (requestUserId && (event as any).hostId !== requestUserId && !(event as any).coHosts?.some((ch: any) => ch.userId === requestUserId)) {
+      if ((event as any).visibilityExclusions?.some((ex: any) => ex.userId === requestUserId)) {
+        return reply.notFound('活动不存在');
+      }
+    }
 
     // Compute attendeeVotes for each linked recommendation and movie
     // Participants = host + co-hosts + accepted/invited/offered signups
@@ -138,8 +156,10 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
+    // Strip visibilityExclusions from response (only accessible via dedicated endpoint)
+    const { visibilityExclusions: _ve, ...eventWithoutExclusions } = event as any;
     return {
-      ...event,
+      ...eventWithoutExclusions,
       address: isParticipant ? (event as any).address : '',
       location: isParticipant ? event.location : '',
       recommendations: enrichedRecs,
@@ -625,6 +645,34 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     await app.prisma.eventRecommendation.deleteMany({
       where: { eventId: id, recommendationId },
     });
+    return { ok: true };
+  });
+
+  // ── Visibility exclusion management ──
+
+  app.get('/:id/exclusions', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const requesterId = request.headers['x-user-id'] as string;
+    if (!requesterId) return reply.code(400).send({ message: '缺少 x-user-id' });
+    const event = await service.getEventById(id);
+    if (!event) return reply.notFound('活动不存在');
+    const isHostOrCoHost = (event as any).hostId === requesterId || (event as any).coHosts?.some((ch: any) => ch.userId === requesterId);
+    if (!isHostOrCoHost) return reply.code(403).send({ message: '仅 Host 或 Co-Host 可查看' });
+    const userIds = await service.getExclusions(id);
+    return { userIds };
+  });
+
+  app.put('/:id/exclusions', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const requesterId = request.headers['x-user-id'] as string;
+    if (!requesterId) return reply.code(400).send({ message: '缺少 x-user-id' });
+    const event = await service.getEventById(id);
+    if (!event) return reply.notFound('活动不存在');
+    const isHostOrCoHost = (event as any).hostId === requesterId || (event as any).coHosts?.some((ch: any) => ch.userId === requesterId);
+    if (!isHostOrCoHost) return reply.code(403).send({ message: '仅 Host 或 Co-Host 可设置' });
+    const { userIds } = request.body as { userIds: string[] };
+    if (!Array.isArray(userIds)) return reply.badRequest('缺少 userIds');
+    await service.setExclusions(id, userIds);
     return { ok: true };
   });
 

@@ -44,6 +44,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         prisma.event.findMany({
           where: {
             status: { not: 'cancelled' },
+            ...(userId ? { NOT: { visibilityExclusions: { some: { userId } } } } : {}),
             OR: [
               { updatedAt: { gte: sevenDaysAgo } },
               ...(activeEventIds.length > 0 ? [{ id: { in: activeEventIds } }] : []),
@@ -109,9 +110,17 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           orderBy: { lastActiveAt: 'desc' },
         }),
 
-        // Recent public postcards
+        // Recent public postcards (exclude those linked to events user is excluded from)
         prisma.postcard.findMany({
-          where: { visibility: 'public' },
+          where: {
+            visibility: 'public',
+            ...(userId ? {
+              OR: [
+                { eventId: null },
+                { event: { NOT: { visibilityExclusions: { some: { userId } } } } },
+              ],
+            } : {}),
+          },
           orderBy: { createdAt: 'desc' },
           take: 10,
           include: {

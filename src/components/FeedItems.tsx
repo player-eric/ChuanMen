@@ -467,8 +467,8 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
                 <div style={{ display: 'flex', gap: 8 }}>
                   {photoCount != null && photoCount > 0 && <span style={{ fontSize: 12, color: c.text3 }}>📷 {photoCount}</span>}
                 </div>
-              ) : !isCancelled && (
-                <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `${total ? `${total - spots}/${total}人 · ` : ''}还剩 ${spots} 位` : (waitlistCount ?? 0) > 0 ? `已满 · ${waitlistCount}人等位` : '已满'}</span>
+              ) : !isCancelled && spots <= 0 && (
+                <span style={{ fontSize: 12, color: c.red }}>{(waitlistCount ?? 0) > 0 ? `已满 · ${waitlistCount}人等位` : '已满'}</span>
               )}
             </div>
             {isList && houseRules && (
@@ -580,8 +580,8 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
                 <div style={{ display: 'flex', gap: 8 }}>
                   {photoCount != null && photoCount > 0 && <span style={{ fontSize: 12, color: c.text3 }}>📷 {photoCount}</span>}
                 </div>
-              ) : !isCancelled && (
-                <span style={{ fontSize: 12, color: spots > 0 ? c.green : c.red }}>{spots > 0 ? `${total ? `${total - spots}/${total}人 · ` : ''}还剩 ${spots} 位` : (waitlistCount ?? 0) > 0 ? `已满 · ${waitlistCount}人等位` : '已满'}</span>
+              ) : !isCancelled && spots <= 0 && (
+                <span style={{ fontSize: 12, color: c.red }}>{(waitlistCount ?? 0) > 0 ? `已满 · ${waitlistCount}人等位` : '已满'}</span>
               )}
             </div>
             {taskSummary && taskSummary.length > 0 && !isCancelled && (

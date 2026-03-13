@@ -34,6 +34,7 @@ export class EventRepository {
           include: { claimedBy: { select: { id: true, name: true } } },
           orderBy: { createdAt: 'asc' as const },
         },
+        visibilityExclusions: { select: { userId: true } },
         _count: { select: { signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } } } } },
       },
     });
@@ -62,6 +63,7 @@ export class EventRepository {
           include: { claimedBy: { select: { id: true, name: true, avatar: true } } },
           orderBy: { createdAt: 'asc' },
         },
+        visibilityExclusions: { select: { userId: true } },
       },
     });
   }
@@ -88,6 +90,8 @@ export class EventRepository {
     isHomeEvent?: boolean;
     houseRules?: string;
     signupMode?: 'direct' | 'application';
+    foodOption?: string;
+    restaurantLocation?: string;
   }) {
     return this.prisma.event.create({
       data: {
@@ -112,6 +116,8 @@ export class EventRepository {
         isHomeEvent: input.isHomeEvent ?? false,
         houseRules: input.houseRules ?? '',
         signupMode: input.signupMode,
+        foodOption: input.foodOption ?? '',
+        restaurantLocation: input.restaurantLocation ?? '',
       },
     });
   }
@@ -134,6 +140,9 @@ export class EventRepository {
     recSelectionMode?: string;
     recCategories?: string[];
     isPrivate?: boolean;
+    signupMode?: 'direct' | 'application';
+    foodOption?: string;
+    restaurantLocation?: string;
   }) {
     return this.prisma.event.update({
       where: { id },
@@ -458,6 +467,7 @@ export class EventRepository {
       include: {
         host: { select: { id: true, name: true, avatar: true } },
         coHosts: { include: { user: { select: { id: true, name: true } } } },
+        visibilityExclusions: { select: { userId: true } },
         _count: { select: { signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } } } } },
       },
     });

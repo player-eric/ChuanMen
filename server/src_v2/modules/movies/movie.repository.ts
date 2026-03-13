@@ -23,7 +23,14 @@ export class MovieRepository {
         votes: { include: { user: { select: { id: true, name: true } } } },
         screenedEvents: {
           include: {
-            event: { select: { id: true, title: true, startsAt: true, status: true, host: { select: { name: true } }, _count: { select: { signups: true } } } },
+            event: {
+              select: {
+                id: true, title: true, startsAt: true, status: true,
+                host: { select: { name: true } },
+                _count: { select: { signups: true } },
+                visibilityExclusions: { select: { userId: true } },
+              },
+            },
           },
         },
         _count: { select: { votes: true } },
@@ -87,7 +94,13 @@ export class MovieRepository {
           orderBy: { event: { startsAt: 'desc' } },
           take: 1,
           include: {
-            event: { select: { id: true, title: true, startsAt: true, host: { select: { name: true } } } },
+            event: {
+              select: {
+                id: true, title: true, startsAt: true,
+                host: { select: { name: true } },
+                visibilityExclusions: { select: { userId: true } },
+              },
+            },
           },
         },
       },

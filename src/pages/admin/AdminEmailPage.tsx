@@ -137,8 +137,8 @@ interface UserEmailStatus {
 
 const defaultGlobalConfig: GlobalEmailConfig = {
   systemPaused: false,
-  fromEmail: 'noreply@chuanmen.co',
-  replyTo: 'hi@chuanmen.co',
+  fromEmail: 'hi@chuanmener.club',
+  replyTo: 'hi@chuanmener.club',
   dailySendTime: '09:00',
   timezone: 'America/New_York',
   maxDailyPerUser: 1,
@@ -148,9 +148,9 @@ const defaultGlobalConfig: GlobalEmailConfig = {
   orgName: '串门儿',
   physicalAddress: '123 Main St, Edison, NJ 08820',
   unsubscribeText: '不想收到邮件？点此退订',
-  unsubscribeUrl: 'https://chuanmen.co/unsubscribe',
+  unsubscribeUrl: 'https://chuanmener.club/unsubscribe',
   unsubscribeReasons: '邮件太频繁, 内容不相关, 不再参与社群, 其他',
-  testEmails: 'admin@chuanmen.co',
+  testEmails: 'admin@chuanmener.club',
 };
 
 const defaultDigestConfig: DigestConfig = {
@@ -167,7 +167,7 @@ const defaultDigestConfig: DigestConfig = {
   headerText: '嘿 {userName}，这是今天的串门儿动态：',
   footerText: '— 串门儿团队',
   ctaLabel: '查看更多动态',
-  ctaUrl: 'https://chuanmen.co/',
+  ctaUrl: 'https://chuanmener.club/',
   sources: [
     { key: 'new_events', label: '新活动发布', enabled: true, sortOrder: 0, maxItems: 3 },
     { key: 'signups', label: '活动报名动态', enabled: true, sortOrder: 1, maxItems: 2 },
