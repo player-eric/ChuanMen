@@ -465,7 +465,56 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
   // Cancel signup
   app.delete('/:id/signup', async (request) => {
     const { id } = request.params as { id: string };
-    return service.cancelSignup(id, request.body);
+    const { userId } = request.body as { userId: string };
+
+    // Check previous status before cancelling
+    const existingSignup = await app.prisma.eventSignup.findUnique({
+      where: { eventId_userId: { eventId: id, userId } },
+      select: { status: true, user: { select: { name: true } } },
+    });
+    const prevStatus = existingSignup?.status;
+
+    const result = await service.cancelSignup(id, request.body);
+
+    // Fire-and-forget: notify host when someone withdraws application or cancels signup
+    if ((prevStatus === 'pending' || prevStatus === 'accepted') && existingSignup?.user && userId !== undefined) {
+      const event = await app.prisma.event.findUnique({
+        where: { id },
+        select: { title: true, hostId: true, host: { select: { name: true, email: true, preferences: true } } },
+      });
+      // Don't notify host about their own cancellation
+      if (event?.host?.email && event.hostId !== userId) {
+        const prefs = event.host.preferences as { emailState?: string } | null;
+        if (prefs?.emailState !== 'unsubscribed') {
+          const isPending = prevStatus === 'pending';
+          const rendered = renderNotificationEmail({
+            subject: isPending
+              ? `${existingSignup.user.name} 撤回了「${event.title}」的申请`
+              : `${existingSignup.user.name} 取消了「${event.title}」的报名`,
+            body: isPending
+              ? `Hi {hostName}，\n\n**{userName}** 撤回了「**{eventTitle}**」的参加申请。`
+              : `Hi {hostName}，\n\n**{userName}** 取消了「**{eventTitle}**」的报名。`,
+            variables: {
+              hostName: event.host.name ?? '',
+              userName: existingSignup.user.name ?? '',
+              eventTitle: event.title,
+            },
+            linkLabel: '查看活动详情 →',
+            linkUrl: `https://chuanmener.club/events/${id}`,
+          });
+          sendEmail({
+            to: event.host.email,
+            subject: rendered.subject,
+            text: rendered.text,
+            html: rendered.html,
+          }).catch((err) => {
+            app.log.error({ err }, 'Signup cancellation notification to host failed');
+          });
+        }
+      }
+    }
+
+    return result;
   });
 
   // Host removes a participant
