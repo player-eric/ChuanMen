@@ -313,13 +313,12 @@ function MoviesSection() {
         ) : (
           <Grid container spacing={1.5}>
             {screened.map((m: any, i: number) => {
-              const match = pool.find((p: any) => p.title === m.title);
               return (
                 <Grid key={i} size={{ xs: 12, md: 6 }}>
                   <Card>
                     <CardActionArea
-                      onClick={() => match && navigate(`/discover/movies/${match.id}`)}
-                      disabled={!match}
+                      onClick={() => m.id && navigate(`/discover/movies/${m.id}`)}
+                      disabled={!m.id}
                     >
                       <CardContent>
                         <Stack direction="row" spacing={2} alignItems="stretch">

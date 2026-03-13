@@ -724,6 +724,7 @@ async function discoverLoader() {
     const screened = (rawScreened as any[]).map((s: any) => {
       const ev = s.screenedEvents?.[0]?.event;
       return {
+        id: s.id,
         title: s.title ?? '',
         year: String(s.year ?? ''),
         dir: s.director ?? '',
