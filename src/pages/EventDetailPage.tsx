@@ -656,7 +656,7 @@ export default function EventDetailPage() {
               </Stack>
               <Stack alignItems="flex-end" spacing={0.25}>
                 <Typography variant="body2" color="text.secondary">📅 {event.date}{event.endDate ? ` — ${event.endDate}` : ''}</Typography>
-                <Typography variant="body2" color="text.secondary">📍 <a href={`https://maps.google.com/?q=${encodeURIComponent([event.city, event.state].filter(Boolean).join(', '))}`} target="_blank" rel="noopener" style={{ color: 'inherit', textDecoration: 'underline' }}>{[event.city, event.state].filter(Boolean).join(', ')}</a></Typography>
+                <Typography variant="body2" color="text.secondary">📍 {[event.city, event.state].filter(Boolean).join(', ')}</Typography>
                 {signedUp && event.address && (
                   <Typography variant="caption" color="success.main">📍 <a href={`https://maps.google.com/?q=${encodeURIComponent([event.address, event.city, event.state].filter(Boolean).join(', '))}`} target="_blank" rel="noopener" style={{ color: 'inherit', textDecoration: 'underline' }}>{event.address}</a></Typography>
                 )}
