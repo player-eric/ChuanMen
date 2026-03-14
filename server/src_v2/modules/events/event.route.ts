@@ -3,6 +3,7 @@ import { EventRepository } from './event.repository.js';
 import { EventService } from './event.service.js';
 import { sendEmail, sendTemplatedEmail } from '../../services/emailService.js';
 import { renderNotificationEmail } from '../../emails/template.js';
+import { awardCreditsForEvent } from '../../services/agentService.js';
 
 export const eventRoutes: FastifyPluginAsync = async (app) => {
   const service = new EventService(new EventRepository(app.prisma), app.prisma);
@@ -257,6 +258,14 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
             app.log.error({ err, userId: s.user.id }, `${ruleId} email failed`);
           });
         }
+      }
+
+      // Award postcard credits immediately when host ends event
+      const wasEnded = oldEvent.phase !== 'ended' && body.phase === 'ended';
+      if (wasEnded) {
+        awardCreditsForEvent(app.prisma, id, app.log).catch((err) => {
+          app.log.error({ err, eventId: id }, 'Failed to award credits on manual end');
+        });
       }
     }
 

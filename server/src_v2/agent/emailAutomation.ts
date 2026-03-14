@@ -7,7 +7,6 @@ import { renderDigestBlock, type DigestSection } from '../emails/template.js';
 import { EventRepository } from '../modules/events/event.repository.js';
 import {
   parseDigestConfig,
-  parseGlobalConfig,
   isWithinSendWindow,
   isSendDay,
   type DigestConfig,
@@ -34,13 +33,19 @@ export async function sendPostEventRecap(
   const now = new Date();
   const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
   const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  // For events without endsAt, assume ~6h duration: startsAt + 6h should be within 24h window
+  const thirtyHoursAgo = new Date(now.getTime() - 30 * 60 * 60 * 1000);
 
-  // Find events that ended (phase changed) within the last 24 hours
-  // Use updatedAt as proxy for when phase changed to 'ended'
+  // Find events that actually ended within the last 24 hours
+  // Use endsAt (or startsAt + 6h fallback) instead of updatedAt to avoid
+  // re-sending when updatedAt is refreshed by migrations/edits
   const recentlyEnded = await prisma.event.findMany({
     where: {
       phase: 'ended',
-      updatedAt: { gte: twentyFourHoursAgo },
+      OR: [
+        { endsAt: { gte: twentyFourHoursAgo, lte: now } },
+        { endsAt: null, startsAt: { gte: thirtyHoursAgo, lte: now } },
+      ],
     },
     include: {
       host: { select: { name: true } },
@@ -1159,10 +1164,6 @@ export async function sendDailyDigest(
     return 0;
   }
 
-  // ── Load global config for maxDailyPerUser ──
-  const globalCfgRow = await prisma.siteConfig.findUnique({ where: { key: 'emailConfig.global' } });
-  const globalCfg = parseGlobalConfig(globalCfgRow?.value);
-
   // Check if there's any global content first (skip per-user queries if nothing happened)
   const globalSections = await buildDigestSections(prisma, undefined, digestCfg);
 
@@ -1190,26 +1191,6 @@ export async function sendDailyDigest(
     rule.cooldownDays,
   );
 
-  // maxDailyPerUser: check how many emails each user received today
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  let dailyLimited: Set<string> | null = null;
-  if (globalCfg.maxDailyPerUser > 0) {
-    const todayLogs = await prisma.emailLog.groupBy({
-      by: ['userId'],
-      where: {
-        userId: { in: candidates.map((u) => u.id) },
-        sentAt: { gte: todayStart },
-      },
-      _count: true,
-    });
-    dailyLimited = new Set(
-      todayLogs
-        .filter((g) => g._count >= globalCfg.maxDailyPerUser)
-        .map((g) => g.userId),
-    );
-  }
-
   log.info(`DIGEST: ${candidates.length} candidates, ${eligible.size} eligible after cooldown`);
 
   const date = new Date().toISOString().split('T')[0];
@@ -1219,7 +1200,6 @@ export async function sendDailyDigest(
 
   for (const user of candidates) {
     if (!eligible.has(user.id)) continue;
-    if (dailyLimited?.has(user.id)) continue;
     try {
       // Build per-user digest with personal interaction feedback + nudge
       const personalSections = await buildDigestSections(prisma, user.id, digestCfg);

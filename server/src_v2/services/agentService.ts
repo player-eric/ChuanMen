@@ -15,6 +15,117 @@ import {
 import { drawWeeklyHost, getWeekKey } from '../modules/lottery/lottery.service.js';
 import { parseGlobalConfig } from '../types/emailConfig.js';
 
+/**
+ * Award postcard credits for a single event.
+ * Host gets +6, co-hosts +6, regular participants +2.
+ * No-ops if already awarded or no participants besides host.
+ */
+export async function awardCreditsForEvent(
+  prisma: Parameters<typeof runAgentCycle>[0]['prisma'],
+  eventId: string,
+  log: { info: (...args: any[]) => void; error: (...args: any[]) => void },
+) {
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: {
+      id: true,
+      title: true,
+      hostId: true,
+      creditsAwarded: true,
+      host: { select: { id: true, name: true, email: true } },
+      signups: {
+        where: { status: 'accepted' },
+        select: { userId: true, user: { select: { id: true, name: true, email: true } } },
+      },
+      coHosts: {
+        select: { userId: true, user: { select: { id: true, name: true, email: true } } },
+      },
+    },
+  });
+
+  if (!event || event.creditsAwarded) return;
+
+  const participants = event.signups.filter((s) => s.userId !== event.hostId);
+  const coHostParticipants = (event.coHosts ?? []).filter(
+    (ch) => ch.userId !== event.hostId && !participants.some((p) => p.userId === ch.userId),
+  );
+  const allParticipants = [...participants, ...coHostParticipants];
+
+  if (allParticipants.length === 0) {
+    await prisma.event.update({ where: { id: event.id }, data: { creditsAwarded: true } });
+    return;
+  }
+
+  const allParticipantIds = allParticipants.map((s) => s.userId);
+  const coHostIds = (event.coHosts ?? []).map((ch) => ch.userId).filter((id) => id !== event.hostId);
+  const hostAndCoHostIds = new Set([event.hostId, ...coHostIds]);
+
+  const regularParticipantIds = allParticipantIds.filter((id) => !hostAndCoHostIds.has(id));
+  if (regularParticipantIds.length > 0) {
+    await prisma.user.updateMany({
+      where: { id: { in: regularParticipantIds } },
+      data: { postcardCredits: { increment: 2 } },
+    });
+  }
+
+  await prisma.user.update({
+    where: { id: event.hostId },
+    data: { postcardCredits: { increment: 6 } },
+  });
+
+  if (coHostIds.length > 0) {
+    await prisma.user.updateMany({
+      where: { id: { in: coHostIds } },
+      data: { postcardCredits: { increment: 6 } },
+    });
+  }
+
+  await prisma.event.update({ where: { id: event.id }, data: { creditsAwarded: true } });
+
+  // Send credit notification emails (best effort)
+  try {
+    const coHostIdSet = new Set(coHostIds);
+    for (const s of allParticipants) {
+      if (coHostIdSet.has(s.userId)) continue;
+      if (s.user?.email) {
+        await sendTemplatedEmail(prisma, {
+          to: s.user.email,
+          ruleId: 'TXN-14',
+          variables: { userName: s.user.name, eventTitle: event.title },
+          ctaLabel: '寄感谢卡',
+          ctaUrl: 'https://chuanmener.club/cards',
+        });
+      }
+    }
+    for (const ch of event.coHosts ?? []) {
+      if (ch.userId === event.hostId) continue;
+      if (ch.user?.email) {
+        await sendTemplatedEmail(prisma, {
+          to: ch.user.email,
+          ruleId: 'TXN-15',
+          variables: { userName: ch.user.name, eventTitle: event.title },
+          ctaLabel: '寄感谢卡',
+          ctaUrl: 'https://chuanmener.club/cards',
+        });
+      }
+    }
+    if (event.host?.email) {
+      await sendTemplatedEmail(prisma, {
+        to: event.host.email,
+        ruleId: 'TXN-16',
+        variables: { userName: event.host.name, eventTitle: event.title },
+        ctaLabel: '寄感谢卡',
+        ctaUrl: 'https://chuanmener.club/cards',
+      });
+    }
+  } catch { /* email failure should not block credit award */ }
+
+  log.info(
+    { eventId: event.id, participants: allParticipantIds.length },
+    'Awarded postcard credits (host +6, participants +2 each)',
+  );
+}
+
 export async function runAgentCycle(app: FastifyInstance) {
   const prisma = app.prisma;
   const log = app.log;
@@ -40,6 +151,8 @@ export async function runAgentCycle(app: FastifyInstance) {
           data: { phase: 'ended' },
         });
         log.info(`Agent: auto-ended event "${event.title}" (id: ${event.id})`);
+        // Award credits immediately so we don't depend on the next tick
+        await awardCreditsForEvent(prisma, event.id, log);
       }
     }
   } catch (err) {
@@ -158,128 +271,17 @@ export async function runAgentCycle(app: FastifyInstance) {
 
   // Phase 1e: Award postcard credits for completed events
   try {
-    // Find events that have started and haven't awarded credits yet
     const unprocessed = await prisma.event.findMany({
       where: {
         startsAt: { lte: new Date() },
         phase: { not: 'cancelled' },
         creditsAwarded: false,
       },
-      select: {
-        id: true,
-        title: true,
-        hostId: true,
-        host: { select: { id: true, name: true, email: true } },
-        signups: {
-          where: { status: 'accepted' },
-          select: { userId: true, user: { select: { id: true, name: true, email: true } } },
-        },
-        coHosts: {
-          select: { userId: true, user: { select: { id: true, name: true, email: true } } },
-        },
-      },
+      select: { id: true },
     });
 
     for (const event of unprocessed) {
-      // Only award if at least 1 participant besides host (signups + co-hosts)
-      const participants = event.signups
-        .filter((s) => s.userId !== event.hostId);
-      // Co-hosts are also participants (exclude host who already gets host bonus)
-      const coHostParticipants = (event.coHosts ?? [])
-        .filter((ch) => ch.userId !== event.hostId && !participants.some((p) => p.userId === ch.userId));
-
-      const allParticipants = [...participants, ...coHostParticipants];
-
-      if (allParticipants.length === 0) {
-        // No real participants — mark as processed but don't award
-        await prisma.event.update({
-          where: { id: event.id },
-          data: { creditsAwarded: true },
-        });
-        continue;
-      }
-
-      const allParticipantIds = allParticipants.map((s) => s.userId);
-
-      // Co-host IDs (excluding primary host)
-      const coHostIds = (event.coHosts ?? [])
-        .map((ch) => ch.userId)
-        .filter((id) => id !== event.hostId);
-      const hostAndCoHostIds = new Set([event.hostId, ...coHostIds]);
-
-      // Award +2 credits to regular participants (excluding host and co-hosts)
-      const regularParticipantIds = allParticipantIds.filter((id) => !hostAndCoHostIds.has(id));
-      if (regularParticipantIds.length > 0) {
-        await prisma.user.updateMany({
-          where: { id: { in: regularParticipantIds } },
-          data: { postcardCredits: { increment: 2 } },
-        });
-      }
-
-      // Award +6 to host (attend +2, host bonus +4)
-      await prisma.user.update({
-        where: { id: event.hostId },
-        data: { postcardCredits: { increment: 6 } },
-      });
-
-      // Award +6 to each co-host (attend +2, host bonus +4)
-      if (coHostIds.length > 0) {
-        await prisma.user.updateMany({
-          where: { id: { in: coHostIds } },
-          data: { postcardCredits: { increment: 6 } },
-        });
-      }
-
-      await prisma.event.update({
-        where: { id: event.id },
-        data: { creditsAwarded: true },
-      });
-
-      // Send credit notification emails (best effort)
-      try {
-        // Notify regular participants (+2)
-        const coHostIdSet = new Set(coHostIds);
-        for (const s of allParticipants) {
-          if (coHostIdSet.has(s.userId)) continue;
-          if (s.user?.email) {
-            await sendTemplatedEmail(prisma, {
-              to: s.user.email,
-              ruleId: 'TXN-14',
-              variables: { userName: s.user.name, eventTitle: event.title },
-              ctaLabel: '寄感谢卡',
-              ctaUrl: 'https://chuanmener.club/cards',
-            });
-          }
-        }
-        // Notify co-hosts (+6)
-        for (const ch of event.coHosts ?? []) {
-          if (ch.userId === event.hostId) continue;
-          if (ch.user?.email) {
-            await sendTemplatedEmail(prisma, {
-              to: ch.user.email,
-              ruleId: 'TXN-15',
-              variables: { userName: ch.user.name, eventTitle: event.title },
-              ctaLabel: '寄感谢卡',
-              ctaUrl: 'https://chuanmener.club/cards',
-            });
-          }
-        }
-        // Notify host (+6)
-        if (event.host?.email) {
-          await sendTemplatedEmail(prisma, {
-            to: event.host.email,
-            ruleId: 'TXN-16',
-            variables: { userName: event.host.name, eventTitle: event.title },
-            ctaLabel: '寄感谢卡',
-            ctaUrl: 'https://chuanmener.club/cards',
-          });
-        }
-      } catch { /* email failure should not block credit award */ }
-
-      log.info(
-        { eventId: event.id, participants: allParticipantIds.length },
-        'Agent: awarded postcard credits (host +6, participants +2 each)',
-      );
+      await awardCreditsForEvent(prisma, event.id, log);
     }
   } catch (err) {
     log.error({ err }, 'Agent: postcard credit award failed');

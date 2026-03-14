@@ -15,6 +15,10 @@ function resend(): Resend {
 type SendEmailInput = { to: string; subject: string; text: string; html?: string };
 
 export async function sendEmail(input: SendEmailInput) {
+  if (env.APP_ENV !== 'prod') {
+    console.log(`[EMAIL BLOCKED] (APP_ENV=${env.APP_ENV}) to: ${input.to}, subject: ${input.subject}`);
+    return { MessageId: `blocked-${Date.now()}` };
+  }
   const { data, error } = await resend().emails.send({
     from: env.RESEND_FROM_EMAIL,
     replyTo: env.RESEND_REPLY_TO,
