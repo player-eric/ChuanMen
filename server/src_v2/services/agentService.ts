@@ -24,6 +24,39 @@ import { getWeekKey } from '../utils/weekKey.js';
 import { cleanOldSignals } from '../modules/signals/signal.service.js';
 import { parseGlobalConfig } from '../types/emailConfig.js';
 
+/* ── Credit config defaults (overridable via SiteConfig key "postcardCredits") ── */
+interface CreditConfig {
+  newUserCredit: number;
+  eventCredit: number;
+  hostCredit: number;
+  purchasePrice: number;
+}
+
+const DEFAULT_CREDIT_CONFIG: CreditConfig = {
+  newUserCredit: 4,
+  eventCredit: 2,
+  hostCredit: 4,
+  purchasePrice: 5,
+};
+
+export async function getCreditConfig(
+  prisma: { siteConfig: { findUnique: (args: any) => Promise<any> } },
+): Promise<CreditConfig> {
+  try {
+    const row = await prisma.siteConfig.findUnique({ where: { key: 'postcardCredits' } });
+    if (row?.value && typeof row.value === 'object') {
+      const v = row.value as Record<string, unknown>;
+      return {
+        newUserCredit: typeof v.newUserCredit === 'number' ? v.newUserCredit : DEFAULT_CREDIT_CONFIG.newUserCredit,
+        eventCredit: typeof v.eventCredit === 'number' ? v.eventCredit : DEFAULT_CREDIT_CONFIG.eventCredit,
+        hostCredit: typeof v.hostCredit === 'number' ? v.hostCredit : DEFAULT_CREDIT_CONFIG.hostCredit,
+        purchasePrice: typeof v.purchasePrice === 'number' ? v.purchasePrice : DEFAULT_CREDIT_CONFIG.purchasePrice,
+      };
+    }
+  } catch { /* fall through to defaults */ }
+  return { ...DEFAULT_CREDIT_CONFIG };
+}
+
 /**
  * Award postcard credits for a single event.
  * Host gets +6, co-hosts +6, regular participants +2.
@@ -69,23 +102,27 @@ export async function awardCreditsForEvent(
   const coHostIds = (event.coHosts ?? []).map((ch) => ch.userId).filter((id) => id !== event.hostId);
   const hostAndCoHostIds = new Set([event.hostId, ...coHostIds]);
 
+  const creditCfg = await getCreditConfig(prisma);
+  const participantIncrement = creditCfg.eventCredit;
+  const hostIncrement = creditCfg.eventCredit + creditCfg.hostCredit;
+
   const regularParticipantIds = allParticipantIds.filter((id) => !hostAndCoHostIds.has(id));
   if (regularParticipantIds.length > 0) {
     await prisma.user.updateMany({
       where: { id: { in: regularParticipantIds } },
-      data: { postcardCredits: { increment: 2 } },
+      data: { postcardCredits: { increment: participantIncrement } },
     });
   }
 
   await prisma.user.update({
     where: { id: event.hostId },
-    data: { postcardCredits: { increment: 6 } },
+    data: { postcardCredits: { increment: hostIncrement } },
   });
 
   if (coHostIds.length > 0) {
     await prisma.user.updateMany({
       where: { id: { in: coHostIds } },
-      data: { postcardCredits: { increment: 6 } },
+      data: { postcardCredits: { increment: hostIncrement } },
     });
   }
 

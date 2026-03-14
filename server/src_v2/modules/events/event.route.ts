@@ -3,7 +3,7 @@ import { EventRepository } from './event.repository.js';
 import { EventService } from './event.service.js';
 import { sendEmail, sendTemplatedEmail } from '../../services/emailService.js';
 import { renderNotificationEmail } from '../../emails/template.js';
-import { awardCreditsForEvent } from '../../services/agentService.js';
+import { awardCreditsForEvent, getCreditConfig } from '../../services/agentService.js';
 
 export const eventRoutes: FastifyPluginAsync = async (app) => {
   const service = new EventService(new EventRepository(app.prisma), app.prisma);
@@ -350,12 +350,13 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     });
     if (eventForCredits?.creditsAwarded) {
       const { userIds: invitedUserIds } = request.body as { userIds: string[] };
-      // Award +2 to each newly invited user (exclude host who already got +6)
+      // Award event credits to each newly invited user (exclude host who already got host bonus)
       const newUserIds = invitedUserIds.filter((uid) => uid !== eventForCredits.hostId);
       if (newUserIds.length > 0) {
+        const creditCfg = await getCreditConfig(app.prisma);
         await app.prisma.user.updateMany({
           where: { id: { in: newUserIds } },
-          data: { postcardCredits: { increment: 2 } },
+          data: { postcardCredits: { increment: creditCfg.eventCredit } },
         });
         app.log.info({ eventId: id, users: newUserIds.length }, 'Backfilled postcard credits for late invites');
       }

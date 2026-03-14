@@ -23,6 +23,8 @@ import MailRoundedIcon from '@mui/icons-material/MailRounded';
 import {
   fetchPostcardsAdminApi,
   adminDeletePostcard,
+  fetchSiteConfig,
+  updateSiteConfig,
 } from '@/lib/domainApi';
 
 /* ── PRD 11.1.4 ── 感谢卡管理：查看/删除/统计/额度配置 ── */
@@ -30,10 +32,9 @@ import {
 type Row = Record<string, any>;
 
 interface CreditConfig {
-  signupCredit: number;
+  newUserCredit: number;
   eventCredit: number;
   hostCredit: number;
-  newUserCredit: number;
   purchasePrice: number;
 }
 
@@ -45,8 +46,9 @@ export default function AdminCardsPage() {
   const [previewCard, setPreviewCard] = useState<Row | null>(null);
 
   const [creditConfig, setCreditConfig] = useState<CreditConfig>({
-    signupCredit: 4, eventCredit: 2, hostCredit: 4, newUserCredit: 4, purchasePrice: 5,
+    newUserCredit: 4, eventCredit: 2, hostCredit: 4, purchasePrice: 5,
   });
+  const [saving, setSaving] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -57,7 +59,12 @@ export default function AdminCardsPage() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+    fetchSiteConfig<CreditConfig>('postcardCredits')
+      .then(val => { if (val && typeof val === 'object') setCreditConfig(prev => ({ ...prev, ...val })); })
+      .catch(() => { /* use defaults */ });
+  }, []);
 
   const handleDelete = async (id: string) => {
     try { await adminDeletePostcard(id); loadData(); } catch (e) { console.error(e); }
@@ -202,7 +209,24 @@ export default function AdminCardsPage() {
             <TextField label="参加活动获得" type="number" value={creditConfig.eventCredit} onChange={e => setCreditConfig(prev => ({ ...prev, eventCredit: Number(e.target.value) }))} slotProps={{ input: { endAdornment: <Typography variant="caption">张 / 次</Typography> } }} />
             <TextField label="Host 活动额外获得" type="number" value={creditConfig.hostCredit} onChange={e => setCreditConfig(prev => ({ ...prev, hostCredit: Number(e.target.value) }))} slotProps={{ input: { endAdornment: <Typography variant="caption">张 / 次</Typography> } }} />
             <TextField label="购买单价" type="number" value={creditConfig.purchasePrice} onChange={e => setCreditConfig(prev => ({ ...prev, purchasePrice: Number(e.target.value) }))} slotProps={{ input: { endAdornment: <Typography variant="caption">$ / 张</Typography> } }} />
-            <Button variant="contained" onClick={() => alert('已保存额度配置（后端暂未实现）')}>保存配置</Button>
+            <Button
+              variant="contained"
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await updateSiteConfig('postcardCredits', creditConfig);
+                  alert('额度配置已保存');
+                } catch (e) {
+                  console.error(e);
+                  alert('保存失败，请重试');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              {saving ? '保存中…' : '保存配置'}
+            </Button>
           </Stack>
         </Card>
       )}
