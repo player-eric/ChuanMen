@@ -1154,11 +1154,8 @@ export async function sendDailyDigest(
   const digestCfgRow = await prisma.siteConfig.findUnique({ where: { key: 'emailConfig.digest' } });
   const digestCfg = parseDigestConfig(digestCfgRow?.value);
 
-  // ── Time window check: only send within ±30 min of configured sendTime ──
-  if (!isWithinSendWindow(digestCfg.sendTime, digestCfg.timezone)) {
-    log.info(`DIGEST: outside send window (configured: ${digestCfg.sendTime} ${digestCfg.timezone}, now: ${new Date().toISOString()}), skipping`);
-    return 0;
-  }
+  // Removed sendTime window check — Render starter plan cold starts often miss
+  // the ±30 min window. 1-day cooldown per user already prevents duplicates.
 
   // ── Frequency check: daily / weekdays / custom ──
   if (!isSendDay(digestCfg.frequency, digestCfg.customDays, digestCfg.timezone)) {
