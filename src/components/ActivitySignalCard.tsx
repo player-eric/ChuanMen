@@ -40,6 +40,14 @@ export default function ActivitySignalCard({ data, onSnack }: Props) {
     return set;
   });
   const [weeksData, setWeeksData] = useState(data.weeks);
+
+  // Sync from loader data on navigation / refresh
+  React.useEffect(() => {
+    const set = new Set<string>();
+    for (const s of data.mySignals) set.add(`${s.weekKey}:${s.tag}`);
+    setMySignals(set);
+    setWeeksData(data.weeks);
+  }, [data]);
   const [expanded, setExpanded] = useState(() => {
     try { return localStorage.getItem('chuanmen.signal.expanded') === '1'; } catch { return false; }
   });
@@ -119,11 +127,14 @@ export default function ActivitySignalCard({ data, onSnack }: Props) {
     });
   };
 
-  // Compact summary: first week's top 3 non-busy tags with emoji+label+count
-  const firstWeek = weeksData[weekKeys[0]];
-  const topTags = (firstWeek?.tags ?? [])
-    .filter((t) => t.count > 0 && !BUSY_TAG_KEYS.has(t.key))
-    .slice(0, 3);
+  // Compact summary: my selected non-busy tags across all weeks (deduplicated)
+  const mySelectedTagKeys = new Set<string>();
+  for (const wk of weekKeys) {
+    for (const t of ACTIVITY_TAGS_NORMAL) {
+      if (mySignals.has(`${wk}:${t.key}`)) mySelectedTagKeys.add(t.key);
+    }
+  }
+  const myCollapsedTags = ACTIVITY_TAGS_NORMAL.filter((t) => mySelectedTagKeys.has(t.key));
 
   // Count selected for current week
   const selectedCount = ACTIVITY_TAGS.filter((t) => isSelected(t.key)).length;
@@ -141,16 +152,15 @@ export default function ActivitySignalCard({ data, onSnack }: Props) {
             sx={{ cursor: 'pointer', py: 0.25 }}
           >
             <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ flexShrink: 0 }}>
-              这周末想做什么？
+              最近想做什么？
             </Typography>
-            {topTags.map((t) => {
-              const def = ACTIVITY_TAG_MAP.get(t.key);
-              return (
-                <Typography key={t.key} variant="caption" color="text.secondary" sx={{ fontSize: 12 }}>
-                  {def?.emoji}{def?.label}{t.count}
-                </Typography>
-              );
-            })}
+            {myCollapsedTags.length > 0 ? myCollapsedTags.map((t) => (
+              <Chip key={t.key} label={`${t.emoji}${t.label}`} size="small" variant="outlined" sx={{ height: 20, fontSize: 11, '& .MuiChip-label': { px: 0.5 } }} />
+            )) : (
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12 }}>
+                点击选择
+              </Typography>
+            )}
             <Box sx={{ flex: 1 }} />
             <Chip
               size="small"
