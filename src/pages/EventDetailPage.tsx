@@ -918,7 +918,7 @@ export default function EventDetailPage() {
                 </Typography>
                 {event.foodOption === 'eat_out' && event.restaurantLocation && (
                   <Typography variant="body2" color="text.secondary">
-                    📍 {event.restaurantLocation}
+                    📍 <a href={`https://maps.google.com/?q=${encodeURIComponent(event.restaurantLocation)}`} target="_blank" rel="noopener" style={{ color: 'inherit', textDecoration: 'underline' }}>{event.restaurantLocation}</a>
                   </Typography>
                 )}
               </Stack>
