@@ -41,6 +41,7 @@ const createEventSchema = z.object({
 const inviteUsersSchema = z.object({
   userIds: z.array(z.string().min(1)).min(1),
   invitedById: z.string().min(1),
+  directSignup: z.boolean().optional(),
 });
 
 const updateEventSchema = z.object({
@@ -164,7 +165,7 @@ export class EventService {
 
   inviteUsers(eventId: string, input: unknown) {
     const data = inviteUsersSchema.parse(input);
-    return this.repository.inviteUsers(eventId, data.userIds, data.invitedById);
+    return this.repository.inviteUsers(eventId, data.userIds, data.invitedById, data.directSignup);
   }
 
   async signup(eventId: string, input: unknown) {

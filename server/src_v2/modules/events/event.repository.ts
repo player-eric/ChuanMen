@@ -319,7 +319,7 @@ export class EventRepository {
     });
   }
 
-  async inviteUsers(eventId: string, userIds: string[], invitedById: string) {
+  async inviteUsers(eventId: string, userIds: string[], invitedById: string, directSignup?: boolean) {
     const event = await this.prisma.event.findUniqueOrThrow({
       where: { id: eventId },
       select: { startsAt: true },
@@ -340,8 +340,8 @@ export class EventRepository {
         if (signup) results.push(signup);
         continue;
       }
-      // If event already started, set directly to accepted (no need to wait for user response)
-      const status = alreadyStarted ? 'accepted' : 'invited';
+      // directSignup or event already started → accepted; otherwise → invited
+      const status = (directSignup || alreadyStarted) ? 'accepted' : 'invited';
       const signup = await this.prisma.eventSignup.upsert({
         where: { eventId_userId: { eventId, userId } },
         create: { eventId, userId, invitedById, status, invitedAt: new Date() },

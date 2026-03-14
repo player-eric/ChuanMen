@@ -179,11 +179,11 @@ export async function createEvent(payload: {
   });
 }
 
-export async function inviteToEvent(eventId: string, userIds: string[], invitedById: string) {
+export async function inviteToEvent(eventId: string, userIds: string[], invitedById: string, directSignup?: boolean) {
   return requestJson<{ ok: boolean; signups: EntityMap[] }>(`/api/events/${eventId}/invite`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userIds, invitedById }),
+    body: JSON.stringify({ userIds, invitedById, directSignup }),
   });
 }
 
@@ -306,6 +306,8 @@ export interface UserSettingsPayload {
   notifyCards?: boolean;
   notifyOps?: boolean;
   notifyAnnounce?: boolean;
+  weekendStatus?: string | null;
+  weekendNote?: string;
 }
 
 export async function updateUserSettings(userId: string, payload: UserSettingsPayload) {
@@ -408,6 +410,62 @@ export async function selectEventRecommendation(eventId: string, recommendationI
 
 export async function fetchFeedApi(userId?: string) {
   return requestJson<EntityMap>(`/api/feed${toQueryString({ userId: userId ?? '' })}`);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Daily Question API
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function submitDailyAnswer(questionId: string, text: string, userId: string) {
+  return requestJson<EntityMap>('/api/daily-question/answer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ questionId, text, userId }),
+  });
+}
+
+export async function fetchRandomDailyQuestion(excludeId?: string, userId?: string) {
+  const params = new URLSearchParams();
+  if (excludeId) params.set('exclude', excludeId);
+  if (userId) params.set('userId', userId);
+  const qs = params.toString() ? `?${params}` : '';
+  return requestJson<{ question: DailyQuestionData['question'] | null; answers: DailyQuestionData['answers']; targetEvent?: { id: string; title: string }; targetRecommendation?: { id: string; title: string } }>(`/api/daily-question/random${qs}`);
+}
+
+// ── Daily Question Admin CRUD ──
+
+export interface DailyQuestionRow {
+  id: string;
+  text: string;
+  targetType: string;
+  targetCategory: string | null;
+  targetEntityType: string | null;
+  date: string | null;
+  createdAt: string;
+}
+
+export async function fetchDailyQuestions() {
+  return requestJson<DailyQuestionRow[]>('/api/daily-question');
+}
+
+export async function createDailyQuestion(payload: { text: string; targetType: string; targetCategory?: string; targetEntityType?: string }) {
+  return requestJson<DailyQuestionRow>('/api/daily-question', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateDailyQuestion(id: string, payload: { text?: string; targetType?: string; targetCategory?: string | null; targetEntityType?: string | null }) {
+  return requestJson<{ ok: boolean; question: DailyQuestionRow }>(`/api/daily-question/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteDailyQuestion(id: string) {
+  return requestJson<{ ok: boolean }>(`/api/daily-question/${id}`, { method: 'DELETE' });
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1274,7 +1332,7 @@ export async function deleteTaskPreset(id: string) {
    Event Tasks API (分工认领)
    ═══════════════════════════════════════════════════════════════ */
 
-import type { EventTaskData } from '@/types';
+import type { EventTaskData, DailyQuestionData } from '@/types';
 
 export async function fetchEventTasks(eventId: string) {
   return requestJson<EventTaskData[]>(`/api/events/${eventId}/tasks`);
@@ -1777,6 +1835,19 @@ export async function updateHostCandidate(userId: string, hostCandidate: boolean
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
     body: JSON.stringify({ hostCandidate }),
+  });
+}
+
+/* ── Activity Signals ── */
+
+export async function saveSignals(
+  signals: { tag: string; weekKey: string }[],
+  weekKeys: string[],
+) {
+  return requestJson<{ ok: boolean }>('/api/signals', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ signals, weekKeys }),
   });
 }
 

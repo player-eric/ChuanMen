@@ -2651,7 +2651,7 @@ export default function EventDetailPage() {
                           await updateEvent(eventId, { capacity: newCapacity });
                           setEvent((prev) => prev ? { ...prev, total: newCapacity } : prev);
                         }
-                        await inviteToEvent(eventId, userIds, user.id);
+                        await inviteToEvent(eventId, userIds, user.id, directSignup || undefined);
                         if (event.phase === 'ended' || directSignup) {
                           setFlash({ open: true, severity: 'success', message: `已${directSignup ? '报名' : '添加'} ${userIds.length} 人` });
                         } else {
