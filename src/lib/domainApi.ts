@@ -1840,6 +1840,10 @@ export async function updateHostCandidate(userId: string, hostCandidate: boolean
 
 /* ── Activity Signals ── */
 
+export async function fetchMySignals() {
+  return requestJson<{ signals: { tag: string; weekKey: string }[] }>('/api/signals/mine');
+}
+
 export async function saveSignals(
   signals: { tag: string; weekKey: string }[],
   weekKeys: string[],

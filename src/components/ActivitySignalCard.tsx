@@ -15,7 +15,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useAuth } from '@/auth/AuthContext';
 import { useColors } from '@/hooks/useColors';
-import { saveSignals } from '@/lib/domainApi';
+import { saveSignals, fetchMySignals } from '@/lib/domainApi';
 import { ACTIVITY_TAGS, ACTIVITY_TAG_MAP, BUSY_TAG_KEYS } from '@/lib/mappings';
 import { getFutureWeekKeys } from '@/lib/weekKey';
 import { AvaStack } from '@/components/Atoms';
@@ -41,15 +41,24 @@ export default function ActivitySignalCard({ data, onSnack }: Props) {
   });
   const [weeksData, setWeeksData] = useState(data.weeks);
 
-  // Sync from loader data on navigation / refresh / SSR→client hydration
-  const mySignalsKey = data.mySignals.map((s) => `${s.weekKey}:${s.tag}`).sort().join(',');
+  // SSR renders without userId → mySignals empty. Fetch client-side on mount.
   React.useEffect(() => {
-    const set = new Set<string>();
-    for (const s of data.mySignals) set.add(`${s.weekKey}:${s.tag}`);
-    setMySignals(set);
-    setWeeksData(data.weeks);
+    if (typeof window === 'undefined' || !user?.id) return;
+    if (data.mySignals.length > 0) {
+      // Loader already had data (client-side navigation)
+      const set = new Set<string>();
+      for (const s of data.mySignals) set.add(`${s.weekKey}:${s.tag}`);
+      setMySignals(set);
+      return;
+    }
+    // SSR case: fetch signals client-side
+    fetchMySignals().then((res) => {
+      const set = new Set<string>();
+      for (const s of res.signals) set.add(`${s.weekKey}:${s.tag}`);
+      setMySignals(set);
+    }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mySignalsKey]);
+  }, [user?.id]);
   const [expanded, setExpanded] = useState(() => {
     try { return localStorage.getItem('chuanmen.signal.expanded') === '1'; } catch { return false; }
   });
