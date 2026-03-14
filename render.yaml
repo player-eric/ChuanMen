@@ -21,7 +21,7 @@ services:
     envVars:
       # ── App ──
       - key: APP_ENV
-        value: prod
+        value: dev
       - key: NODE_ENV
         value: production
       - key: TRUST_PROXY
@@ -62,7 +62,7 @@ services:
     dockerCommand: node dist/workers/agentTick.js
     envVars:
       - key: APP_ENV
-        value: prod
+        value: dev
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
