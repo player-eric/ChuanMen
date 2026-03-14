@@ -257,11 +257,13 @@ export class EventService {
   }
 
   async removeParticipant(eventId: string, userId: string, requesterId: string) {
-    // Verify requester is the host or co-host
+    // Verify requester is the host, co-host, or admin
     const event = await this.repository.getById(eventId);
+    const requester = await this.prisma.user.findUnique({ where: { id: requesterId }, select: { role: true } });
     const isHostOrCoHost = event && (event.hostId === requesterId || event.coHosts?.some((ch: any) => ch.userId === requesterId));
-    if (!event || !isHostOrCoHost) {
-      throw new Error('只有 Host 或 Co-Host 可以移除参与者');
+    const isAdmin = requester?.role === 'admin';
+    if (!event || (!isHostOrCoHost && !isAdmin)) {
+      throw new Error('只有 Host、Co-Host 或管理员可以移除参与者');
     }
     const { cancelled, promoted } = await this.repository.cancelSignup(eventId, userId);
 
