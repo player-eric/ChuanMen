@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLoaderData } from 'react-router';
 import {
   Alert,
@@ -28,7 +29,7 @@ import { useAuth } from '@/auth/AuthContext';
 import type { FeedPageData, FeedItem, LotteryDraw, PersonalNotification } from '@/types';
 import { sendPostcard, acceptLottery, skipLottery, updateHostCandidate } from '@/lib/domainApi';
 import { useColors } from '@/hooks/useColors';
-import { Ava } from '@/components/Atoms';
+import { Ava, AvaStack } from '@/components/Atoms';
 import QuickActionDialog from '@/components/QuickActionDialog';
 import {
   FeedTime,
@@ -460,7 +461,7 @@ const PAGE_SIZE = 8;
 function FullFeed() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { items, notifications, currentLottery, lotteryUserStatus, postcardCredits } = useLoaderData() as FeedPageData;
+  const { items, members, notifications, currentLottery, lotteryUserStatus, postcardCredits } = useLoaderData() as FeedPageData;
   const [snackMsg, setSnackMsg] = useState('');
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -514,6 +515,9 @@ function FullFeed() {
   const canInteract = Boolean(user);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  // Recently active members (within 7 days)
+  const recentMembers = (members ?? []).filter((m: any) => m.recentlyActive);
   const isDrawnPerson = lotteryState?.drawnMemberId === user?.id && lotteryState?.status === 'pending';
 
   const handleAcceptLottery = async () => {
@@ -556,6 +560,7 @@ function FullFeed() {
 
   return (
     <Box>
+      <PresenceAvatars members={recentMembers} />
       <RecapBanner items={items} onSnack={setSnackMsg} />
       <WelcomeBanner />
       <ProfileNudgeBanner />
@@ -738,6 +743,40 @@ function renderFeedItem(item: FeedItem) {
     case 'newMember':      return <FeedNewMember {...props as React.ComponentProps<typeof FeedNewMember>} />;
     case 'birthday':       return <FeedBirthday {...props as React.ComponentProps<typeof FeedBirthday>} />;
   }
+}
+
+/* ═══ Presence Avatars (Portal → AppBar) ═══ */
+function PresenceAvatars({ members }: { members: any[] }) {
+  const navigate = useNavigate();
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setSlot(document.getElementById('presence-slot'));
+  }, []);
+
+  if (!slot || members.length === 0) return null;
+
+  const ONLINE_THRESHOLD = 15 * 60 * 1000;
+  const names = members.map((m) => ({ name: m.name, avatar: m.avatar }));
+  const tooltips = members.map((m) => {
+    const isOnline = m.lastActiveAt && (Date.now() - new Date(m.lastActiveAt).getTime()) < ONLINE_THRESHOLD;
+    return `${m.name} · ${isOnline ? '在线' : (m.lastActiveLabel || '刚刚') + '来过'}`;
+  });
+  const onlineFlags = members.map((m) =>
+    Boolean(m.lastActiveAt && (Date.now() - new Date(m.lastActiveAt).getTime()) < ONLINE_THRESHOLD),
+  );
+
+  return createPortal(
+    <AvaStack
+      names={names}
+      size={24}
+      max={6}
+      tooltips={tooltips}
+      onlineFlags={onlineFlags}
+      onClickItem={(i) => navigate('/members/' + encodeURIComponent(members[i].name))}
+    />,
+    slot,
+  );
 }
 
 /* ═══ FeedPage ═══ */

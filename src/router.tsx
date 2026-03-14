@@ -400,7 +400,27 @@ async function feedLoader() {
       userId ? fetchCoAttendees(userId).catch(() => []) : Promise.resolve([]),
     ]);
     const { items, personalNotifications } = buildFeedItems(data);
-    const members = (data as any).members ?? [];
+    let members = ((data as any).members ?? []).map((m: any) => ({
+      ...m,
+      lastActiveLabel: m.lastActiveAt ? timeAgo(m.lastActiveAt) : '',
+      recentlyActive: m.recentlyActive ?? false,
+    }));
+
+    // TODO: remove — dummy presence data for local testing
+    if (members.filter((m: any) => m.recentlyActive).length < 2) {
+      const now = Date.now();
+      const dummies = [
+        { id: 'dummy-1', name: '小明', avatar: null, lastActiveAt: new Date(now - 3 * 60000).toISOString(), recentlyActive: true, lastActiveLabel: '3分钟前' },
+        { id: 'dummy-2', name: '思琪', avatar: null, lastActiveAt: new Date(now - 1 * 60000).toISOString(), recentlyActive: true, lastActiveLabel: '1分钟前' },
+        { id: 'dummy-3', name: '大卫', avatar: null, lastActiveAt: new Date(now - 30 * 60000).toISOString(), recentlyActive: true, lastActiveLabel: '30分钟前' },
+        { id: 'dummy-4', name: '佳琪', avatar: null, lastActiveAt: new Date(now - 2 * 60000).toISOString(), recentlyActive: true, lastActiveLabel: '2分钟前' },
+        { id: 'dummy-5', name: '子轩', avatar: null, lastActiveAt: new Date(now - 120 * 60000).toISOString(), recentlyActive: true, lastActiveLabel: '2小时前' },
+        { id: 'dummy-6', name: '雨桐', avatar: null, lastActiveAt: new Date(now - 5 * 60000).toISOString(), recentlyActive: true, lastActiveLabel: '5分钟前' },
+        { id: 'dummy-7', name: '浩然', avatar: null, lastActiveAt: new Date(now - 45 * 60000).toISOString(), recentlyActive: true, lastActiveLabel: '45分钟前' },
+        { id: 'dummy-8', name: '诗涵', avatar: null, lastActiveAt: new Date(now - 10 * 60000).toISOString(), recentlyActive: true, lastActiveLabel: '10分钟前' },
+      ];
+      members = [...members, ...dummies];
+    }
 
     // Inject socialHint into activity items
     if (userId && coAttendees.length > 0) {

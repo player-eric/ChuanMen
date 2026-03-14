@@ -304,7 +304,7 @@ export default function AppLayout() {
       <Box sx={{ flex: 1, minWidth: 0, minHeight: '100dvh' }}>
         {/* Top AppBar: hamburger/back + title + status (v2.1 §4.0) */}
         <AppBar position="sticky" color="transparent" elevation={0} sx={{ backdropFilter: 'blur(10px)', borderBottom: 1, borderColor: 'divider' }}>
-          <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Toolbar>
             <Stack direction="row" spacing={1} alignItems="center">
               {showBack ? (
                 <IconButton
@@ -336,6 +336,7 @@ export default function AppLayout() {
                 {title}
               </Typography>
             </Stack>
+            <Box id="presence-slot" sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end', mx: 1 }} />
             <Stack direction="row" spacing={1} alignItems="center">
               <IconButton size="small" onClick={toggleColorMode} aria-label={mode === 'dark' ? '切换到浅色模式' : '切换到深色模式'}>
                 {mode === 'dark' ? <LightModeRoundedIcon fontSize="small" /> : <DarkModeRoundedIcon fontSize="small" />}

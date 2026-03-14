@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode, MouseEventHandler } from 'react';
 import { useTheme } from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
 import { useColors } from '@/hooks/useColors';
 import { hf } from '@/theme';
 
@@ -66,22 +67,44 @@ export function Ava({ name: rawName, src, size = 28, border, badge, onTap }: Ava
 interface AvaStackProps {
   names: (string | { name: string; avatar?: string | null })[];
   size?: number;
+  max?: number;
+  tooltips?: string[];
+  onClickItem?: (index: number) => void;
+  onlineFlags?: boolean[];
 }
 
-export function AvaStack({ names, size = 22 }: AvaStackProps) {
+export function AvaStack({ names, size = 22, max = 5, tooltips, onClickItem, onlineFlags }: AvaStackProps) {
   const c = useColors();
   return (
-    <div style={{ display: 'flex' }}>
-      {names.slice(0, 5).map((item, i) => {
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+      {names.slice(0, max).map((item, i) => {
         const n = typeof item === 'string' ? item : item.name;
         const src = typeof item === 'string' ? undefined : (item.avatar ?? undefined);
-        return (
-          <div key={i} style={{ marginLeft: i ? -6 : 0, zIndex: 5 - i }}>
+        const isOnline = onlineFlags?.[i] ?? false;
+        const avatar = (
+          <div
+            key={i}
+            style={{ marginLeft: i ? -6 : 0, zIndex: max - i, cursor: onClickItem ? 'pointer' : undefined, position: 'relative' }}
+            onClick={onClickItem ? () => onClickItem(i) : undefined}
+          >
             <Ava name={n} src={src} size={size} border />
+            {isOnline && (
+              <div style={{
+                position: 'absolute', bottom: 0, right: 0,
+                width: Math.max(6, size * 0.28), height: Math.max(6, size * 0.28),
+                borderRadius: '50%', backgroundColor: '#4caf50',
+                border: `1.5px solid ${c.s1}`,
+              }} />
+            )}
           </div>
         );
+        return tooltips?.[i] ? (
+          <Tooltip key={i} title={tooltips[i]} arrow placement="top">
+            {avatar}
+          </Tooltip>
+        ) : avatar;
       })}
-      {names.length > 5 && (
+      {names.length > max && (
         <div
           style={{
             marginLeft: -6, width: size, height: size, borderRadius: '50%',
@@ -90,7 +113,7 @@ export function AvaStack({ names, size = 22 }: AvaStackProps) {
             fontSize: 9, color: c.text3,
           }}
         >
-          +{names.length - 5}
+          +{names.length - max}
         </div>
       )}
     </div>

@@ -106,8 +106,15 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             birthday: true,
             hideBirthday: true,
             socialTitles: true,
+            lastActiveAt: true,
           },
           orderBy: { lastActiveAt: 'desc' },
+        }).then(members => {
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          return members.map(m => ({
+            ...m,
+            recentlyActive: m.lastActiveAt ? m.lastActiveAt > sevenDaysAgo : false,
+          }));
         }),
 
         // Recent public postcards (exclude those linked to events user is excluded from)
