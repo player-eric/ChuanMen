@@ -1733,7 +1733,10 @@ export async function sendFirstEventFollowup(
   const recentlyEnded = await prisma.event.findMany({
     where: {
       phase: 'ended',
-      startsAt: { gte: new Date(twelveHoursAgo.getTime() - 4 * 60 * 60 * 1000), lte: new Date(sixHoursAgo.getTime() - 4 * 60 * 60 * 1000) },
+      OR: [
+        { endsAt: { gte: twelveHoursAgo, lte: sixHoursAgo } },
+        { endsAt: null, startsAt: { gte: new Date(twelveHoursAgo.getTime() - 6 * 60 * 60 * 1000), lte: new Date(sixHoursAgo.getTime() - 6 * 60 * 60 * 1000) } },
+      ],
     },
     select: {
       id: true,

@@ -11,6 +11,13 @@ import {
   sendConsecutiveEventsReminder,
   sendSameDayReminder,
   sendFirstEventFollowup,
+  sendNewEventNotif,
+  sendNewRecNotif,
+  sendOnboardingCheckin,
+  sendSecondRecall,
+  sendMilestoneNotif,
+  sendHostTributeNotif,
+  sendRecDigest,
 } from '../agent/emailAutomation.js';
 import { drawWeeklyHost, getWeekKey } from '../modules/lottery/lottery.service.js';
 import { parseGlobalConfig } from '../types/emailConfig.js';
@@ -231,7 +238,10 @@ export async function runAgentCycle(app: FastifyInstance) {
     const recentlyEnded = await prisma.event.findMany({
       where: {
         phase: 'ended',
-        updatedAt: { gte: eightHoursAgo },
+        OR: [
+          { endsAt: { gte: eightHoursAgo, lte: new Date() } },
+          { endsAt: null, startsAt: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000), lte: new Date() } },
+        ],
       },
       select: {
         id: true,
@@ -371,6 +381,34 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: sendConsecutiveEventsReminder failed');
   }
 
+  // P2-A: New event notification (10-20 min after creation)
+  try {
+    await sendNewEventNotif(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendNewEventNotif failed');
+  }
+
+  // P2-B: New recommendation notification
+  try {
+    await sendNewRecNotif(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendNewRecNotif failed');
+  }
+
+  // P3-A: One-week onboarding check-in
+  try {
+    await sendOnboardingCheckin(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendOnboardingCheckin failed');
+  }
+
+  // P3-G: Second churn recall (30+ days inactive)
+  try {
+    await sendSecondRecall(prisma, log);
+  } catch (err) {
+    log.error({ err }, 'Agent: sendSecondRecall failed');
+  }
+
   // Phase 4: Daily digest (consolidates all non-instant notifications)
   // Covers: new events, new recs, new members, postcards, milestones,
   // engagement nudges (P3-C/D/E/F/G), community stats
@@ -378,6 +416,33 @@ export async function runAgentCycle(app: FastifyInstance) {
     await sendDailyDigest(prisma, log);
   } catch (err) {
     log.error({ err }, 'Agent: sendDailyDigest failed');
+  }
+
+  // P4-A: Milestone notification (uses milestones from Phase 1)
+  if (milestones.length > 0) {
+    try {
+      await sendMilestoneNotif(prisma, log, milestones);
+    } catch (err) {
+      log.error({ err }, 'Agent: sendMilestoneNotif failed');
+    }
+  }
+
+  // P4-C: Host tribute notification (uses tribute from Phase 1)
+  if (tribute) {
+    try {
+      await sendHostTributeNotif(prisma, log, tribute);
+    } catch (err) {
+      log.error({ err }, 'Agent: sendHostTributeNotif failed');
+    }
+  }
+
+  // P4-B: Weekly recommendation digest (Sundays only)
+  if (new Date().getDay() === 0) {
+    try {
+      await sendRecDigest(prisma, log);
+    } catch (err) {
+      log.error({ err }, 'Agent: sendRecDigest failed');
+    }
   }
   } // end if (!emailPaused)
 
