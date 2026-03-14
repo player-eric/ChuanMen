@@ -409,6 +409,42 @@ export interface PersonalNotification {
   navTarget?: string;
 }
 
+export interface DailyQuestionData {
+  question: {
+    id: string;
+    text: string;
+    targetType: 'recommendation' | 'proposal' | 'comment';
+    targetCategory?: string;
+    targetEntityType?: string;
+  };
+  answers: { id: string; userName: string; userAvatar?: string; text: string; createdAt: string }[];
+  myAnswerId?: string;
+  targetEvent?: { id: string; title: string };
+  targetRecommendation?: { id: string; title: string };
+}
+
+export interface WeekendSummary {
+  freeCount: number;
+  maybeCount: number;
+  topNotes: string[];
+  myStatus?: string;
+  myNote?: string;
+}
+
+export interface DemandSignalTag {
+  key: string;
+  count: number;
+  users: { id: string; name: string; avatar: string | null }[];
+}
+
+export interface DemandSignal {
+  weeks: Record<string, {
+    label: string;
+    tags: DemandSignalTag[];
+  }>;
+  mySignals: { tag: string; weekKey: string }[];
+}
+
 export interface FeedPageData {
   members: MemberData[];
   items: FeedItem[];
@@ -416,6 +452,9 @@ export interface FeedPageData {
   currentLottery?: LotteryDraw | null;
   lotteryUserStatus?: { hostCandidate: boolean; consecutiveEvents: number } | null;
   postcardCredits?: number;
+  dailyQuestion?: DailyQuestionData | null;
+  weekendSummary?: WeekendSummary;
+  demandSignal?: DemandSignal;
 }
 
 export interface EventsPageData {

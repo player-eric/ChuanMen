@@ -35,6 +35,7 @@ import MailRoundedIcon from '@mui/icons-material/MailRounded';
 import CampaignRoundedIcon from '@mui/icons-material/CampaignRounded';
 import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
 import FeedbackRoundedIcon from '@mui/icons-material/FeedbackRounded';
+import QuizRoundedIcon from '@mui/icons-material/QuizRounded';
 import { useAuth } from '@/auth/AuthContext';
 
 const drawerWidth = 240;
@@ -47,6 +48,7 @@ const adminNav = [
   { id: 'cards', icon: <MailRoundedIcon />, label: '感谢卡管理' },
   { id: 'titles', icon: <MilitaryTechRoundedIcon />, label: '称号管理' },
   { id: 'task-presets', icon: <AssignmentRoundedIcon />, label: '分工预设' },
+  { id: 'daily-questions', icon: <QuizRoundedIcon />, label: '每日话题' },
   { id: 'announcements', icon: <CampaignRoundedIcon />, label: '公告与里程碑' },
   { id: 'email', icon: <MarkEmailReadRoundedIcon />, label: '邮件管理' },
   { id: 'newsletters', icon: <EmailRoundedIcon />, label: '社区通讯' },

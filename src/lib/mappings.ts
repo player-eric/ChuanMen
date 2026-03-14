@@ -41,6 +41,32 @@ export const roleLabelMap: Record<string, string> = {
   member: '成员',
 };
 
+/** Activity signal tag definitions */
+export const ACTIVITY_TAGS = [
+  { key: 'movie',     label: '看电影',   emoji: '🎬' },
+  { key: 'chuanmen',  label: '茶话会',   emoji: '🍵' },
+  { key: 'outdoor',   label: '户外',    emoji: '🏕️' },
+  { key: 'eat',       label: '吃饭',    emoji: '🍜' },
+  { key: 'boardgame', label: '桌游',    emoji: '🎲' },
+  { key: 'drink',     label: '喝酒',    emoji: '🍻' },
+  { key: 'show',      label: '看演出',   emoji: '🎭' },
+  { key: 'deeptalk',  label: '谈谈心',   emoji: '💬' },
+  { key: 'reading',   label: '读书',    emoji: '📖' },
+  { key: 'music',     label: '听歌',    emoji: '🎵' },
+  { key: 'sports',    label: '运动',    emoji: '🏸' },
+  { key: 'holiday',   label: '过节',    emoji: '🎉' },
+  { key: 'study',     label: '学习',    emoji: '📚',  busy: true },
+  { key: 'overtime',  label: '加班',    emoji: '💼',  busy: true },
+  { key: 'travel',    label: '出门旅游', emoji: '✈️',  busy: true },
+  { key: 'other',     label: '别的安排', emoji: '📌',  busy: true },
+] as const;
+
+/** "没空" tag keys — not counted as activity interest in dashboard */
+export const BUSY_TAG_KEYS = new Set(['study', 'overtime', 'travel', 'other']);
+
+/** Tag key → tag definition lookup */
+export const ACTIVITY_TAG_MAP = new Map<string, typeof ACTIVITY_TAGS[number]>(ACTIVITY_TAGS.map((t) => [t.key, t]));
+
 /** Host milestone badge tier shape */
 export type HostBadgeTier = { min: number; emoji: string; label: string };
 

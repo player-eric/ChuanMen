@@ -1,5 +1,4 @@
 import type { FastifyPluginAsync } from 'fastify';
-
 /**
  * GET /api/profile?userId=xxx  OR  ?name=xxx
  * Optional: viewerId (via query or x-user-id header) for mutual computation
@@ -259,6 +258,21 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         participationPlan: user.participationPlan,
         titles: user.socialTitles.map((t) => t.value),
         createdAt: user.createdAt,
+        // Legacy weekend status (kept for backward compat, prefer activitySignals)
+        ...(() => {
+          if (!user.weekendStatus || !user.weekendUpdatedAt) return {};
+          const now = new Date();
+          const dow = now.getUTCDay();
+          const mondayOffset = dow === 0 ? 6 : dow - 1;
+          const monday = new Date(now);
+          monday.setUTCDate(monday.getUTCDate() - mondayOffset);
+          monday.setUTCHours(0, 0, 0, 0);
+          if (user.weekendUpdatedAt < monday) return {};
+          return {
+            weekendStatus: user.weekendStatus,
+            weekendNote: user.weekendNote || undefined,
+          };
+        })(),
       },
       stats: {
         hostCount: hostedEvents,

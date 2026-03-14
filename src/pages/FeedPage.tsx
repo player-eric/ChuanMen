@@ -26,8 +26,10 @@ import {
 } from '@mui/material';
 import Masonry from '@mui/lab/Masonry';
 import { useAuth } from '@/auth/AuthContext';
-import type { FeedPageData, FeedItem, LotteryDraw, PersonalNotification } from '@/types';
+import type { FeedPageData, FeedItem, LotteryDraw, PersonalNotification, DailyQuestionData, DemandSignal } from '@/types';
 import { sendPostcard, acceptLottery, skipLottery, updateHostCandidate } from '@/lib/domainApi';
+import DailyQuestionCard from '@/components/DailyQuestionCard';
+import ActivitySignalCard from '@/components/ActivitySignalCard';
 import { useColors } from '@/hooks/useColors';
 import { Ava, AvaStack } from '@/components/Atoms';
 import QuickActionDialog from '@/components/QuickActionDialog';
@@ -461,7 +463,7 @@ const PAGE_SIZE = 8;
 function FullFeed() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { items, members, notifications, currentLottery, lotteryUserStatus, postcardCredits } = useLoaderData() as FeedPageData;
+  const { items, members, notifications, currentLottery, lotteryUserStatus, postcardCredits, dailyQuestion, demandSignal } = useLoaderData() as FeedPageData;
   const [snackMsg, setSnackMsg] = useState('');
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -565,6 +567,10 @@ function FullFeed() {
       <WelcomeBanner />
       <ProfileNudgeBanner />
       <NotificationBar notifications={notifications ?? []} />
+
+      {/* Activity signal + Daily question */}
+      {demandSignal && <ActivitySignalCard data={demandSignal} onSnack={setSnackMsg} />}
+      {dailyQuestion?.question && <DailyQuestionCard data={dailyQuestion as DailyQuestionData} onSnack={setSnackMsg} />}
 
       {/* Lottery: drawn person banner */}
       {isDrawnPerson && !lotteryDismissed && (

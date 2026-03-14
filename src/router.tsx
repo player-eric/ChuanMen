@@ -37,6 +37,7 @@ import AdminContentPage from '@/pages/admin/AdminContentPage';
 import AdminCardsPage from '@/pages/admin/AdminCardsPage';
 import AdminAnnouncementsPage from '@/pages/admin/AdminAnnouncementsPage';
 import AdminCommunityInfoPage from '@/pages/admin/AdminCommunityInfoPage';
+import AdminDailyQuestionsPage from '@/pages/admin/AdminDailyQuestionsPage';
 import AdminFeedbackPage from '@/pages/admin/AdminFeedbackPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import {
@@ -436,8 +437,10 @@ async function feedLoader() {
     const currentLottery = (data as any).currentLottery ?? null;
     const lotteryUserStatus = (data as any).lotteryUserStatus ?? null;
     const postcardCredits = (data as any).postcardCredits ?? undefined;
+    const dailyQuestion = (data as any).dailyQuestion ?? null;
+    const demandSignal = (data as any).demandSignal ?? undefined;
 
-    return { items, members, currentLottery, lotteryUserStatus, postcardCredits, notifications: personalNotifications };
+    return { items, members, currentLottery, lotteryUserStatus, postcardCredits, notifications: personalNotifications, dailyQuestion, demandSignal };
   } catch {
     return { items: [], members: [] };
   }
@@ -1086,6 +1089,7 @@ export const appRoutes: RouteObject[] = [
       { path: 'cards', element: <AdminCardsPage /> },
       { path: 'titles', element: <AdminTitlesPage /> },
       { path: 'task-presets', element: <AdminTaskPresetsPage /> },
+      { path: 'daily-questions', element: <AdminDailyQuestionsPage /> },
       { path: 'announcements', element: <AdminAnnouncementsPage /> },
       { path: 'email', element: <AdminEmailPage /> },
       { path: 'newsletters', element: <AdminNewslettersPage /> },

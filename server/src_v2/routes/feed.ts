@@ -1,5 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { getWeekKey } from '../modules/lottery/lottery.service.js';
+import { getWeekKey } from '../utils/weekKey.js';
+import { getFutureWeekKeys, weekKeyToLabel } from '../utils/weekKey.js';
+import { getSignalSummary, getMySignals } from '../modules/signals/signal.service.js';
+import { DailyQuestionService } from '../modules/daily-question/daily-question.service.js';
 
 /**
  * GET /api/feed?userId=xxx
@@ -627,6 +630,40 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       postcardCredits = u?.postcardCredits ?? undefined;
     }
 
+    // ── Daily question + demand signal ──
+    const dailyQuestionService = new DailyQuestionService(prisma);
+    const signalWeekKeys = getFutureWeekKeys(3);
+    const BUSY_TAGS = new Set(['study', 'overtime', 'travel', 'other']);
+
+    // Fetch signals first, then use current-week tags for personalized question selection
+    const [signalSummary, mySignals] = await Promise.all([
+      getSignalSummary(prisma, signalWeekKeys),
+      userId ? getMySignals(prisma, userId, signalWeekKeys) : Promise.resolve([]),
+    ]);
+
+    const currentWeekTags = mySignals
+      .filter(s => s.weekKey === signalWeekKeys[0] && !BUSY_TAGS.has(s.tag))
+      .map(s => s.tag);
+
+    const dailyQuestion = await dailyQuestionService
+      .getToday(userId, currentWeekTags.length > 0 ? currentWeekTags : undefined)
+      .catch(() => null);
+
+    // Build demandSignal response
+    const now2 = new Date();
+    const demandSignal = {
+      weeks: Object.fromEntries(
+        signalWeekKeys.map((wk) => [
+          wk,
+          {
+            label: weekKeyToLabel(wk, now2),
+            tags: signalSummary[wk] ?? [],
+          },
+        ]),
+      ),
+      mySignals: mySignals.map((s) => ({ tag: s.tag, weekKey: s.weekKey })),
+    };
+
     // Filter out invite-phase events unless user is host or has a signup
     const visibleEvents = events.filter((e) => {
       if (e.phase !== 'invite') return true;
@@ -684,6 +721,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       lotteryUserStatus,
       notifications,
       postcardCredits,
+      dailyQuestion,
+      demandSignal,
     };
   });
 };

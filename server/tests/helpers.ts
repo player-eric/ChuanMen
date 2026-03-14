@@ -69,6 +69,8 @@ export async function cleanDb() {
     prisma.taskPreset.deleteMany(),
     prisma.newsletter.deleteMany(),
     prisma.siteConfig.deleteMany(),
+    prisma.activitySignal.deleteMany(),
+    prisma.dailyQuestion.deleteMany(),
     prisma.aboutContent.deleteMany(),
     prisma.mediaAsset.deleteMany(),
     prisma.user.deleteMany(),
@@ -149,6 +151,21 @@ export async function seedTestRecommendation(authorId: string, overrides: Record
     description: '一部好电影',
   };
   return prisma.recommendation.create({ data: { ...defaults, ...overrides } });
+}
+
+export async function seedTestDailyQuestion(overrides: Record<string, any> = {}) {
+  const prisma = getTestPrisma();
+  const defaults = {
+    text: '测试每日话题',
+    targetType: 'recommendation',
+    targetCategory: 'movie',
+  };
+  return prisma.dailyQuestion.create({ data: { ...defaults, ...overrides } });
+}
+
+export async function seedTestSignal(userId: string, tag: string, weekKey: string) {
+  const prisma = getTestPrisma();
+  return prisma.activitySignal.create({ data: { userId, tag, weekKey } });
 }
 
 export async function seedTestPostcard(fromId: string, toId: string, overrides: Record<string, any> = {}) {

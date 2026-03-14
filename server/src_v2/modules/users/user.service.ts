@@ -63,6 +63,9 @@ const updateSettingsSchema = z.object({
   notifyAnnounce: z.boolean().optional(),
   // Lottery candidate pool
   hostCandidate: z.boolean().optional(),
+  // Weekend status
+  weekendStatus: z.enum(['free', 'maybe', 'busy']).nullable().optional(),
+  weekendNote: z.string().optional(),
 });
 
 // Admin: update any user fields
@@ -293,12 +296,14 @@ export class UserService {
     const data = updateSettingsSchema.parse(input);
 
     // Split preference fields from user fields
-    const { emailState, notifyEvents, notifyCards, notifyOps, notifyAnnounce, hostCandidate, birthday, ...restFields } = data;
+    const { emailState, notifyEvents, notifyCards, notifyOps, notifyAnnounce, hostCandidate, birthday, weekendStatus, weekendNote, ...restFields } = data;
     const prefFields = { emailState, notifyEvents, notifyCards, notifyOps, notifyAnnounce };
     const userFields = {
       ...restFields,
       ...(birthday !== undefined ? { birthday: birthday ? new Date(birthday) : null } : {}),
       ...(hostCandidate !== undefined ? { hostCandidate } : {}),
+      ...(weekendStatus !== undefined ? { weekendStatus, weekendUpdatedAt: new Date() } : {}),
+      ...(weekendNote !== undefined ? { weekendNote, weekendUpdatedAt: new Date() } : {}),
     };
     const hasPrefUpdate = Object.values(prefFields).some((v) => v !== undefined);
 

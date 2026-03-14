@@ -235,6 +235,13 @@ model User {
   claimedTasks         EventTask[]
   feedbacks            Feedback[]
   dailyActiveLogs      DailyActiveLog[]
+
+  // Weekend status (legacy, replaced by ActivitySignal)
+  weekendStatus        String?
+  weekendNote          String?
+  weekendUpdatedAt     DateTime?
+
+  activitySignals      ActivitySignal[]
 }
 
 model UserOperatorRole {
@@ -403,10 +410,12 @@ model Recommendation {
   createdAt   DateTime               @default(now())
   updatedAt   DateTime               @updatedAt
 
-  author      User                   @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  tags        RecommendationTag[]
-  votes       RecommendationVote[]
-  events      EventRecommendation[]
+  author          User                   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  tags            RecommendationTag[]
+  votes           RecommendationVote[]
+  events          EventRecommendation[]
+  dailyQuestionId String?
+  dailyQuestion   DailyQuestion?         @relation(fields: [dailyQuestionId], references: [id])
 
   @@index([category, createdAt(sort: Desc)])
   @@index([title])
@@ -506,10 +515,12 @@ model Proposal {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  author        User          @relation("ProposalAuthor", fields: [authorId], references: [id], onDelete: Restrict)
-  organizer     User?         @relation("ProposalOrganizer", fields: [organizerId], references: [id], onDelete: SetNull)
-  events        Event[]       @relation("EventProposal")
-  votes         ProposalVote[]
+  author          User          @relation("ProposalAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  organizer       User?         @relation("ProposalOrganizer", fields: [organizerId], references: [id], onDelete: SetNull)
+  events          Event[]       @relation("EventProposal")
+  votes           ProposalVote[]
+  dailyQuestionId String?
+  dailyQuestion   DailyQuestion? @relation(fields: [dailyQuestionId], references: [id])
 
   @@index([status, createdAt(sort: Desc)])
   @@index([title])
@@ -923,6 +934,34 @@ model EmailSuppression {
   reason  String   @default("")
   source  String   @default("system") // system, admin
   addedAt DateTime @default(now())
+}
+
+// ─── Daily Question ─────────────────────────────────────
+model DailyQuestion {
+  id               String           @id @default(cuid())
+  text             String
+  targetType       String           // 'recommendation' | 'proposal' | 'comment'
+  targetCategory   String?          // recommendation category: music/place/movie/book/recipe/external_event
+  targetEntityType String?          // comment entityType: event/movie/recommendation
+  date             DateTime?        @unique @db.Date
+  createdAt        DateTime         @default(now())
+
+  recommendations  Recommendation[]
+  proposals        Proposal[]
+}
+
+// ─── Activity Signal ─────────────────────────────────────
+model ActivitySignal {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tag       String   // "hiking", "movie", "eat", "deeptalk", etc.
+  weekKey   String   // ISO week: "2026-W12"
+  createdAt DateTime @default(now())
+
+  @@unique([userId, tag, weekKey])
+  @@index([weekKey])
+  @@index([userId])
 }
 
 // ─── User Feedback ───────────────────────────────────────

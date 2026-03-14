@@ -19,7 +19,9 @@ import {
   sendHostTributeNotif,
   sendRecDigest,
 } from '../agent/emailAutomation.js';
-import { drawWeeklyHost, getWeekKey } from '../modules/lottery/lottery.service.js';
+import { drawWeeklyHost } from '../modules/lottery/lottery.service.js';
+import { getWeekKey } from '../utils/weekKey.js';
+import { cleanOldSignals } from '../modules/signals/signal.service.js';
 import { parseGlobalConfig } from '../types/emailConfig.js';
 
 /**
@@ -313,6 +315,16 @@ export async function runAgentCycle(app: FastifyInstance) {
     }
   } catch (err) {
     log.error({ err }, 'Agent: auto-screen movies failed');
+  }
+
+  // Phase 1g: Clean old activity signals (older than 4 weeks)
+  try {
+    const fourWeeksAgo = new Date(Date.now() - 28 * 86400000);
+    const cutoffWeekKey = getWeekKey(fourWeeksAgo);
+    const { count } = await cleanOldSignals(prisma, cutoffWeekKey);
+    if (count > 0) log.info(`Agent: cleaned ${count} old activity signal(s)`);
+  } catch (err) {
+    log.error({ err }, 'Agent: cleanOldSignals failed');
   }
 
   // ── Check global email pause ──

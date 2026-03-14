@@ -1190,6 +1190,68 @@ async function main() {
   }
   console.log('');
 
+  // ─── Step 15: Daily Questions ──────────────────────────────
+  console.log('══ Step 15: Daily Questions ══');
+  const dailyQuestions = [
+    // Recommendation: music
+    { text: '推荐一首最近单曲循环的歌？', targetType: 'recommendation', targetCategory: 'music' },
+    { text: '推荐一首适合开车听的歌？', targetType: 'recommendation', targetCategory: 'music' },
+    { text: '推荐一首能让心情变好的歌？', targetType: 'recommendation', targetCategory: 'music' },
+    { text: '推荐一首适合做饭时听的歌？', targetType: 'recommendation', targetCategory: 'music' },
+    { text: '最近喜欢的歌手或专辑？', targetType: 'recommendation', targetCategory: 'music' },
+    // Recommendation: place
+    { text: '最近发现一家什么好店？', targetType: 'recommendation', targetCategory: 'place' },
+    { text: '你最喜欢的 NJ/NY 周末去处？', targetType: 'recommendation', targetCategory: 'place' },
+    { text: '你最喜欢的 brunch 地方？', targetType: 'recommendation', targetCategory: 'place' },
+    { text: '推荐一个适合散步的公园或 trail？', targetType: 'recommendation', targetCategory: 'place' },
+    { text: '推荐一个你觉得不错的餐厅？', targetType: 'recommendation', targetCategory: 'place' },
+    // Recommendation: movie
+    { text: '推荐一部最近看的好电影？', targetType: 'recommendation', targetCategory: 'movie' },
+    { text: '推荐一部可以重刷的老电影？', targetType: 'recommendation', targetCategory: 'movie' },
+    { text: '你最近追的一部剧？', targetType: 'recommendation', targetCategory: 'movie' },
+    { text: '最近想看的一部电影？', targetType: 'recommendation', targetCategory: 'movie' },
+    // Recommendation: book
+    { text: '最近读了什么好书？', targetType: 'recommendation', targetCategory: 'book' },
+    { text: '有什么想读的书？', targetType: 'recommendation', targetCategory: 'book' },
+    // Recommendation: recipe
+    { text: '推荐一道你最近做的好菜？', targetType: 'recommendation', targetCategory: 'recipe' },
+    { text: '推荐一道简单又好吃的快手菜？', targetType: 'recommendation', targetCategory: 'recipe' },
+    { text: '有什么想要分享给大家的好菜谱？', targetType: 'recommendation', targetCategory: 'recipe' },
+    // Recommendation: external_event
+    { text: '最近发现的一个宝藏 YouTube 或播客频道？', targetType: 'recommendation', targetCategory: 'external_event' },
+    { text: '有什么最近想看的演出吗？', targetType: 'recommendation', targetCategory: 'external_event' },
+    { text: '有什么想看的展览吗？', targetType: 'recommendation', targetCategory: 'external_event' },
+    // Comment: event
+    { text: '上次活动你印象最深的瞬间是什么？', targetType: 'comment', targetEntityType: 'event' },
+    { text: '上次活动有什么想对 Host 说的？', targetType: 'comment', targetEntityType: 'event' },
+    { text: '上次活动有没有特别想感谢的人？寄张卡片吧！', targetType: 'comment', targetEntityType: 'event' },
+    // Comment: recommendation
+    { text: '最近有人推荐了 {{recTitle}}，你觉得怎么样？', targetType: 'comment', targetEntityType: 'recommendation' },
+    { text: '有人推荐了 {{recTitle}}，你看过/去过/试过吗？', targetType: 'comment', targetEntityType: 'recommendation' },
+    // Proposal
+    { text: '如果你来做 Host，你会组什么活动？', targetType: 'proposal' },
+    { text: '有没有你擅长但没机会展示的技能？想教大家吗？', targetType: 'proposal' },
+    { text: '天气变暖了，最想一起去哪玩？', targetType: 'proposal' },
+    { text: '最想一起看的下一部电影是什么？', targetType: 'recommendation', targetCategory: 'movie' },
+    { text: '夏天到了，最想一起做的户外活动？', targetType: 'proposal' },
+  ];
+  if (!DRY_RUN) {
+    const existingDQ = await prisma.dailyQuestion.count();
+    if (existingDQ === 0) {
+      await prisma.dailyQuestion.createMany({
+        data: dailyQuestions.map((q) => ({
+          text: q.text,
+          targetType: q.targetType,
+          targetCategory: q.targetCategory ?? null,
+          targetEntityType: (q as any).targetEntityType ?? null,
+        })),
+      });
+    }
+    console.log(`  ✅ Daily Questions (${dailyQuestions.length} entries${existingDQ > 0 ? ', skipped' : ''})`);
+  } else {
+    console.log(`  [DRY] ${dailyQuestions.length} daily questions`);
+  }
+
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(`🌱 Seed complete! (${elapsed}s)\n`);
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { createTestApp, closeTestApp, cleanDb, seedTestUser, seedTestEvent, seedTestMovie, seedTestProposal, seedTestPostcard, seedTestRecommendation, getTestPrisma } from '../helpers.js';
+import { createTestApp, closeTestApp, cleanDb, seedTestUser, seedTestEvent, seedTestMovie, seedTestProposal, seedTestPostcard, seedTestRecommendation, seedTestDailyQuestion, seedTestSignal, getTestPrisma } from '../helpers.js';
 import type { FastifyInstance } from 'fastify';
 
 let app: FastifyInstance;
@@ -295,6 +295,97 @@ describe('GET /api/feed', () => {
     const realized = notifs.find((n: any) => n.action === 'proposal_realized');
     expect(realized).toBeDefined();
     expect(realized.targetTitle).toBe('好创意');
+  });
+
+  // ── Daily question tests ──
+
+  it('returns dailyQuestion in feed when questions exist', async () => {
+    await seedTestDailyQuestion({ text: '推荐一部好电影？', targetType: 'recommendation', targetCategory: 'movie' });
+
+    const res = await app.inject({ method: 'GET', url: '/api/feed' });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.dailyQuestion).toBeDefined();
+    expect(body.dailyQuestion.question).toBeDefined();
+    expect(body.dailyQuestion.question.text).toBe('推荐一部好电影？');
+    expect(body.dailyQuestion.question.targetType).toBe('recommendation');
+    expect(body.dailyQuestion.question.targetCategory).toBe('movie');
+    expect(body.dailyQuestion.answers).toEqual([]);
+  });
+
+  it('returns null dailyQuestion when no questions exist', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/feed' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().dailyQuestion).toBeNull();
+  });
+
+  it('returns personalized question based on user signal tags', async () => {
+    const user = await seedTestUser();
+    // Create questions of different types
+    await seedTestDailyQuestion({ text: '推荐一部好电影？', targetType: 'recommendation', targetCategory: 'movie' });
+    await seedTestDailyQuestion({ text: '推荐一个好地方？', targetType: 'recommendation', targetCategory: 'place' });
+
+    // Compute current week key dynamically
+    const now = new Date();
+    const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+    const weekKey = `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+
+    // User has 'movie' signal for current week → should get movie question
+    await seedTestSignal(user.id, 'movie', weekKey);
+
+    const res = await app.inject({ method: 'GET', url: `/api/feed?userId=${user.id}` });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.dailyQuestion).toBeDefined();
+    expect(body.dailyQuestion.question.targetCategory).toBe('movie');
+  });
+
+  it('ignores busy signal tags for question personalization', async () => {
+    const user = await seedTestUser();
+    // Only movie questions available
+    await seedTestDailyQuestion({ text: '推荐一部好电影？', targetType: 'recommendation', targetCategory: 'movie' });
+
+    const now = new Date();
+    const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+    const weekKey = `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+
+    // User only has busy tags (overtime, travel) — should not personalize
+    await seedTestSignal(user.id, 'overtime', weekKey);
+    await seedTestSignal(user.id, 'travel', weekKey);
+
+    const res = await app.inject({ method: 'GET', url: `/api/feed?userId=${user.id}` });
+    expect(res.statusCode).toBe(200);
+    // Should still get a question (fallback to random from pool)
+    expect(res.json().dailyQuestion).toBeDefined();
+    expect(res.json().dailyQuestion.question.text).toBe('推荐一部好电影？');
+  });
+
+  it('falls back to random question when no signal tags match', async () => {
+    const user = await seedTestUser();
+    // Only proposal questions exist
+    await seedTestDailyQuestion({ text: '想一起做什么？', targetType: 'proposal', targetCategory: undefined });
+
+    const now = new Date();
+    const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+    const weekKey = `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+
+    // User has music signal, but no music questions exist → fallback
+    await seedTestSignal(user.id, 'music', weekKey);
+
+    const res = await app.inject({ method: 'GET', url: `/api/feed?userId=${user.id}` });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.dailyQuestion).toBeDefined();
+    expect(body.dailyQuestion.question.text).toBe('想一起做什么？');
   });
 
   it('does not return notifications older than 14 days', async () => {
