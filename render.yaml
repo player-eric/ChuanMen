@@ -50,36 +50,6 @@ services:
       - key: RESEND_REPLY_TO
         sync: false
 
-  # ── Agent cron job (runs every 10 minutes) ─────────
-  - type: cron
-    name: chuanmen-agent
-    runtime: docker
-    dockerfilePath: ./server/Dockerfile
-    dockerContext: ./server
-    schedule: "*/10 * * * *"
-    plan: starter
-    region: oregon
-    dockerCommand: node dist/workers/agentTick.js
-    envVars:
-      - key: APP_ENV
-        value: dev
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: chuanmen-db
-          property: connectionString
-      - key: AWS_REGION
-        sync: false
-      - key: AWS_ACCESS_KEY_ID
-        sync: false
-      - key: AWS_SECRET_ACCESS_KEY
-        sync: false
-      - key: AWS_S3_BUCKET
-        sync: false
-      - key: RESEND_API_KEY
-        sync: false
-      - key: RESEND_FROM_EMAIL
-        sync: false
-      - key: RESEND_REPLY_TO
-        sync: false
+  # ── Agent cron job — REMOVED ─────────
+  # Agent tick now runs in-process via setInterval in index.ts (shares web server env vars).
+  # Delete the chuanmen-agent cron service from Render Dashboard manually.

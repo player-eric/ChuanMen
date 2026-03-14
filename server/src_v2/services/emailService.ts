@@ -19,6 +19,15 @@ export async function sendEmail(input: SendEmailInput) {
     console.log(`[EMAIL BLOCKED] (no RESEND_API_KEY) to: ${input.to}, subject: ${input.subject}`);
     return { MessageId: `blocked-${Date.now()}` };
   }
+  // Safety: when EMAIL_WHITELIST is set, only send to listed addresses
+  const whitelist = process.env.EMAIL_WHITELIST;
+  if (whitelist) {
+    const allowed = whitelist.split(',').map((e) => e.trim().toLowerCase());
+    if (!allowed.includes(input.to.toLowerCase())) {
+      console.log(`[EMAIL BLOCKED] (whitelist) to: ${input.to}, subject: ${input.subject}`);
+      return { MessageId: `whitelist-blocked-${Date.now()}` };
+    }
+  }
   const { data, error } = await resend().emails.send({
     from: env.RESEND_FROM_EMAIL,
     replyTo: env.RESEND_REPLY_TO,
