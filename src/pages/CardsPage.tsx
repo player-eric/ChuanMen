@@ -214,7 +214,7 @@ function FullCards() {
                 <Stack spacing={2}>
                   {(showAllEvents ? eligibleEvents : eligibleEvents.slice(0, DEFAULT_EVENT_COUNT)).map((evt) => {
                     const dateStr = evt.startsAt
-                      ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+                      ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'UTC' })
                       : '';
                     const eventCtx = dateStr ? `${dateStr} ${evt.title}` : evt.title;
                     const filteredPeople = evt.people.filter((p) => p.id !== user?.id);

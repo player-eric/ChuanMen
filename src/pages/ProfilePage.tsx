@@ -94,7 +94,7 @@ export default function ProfilePage() {
       id: e.id,
       title: e.title ?? '',
       date: e.startsAt
-        ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })
+        ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'UTC' })
         : e.date ?? '',
       scene: e.tags?.[0] ?? e.scene ?? '',
       role: e.hostId === user?.id ? 'Host' : e.role,
@@ -103,7 +103,7 @@ export default function ProfilePage() {
       id: e.id,
       title: e.title ?? '',
       date: e.startsAt
-        ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })
+        ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'UTC' })
         : e.date ?? '',
       scene: e.tags?.[0] ?? e.scene ?? '',
       role: e.hostId === user?.id ? 'Host' : e.role,

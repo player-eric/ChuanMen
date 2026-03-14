@@ -322,7 +322,7 @@ export default function EventDetailPage() {
           id: '',
           title: String(item.title ?? ''),
           host: hostName,
-          date: new Date(String(item.startsAt ?? new Date().toISOString())).toLocaleString('zh-CN'),
+          date: new Date(String(item.startsAt ?? new Date().toISOString())).toLocaleString('zh-CN', { timeZone: 'UTC' }),
           city: String(item.city || item.location || ''),
           scene: 'small-group',
           film: undefined,
@@ -656,9 +656,9 @@ export default function EventDetailPage() {
               </Stack>
               <Stack alignItems="flex-end" spacing={0.25}>
                 <Typography variant="body2" color="text.secondary">📅 {event.date}{event.endDate ? ` — ${event.endDate}` : ''}</Typography>
-                <Typography variant="body2" color="text.secondary">📍 {[event.city, event.state].filter(Boolean).join(', ')}</Typography>
+                <Typography variant="body2" color="text.secondary">📍 <a href={`https://maps.google.com/?q=${encodeURIComponent([event.city, event.state].filter(Boolean).join(', '))}`} target="_blank" rel="noopener" style={{ color: 'inherit', textDecoration: 'underline' }}>{[event.city, event.state].filter(Boolean).join(', ')}</a></Typography>
                 {signedUp && event.address && (
-                  <Typography variant="caption" color="success.main">📍 {event.address}</Typography>
+                  <Typography variant="caption" color="success.main">📍 <a href={`https://maps.google.com/?q=${encodeURIComponent([event.address, event.city, event.state].filter(Boolean).join(', '))}`} target="_blank" rel="noopener" style={{ color: 'inherit', textDecoration: 'underline' }}>{event.address}</a></Typography>
                 )}
                 {!signedUp && (
                   <Typography variant="caption" color="text.secondary">🔒 报名后可见具体地址</Typography>
