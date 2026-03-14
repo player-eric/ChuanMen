@@ -322,7 +322,7 @@ export default function EventDetailPage() {
           id: '',
           title: String(item.title ?? ''),
           host: hostName,
-          date: new Date(String(item.startsAt ?? new Date().toISOString())).toLocaleString('zh-CN', { timeZone: 'UTC' }),
+          date: new Date(String(item.startsAt ?? new Date().toISOString())).toLocaleString('zh-CN', { timeZone: 'America/New_York' }),
           city: String(item.city || item.location || ''),
           scene: 'small-group',
           film: undefined,
@@ -681,8 +681,10 @@ export default function EventDetailPage() {
                     setEditZipCode(event.zipCode ?? '');
                     setEditAddress(event.address ?? '');
                     setEditCapacity(event.total);
-                    setEditStartsAt((loadedEvent as any)?.startsAt ? new Date((loadedEvent as any).startsAt).toISOString().slice(0, 16) : '');
-                    setEditEndsAt((loadedEvent as any)?.endsAt ? new Date((loadedEvent as any).endsAt).toISOString().slice(0, 16) : '');
+                    // Convert UTC ISO string to local datetime-local format for the input
+                    const toLocalDT = (iso: string) => { const d = new Date(iso); const p = (n: number) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+                    setEditStartsAt((loadedEvent as any)?.startsAt ? toLocalDT((loadedEvent as any).startsAt) : '');
+                    setEditEndsAt((loadedEvent as any)?.endsAt ? toLocalDT((loadedEvent as any).endsAt) : '');
                     setEditTitleImageUrl(isImageUrl(event.scene) ? event.scene : '');
                     setEditSignupMode(event.signupMode ?? 'direct');
                     setEditFoodOption((event.foodOption as FoodOption) || 'none');
@@ -2505,10 +2507,11 @@ export default function EventDetailPage() {
                   if (editZipCode !== (event.zipCode ?? '')) payload.zipCode = editZipCode;
                   if (editAddress !== (event.address ?? '')) payload.address = editAddress;
                   if (editCapacity !== event.total) payload.capacity = editCapacity;
-                  const origStartsAt = (loadedEvent as any)?.startsAt ? new Date((loadedEvent as any).startsAt).toISOString().slice(0, 16) : '';
-                  const origEndsAt = (loadedEvent as any)?.endsAt ? new Date((loadedEvent as any).endsAt).toISOString().slice(0, 16) : '';
-                  if (editStartsAt && editStartsAt !== origStartsAt) payload.startsAt = editStartsAt;
-                  if (editEndsAt && editEndsAt !== origEndsAt) payload.endsAt = editEndsAt;
+                  const toLocalDT = (iso: string) => { const d = new Date(iso); const p = (n: number) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+                  const origStartsAt = (loadedEvent as any)?.startsAt ? toLocalDT((loadedEvent as any).startsAt) : '';
+                  const origEndsAt = (loadedEvent as any)?.endsAt ? toLocalDT((loadedEvent as any).endsAt) : '';
+                  if (editStartsAt && editStartsAt !== origStartsAt) payload.startsAt = new Date(editStartsAt).toISOString();
+                  if (editEndsAt && editEndsAt !== origEndsAt) payload.endsAt = new Date(editEndsAt).toISOString();
                   const currentImageUrl = isImageUrl(event.scene) ? event.scene : '';
                   if (editTitleImageUrl !== currentImageUrl) payload.titleImageUrl = editTitleImageUrl;
                   if (editSignupMode !== (event.signupMode ?? 'direct')) payload.signupMode = editSignupMode;
@@ -2528,8 +2531,8 @@ export default function EventDetailPage() {
                       address: editAddress || prev.address,
                       total: editCapacity || prev.total,
                       spots: Math.max(0, (editCapacity || prev.total) - (1 + (prev.coHosts?.length ?? 0)) - (prev.signupDetails ?? []).filter((s) => ['accepted', 'invited', 'offered'].includes(s.status)).length),
-                      date: editStartsAt ? new Date(editStartsAt).toLocaleString('zh-CN') : prev.date,
-                      endDate: editEndsAt ? new Date(editEndsAt).toLocaleString('zh-CN') : prev.endDate,
+                      date: editStartsAt ? new Date(editStartsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'America/New_York' }) + ' ' + new Date(editStartsAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/New_York' }) : prev.date,
+                      endDate: editEndsAt ? new Date(editEndsAt).toLocaleDateString('zh-CN', { timeZone: 'America/New_York' }) : prev.endDate,
                       scene: editTitleImageUrl || prev.scene,
                       signupMode: editSignupMode,
                       foodOption: newFood || undefined,

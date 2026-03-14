@@ -232,7 +232,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
           include: { user: { select: { id: true, name: true, email: true, preferences: true } } },
         });
         const eventDate = (updated as any).startsAt
-          ? new Date((updated as any).startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })
+          ? new Date((updated as any).startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'America/New_York' })
           : '';
         for (const s of participants) {
           if (!s.user?.email) continue;
@@ -318,6 +318,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
       });
       const eventDate = event.startsAt.toLocaleDateString('zh-CN', {
         month: 'long', day: 'numeric', weekday: 'short',
+        timeZone: 'America/New_York',
       });
       for (const user of invitedUsers) {
         sendTemplatedEmail(app.prisma, {
@@ -418,6 +419,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
           if (prefs?.emailState !== 'unsubscribed') {
             const eventDate = event.startsAt.toLocaleDateString('zh-CN', {
               month: 'long', day: 'numeric', weekday: 'short',
+              timeZone: 'America/New_York',
             });
             sendTemplatedEmail(app.prisma, {
               to: user.email,

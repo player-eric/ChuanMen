@@ -169,9 +169,10 @@ export default function EventCreatePage() {
     if (startDate && startTime) {
       const d = new Date(combineDT(startDate, startTime));
       d.setHours(d.getHours() + 3);
-      const iso = d.toISOString().slice(0, 16);
-      if (!endDate) setEndDate(splitDate(iso));
-      if (!endTime) setEndTime(splitTime(iso));
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const localEnd = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      if (!endDate) setEndDate(splitDate(localEnd));
+      if (!endTime) setEndTime(splitTime(localEnd));
     }
   }, [startDate, startTime, endDate, endTime]);
 
@@ -211,13 +212,13 @@ export default function EventCreatePage() {
         state: state.trim() || undefined,
         zipCode: zipCode.trim() || undefined,
         address: address.trim() || undefined,
-        startsAt: combineDT(startDate, startTime || '19:00'),
+        startsAt: new Date(combineDT(startDate, startTime || '19:00')).toISOString(),
         capacity,
         description,
         titleImageUrl: titleImageUrl || undefined,
         tags: mappedTags.length > 0 ? mappedTags : (lotteryId ? ['small_group'] : undefined),
         phase: isPastDate ? 'ended' : delayPublish ? 'invite' : 'open',
-        publishAt: delayPublish && publishDate ? combineDT(publishDate, publishTime || '00:00') : undefined,
+        publishAt: delayPublish && publishDate ? new Date(combineDT(publishDate, publishTime || '00:00')).toISOString() : undefined,
         recCategories: recCategories.length > 0
           ? Object.entries(recCatModes).map(([c, m]) => `${c}:${m}`)
           : undefined,

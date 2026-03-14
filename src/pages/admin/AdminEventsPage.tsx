@@ -134,7 +134,7 @@ export default function AdminEventsPage() {
             {upcoming.map((evt, i) => {
               const hostName = evt.host?.name ?? '—';
               const signupCount = evt._count?.signups ?? evt.signups?.length ?? 0;
-              const dateStr = evt.startsAt ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short', timeZone: 'UTC' }) : '';
+              const dateStr = evt.startsAt ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short', timeZone: 'America/New_York' }) : '';
               return (
                 <Box key={evt.id}>
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr auto', md: '3fr 1.5fr 2fr 1fr 1fr 120px' }, gap: 1, px: 2, py: 1.5, alignItems: 'center' }}>
@@ -186,7 +186,7 @@ export default function AdminEventsPage() {
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 1.5fr 1fr 1fr' }, gap: 1, px: 2, py: 1.5, alignItems: 'center' }}>
                   <Typography variant="body2" fontWeight={600}>{evt.title}</Typography>
                   <Typography variant="body2" sx={{ display: { xs: 'none', md: 'block' } }}>{evt.host?.name ?? '—'}</Typography>
-                  <Typography variant="body2" sx={{ display: { xs: 'none', md: 'block' } }}>{evt.startsAt ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { timeZone: 'UTC' }) : ''}</Typography>
+                  <Typography variant="body2" sx={{ display: { xs: 'none', md: 'block' } }}>{evt.startsAt ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { timeZone: 'America/New_York' }) : ''}</Typography>
                   <Typography variant="body2" sx={{ display: { xs: 'none', md: 'block' } }}>{evt._count?.signups ?? 0} 人</Typography>
                 </Box>
                 {i < past.length - 1 && <Divider />}
@@ -203,7 +203,7 @@ export default function AdminEventsPage() {
             <Grid key={evt.id} size={{ xs: 12, md: 6 }}>
               <Card><CardContent>
                 <Typography fontWeight={700}>{evt.title}</Typography>
-                <Typography variant="body2" color="text.secondary">Host: {evt.host?.name ?? '—'} · {evt.startsAt ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { timeZone: 'UTC' }) : ''}</Typography>
+                <Typography variant="body2" color="text.secondary">Host: {evt.host?.name ?? '—'} · {evt.startsAt ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { timeZone: 'America/New_York' }) : ''}</Typography>
               </CardContent></Card>
             </Grid>
           ))}
@@ -240,7 +240,7 @@ export default function AdminEventsPage() {
         <DialogContent>
           <Stack spacing={1} sx={{ mt: 1 }}>
             <Typography variant="body2"><strong>Host：</strong>{detailEvent?.host?.name ?? '—'}</Typography>
-            <Typography variant="body2"><strong>时间：</strong>{detailEvent?.startsAt ? new Date(detailEvent.startsAt).toLocaleString('zh-CN', { timeZone: 'UTC' }) : ''}</Typography>
+            <Typography variant="body2"><strong>时间：</strong>{detailEvent?.startsAt ? new Date(detailEvent.startsAt).toLocaleString('zh-CN', { timeZone: 'America/New_York' }) : ''}</Typography>
             <Typography variant="body2"><strong>城市：</strong>{detailEvent?.city || detailEvent?.location}</Typography>
             <Typography variant="body2"><strong>人数：</strong>{detailEvent ? `${detailEvent._count?.signups ?? 0}/${detailEvent.capacity}` : ''}</Typography>
             <Typography variant="body2"><strong>阶段：</strong>{detailEvent?.phase === 'invite' ? '私人邀请中' : '公开报名中'}</Typography>

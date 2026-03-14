@@ -130,7 +130,7 @@ export default function MovieDetailPage() {
     const evt = se.event ?? se;
     historyItems.push({
       title: evt.title ?? '',
-      date: evt.startsAt ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { timeZone: 'UTC' }) : '',
+      date: evt.startsAt ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { timeZone: 'America/New_York' }) : '',
       host: evt.host?.name ?? '',
       eventId: evt.id,
       people: evt._count?.signups,
@@ -430,7 +430,7 @@ export default function MovieDetailPage() {
                       <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
                         <Typography variant="body2" fontWeight={600}>{event.title}</Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {event.startsAt ? new Date(event.startsAt).toLocaleDateString('zh-CN', { timeZone: 'UTC' }) : ''} · {event.host?.name ?? ''} Host
+                          {event.startsAt ? new Date(event.startsAt).toLocaleDateString('zh-CN', { timeZone: 'America/New_York' }) : ''} · {event.host?.name ?? ''} Host
                         </Typography>
                       </CardContent>
                     </CardActionArea>

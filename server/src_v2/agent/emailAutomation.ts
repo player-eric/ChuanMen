@@ -156,6 +156,7 @@ export async function sendEventReminder(
     const eventDate = event.startsAt.toLocaleDateString('zh-CN', {
       month: 'long', day: 'numeric', weekday: 'short',
       hour: '2-digit', minute: '2-digit', hour12: false,
+      timeZone: 'America/New_York',
     });
     const acceptedCount = event.signups.length;
 
@@ -163,11 +164,12 @@ export async function sendEventReminder(
       if (!eligible.has(user.id)) continue;
       try {
         // Build task info for this user
-        const myTask = (event as any).tasks?.find((t: any) => t.claimedBy?.id === user.id);
+        const myTasks = ((event as any).tasks ?? []).filter((t: any) => t.claimedBy?.id === user.id);
         const unclaimedTasks = ((event as any).tasks ?? []).filter((t: any) => !t.claimedById);
         let taskInfo = '';
-        if (myTask) {
-          taskInfo = `你的分工：${myTask.role}${myTask.description ? ` — ${myTask.description}` : ''}`;
+        if (myTasks.length > 0) {
+          const taskList = myTasks.map((t: any) => t.role + (t.description ? `（${t.description}）` : '')).join('、');
+          taskInfo = `你认领了：${taskList}，记得提前准备哦 🙌`;
         } else if (unclaimedTasks.length > 0) {
           const t = unclaimedTasks[0];
           taskInfo = `「${t.role}」还没有人认领${t.description ? `（${t.description}）` : ''}，你要来吗？`;
@@ -767,7 +769,7 @@ async function buildDigestSections(
           icon: '🎬',
           title: '新活动',
           items: newEvents.map((e) => {
-            const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+            const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'America/New_York' });
             return { text: `${e.title}（${d}）`, url: `https://chuanmener.club/events/${e.id}` };
           }),
         },
@@ -794,7 +796,7 @@ async function buildDigestSections(
           icon: '📅',
           title: '即将开始',
           items: upcoming.map((e) => {
-            const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+            const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'America/New_York' });
             return { text: `${e.title}（${d}）`, url: `https://chuanmener.club/events/${e.id}` };
           }),
         },
@@ -1090,7 +1092,7 @@ async function buildPersonalNudge(
           icon: '💡',
           title: '去串串门？',
           items: upcoming.map((e) => {
-            const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+            const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'America/New_York' });
             return { text: `${e.title}（${d}）`, url: `https://chuanmener.club/events/${e.id}` };
           }),
         };
@@ -1492,6 +1494,10 @@ export async function sendSameDayReminder(
         where: { status: 'accepted' },
         include: { user: { select: { id: true, name: true, email: true } } },
       },
+      tasks: {
+        include: { claimedBy: { select: { id: true, name: true } } },
+        orderBy: { createdAt: 'asc' },
+      },
     },
   });
 
@@ -1502,11 +1508,19 @@ export async function sendSameDayReminder(
     const eventDate = event.startsAt.toLocaleDateString('zh-CN', {
       month: 'long', day: 'numeric', weekday: 'short',
       hour: '2-digit', minute: '2-digit', hour12: false,
+      timeZone: 'America/New_York',
     });
 
     for (const user of participants) {
       if (!eligible.has(user.id)) continue;
       try {
+        // Build task info for this user
+        const myTasks = ((event as any).tasks ?? []).filter((t: any) => t.claimedBy?.id === user.id);
+        let taskInfo = '';
+        if (myTasks.length > 0) {
+          const taskList = myTasks.map((t: any) => t.role + (t.description ? `（${t.description}）` : '')).join('、');
+          taskInfo = `你认领了：${taskList}，记得提前准备哦 🙌`;
+        }
         const result = await sendTemplatedEmail(prisma, {
           to: user.email,
           ruleId: 'P0-D',
@@ -1515,6 +1529,7 @@ export async function sendSameDayReminder(
             eventTitle: event.title,
             eventDate,
             eventLocation: event.location ?? '',
+            taskInfo,
           },
           ctaLabel: '查看活动详情',
           ctaUrl: `https://chuanmener.club/events/${event.id}`,
@@ -1568,6 +1583,7 @@ export async function sendNewEventNotif(
     const eligible = await filterByRefId(prisma, allUsers.map((u) => u.id), 'P2-A', event.id);
     const eventDate = event.startsAt.toLocaleDateString('zh-CN', {
       month: 'long', day: 'numeric', weekday: 'short',
+      timeZone: 'America/New_York',
     });
 
     for (const user of allUsers) {

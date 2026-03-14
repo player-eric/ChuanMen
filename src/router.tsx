@@ -103,8 +103,8 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
   // Events → activity items (grouped by real activity time)
   for (const e of (data.events ?? [])) {
     const [sortKey, sortLabel] = dateParts(e.activityAt ?? e.createdAt);
-    const fmt = (iso: string) => { const dt = new Date(iso); return dt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }); };
-    const datePart = e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'UTC' }) : '';
+    const fmt = (iso: string) => { const dt = new Date(iso); return dt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/New_York' }); };
+    const datePart = e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'America/New_York' }) : '';
     const timePart = e.startsAt ? fmt(e.startsAt) : '';
     const endTimePart = e.endsAt ? fmt(e.endsAt) : '';
     const d = timePart ? `${datePart} ${timePart}${endTimePart ? '-' + endTimePart : ''}` : datePart;
@@ -479,9 +479,9 @@ function mapApiEvent(e: any): any {
     host: hostName,
     hostAvatar,
     hostId,
-    date: e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'UTC' }) + ' ' + new Date(e.startsAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }) + (e.endsAt ? '-' + new Date(e.endsAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }) : '') : '',
+    date: e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'America/New_York' }) + ' ' + new Date(e.startsAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/New_York' }) + (e.endsAt ? '-' + new Date(e.endsAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/New_York' }) : '') : '',
     startsAt: e.startsAt,
-    endDate: e.endsAt ? new Date(e.endsAt).toLocaleDateString('zh-CN', { timeZone: 'UTC' }) : undefined,
+    endDate: e.endsAt ? new Date(e.endsAt).toLocaleDateString('zh-CN', { timeZone: 'America/New_York' }) : undefined,
     city: e.city || '',
     state: e.state || undefined,
     zipCode: e.zipCode || undefined,
@@ -597,7 +597,7 @@ async function eventsLoader() {
         id: e.id,
         title: e.title ?? '',
         host: typeof e.host === 'string' ? e.host : e.host?.name ?? '?',
-        date: e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'UTC' }) : '',
+        date: e.startsAt ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'America/New_York' }) : '',
         startsAt: e.startsAt ?? '',
         people: peopleCount,
         scene: e.titleImageUrl || eventTagToScene[e.tags?.[0]] || e.tags?.[0] || '',
@@ -730,7 +730,7 @@ async function discoverLoader() {
         title: s.title ?? '',
         year: String(s.year ?? ''),
         dir: s.director ?? '',
-        date: ev?.startsAt ? new Date(ev.startsAt).toLocaleDateString('zh-CN', { timeZone: 'UTC' }) : '',
+        date: ev?.startsAt ? new Date(ev.startsAt).toLocaleDateString('zh-CN', { timeZone: 'America/New_York' }) : '',
         host: ev?.host?.name ?? '',
         poster: s.poster || undefined,
       };
@@ -858,7 +858,7 @@ async function cardsLoader() {
     const people: { id: string; name: string; ctx: string }[] = [];
     for (const evt of eligibleEvents) {
       const dateStr = evt.startsAt
-        ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'UTC' })
+        ? new Date(evt.startsAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'America/New_York' })
         : '';
       for (const p of evt.people) {
         if (seen.has(p.id)) continue;
