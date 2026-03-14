@@ -41,13 +41,15 @@ export default function ActivitySignalCard({ data, onSnack }: Props) {
   });
   const [weeksData, setWeeksData] = useState(data.weeks);
 
-  // Sync from loader data on navigation / refresh
+  // Sync from loader data on navigation / refresh / SSR→client hydration
+  const mySignalsKey = data.mySignals.map((s) => `${s.weekKey}:${s.tag}`).sort().join(',');
   React.useEffect(() => {
     const set = new Set<string>();
     for (const s of data.mySignals) set.add(`${s.weekKey}:${s.tag}`);
     setMySignals(set);
     setWeeksData(data.weeks);
-  }, [data]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mySignalsKey]);
   const [expanded, setExpanded] = useState(() => {
     try { return localStorage.getItem('chuanmen.signal.expanded') === '1'; } catch { return false; }
   });
@@ -99,8 +101,9 @@ export default function ActivitySignalCard({ data, onSnack }: Props) {
       if (adding) {
         const existing = week.tags.find((t) => t.key === tag);
         if (existing) {
+          const alreadyIn = existing.users.some((u) => u.id === user.id);
           week.tags = week.tags.map((t) =>
-            t.key === tag ? { ...t, count: t.count + 1, users: [...t.users, me] } : t
+            t.key === tag ? { ...t, count: alreadyIn ? t.count : t.count + 1, users: alreadyIn ? t.users : [...t.users, me] } : t
           );
         } else {
           week.tags = [...week.tags, { key: tag, count: 1, users: [me] }];
