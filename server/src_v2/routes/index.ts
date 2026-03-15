@@ -24,6 +24,7 @@ import { siteConfigRoutes } from '../modules/site-config/site-config.route.js';
 import { lotteryRoutes } from '../modules/lottery/lottery.route.js';
 import { dailyQuestionRoutes } from '../modules/daily-question/daily-question.route.js';
 import { signalRoutes } from '../modules/signals/signal.route.js';
+import { migrationRoutes } from './migration.js';
 
 export const apiRoutes: FastifyPluginAsync = async (app) => {
   // Touch lastActiveAt on meaningful API activity (throttled per user, fire-and-forget)
@@ -78,6 +79,7 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
   app.register(lotteryRoutes, { prefix: '/lottery' });
   app.register(dailyQuestionRoutes, { prefix: '/daily-question' });
   app.register(signalRoutes, { prefix: '/signals' });
+  app.register(migrationRoutes, { prefix: '/migration' });
 
   // Admin dashboard stats
   app.get('/admin/stats', async () => {
