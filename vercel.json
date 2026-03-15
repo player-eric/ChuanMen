@@ -7,7 +7,7 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 30,
-      "includeFiles": "server/**"
+      "includeFiles": "server/node_modules/.prisma/**"
     }
   }
 }
