@@ -36,8 +36,8 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
       pastEvents,
       galleryEvents,
     ] = await Promise.all([
-      // Events user hosted
-      prisma.event.count({ where: { hostId: targetId } }),
+      // Events user hosted (as host or co-host)
+      prisma.event.count({ where: { OR: [{ hostId: targetId }, { coHosts: { some: { userId: targetId } } }] } }),
 
       // Events user participated in (accepted signups)
       prisma.eventSignup.count({ where: { userId: targetId, status: 'accepted' } }),

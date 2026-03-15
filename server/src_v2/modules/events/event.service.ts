@@ -234,7 +234,13 @@ export class EventService {
     const isHostOrCoHost = event.hostId === requesterId || event.coHosts?.some((ch: any) => ch.userId === requesterId);
     if (!isHostOrCoHost) throw new Error('只有 Host 或 Co-Host 可以添加 Co-Host');
     if (event.hostId === userId) throw new Error('Host 不能添加自己为 Co-Host');
-    return this.repository.addCoHost(eventId, userId);
+    const result = await this.repository.addCoHost(eventId, userId);
+    // Increment co-host's hostCount (co-hosting counts as hosting)
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { hostCount: { increment: 1 } },
+    });
+    return result;
   }
 
   async removeCoHost(eventId: string, userId: string, requesterId: string) {
@@ -243,6 +249,11 @@ export class EventService {
     const isHostOrCoHost = event.hostId === requesterId || event.coHosts?.some((ch: any) => ch.userId === requesterId);
     if (!isHostOrCoHost) throw new Error('只有 Host 或 Co-Host 可以移除 Co-Host');
     const result = await this.repository.removeCoHost(eventId, userId);
+    // Decrement co-host's hostCount
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { hostCount: { decrement: 1 } },
+    });
     // Removing a co-host frees a slot — promote next waitlisted if applicable
     await this.repository.promoteNextWaitlisted(eventId);
     return result;
@@ -477,14 +488,24 @@ export class EventService {
   }
 
   async delete(id: string) {
-    const event = await this.prisma.event.findUnique({ where: { id }, select: { hostId: true } });
+    const event = await this.prisma.event.findUnique({
+      where: { id },
+      select: { hostId: true, coHosts: { select: { userId: true } } },
+    });
     const result = await this.repository.delete(id);
-    // Decrement host's hostCount
+    // Decrement host's and co-hosts' hostCount
     if (event) {
       await this.prisma.user.update({
         where: { id: event.hostId },
         data: { hostCount: { decrement: 1 } },
       });
+      const coHostIds = event.coHosts.map((ch) => ch.userId);
+      if (coHostIds.length > 0) {
+        await this.prisma.user.updateMany({
+          where: { id: { in: coHostIds } },
+          data: { hostCount: { decrement: 1 } },
+        });
+      }
     }
     return result;
   }
