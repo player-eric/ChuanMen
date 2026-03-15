@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { useNavigate } from 'react-router';
 import { useAuth } from '@/auth/AuthContext';
 import { useColors } from '@/hooks/useColors';
 import { saveSignals, fetchMySignals } from '@/lib/domainApi';
@@ -31,6 +32,7 @@ const ACTIVITY_TAGS_BUSY = ACTIVITY_TAGS.filter((t) => 'busy' in t && t.busy);
 
 export default function ActivitySignalCard({ data, onSnack }: Props) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const c = useColors();
   const weekKeys = Object.keys(data.weeks);
   const [activeWeek, setActiveWeek] = useState(0);
@@ -292,6 +294,11 @@ export default function ActivitySignalCard({ data, onSnack }: Props) {
                           names={tag.users.map((u) => ({ name: u.name, avatar: u.avatar }))}
                           max={5}
                           size={22}
+                          tooltips={tag.users.map((u) => u.name)}
+                          onClickItem={(i) => {
+                            const name = tag.users[i]?.name;
+                            if (name) navigate(`/members/${encodeURIComponent(name)}`);
+                          }}
                         />
                       </Stack>
                     );
