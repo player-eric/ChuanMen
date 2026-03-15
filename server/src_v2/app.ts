@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
@@ -27,10 +28,13 @@ export async function createApp() {
   });
   await app.register(prismaPlugin);
 
-  app.register(fastifyStatic, {
-    root: path.resolve(__dirname, '../public/system-test'),
-    prefix: '/system-test/',
-  });
+  const staticRoot = path.resolve(__dirname, '../public/system-test');
+  if (fs.existsSync(staticRoot)) {
+    app.register(fastifyStatic, {
+      root: staticRoot,
+      prefix: '/system-test/',
+    });
+  }
 
   // Parse image/* content types as raw Buffer (for direct file upload, up to 10MB)
   // Parse image content types as raw Buffer for direct file upload

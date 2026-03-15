@@ -394,6 +394,26 @@ Key models (45+ total in `schema.prisma`):
 7. **Co-Host auto-pairing** — `ExperimentPairing` model exists but no routes/UI. P3-D email rule describes auto-pairing but not implemented.
 8. **Mock data cleanup** — `src/mock/data.ts` and `src/mock/api.ts` are dead code (not imported anywhere). Can be safely removed.
 
+## Git Remotes & Branches
+
+This repo maintains two remotes for two versions of the project:
+
+| Remote | URL | Branch | Purpose |
+|--------|-----|--------|---------|
+| `origin` | `https://github.com/player-eric/ChuanMen.git` | `main` | Original repo |
+| `cyentist` | `https://github.com/CYentist/chuanmener.git` | `cyentist-main` → pushes as `main` | New repo (backend env differences) |
+
+### Workflow
+```bash
+git checkout main            # Work on player-eric/ChuanMen
+git push origin main
+
+git checkout cyentist-main   # Work on CYentist/chuanmener
+git push cyentist cyentist-main:main
+```
+
+Frontend code is shared; `cyentist-main` branch diverges only in backend env/config.
+
 ## Deployment
 
 ### Render (Primary)
