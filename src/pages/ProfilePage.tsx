@@ -97,7 +97,7 @@ export default function ProfilePage() {
         ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'America/New_York' })
         : e.date ?? '',
       scene: e.tags?.[0] ?? e.scene ?? '',
-      role: e.hostId === user?.id ? 'Host' : e.role,
+      role: e.hostId === user?.id ? 'Host' : (e.coHosts ?? []).some((ch: any) => ch.userId === user?.id) ? 'Co-Host' : e.role,
     })),
     myEvents: (raw.pastEvents ?? raw.myEvents ?? []).map((e: any) => ({
       id: e.id,
@@ -106,7 +106,7 @@ export default function ProfilePage() {
         ? new Date(e.startsAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'America/New_York' })
         : e.date ?? '',
       scene: e.tags?.[0] ?? e.scene ?? '',
-      role: e.hostId === user?.id ? 'Host' : e.role,
+      role: e.hostId === user?.id ? 'Host' : (e.coHosts ?? []).some((ch: any) => ch.userId === user?.id) ? 'Co-Host' : e.role,
     })),
     recentCards: (raw.postcardsReceived ?? raw.recentCards ?? []).map((c: any) => ({
       ...c,
@@ -432,6 +432,7 @@ export default function ProfilePage() {
                               <Typography variant="caption" color="text.secondary">{event.date}</Typography>
                             </Box>
                             {event.role === 'Host' && <Chip size="small" color="warning" label="🏠 Host" />}
+                            {event.role === 'Co-Host' && <Chip size="small" color="secondary" label="🤝 Co-Host" />}
                           </Stack>
                         </CardContent>
                       </CardActionArea>
@@ -556,6 +557,7 @@ export default function ProfilePage() {
                               <Typography variant="caption" color="text.secondary">{event.date}</Typography>
                             </Box>
                             {event.role === 'Host' && <Chip size="small" color="warning" label="🏠 Host" />}
+                            {event.role === 'Co-Host' && <Chip size="small" color="secondary" label="🤝 Co-Host" />}
                           </Stack>
                         </CardContent>
                       </CardActionArea>

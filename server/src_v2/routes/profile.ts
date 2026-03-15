@@ -129,6 +129,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           ...(viewerId && !isOwnProfile ? { NOT: { visibilityExclusions: { some: { userId: viewerId } } } } : {}),
           OR: [
             { hostId: targetId },
+            { coHosts: { some: { userId: targetId } } },
             { signups: { some: { userId: targetId, status: 'accepted' } } },
           ],
         },
@@ -136,6 +137,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         take: 10,
         include: {
           host: { select: { id: true, name: true } },
+          coHosts: { select: { userId: true } },
         },
       }),
 
@@ -145,6 +147,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           ...(viewerId && !isOwnProfile ? { NOT: { visibilityExclusions: { some: { userId: viewerId } } } } : {}),
           OR: [
             { hostId: targetId, status: 'completed' },
+            { coHosts: { some: { userId: targetId } }, status: 'completed' },
             { signups: { some: { userId: targetId, status: 'accepted' } }, status: 'completed' },
           ],
         },
@@ -158,6 +161,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           tags: true,
           status: true,
           host: { select: { id: true, name: true } },
+          coHosts: { select: { userId: true } },
           recapPhotoUrls: true,
         },
       }),
