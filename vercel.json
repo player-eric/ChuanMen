@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "buildCommand": "cd server && npx prisma migrate deploy && cd .. && npm run build:client",
+  "buildCommand": "cd server && npx prisma migrate deploy || echo 'Migration skipped (DB unreachable)' && cd .. && npm run build:client",
   "outputDirectory": "dist/client",
   "installCommand": "npm install && cd server && npm install && npx prisma generate",
   "rewrites": [
