@@ -22,6 +22,7 @@ import {
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import EditIcon from '@mui/icons-material/Edit';
 import { useAuth } from '@/auth/AuthContext';
 import { useColors } from '@/hooks/useColors';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
@@ -48,6 +49,10 @@ export default function RecommendationDetailPage() {
   const [editingLink, setEditingLink] = useState(false);
   const [linkDraft, setLinkDraft] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
   const [voted, setVoted] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
   const [voters, setVoters] = useState<{ id: string; name: string }[]>([]);
@@ -201,9 +206,14 @@ export default function RecommendationDetailPage() {
                   )}
                 </Box>
                 {canModify && (
-                  <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => setConfirmDelete(true)}>
-                    <DeleteOutlineIcon />
-                  </IconButton>
+                  <Stack direction="row" spacing={0.5}>
+                    <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => { setEditTitle(title); setEditDesc(description); setEditing(true); }}>
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => setConfirmDelete(true)}>
+                      <DeleteOutlineIcon />
+                    </IconButton>
+                  </Stack>
                 )}
               </Stack>
             </Box>
@@ -302,6 +312,27 @@ export default function RecommendationDetailPage() {
 
         {/* 5. Comments */}
         {recommendationId && <CommentSection entityType="recommendation" entityId={recommendationId} />}
+
+        <Dialog open={editing} onClose={() => setEditing(false)} fullWidth maxWidth="sm">
+          <DialogTitle>编辑推荐</DialogTitle>
+          <DialogContent>
+            <TextField label="标题" fullWidth value={editTitle} onChange={(e) => setEditTitle(e.target.value)} sx={{ mt: 1, mb: 2 }} />
+            <TextField label="简介" fullWidth multiline minRows={4} value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditing(false)}>取消</Button>
+            <Button variant="contained" disabled={editSaving || !editTitle.trim()} onClick={async () => {
+              if (!user?.id || !recommendationId) return;
+              setEditSaving(true);
+              try {
+                await updateRecommendation(recommendationId, user.id, { title: editTitle, description: editDesc });
+                setItem((prev) => prev ? { ...prev, title: editTitle, description: editDesc } : prev);
+                setEditing(false);
+              } catch { /* ignore */ }
+              setEditSaving(false);
+            }}>{editSaving ? '保存中...' : '保存'}</Button>
+          </DialogActions>
+        </Dialog>
 
         <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
           <DialogTitle>确认删除</DialogTitle>
