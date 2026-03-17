@@ -191,8 +191,9 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
     // Mutual computation (when viewing someone else's profile)
     let mutual = undefined;
     if (viewerId && !isOwnProfile) {
-      const [viewerSignups, viewerVotes, viewerRecVotes, targetRecVotes, mutualCardsSent, mutualCardsReceived] = await Promise.all([
+      const [viewerSignups, viewerHosted, viewerVotes, viewerRecVotes, targetRecVotes, mutualCardsSent, mutualCardsReceived] = await Promise.all([
         prisma.eventSignup.findMany({ where: { userId: viewerId, status: 'accepted' }, select: { eventId: true } }),
+        prisma.event.findMany({ where: { hostId: viewerId }, select: { id: true } }),
         prisma.movieVote.findMany({ where: { userId: viewerId }, select: { movieId: true } }),
         prisma.recommendationVote.findMany({ where: { userId: viewerId }, select: { recommendationId: true } }),
         prisma.recommendationVote.findMany({
@@ -203,7 +204,10 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         prisma.postcard.count({ where: { fromId: targetId, toId: viewerId } }),
       ]);
 
-      const viewerEventIds = new Set(viewerSignups.map((s) => s.eventId));
+      const viewerEventIds = new Set([
+        ...viewerSignups.map((s) => s.eventId),
+        ...viewerHosted.map((e) => e.id),
+      ]);
       const viewerMovieIds = new Set(viewerVotes.map((v) => v.movieId));
 
       // Find mutual events from pastEvents (already fetched)

@@ -80,6 +80,37 @@ export class UserRepository {
     });
   }
 
+  /** Get event signups for a set of users, filtered to specific event IDs */
+  getEventSignupsForUsers(userIds: string[], eventIds: string[]) {
+    return this.prisma.eventSignup.findMany({
+      where: {
+        userId: { in: userIds },
+        eventId: { in: eventIds },
+        status: 'accepted',
+      },
+      select: { userId: true, eventId: true },
+    });
+  }
+
+  /** Get hosted event IDs for a single user */
+  getHostedEventIds(userId: string) {
+    return this.prisma.event.findMany({
+      where: { hostId: userId },
+      select: { id: true },
+    }).then((events) => events.map((e) => e.id));
+  }
+
+  /** Get hosted events for a set of users, filtered to specific event IDs */
+  getHostedEventsForUsers(userIds: string[], eventIds: string[]) {
+    return this.prisma.event.findMany({
+      where: {
+        hostId: { in: userIds },
+        id: { in: eventIds },
+      },
+      select: { id: true, hostId: true },
+    });
+  }
+
   getByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
