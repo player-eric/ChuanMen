@@ -230,7 +230,7 @@ export class UserService {
 
     return {
       ...profile,
-      hostCount: _count.hostedEvents,
+      hostCount: _count.hostedEvents + (_count.coHostedEvents ?? 0),
       activities: {
         events: allEvents,
         movies: allMovies,

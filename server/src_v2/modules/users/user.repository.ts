@@ -9,6 +9,7 @@ export class UserRepository {
       include: {
         preferences: true,
         socialTitles: true,
+        _count: { select: { hostedEvents: true, coHostedEvents: true } },
       },
     });
   }
@@ -59,6 +60,7 @@ export class UserRepository {
             postcardsSent: true,
             postcardsReceived: true,
             hostedEvents: true,
+            coHostedEvents: true,
           },
         },
       },
