@@ -2,7 +2,7 @@
   "framework": "vite",
   "buildCommand": "npm run build:client",
   "outputDirectory": "dist/client",
-  "installCommand": "npm install && cd server && npm install && npx prisma generate",
+  "installCommand": "npm install && cd server && npm install && npx prisma generate && npx prisma migrate deploy",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
