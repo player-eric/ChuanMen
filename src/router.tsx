@@ -940,7 +940,7 @@ function isBirthdayWeek(birthday: string): boolean {
 
 function mapApiMember(m: any, badgeTiers?: HostBadgeTier[]) {
   const raw = m.mutual ?? {};
-  const hostCount = m.host ?? m.hostCount ?? 0;
+  const hostCount = ((m._count?.hostedEvents ?? 0) + (m._count?.coHostedEvents ?? 0)) || (m.host ?? m.hostCount ?? 0);
   // Birthday badge overrides host milestone badge during birthday week
   const birthdayStr = m.birthday ? (typeof m.birthday === 'string' ? m.birthday : new Date(m.birthday).toISOString()) : '';
   const hasBirthdayBadge = birthdayStr && !m.hideBirthday && isBirthdayWeek(birthdayStr);

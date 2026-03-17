@@ -121,6 +121,7 @@ export default function MemberDetailPage() {
   const [eventFilter, setEventFilter] = useState<'all' | 'host'>('all');
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
 
   const rawCover = member.coverImageUrl || photos.cozy;
   const isGradient = rawCover.startsWith('linear-gradient') || rawCover.startsWith('radial-gradient');
@@ -159,10 +160,10 @@ export default function MemberDetailPage() {
             alignItems="flex-end"
             sx={{ position: 'absolute', bottom: 12, left: 16, right: 16 }}
           >
-            <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+            <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0, cursor: member.avatar ? 'pointer' : 'default' }} onClick={() => member.avatar && setAvatarOpen(true)}>
               <Avatar
                 src={member.avatar}
-                sx={{ width: 64, height: 64, border: '3px solid rgba(255,255,255,0.8)', fontSize: 24 }}
+                sx={{ width: 72, height: 72, border: '3px solid rgba(255,255,255,0.8)', fontSize: 28 }}
               >
                 {member.name?.[0]}
               </Avatar>
@@ -623,25 +624,40 @@ export default function MemberDetailPage() {
                     <RichTextViewer html={member.bio} />
                   </>
                 )}
-                {member.selfAsFriend && (
+                {/* Only show separate Q&A sections if bio doesn't already contain the Q&A text */}
+                {!(() => {
+                  if (!member.bio) return false;
+                  const plain = member.bio.replace(/<[^>]*>/g, '');
+                  // Bio already embeds Q&A if it contains bold markers or the selfAsFriend answer text
+                  if (plain.includes('**') || member.bio.includes('<strong>')) return true;
+                  if (member.selfAsFriend) {
+                    const ans = member.selfAsFriend.replace(/<[^>]*>/g, '').trim().slice(0, 15);
+                    if (ans && plain.includes(ans)) return true;
+                  }
+                  return false;
+                })() && (
                   <>
-                    <Divider sx={{ my: 1.5 }} />
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>作为朋友</Typography>
-                    <RichTextViewer html={member.selfAsFriend} />
-                  </>
-                )}
-                {member.idealFriend && (
-                  <>
-                    <Divider sx={{ my: 1.5 }} />
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>理想中的朋友</Typography>
-                    <RichTextViewer html={member.idealFriend} />
-                  </>
-                )}
-                {member.participationPlan && (
-                  <>
-                    <Divider sx={{ my: 1.5 }} />
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>参与计划</Typography>
-                    <RichTextViewer html={member.participationPlan} />
+                    {member.selfAsFriend && (
+                      <>
+                        <Divider sx={{ my: 1.5 }} />
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>作为朋友</Typography>
+                        <RichTextViewer html={member.selfAsFriend} />
+                      </>
+                    )}
+                    {member.idealFriend && (
+                      <>
+                        <Divider sx={{ my: 1.5 }} />
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>理想中的朋友</Typography>
+                        <RichTextViewer html={member.idealFriend} />
+                      </>
+                    )}
+                    {member.participationPlan && (
+                      <>
+                        <Divider sx={{ my: 1.5 }} />
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>参与计划</Typography>
+                        <RichTextViewer html={member.participationPlan} />
+                      </>
+                    )}
                   </>
                 )}
               </CardContent>
@@ -825,6 +841,13 @@ export default function MemberDetailPage() {
             </Box>
           );
         })()}
+      </Dialog>
+      {/* ══════ Avatar Lightbox ══════ */}
+      <Dialog open={avatarOpen} onClose={() => setAvatarOpen(false)} maxWidth="sm" PaperProps={{ sx: { bgcolor: 'transparent', boxShadow: 'none', overflow: 'visible' } }}>
+        <Box sx={{ position: 'relative' }}>
+          <IconButton onClick={() => setAvatarOpen(false)} sx={{ position: 'absolute', top: -40, right: 0, color: '#fff' }}><CloseIcon /></IconButton>
+          <Box component="img" src={member.avatar} sx={{ width: '100%', maxWidth: 400, borderRadius: 2 }} />
+        </Box>
       </Dialog>
     </Stack>
   );
