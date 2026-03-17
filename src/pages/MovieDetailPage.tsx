@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
 import {
   Avatar,
@@ -23,12 +23,15 @@ import {
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import EditIcon from '@mui/icons-material/Edit';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { toggleMovieVote, updateMovie, deleteMovie } from '@/lib/domainApi';
-import { RichTextViewer } from '@/components/RichTextEditor';
+import { RichTextViewer, type RichTextEditorHandle } from '@/components/RichTextEditor';
+
+const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 import { firstNonEmoji } from '@/components/Atoms';
 import CommentSection from '@/components/CommentSection';
 
@@ -57,6 +60,13 @@ export default function MovieDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [posterState, setPosterState] = useState<string>(raw?.poster ?? '');
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editSynopsis, setEditSynopsis] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [movieTitle, setMovieTitle] = useState<string>(raw?.title ?? '');
+  const [movieSynopsis, setMovieSynopsis] = useState<string>(raw?.synopsis ?? '');
+  const synopsisEditorRef = useRef<RichTextEditorHandle>(null);
 
   const { pickFile: pickPoster, upload: uploadPoster, isUploading: posterUploading } = useMediaUpload({
     category: 'cover',
@@ -238,7 +248,7 @@ export default function MovieDetailPage() {
                   lineHeight: 1.2,
                 }}
               >
-                {title}
+                {movieTitle}
               </Typography>
               <Typography
                 variant="body1"
@@ -260,9 +270,14 @@ export default function MovieDetailPage() {
               )}
               </Box>
               {canEditLink && (
-                <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => setConfirmDelete(true)}>
-                  <DeleteOutlineIcon />
-                </IconButton>
+                <Stack direction="row" spacing={0.5}>
+                  <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => { setEditTitle(movieTitle); setEditSynopsis(movieSynopsis); setEditing(true); }}>
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => setConfirmDelete(true)}>
+                    <DeleteOutlineIcon />
+                  </IconButton>
+                </Stack>
               )}
               </Stack>
             </Box>
@@ -304,11 +319,11 @@ export default function MovieDetailPage() {
         </Card>
 
         {/* 2. Synopsis */}
-        {movie.synopsis && (
+        {movieSynopsis && (
           <Card>
             <CardContent>
               <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>简介</Typography>
-              <RichTextViewer html={movie.synopsis} />
+              <RichTextViewer html={movieSynopsis} />
             </CardContent>
           </Card>
         )}
@@ -469,6 +484,32 @@ export default function MovieDetailPage() {
 
         {/* 8. Comments */}
         {raw?.id && <CommentSection entityType="movie" entityId={String(raw.id)} />}
+
+        <Dialog open={editing} onClose={() => setEditing(false)} fullWidth maxWidth="md" fullScreen={window.innerWidth < 600}>
+          <DialogTitle>编辑电影</DialogTitle>
+          <DialogContent>
+            <TextField label="标题" fullWidth value={editTitle} onChange={(e) => setEditTitle(e.target.value)} sx={{ mt: 1, mb: 2 }} />
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>简介</Typography>
+            <Suspense fallback={<Typography color="text.secondary">加载编辑器...</Typography>}>
+              <RichTextEditorLazy content={editSynopsis} onChange={setEditSynopsis} editorRef={synopsisEditorRef} />
+            </Suspense>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditing(false)}>取消</Button>
+            <Button variant="contained" disabled={editSaving || !editTitle.trim()} onClick={async () => {
+              if (!movie.id) return;
+              setEditSaving(true);
+              const html = synopsisEditorRef.current?.getHTML() ?? editSynopsis;
+              try {
+                await updateMovie(String(movie.id), { title: editTitle, synopsis: html });
+                setMovieTitle(editTitle);
+                setMovieSynopsis(html);
+                setEditing(false);
+              } catch { /* ignore */ }
+              setEditSaving(false);
+            }}>{editSaving ? '保存中...' : '保存'}</Button>
+          </DialogActions>
+        </Dialog>
 
         <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
           <DialogTitle>确认删除</DialogTitle>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
   Alert,
@@ -27,7 +27,9 @@ import { useAuth } from '@/auth/AuthContext';
 import { useColors } from '@/hooks/useColors';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { getRecommendationById, deleteRecommendation, updateRecommendation, toggleRecommendationVote, type RecommendationCategory } from '@/lib/domainApi';
-import { RichTextViewer } from '@/components/RichTextEditor';
+import { RichTextViewer, type RichTextEditorHandle } from '@/components/RichTextEditor';
+
+const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 import { firstNonEmoji } from '@/components/Atoms';
 import CommentSection from '@/components/CommentSection';
 
@@ -53,6 +55,7 @@ export default function RecommendationDetailPage() {
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const descEditorRef = useRef<RichTextEditorHandle>(null);
   const [voted, setVoted] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
   const [voters, setVoters] = useState<{ id: string; name: string }[]>([]);
@@ -313,20 +316,24 @@ export default function RecommendationDetailPage() {
         {/* 5. Comments */}
         {recommendationId && <CommentSection entityType="recommendation" entityId={recommendationId} />}
 
-        <Dialog open={editing} onClose={() => setEditing(false)} fullWidth maxWidth="sm">
+        <Dialog open={editing} onClose={() => setEditing(false)} fullWidth maxWidth="md" fullScreen={window.innerWidth < 600}>
           <DialogTitle>编辑推荐</DialogTitle>
           <DialogContent>
             <TextField label="标题" fullWidth value={editTitle} onChange={(e) => setEditTitle(e.target.value)} sx={{ mt: 1, mb: 2 }} />
-            <TextField label="简介" fullWidth multiline minRows={4} value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>简介</Typography>
+            <Suspense fallback={<Typography color="text.secondary">加载编辑器...</Typography>}>
+              <RichTextEditorLazy content={editDesc} onChange={setEditDesc} editorRef={descEditorRef} />
+            </Suspense>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setEditing(false)}>取消</Button>
             <Button variant="contained" disabled={editSaving || !editTitle.trim()} onClick={async () => {
               if (!user?.id || !recommendationId) return;
               setEditSaving(true);
+              const html = descEditorRef.current?.getHTML() ?? editDesc;
               try {
-                await updateRecommendation(recommendationId, user.id, { title: editTitle, description: editDesc });
-                setItem((prev) => prev ? { ...prev, title: editTitle, description: editDesc } : prev);
+                await updateRecommendation(recommendationId, user.id, { title: editTitle, description: html });
+                setItem((prev) => prev ? { ...prev, title: editTitle, description: html } : prev);
                 setEditing(false);
               } catch { /* ignore */ }
               setEditSaving(false);
