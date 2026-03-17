@@ -1838,6 +1838,12 @@ export async function updateHostCandidate(userId: string, hostCandidate: boolean
   });
 }
 
+/* ── Notifications ── */
+
+export async function markNotificationsRead() {
+  return requestJson<{ ok: boolean }>('/api/feed/mark-read', { method: 'POST' });
+}
+
 /* ── Activity Signals ── */
 
 export async function fetchMySignals() {

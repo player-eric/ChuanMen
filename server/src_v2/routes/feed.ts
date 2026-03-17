@@ -245,11 +245,23 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
 
     // ── Personal notifications (14 days, only when userId is present) ──
     const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000);
+    // If user has notifReadAt, use it as a floor so older notifs are excluded
+    let notifCutoff = fourteenDaysAgo;
+    let notifReadAtISO: string | null = null;
+    if (userId) {
+      const pref = await prisma.userPreference.findUnique({ where: { userId }, select: { notifReadAt: true } });
+      if (pref?.notifReadAt) {
+        notifReadAtISO = pref.notifReadAt.toISOString();
+        if (pref.notifReadAt > fourteenDaysAgo) {
+          notifCutoff = pref.notifReadAt;
+        }
+      }
+    }
     const notificationQueries = userId
       ? await Promise.all([
           // 1. 被@提及
           prisma.comment.findMany({
-            where: { mentionedUserIds: { has: userId }, createdAt: { gte: fourteenDaysAgo } },
+            where: { mentionedUserIds: { has: userId }, createdAt: { gte: notifCutoff } },
             select: {
               id: true, entityType: true, entityId: true, createdAt: true,
               author: { select: { id: true, name: true } },
@@ -259,7 +271,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           }),
           // 2. 被邀请活动
           prisma.eventSignup.findMany({
-            where: { userId, status: 'invited', createdAt: { gte: fourteenDaysAgo } },
+            where: { userId, status: 'invited', createdAt: { gte: notifCutoff } },
             select: {
               createdAt: true, invitedById: true,
               event: { select: { id: true, title: true } },
@@ -269,7 +281,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           }),
           // 3. 被安排分工 (someone else assigned me)
           prisma.eventTask.findMany({
-            where: { claimedById: userId, updatedAt: { gte: fourteenDaysAgo } },
+            where: { claimedById: userId, updatedAt: { gte: notifCutoff } },
             select: {
               role: true, updatedAt: true,
               event: { select: { id: true, title: true, hostId: true } },
@@ -279,7 +291,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           }),
           // 4. 收到感谢卡
           prisma.postcard.findMany({
-            where: { toId: userId, createdAt: { gte: fourteenDaysAgo } },
+            where: { toId: userId, createdAt: { gte: notifCutoff } },
             select: {
               createdAt: true,
               from: { select: { id: true, name: true } },
@@ -292,7 +304,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             where: {
               userId,
               status: { in: ['offered', 'accepted'] },
-              offeredAt: { gte: fourteenDaysAgo },
+              offeredAt: { gte: notifCutoff },
             },
             select: {
               status: true, offeredAt: true, respondedAt: true,
@@ -305,7 +317,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           prisma.eventSignup.findMany({
             where: {
               status: 'pending',
-              createdAt: { gte: fourteenDaysAgo },
+              createdAt: { gte: notifCutoff },
               event: { hostId: userId, signupMode: 'application' },
             },
             select: {
@@ -321,7 +333,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             where: {
               userId,
               status: 'accepted',
-              respondedAt: { gte: fourteenDaysAgo },
+              respondedAt: { gte: notifCutoff },
               event: { signupMode: 'application' },
             },
             select: {
@@ -339,7 +351,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
                 select: {
                   id: true, title: true,
                   events: {
-                    where: { createdAt: { gte: fourteenDaysAgo } },
+                    where: { createdAt: { gte: notifCutoff } },
                     select: { id: true, title: true, createdAt: true },
                     take: 1,
                   },
@@ -365,7 +377,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
               where: {
                 OR: orConditions,
                 authorId: { not: userId },
-                createdAt: { gte: fourteenDaysAgo },
+                createdAt: { gte: notifCutoff },
                 // Exclude comments where user is already @mentioned (they get 'mention' notification)
                 NOT: { mentionedUserIds: { has: userId } },
               },
@@ -709,6 +721,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
 
     return {
       events: enrichedEvents.slice(0, 20),
+      notifReadAt: notifReadAtISO,
       announcements,
       recommendations,
       members,
@@ -724,5 +737,19 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       dailyQuestion,
       demandSignal,
     };
+  });
+
+  // ── Mark all notifications as read ──
+  app.post('/mark-read', async (request, reply) => {
+    const userId = (request.headers as Record<string, string>)['x-user-id'];
+    if (!userId) return reply.status(401).send({ message: 'Missing x-user-id' });
+
+    await app.prisma.userPreference.upsert({
+      where: { userId },
+      update: { notifReadAt: new Date() },
+      create: { userId, notifReadAt: new Date() },
+    });
+
+    return { ok: true };
   });
 };

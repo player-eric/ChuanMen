@@ -27,7 +27,7 @@ import {
 import Masonry from '@mui/lab/Masonry';
 import { useAuth } from '@/auth/AuthContext';
 import type { FeedPageData, FeedItem, LotteryDraw, PersonalNotification, DailyQuestionData, DemandSignal } from '@/types';
-import { sendPostcard, acceptLottery, skipLottery, updateHostCandidate } from '@/lib/domainApi';
+import { sendPostcard, acceptLottery, skipLottery, updateHostCandidate, markNotificationsRead } from '@/lib/domainApi';
 import DailyQuestionCard from '@/components/DailyQuestionCard';
 import ActivitySignalCard from '@/components/ActivitySignalCard';
 import { useColors } from '@/hooks/useColors';
@@ -421,8 +421,33 @@ function NotificationBar({ notifications }: { notifications: PersonalNotificatio
   const visible = notifications.filter((n) => !dismissed.has((n as any)._key ?? `${n.action}-${n.navTarget}-${n.time}`));
   if (visible.length === 0) return null;
 
+  const handleMarkAllRead = async () => {
+    try {
+      await markNotificationsRead();
+      // Dismiss all visible notifications locally
+      setDismissed((prev) => {
+        const next = new Set(prev);
+        for (const n of visible) next.add((n as any)._key ?? `${n.action}-${n.navTarget}-${n.time}`);
+        localStorage.setItem('chuanmen.feed.notifDismissed', JSON.stringify([...next]));
+        return next;
+      });
+    } catch { /* ignore */ }
+  };
+
   return (
     <Stack spacing={0.5} sx={{ mb: 2 }}>
+      {visible.length > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.25 }}>
+          <Typography
+            component="span"
+            variant="caption"
+            onClick={handleMarkAllRead}
+            sx={{ color: c.text3, cursor: 'pointer', '&:hover': { color: c.text } }}
+          >
+            全部已读
+          </Typography>
+        </Box>
+      )}
       {visible.map((n) => {
         const key = (n as any)._key ?? `${n.action}-${n.navTarget}-${n.time}`;
         const cfg = notifConfig[n.action];

@@ -277,6 +277,7 @@ model UserPreference {
   notifyCards     Boolean    @default(true)
   notifyOps       Boolean    @default(true)
   notifyAnnounce  Boolean    @default(true)
+  notifReadAt     DateTime?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
