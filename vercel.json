@@ -12,5 +12,11 @@
       "maxDuration": 30,
       "includeFiles": "server/node_modules/.prisma/**"
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/agent/tick",
+      "schedule": "0 12 * * *"
+    }
+  ]
 }
