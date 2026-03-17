@@ -407,7 +407,9 @@ model Recommendation {
   description String                 @default("")
   authorId    String
   sourceUrl   String                 @default("")
-  coverUrl    String                 @default("")
+  coverUrl     String                 @default("")
+  eventDate    DateTime?
+  eventEndDate DateTime?
   voteCount   Int                    @default(0)
   status      RecommendationStatus   @default(candidate)
   createdAt   DateTime               @default(now())

@@ -727,6 +727,8 @@ function mapRecommendation(r: any) {
     authorId: r.author?.id ?? r.authorId ?? '',
     coverUrl: r.coverUrl || undefined,
     sourceUrl: r.sourceUrl || undefined,
+    eventDate: r.eventDate || undefined,
+    eventEndDate: r.eventEndDate || undefined,
     voteCount: r._count?.votes ?? r.voteCount ?? 0,
     voterIds: (r.votes ?? []).map((v: any) => v.userId ?? v.user?.id).filter(Boolean),
     category: r.category ?? '',

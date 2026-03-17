@@ -227,6 +227,8 @@ export async function createRecommendation(payload: {
   description: string;
   sourceUrl?: string;
   coverUrl?: string;
+  eventDate?: string;
+  eventEndDate?: string;
   tags?: string[];
   authorId: string;
 }) {
@@ -1043,7 +1045,7 @@ export async function deleteRecommendation(id: string, userId: string) {
   });
 }
 
-export async function updateRecommendation(id: string, userId: string, data: { title?: string; description?: string; sourceUrl?: string; coverUrl?: string }) {
+export async function updateRecommendation(id: string, userId: string, data: { title?: string; description?: string; sourceUrl?: string; coverUrl?: string; eventDate?: string | null; eventEndDate?: string | null }) {
   return requestJson<EntityMap>(`/api/recommendations/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', 'x-user-id': userId },

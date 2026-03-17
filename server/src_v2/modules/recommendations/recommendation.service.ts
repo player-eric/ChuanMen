@@ -13,6 +13,8 @@ const createSchema = z.object({
   description: z.string().optional(),
   sourceUrl: z.string().optional(),
   coverUrl: z.string().optional(),
+  eventDate: z.string().optional().transform(v => v ? new Date(v) : undefined),
+  eventEndDate: z.string().optional().transform(v => v ? new Date(v) : undefined),
   status: z.enum(['candidate', 'featured', 'archived']).optional(),
   tags: z.array(z.string().min(1)).optional(),
 });
@@ -52,6 +54,8 @@ export class RecommendationService {
       description: z.string().optional(),
       sourceUrl: z.string().optional(),
       coverUrl: z.string().optional(),
+      eventDate: z.string().nullable().optional().transform(v => v === null ? null : v ? new Date(v) : undefined),
+      eventEndDate: z.string().nullable().optional().transform(v => v === null ? null : v ? new Date(v) : undefined),
     }).parse(input);
     return this.repository.update(id, data);
   }

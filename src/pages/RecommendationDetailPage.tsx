@@ -55,6 +55,8 @@ export default function RecommendationDetailPage() {
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const [editEventDate, setEditEventDate] = useState('');
+  const [editEventEndDate, setEditEventEndDate] = useState('');
   const descEditorRef = useRef<RichTextEditorHandle>(null);
   const [voted, setVoted] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
@@ -154,6 +156,9 @@ export default function RecommendationDetailPage() {
   const description = String(item.description ?? '');
   const authorName = (item.author as any)?.name ?? '';
   const tags: string[] = ((item.tags as any[]) ?? []).map((t: any) => t.value ?? t).filter(Boolean);
+  const eventDate = item.eventDate ? new Date(item.eventDate as string) : null;
+  const eventEndDate = item.eventEndDate ? new Date(item.eventEndDate as string) : null;
+  const isExternalEvent = currentCategory === 'external_event';
 
   // Hero background
   const heroBg = coverUrl
@@ -202,15 +207,28 @@ export default function RecommendationDetailPage() {
                   <Typography variant="h4" fontWeight={800} sx={{ color: '#fff', textShadow: '0 2px 12px rgba(0,0,0,0.6)', lineHeight: 1.2 }}>
                     {title}
                   </Typography>
-                  {tags.length > 0 && (
+                  {(tags.length > 0 || eventDate) && (
                     <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mt: 0.5, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                      {eventDate && (
+                        <>
+                          📅 {eventDate.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}
+                          {eventEndDate && ` — ${eventEndDate.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}`}
+                          {tags.length > 0 && ' · '}
+                        </>
+                      )}
                       {tags.join(' · ')}
                     </Typography>
                   )}
                 </Box>
                 {canModify && (
                   <Stack direction="row" spacing={0.5}>
-                    <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => { setEditTitle(title); setEditDesc(description); setEditing(true); }}>
+                    <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => {
+                      setEditTitle(title);
+                      setEditDesc(description);
+                      setEditEventDate(eventDate ? eventDate.toISOString().slice(0, 10) : '');
+                      setEditEventEndDate(eventEndDate ? eventEndDate.toISOString().slice(0, 10) : '');
+                      setEditing(true);
+                    }}>
                       <EditIcon />
                     </IconButton>
                     <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => setConfirmDelete(true)}>
@@ -320,6 +338,26 @@ export default function RecommendationDetailPage() {
           <DialogTitle>编辑推荐</DialogTitle>
           <DialogContent>
             <TextField label="标题" fullWidth value={editTitle} onChange={(e) => setEditTitle(e.target.value)} sx={{ mt: 1, mb: 2 }} />
+            {isExternalEvent && (
+              <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+                <TextField
+                  label="日期"
+                  type="date"
+                  value={editEventDate}
+                  onChange={(e) => setEditEventDate(e.target.value)}
+                  fullWidth
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+                <TextField
+                  label="结束日期（可选）"
+                  type="date"
+                  value={editEventEndDate}
+                  onChange={(e) => setEditEventEndDate(e.target.value)}
+                  fullWidth
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+              </Stack>
+            )}
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>简介</Typography>
             <Suspense fallback={<Typography color="text.secondary">加载编辑器...</Typography>}>
               <RichTextEditorLazy content={editDesc} onChange={setEditDesc} editorRef={descEditorRef} />
@@ -331,9 +369,14 @@ export default function RecommendationDetailPage() {
               if (!user?.id || !recommendationId) return;
               setEditSaving(true);
               const html = descEditorRef.current?.getHTML() ?? editDesc;
+              const patch: Parameters<typeof updateRecommendation>[2] = { title: editTitle, description: html };
+              if (isExternalEvent) {
+                patch.eventDate = editEventDate || null;
+                patch.eventEndDate = editEventEndDate || null;
+              }
               try {
-                await updateRecommendation(recommendationId, user.id, { title: editTitle, description: html });
-                setItem((prev) => prev ? { ...prev, title: editTitle, description: html } : prev);
+                await updateRecommendation(recommendationId, user.id, patch);
+                setItem((prev) => prev ? { ...prev, title: editTitle, description: html, eventDate: editEventDate || null, eventEndDate: editEventEndDate || null } : prev);
                 setEditing(false);
               } catch { /* ignore */ }
               setEditSaving(false);

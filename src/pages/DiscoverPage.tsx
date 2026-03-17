@@ -937,6 +937,19 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
                         )}
                         <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                           <Typography fontWeight={700} sx={{ fontSize: 15 }}>{r.title}</Typography>
+                          {category === 'external_event' && r.eventDate && (() => {
+                            const d = new Date(r.eventDate);
+                            const end = r.eventEndDate ? new Date(r.eventEndDate) : null;
+                            const now = new Date();
+                            const isPast = end ? end < now : d < now;
+                            return (
+                              <Typography variant="body2" sx={{ mt: 0.25, color: isPast ? 'text.disabled' : 'warning.main', fontSize: 12 }}>
+                                📅 {d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
+                                {end && ` — ${end.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}`}
+                                {isPast && ' · 已结束'}
+                              </Typography>
+                            );
+                          })()}
                           {r.description && (
                             <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description}</Typography>
                           )}

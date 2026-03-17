@@ -471,6 +471,8 @@ export interface RecommendationItem {
   authorId: string;
   coverUrl?: string;
   sourceUrl?: string;
+  eventDate?: string;
+  eventEndDate?: string;
   voteCount: number;
   voterIds: string[];
   category: string;

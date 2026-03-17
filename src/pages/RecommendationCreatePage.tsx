@@ -41,6 +41,8 @@ export default function RecommendationCreatePage() {
   const [sourceUrl, setSourceUrl] = useState('');
   const [tagsText, setTagsText] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [eventEndDate, setEventEndDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -55,6 +57,7 @@ export default function RecommendationCreatePage() {
   }
 
   const isBook = currentCategory === 'book';
+  const isExternalEvent = currentCategory === 'external_event';
 
   const onSubmit = async () => {
     if (!user?.id) {
@@ -88,6 +91,8 @@ export default function RecommendationCreatePage() {
           description: description.trim(),
           sourceUrl: sourceUrl.trim(),
           coverUrl: coverUrl || undefined,
+          eventDate: eventDate || undefined,
+          eventEndDate: eventEndDate || undefined,
           tags,
           authorId: user.id,
         });
@@ -111,10 +116,32 @@ export default function RecommendationCreatePage() {
           {error && <Alert severity="error">{error}</Alert>}
 
           <TextField label="标题" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth placeholder={isBook ? '书名' : undefined} />
-          <TextField label="描述" value={description} onChange={(e) => setDescription(e.target.value)} multiline minRows={4} fullWidth placeholder={isBook ? '作者、推荐理由…' : undefined} />
+          <TextField label="描述" value={description} onChange={(e) => setDescription(e.target.value)} multiline minRows={4} fullWidth placeholder={isBook ? '作者、推荐理由…' : isExternalEvent ? '地点、票价、推荐理由…' : undefined} />
+
+          {/* Date fields for external_event */}
+          {isExternalEvent && (
+            <Stack direction="row" spacing={2}>
+              <TextField
+                label="日期"
+                type="date"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+                fullWidth
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+              <TextField
+                label="结束日期（可选）"
+                type="date"
+                value={eventEndDate}
+                onChange={(e) => setEventEndDate(e.target.value)}
+                fullWidth
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Stack>
+          )}
 
           {/* Link field */}
-          <TextField label={isBook ? '豆瓣/商品链接（可选）' : '链接（可选）'} value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} fullWidth />
+          <TextField label={isBook ? '豆瓣/商品链接（可选）' : isExternalEvent ? '购票/详情链接（可选）' : '链接（可选）'} value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} fullWidth />
 
           <TextField label="标签（逗号分隔）" value={tagsText} onChange={(e) => setTagsText(e.target.value)} fullWidth />
 
