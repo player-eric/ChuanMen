@@ -93,6 +93,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           include: {
             author: { select: { id: true, name: true, avatar: true } },
             tags: true,
+            _count: { select: { votes: true } },
           },
         }),
 
@@ -635,11 +636,22 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       };
     };
 
-    // Fetch user's current postcard credits (for credit change toast)
+    // Fetch user's current postcard credits + voted entity IDs
     let postcardCredits: number | undefined;
+    let myVotedIds: { movieIds: string[]; proposalIds: string[]; recommendationIds: string[] } = { movieIds: [], proposalIds: [], recommendationIds: [] };
     if (userId) {
-      const u = await prisma.user.findUnique({ where: { id: userId }, select: { postcardCredits: true } });
+      const [u, movieVotes, proposalVotes2, recVotes] = await Promise.all([
+        prisma.user.findUnique({ where: { id: userId }, select: { postcardCredits: true } }),
+        prisma.movieVote.findMany({ where: { userId }, select: { movieId: true } }),
+        prisma.proposalVote.findMany({ where: { userId }, select: { proposalId: true } }),
+        prisma.recommendationVote.findMany({ where: { userId }, select: { recommendationId: true } }),
+      ]);
       postcardCredits = u?.postcardCredits ?? undefined;
+      myVotedIds = {
+        movieIds: movieVotes.map(v => v.movieId),
+        proposalIds: proposalVotes2.map(v => v.proposalId),
+        recommendationIds: recVotes.map(v => v.recommendationId),
+      };
     }
 
     // ── Daily question + demand signal ──
@@ -734,6 +746,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       lotteryUserStatus,
       notifications,
       postcardCredits,
+      myVotedIds,
       dailyQuestion,
       demandSignal,
     };

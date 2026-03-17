@@ -77,7 +77,10 @@ const PERSONAL_ACTIONS = new Set([
 ]);
 
 /** Transform raw feed API data into FeedItem[] for the timeline */
-function buildFeedItems(data: any): { items: any[]; personalNotifications: any[] } {
+function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalIds: string[]; recommendationIds: string[] }): { items: any[]; personalNotifications: any[] } {
+  const votedMovies = new Set(myVotedIds?.movieIds ?? []);
+  const votedProposals = new Set(myVotedIds?.proposalIds ?? []);
+  const votedRecs = new Set(myVotedIds?.recommendationIds ?? []);
   const items: any[] = [];
   const personalNotifications: any[] = [];
 
@@ -198,6 +201,7 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
     addToDate(sk, d, {
       _key: `movie-${m.id}`,
       type: 'compactMovie',
+      entityId: m.id,
       name: m.recommendedBy?.name ?? '',
       avatar: m.recommendedBy?.avatar ?? undefined,
       title: m.title,
@@ -205,6 +209,7 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
       dir: m.director ?? '',
       poster: m.poster || undefined,
       votes: m._count?.votes ?? 0,
+      voted: votedMovies.has(m.id),
       time,
       navTarget: `/discover/movies/${m.id}`,
       likes: m.likes ?? 0,
@@ -270,13 +275,15 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
     addToDate(sk, d, {
       _key: `rec-${r.id}`,
       type: 'compactRecommendation',
+      entityId: r.id,
       name: r.author?.name ?? '',
       avatar: r.author?.avatar ?? undefined,
       title: r.title,
       category: cat,
       categoryIcon: categoryIcons[cat] ?? '📖',
       coverUrl: r.coverUrl || undefined,
-      votes: r.voteCount ?? r._count?.votes ?? 0,
+      votes: r._count?.votes ?? r.voteCount ?? 0,
+      voted: votedRecs.has(r.id),
       time,
       navTarget: `/discover/recommendations/${r.id}`,
       likes: r.likes ?? 0,
@@ -341,10 +348,12 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
     addToDate(sk, d, {
       _key: `proposal-${p.id}`,
       type: 'compactProposal',
+      entityId: p.id,
       name: p.author?.name ?? '',
       avatar: p.author?.avatar ?? undefined,
       title: p.title,
       votes: p._count?.votes ?? 0,
+      voted: votedProposals.has(p.id),
       interested: [],
       time,
       navTarget: `/events/proposals/${p.id}`,
@@ -400,7 +409,7 @@ async function feedLoader() {
       fetchFeedApi(userId || undefined),
       userId ? fetchCoAttendees(userId).catch(() => []) : Promise.resolve([]),
     ]);
-    const { items, personalNotifications } = buildFeedItems(data);
+    const { items, personalNotifications } = buildFeedItems(data, (data as any).myVotedIds);
     let members = ((data as any).members ?? []).map((m: any) => ({
       ...m,
       lastActiveLabel: m.lastActiveAt ? timeAgo(m.lastActiveAt) : '',

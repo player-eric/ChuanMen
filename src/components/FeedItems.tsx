@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/auth/AuthContext';
-import { signupEvent, cancelSignup, addComment, fetchCommentsApi, fetchMembersApi, fetchEventTasks, claimEventTask, volunteerEventTask } from '@/lib/domainApi';
+import { signupEvent, cancelSignup, addComment, fetchCommentsApi, fetchMembersApi, fetchEventTasks, claimEventTask, volunteerEventTask, toggleMovieVote, toggleProposalVote, toggleRecommendationVote } from '@/lib/domainApi';
 import type { EventTaskData } from '@/types';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import type { FeedComment } from '@/types';
@@ -754,15 +754,26 @@ export function FeedCard({ from, to, fromAvatar, toAvatar, message, photo, stamp
 /* ═══ FeedMovie ═══ */
 interface FeedMovieProps extends InteractionProps {
   name: string; avatar?: string; title: string; year: string; dir: string; poster?: string; votes: number;
-  navTarget?: string; time?: string;
+  entityId?: string; voted?: boolean; navTarget?: string; time?: string;
 }
 
-export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedMovieProps) {
+export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV, entityId, voted: initVoted, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedMovieProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
   const navigate = useNavigate();
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleMovieVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <Card>
@@ -781,7 +792,7 @@ export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV
             <div style={{ fontSize: 12, color: c.text3, marginTop: 2 }}>{year}  {dir}</div>
             <div style={{ marginTop: 6 }}>
               <button
-                onClick={(e) => { e.stopPropagation(); setV(!v); }}
+                onClick={handleVote}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   padding: '4px 12px', borderRadius: 6,
@@ -791,7 +802,7 @@ export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV
                   fontSize: 14, fontWeight: 700, cursor: 'pointer',
                 }}
               >
-                ▲ {initV + (v ? 1 : 0)}
+                ▲ {count}
               </button>
             </div>
           </div>
@@ -822,15 +833,26 @@ export function FeedMilestone({ text, emoji, likes, likedBy, comments, newCommen
 /* ═══ FeedProposal ═══ */
 interface FeedProposalProps extends InteractionProps {
   name: string; avatar?: string; title: string; votes: number; interested: string[];
-  navTarget?: string; time?: string;
+  entityId?: string; voted?: boolean; navTarget?: string; time?: string;
 }
 
-export function FeedProposal({ name, avatar, title, votes: initV, interested, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedProposalProps) {
+export function FeedProposal({ name, avatar, title, votes: initV, interested, entityId, voted: initVoted, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedProposalProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
   const navigate = useNavigate();
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleProposalVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <Card>
@@ -848,7 +870,7 @@ export function FeedProposal({ name, avatar, title, votes: initV, interested, na
           <span style={{ fontSize: 12, color: c.text3 }}>{interested.length} 人感兴趣</span>
         </div>
         <button
-          onClick={(e) => { e.stopPropagation(); setV(!v); }}
+          onClick={handleVote}
           style={{
             padding: '6px 16px', borderRadius: 6,
             background: v ? c.blue + '15' : c.s2,
@@ -857,7 +879,7 @@ export function FeedProposal({ name, avatar, title, votes: initV, interested, na
             fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}
         >
-          {v ? '✓ 我也感兴趣' : '我感兴趣'} · {initV + (v ? 1 : 0)}
+          {v ? '✓ 我也感兴趣' : '我感兴趣'} · {count}
         </button>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
@@ -868,15 +890,26 @@ export function FeedProposal({ name, avatar, title, votes: initV, interested, na
 /* ═══ FeedCompactMovie ═══ */
 interface FeedCompactMovieProps extends InteractionProps {
   name: string; avatar?: string; title: string; year: string; dir: string;
-  poster?: string; votes: number; time: string; navTarget?: string;
+  poster?: string; votes: number; entityId?: string; voted?: boolean; time: string; navTarget?: string;
 }
 
-export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactMovieProps) {
+export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV, entityId, voted: initVoted, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactMovieProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleMovieVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
@@ -894,7 +927,7 @@ export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV,
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flexShrink: 0 }}>
           <button
-            onClick={(e) => { e.stopPropagation(); setV(!v); }}
+            onClick={handleVote}
             style={{
               display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
               background: v ? c.warm + '15' : c.s2,
@@ -902,7 +935,7 @@ export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV,
               color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}
           >
-            ▲ {initV + (v ? 1 : 0)}
+            ▲ {count}
           </button>
         </div>
       </div>
@@ -914,15 +947,26 @@ export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV,
 /* ═══ FeedCompactProposal ═══ */
 interface FeedCompactProposalProps extends InteractionProps {
   name: string; avatar?: string; title: string; votes: number;
-  interested: string[]; time: string; navTarget?: string;
+  entityId?: string; voted?: boolean; interested: string[]; time: string; navTarget?: string;
 }
 
-export function FeedCompactProposal({ name, avatar, title, votes: initV, interested, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactProposalProps) {
+export function FeedCompactProposal({ name, avatar, title, votes: initV, entityId, voted: initVoted, interested, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactProposalProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleProposalVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
@@ -938,7 +982,7 @@ export function FeedCompactProposal({ name, avatar, title, votes: initV, interes
             <AvaStack names={interested} size={16} />
           </div>
           <button
-            onClick={(e) => { e.stopPropagation(); setV(!v); }}
+            onClick={handleVote}
             style={{
               padding: '3px 10px', borderRadius: 5,
               background: v ? c.blue + '15' : c.s2,
@@ -946,7 +990,7 @@ export function FeedCompactProposal({ name, avatar, title, votes: initV, interes
               color: v ? c.blue : c.text3, fontSize: 12, fontWeight: 600, cursor: 'pointer',
             }}
           >
-            {v ? '✓' : '🙋'} {initV + (v ? 1 : 0)}
+            {v ? '✓' : '🙋'} {count}
           </button>
         </div>
       </div>
@@ -958,19 +1002,30 @@ export function FeedCompactProposal({ name, avatar, title, votes: initV, interes
 /* ═══ FeedRecommendation (compact) ═══ */
 interface FeedRecommendationProps extends InteractionProps {
   name: string; avatar?: string; title: string; category: string; categoryIcon: string;
-  coverUrl?: string; votes: number; time: string; navTarget?: string;
+  coverUrl?: string; votes: number; entityId?: string; voted?: boolean; time: string; navTarget?: string;
 }
 
 const categoryLabel: Record<string, string> = {
   movie: '🎬 电影', book: '📖 读书', music: '🎵 音乐', recipe: '🍳 菜谱', place: '📍 好店', external_event: '🎭 演出',
 };
 
-export function FeedRecommendation({ name, title, category, categoryIcon, coverUrl, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedRecommendationProps) {
+export function FeedRecommendation({ name, title, category, categoryIcon, coverUrl, votes: initV, entityId, voted: initVoted, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedRecommendationProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleRecommendationVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
@@ -993,7 +1048,7 @@ export function FeedRecommendation({ name, title, category, categoryIcon, coverU
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flexShrink: 0 }}>
           <button
-            onClick={(e) => { e.stopPropagation(); setV(!v); }}
+            onClick={handleVote}
             style={{
               display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
               background: v ? c.warm + '15' : c.s2,
@@ -1001,7 +1056,7 @@ export function FeedRecommendation({ name, title, category, categoryIcon, coverU
               color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}
           >
-            ▲ {initV + (v ? 1 : 0)}
+            ▲ {count}
           </button>
         </div>
       </div>
@@ -1013,15 +1068,26 @@ export function FeedRecommendation({ name, title, category, categoryIcon, coverU
 /* ═══ FeedBook ═══ */
 interface FeedBookProps extends InteractionProps {
   name: string; avatar?: string; title: string; year: string; author: string; coverUrl?: string; votes: number;
-  navTarget?: string; time?: string;
+  entityId?: string; voted?: boolean; navTarget?: string; time?: string;
 }
 
-export function FeedBook({ name, avatar, title, year, author, coverUrl, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedBookProps) {
+export function FeedBook({ name, avatar, title, year, author, coverUrl, votes: initV, entityId, voted: initVoted, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedBookProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
   const navigate = useNavigate();
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleRecommendationVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <Card>
@@ -1040,7 +1106,7 @@ export function FeedBook({ name, avatar, title, year, author, coverUrl, votes: i
             <div style={{ fontSize: 12, color: c.text3, marginTop: 2 }}>{year} · {author}</div>
             <div style={{ marginTop: 6 }}>
               <button
-                onClick={(e) => { e.stopPropagation(); setV(!v); }}
+                onClick={handleVote}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   padding: '4px 12px', borderRadius: 6,
@@ -1050,7 +1116,7 @@ export function FeedBook({ name, avatar, title, year, author, coverUrl, votes: i
                   fontSize: 14, fontWeight: 700, cursor: 'pointer',
                 }}
               >
-                ▲ {initV + (v ? 1 : 0)}
+                ▲ {count}
               </button>
             </div>
           </div>
@@ -1272,15 +1338,26 @@ export function FeedCompactSmallGroup({ name, avatar, title, date, location, wee
 /* ═══ FeedCompactBook ═══ */
 interface FeedCompactBookProps extends InteractionProps {
   name: string; avatar?: string; title: string; year: string; author: string;
-  coverUrl?: string; votes: number; time: string; navTarget?: string;
+  coverUrl?: string; votes: number; entityId?: string; voted?: boolean; time: string; navTarget?: string;
 }
 
-export function FeedCompactBook({ name, title, year, author, coverUrl, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactBookProps) {
+export function FeedCompactBook({ name, title, year, author, coverUrl, votes: initV, entityId, voted: initVoted, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactBookProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleRecommendationVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
@@ -1298,7 +1375,7 @@ export function FeedCompactBook({ name, title, year, author, coverUrl, votes: in
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flexShrink: 0 }}>
           <button
-            onClick={(e) => { e.stopPropagation(); setV(!v); }}
+            onClick={handleVote}
             style={{
               display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
               background: v ? c.warm + '15' : c.s2,
@@ -1306,7 +1383,7 @@ export function FeedCompactBook({ name, title, year, author, coverUrl, votes: in
               color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}
           >
-            ▲ {initV + (v ? 1 : 0)}
+            ▲ {count}
           </button>
         </div>
       </div>
