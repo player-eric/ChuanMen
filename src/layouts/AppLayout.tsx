@@ -24,6 +24,7 @@ import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import EventRoundedIcon from '@mui/icons-material/EventRounded';
 import ThumbUpRoundedIcon from '@mui/icons-material/ThumbUpRounded';
 import MailRoundedIcon from '@mui/icons-material/MailRounded';
+import RateReviewRoundedIcon from '@mui/icons-material/RateReviewRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
@@ -192,6 +193,12 @@ export default function AppLayout() {
           <ListItemIcon><InfoOutlinedIcon /></ListItemIcon>
           <ListItemText primary="关于串门儿" />
         </ListItemButton>
+        {user && (
+          <ListItemButton onClick={() => { setDrawerOpen(false); setFeedbackOpen(true); }}>
+            <ListItemIcon><RateReviewRoundedIcon /></ListItemIcon>
+            <ListItemText primary="反馈 & 建议" />
+          </ListItemButton>
+        )}
       </List>
       <Divider />
 
@@ -212,10 +219,6 @@ export default function AppLayout() {
           </List>
           <Divider />
           <List>
-            <ListItemButton onClick={() => { setDrawerOpen(false); setFeedbackOpen(true); }}>
-              <ListItemIcon><MailRoundedIcon /></ListItemIcon>
-              <ListItemText primary="联系管理员" />
-            </ListItemButton>
             <ListItemButton onClick={() => { setDrawerOpen(false); setUser(null); navigate('/'); }}>
               <ListItemIcon><LogoutRoundedIcon /></ListItemIcon>
               <ListItemText primary="退出登录" />
@@ -284,6 +287,12 @@ export default function AppLayout() {
                 <ListItemIcon><InfoOutlinedIcon /></ListItemIcon>
                 <ListItemText primary="关于串门儿" />
               </ListItemButton>
+              {user && (
+                <ListItemButton onClick={() => setFeedbackOpen(true)}>
+                  <ListItemIcon><RateReviewRoundedIcon /></ListItemIcon>
+                  <ListItemText primary="反馈 & 建议" />
+                </ListItemButton>
+              )}
               {user && (
                 <ListItemButton selected={pathname === '/settings'} onClick={() => navigate('/settings')}>
                   <ListItemIcon><SettingsRoundedIcon /></ListItemIcon>
