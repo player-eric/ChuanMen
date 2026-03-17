@@ -303,14 +303,29 @@ export default function ActivitySignalCard({ data, onSnack }: Props) {
                       </Stack>
                     );
                   })}
-                  {busyTags.length > 0 && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontSize: 11 }}>
-                      💤 {busyTags.map((t) => {
-                        const def = ACTIVITY_TAG_MAP.get(t.key);
-                        return `${t.count}人${def?.label ?? t.key}`;
-                      }).join(' · ')}
-                    </Typography>
-                  )}
+                  {busyTags.map((tag) => {
+                    const def = ACTIVITY_TAG_MAP.get(tag.key);
+                    return (
+                      <Stack key={tag.key} direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5, opacity: 0.6 }}>
+                        <Typography variant="body2" sx={{ minWidth: 80, fontSize: 13 }}>
+                          {def?.emoji ?? '💤'} {def?.label ?? tag.key}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 30 }}>
+                          {tag.count}人
+                        </Typography>
+                        <AvaStack
+                          names={tag.users.map((u) => ({ name: u.name, avatar: u.avatar }))}
+                          max={5}
+                          size={22}
+                          tooltips={tag.users.map((u) => u.name)}
+                          onClickItem={(i) => {
+                            const name = tag.users[i]?.name;
+                            if (name) navigate(`/members/${encodeURIComponent(name)}`);
+                          }}
+                        />
+                      </Stack>
+                    );
+                  })}
                 </Box>
               );
             })}

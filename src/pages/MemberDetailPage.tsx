@@ -624,18 +624,7 @@ export default function MemberDetailPage() {
                     <RichTextViewer html={member.bio} />
                   </>
                 )}
-                {/* Only show separate Q&A sections if bio doesn't already contain the Q&A text */}
-                {!(() => {
-                  if (!member.bio) return false;
-                  const plain = member.bio.replace(/<[^>]*>/g, '');
-                  // Bio already embeds Q&A if it contains bold markers or the selfAsFriend answer text
-                  if (plain.includes('**') || member.bio.includes('<strong>')) return true;
-                  if (member.selfAsFriend) {
-                    const ans = member.selfAsFriend.replace(/<[^>]*>/g, '').trim().slice(0, 15);
-                    if (ans && plain.includes(ans)) return true;
-                  }
-                  return false;
-                })() && (
+                {(member.selfAsFriend || member.idealFriend || member.participationPlan) && (
                   <>
                     {member.selfAsFriend && (
                       <>
