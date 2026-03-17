@@ -64,7 +64,7 @@ const searchPlaceholders: Record<string, string> = {
   music: '搜歌名、歌手...',
   recipe: '搜菜名...',
   place: '搜店名...',
-  external_event: '搜演出名...',
+  external_event: '搜演出/展览名...',
 };
 
 // ── RecommendationInput: search → pick existing / create new ──

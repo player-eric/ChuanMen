@@ -263,7 +263,7 @@ export default function EventCreatePage() {
     { key: 'recipe', label: '🍳 食谱' },
     { key: 'place', label: '📍 地方' },
     { key: 'music', label: '🎵 音乐' },
-    { key: 'external_event', label: '🎭 演出' },
+    { key: 'external_event', label: '🎭 演出与展览' },
   ];
 
   return (
@@ -677,7 +677,7 @@ export default function EventCreatePage() {
 
           {/* Recommendation picker dialog */}
           <Dialog open={recPickerOpen} onClose={() => { setRecPickerOpen(false); setRecSearch(''); setRecCategory('all'); }} maxWidth="xs" fullWidth>
-            <DialogTitle>选择推荐{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' }[recCategory] ?? ''}` : ''}</DialogTitle>
+            <DialogTitle>选择推荐{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出/展览' }[recCategory] ?? ''}` : ''}</DialogTitle>
             <DialogContent>
               <TextField
                 size="small"
@@ -697,7 +697,7 @@ export default function EventCreatePage() {
                   if (rq && !(r.title ?? '').toLowerCase().includes(rq) && !(r.description ?? '').toLowerCase().includes(rq)) return false;
                   return true;
                 });
-                const categoryLabel: Record<string, string> = { book: '书', recipe: '食谱', place: '地方', movie: '电影', music: '音乐', external_event: '演出' };
+                const categoryLabel: Record<string, string> = { book: '书', recipe: '食谱', place: '地方', movie: '电影', music: '音乐', external_event: '演出/展览' };
                 return filtered.length > 0 ? (
                   <Stack spacing={1}>
                     {filtered.slice(0, 20).map((r: any) => {

@@ -34,7 +34,7 @@ const categoryTabs: { key: Category; label: string }[] = [
   { key: 'music', label: '🎵 音乐' },
   { key: 'recipe', label: '🍜 菜谱' },
   { key: 'place', label: '📍 好店' },
-  { key: 'external_event', label: '🎭 演出和其他' },
+  { key: 'external_event', label: '🎭 演出与展览' },
 ];
 
 const categoryAddLabels: Record<Category, string> = {
@@ -43,13 +43,13 @@ const categoryAddLabels: Record<Category, string> = {
   recipe: '添加菜谱',
   music: '添加音乐',
   place: '添加好店',
-  external_event: '添加演出',
+  external_event: '添加演出/展览',
 };
 
 const mineEmptyLabel: Record<string, string> = {
   recipe: '菜谱',
   place: '好店',
-  external_event: '演出',
+  external_event: '演出/展览',
 };
 
 /* ═══ DiscoverPage ═══ */
@@ -868,7 +868,7 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
   const emptyMap: Record<string, { icon: string; title: string; desc: string }> = {
     recipe: { icon: '🍜', title: '还没有推荐菜谱', desc: '分享你的拿手菜或发现的好菜谱。' },
     place: { icon: '📍', title: '还没有推荐好店', desc: '分享你发现的好店好去处。' },
-    external_event: { icon: '🎭', title: '还没有推荐演出', desc: '分享你发现的演出、展览或其他活动。' },
+    external_event: { icon: '🎭', title: '还没有推荐演出与展览', desc: '分享你发现的演出、展览或其他活动。' },
   };
   const empty = emptyMap[category];
 

@@ -24,7 +24,7 @@ const categoryMap: Record<RecommendationCategory, { title: string; icon: string 
   recipe: { title: '菜谱推荐', icon: '🍜' },
   music: { title: '音乐推荐', icon: '🎵' },
   place: { title: '好店推荐', icon: '📍' },
-  external_event: { title: '演出和其他', icon: '🎭' },
+  external_event: { title: '演出与展览', icon: '🎭' },
 };
 
 function isCategory(value: string | undefined): value is RecommendationCategory {

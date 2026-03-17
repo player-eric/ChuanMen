@@ -1008,7 +1008,7 @@ export default function EventDetailPage() {
               if (!showSection) return null;
 
               const catIcon: Record<string, string> = { movie: '🍿', book: '📚', recipe: '🍳', place: '📍', music: '🎵', external_event: '🎭' };
-              const catLabel: Record<string, string> = { movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' };
+              const catLabel: Record<string, string> = { movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出/展览' };
 
               // Determine which categories to show: configured cats, or unique cats from linked recs
               const displayCats = cats.length > 0 ? cats : [...new Set(recs.map((r) => r.category))];
@@ -1164,7 +1164,7 @@ export default function EventDetailPage() {
                           { key: 'recipe', label: '🍳 食谱' },
                           { key: 'place', label: '📍 地方' },
                           { key: 'music', label: '🎵 音乐' },
-                          { key: 'external_event', label: '🎭 演出' },
+                          { key: 'external_event', label: '🎭 演出与展览' },
                         ].map((cat) => (
                           <Chip key={cat.key} label={cat.label} size="small" variant="outlined" clickable
                             onClick={() => { setRecCategory(cat.key); setRecLinkOpen(true); }} />
@@ -1180,7 +1180,7 @@ export default function EventDetailPage() {
 
         {/* Link/Nominate Recommendation dialog */}
         <Dialog open={recLinkOpen} onClose={() => { setRecLinkOpen(false); setRecSearch(''); setRecCategory('all'); }} maxWidth="xs" fullWidth>
-          <DialogTitle>{(event.recSelectionMode === 'nominate') ? '提名推荐' : '关联推荐'}{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' }[recCategory] ?? ''}` : ''}</DialogTitle>
+          <DialogTitle>{(event.recSelectionMode === 'nominate') ? '提名推荐' : '关联推荐'}{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出/展览' }[recCategory] ?? ''}` : ''}</DialogTitle>
           <DialogContent>
             <TextField
               size="small"
@@ -1200,7 +1200,7 @@ export default function EventDetailPage() {
                 if (rq && !(r.title ?? '').toLowerCase().includes(rq) && !(r.description ?? '').toLowerCase().includes(rq)) return false;
                 return true;
               });
-              const categoryLabel: Record<string, string> = { book: '书', recipe: '食谱', place: '地方', movie: '电影', music: '音乐', external_event: '演出' };
+              const categoryLabel: Record<string, string> = { book: '书', recipe: '食谱', place: '地方', movie: '电影', music: '音乐', external_event: '演出/展览' };
               return filtered.length > 0 ? (
                 <Stack spacing={1}>
                   {filtered.slice(0, 20).map((r: any) => (

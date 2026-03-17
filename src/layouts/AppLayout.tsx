@@ -70,7 +70,7 @@ function getTitle(pathname: string): string {
   if (pathname === '/discover/recipe/add') return '添加菜谱';
   if (pathname === '/discover/music/add') return '添加音乐';
   if (pathname === '/discover/place/add') return '添加好店';
-  if (pathname === '/discover/external_event/add') return '添加演出';
+  if (pathname === '/discover/external_event/add') return '添加演出/展览';
   if (pathname.startsWith('/discover/movies/')) return '电影详情';
   if (pathname.startsWith('/discover/books/')) return '图书详情';
   if (/^\/discover\/(book|recipe|music|place|external_event)\/.+/.test(pathname) && !pathname.endsWith('/add')) return '推荐详情';

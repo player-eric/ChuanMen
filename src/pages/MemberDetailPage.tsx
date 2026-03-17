@@ -661,7 +661,7 @@ export default function MemberDetailPage() {
           book: '📚', recipe: '🍜', music: '🎵', place: '📍', external_event: '🎭',
         };
         const catLabel: Record<string, string> = {
-          book: '图书', recipe: '食谱', music: '音乐', place: '地点', external_event: '演出',
+          book: '图书', recipe: '食谱', music: '音乐', place: '地点', external_event: '演出/展览',
         };
         const recs = mutual.recommendations ?? {};
         const recCategories = Object.keys(recs).filter((cat) => recs[cat].length > 0);

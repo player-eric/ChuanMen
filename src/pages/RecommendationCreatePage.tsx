@@ -22,7 +22,7 @@ const categoryMap: Record<string, string> = {
   recipe: '菜谱',
   music: '音乐',
   place: '好店',
-  external_event: '演出和其他',
+  external_event: '演出与展览',
 };
 
 function isCategory(value: string | undefined): value is RecommendationCategory {

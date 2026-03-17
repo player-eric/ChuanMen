@@ -1006,7 +1006,7 @@ interface FeedRecommendationProps extends InteractionProps {
 }
 
 const categoryLabel: Record<string, string> = {
-  movie: '🎬 电影', book: '📖 读书', music: '🎵 音乐', recipe: '🍳 菜谱', place: '📍 好店', external_event: '🎭 演出',
+  movie: '🎬 电影', book: '📖 读书', music: '🎵 音乐', recipe: '🍳 菜谱', place: '📍 好店', external_event: '🎭 演出与展览',
 };
 
 export function FeedRecommendation({ name, title, category, categoryIcon, coverUrl, votes: initV, entityId, voted: initVoted, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedRecommendationProps) {
