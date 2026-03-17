@@ -73,7 +73,7 @@ export class RecommendationRepository {
     });
   }
 
-  create(input: {
+  async create(input: {
     category: RecommendationCategory;
     title: string;
     authorId: string;
@@ -83,7 +83,7 @@ export class RecommendationRepository {
     status?: RecommendationStatus;
     tags?: string[];
   }) {
-    return this.prisma.recommendation.create({
+    const rec = await this.prisma.recommendation.create({
       data: {
         category: input.category,
         title: input.title,
@@ -97,10 +97,13 @@ export class RecommendationRepository {
               create: input.tags.map((value) => ({ value })),
             }
           : undefined,
+        // Auto-vote by recommender
+        votes: { create: { userId: input.authorId } },
       },
       include: {
         tags: true,
       },
     });
+    return rec;
   }
 }
