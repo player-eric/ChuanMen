@@ -130,9 +130,18 @@ export default function MemberDetailPage() {
   const allGalleryPhotos = data.galleryPhotos ?? [];
   const galleryPhotos = showAllPhotos ? allGalleryPhotos : allGalleryPhotos.slice(0, 9);
 
-  // Tab labels — add "我们的交集" if there's mutual data
-  const tabs = ['活动记忆', '电影', '感谢卡', '关于TA'];
+  // Recommendations by this member (grouped by category)
+  const recommendations = (raw.recommendations ?? []) as any[];
+  const recsByCategory: Record<string, any[]> = {};
+  for (const rec of recommendations) {
+    const cat = rec.category ?? 'other';
+    (recsByCategory[cat] ??= []).push(rec);
+  }
+
+  // Tab labels — 关于TA and 我们的交集 first
+  const tabs: string[] = ['关于TA'];
   if (hasMutual) tabs.push('我们的交集');
+  tabs.push('活动记忆', '品味', '感谢卡');
 
   return (
     <Stack spacing={0}>
@@ -224,14 +233,14 @@ export default function MemberDetailPage() {
             sx={{ mb: 1.5 }}
           >
             {[
-              { value: data.participationStats.eventCount, label: '场活动', action: () => { setTab(0); setEventFilter('all'); } },
-              { value: data.participationStats.hostCount, label: '次Host', action: () => { setTab(0); setEventFilter('host'); } },
-              { value: data.participationStats.movieCount, label: '部电影', action: () => { setTab(1); } },
+              { value: data.participationStats.eventCount, label: '场活动', action: () => { setTab(tabs.indexOf('活动记忆')); setEventFilter('all'); } },
+              { value: data.participationStats.hostCount, label: '次Host', action: () => { setTab(tabs.indexOf('活动记忆')); setEventFilter('host'); } },
+              { value: data.participationStats.movieCount, label: '部电影', action: () => { setTab(tabs.indexOf('品味')); } },
             ].map((stat) => {
               const active =
-                (stat.label === '场活动' && tab === 0 && eventFilter === 'all') ||
-                (stat.label === '次Host' && tab === 0 && eventFilter === 'host') ||
-                (stat.label === '部电影' && tab === 1);
+                (stat.label === '场活动' && tabs[tab] === '活动记忆' && eventFilter === 'all') ||
+                (stat.label === '次Host' && tabs[tab] === '活动记忆' && eventFilter === 'host') ||
+                (stat.label === '部电影' && tabs[tab] === '品味');
               return (
                 <Box
                   key={stat.label}
@@ -285,8 +294,170 @@ export default function MemberDetailPage() {
         </Tabs>
       </Box>
 
-      {/* ══════ Tab 0: 活动记忆 ══════ */}
-      {tab === 0 && (() => {
+      {/* ══════ 关于TA ══════ */}
+      {tabs[tab] === '关于TA' && (
+        <Stack spacing={2}>
+          {(member.bio || member.selfAsFriend || member.idealFriend || member.participationPlan) ? (
+            <Card>
+              <CardContent>
+                {member.bio && (
+                  <>
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>关于TA</Typography>
+                    <RichTextViewer html={member.bio} />
+                  </>
+                )}
+                {(member.selfAsFriend || member.idealFriend || member.participationPlan) && (
+                  <>
+                    {member.selfAsFriend && (
+                      <>
+                        <Divider sx={{ my: 1.5 }} />
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>作为朋友</Typography>
+                        <RichTextViewer html={member.selfAsFriend} />
+                      </>
+                    )}
+                    {member.idealFriend && (
+                      <>
+                        <Divider sx={{ my: 1.5 }} />
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>理想中的朋友</Typography>
+                        <RichTextViewer html={member.idealFriend} />
+                      </>
+                    )}
+                    {member.participationPlan && (
+                      <>
+                        <Divider sx={{ my: 1.5 }} />
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>参与计划</Typography>
+                        <RichTextViewer html={member.participationPlan} />
+                      </>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <EmptyState
+              icon="📝"
+              title={`${member.name} 还没有填写个人介绍`}
+            />
+          )}
+        </Stack>
+      )}
+
+      {/* ══════ 我们的交集 ══════ */}
+      {tabs[tab] === '我们的交集' && hasMutual && (() => {
+        const catEmoji: Record<string, string> = {
+          book: '📚', recipe: '🍜', music: '🎵', place: '📍', external_event: '🎭',
+        };
+        const catLabel: Record<string, string> = {
+          book: '图书', recipe: '食谱', music: '音乐', place: '地点', external_event: '演出/展览',
+        };
+        const recs = mutual.recommendations ?? {};
+        const recCategories = Object.keys(recs).filter((cat) => recs[cat].length > 0);
+
+        return (
+        <Stack spacing={2}>
+          {/* Mutual stats */}
+          <Grid container spacing={1.2}>
+            {[
+              { label: '📅 一起参加', value: mutual.evtCount },
+              { label: '🤝 共同品味', value: tasteCount },
+              { label: '💌 互寄卡片', value: mutual.cards },
+            ].filter((s) => s.value > 0).map((stat) => (
+              <Grid key={stat.label} size={{ xs: 4 }}>
+                <Card>
+                  <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                    <Typography variant="h5" color="primary.main" fontWeight={800}>{stat.value}</Typography>
+                    <Typography variant="caption" color="text.secondary">{stat.label}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* Mutual events */}
+          {mutual.events.length > 0 && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>一起参加的活动</Typography>
+                <Stack spacing={0.8}>
+                  {mutual.events.map((evt: any) => (
+                    <Typography
+                      key={evt.id}
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
+                      onClick={() => navigate(`/events/${evt.id}`)}
+                    >
+                      {sceneEmoji[evt.scene] ?? '📅'} {evt.title}
+                    </Typography>
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Unified taste card: movies + recommendations by category */}
+          {tasteCount > 0 && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>共同品味</Typography>
+                <Stack spacing={1.5}>
+                  {mutual.movies.length > 0 && (
+                    <Box>
+                      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>🎬 电影 ({mutual.movies.length})</Typography>
+                      <Stack direction="row" spacing={0.8} flexWrap="wrap" useFlexGap>
+                        {mutual.movies.map((movie: any) => (
+                          <Chip
+                            key={movie.id}
+                            size="small"
+                            color="secondary"
+                            label={movie.title}
+                            onClick={() => navigate(`/discover/movies/${movie.id}`)}
+                            sx={{ cursor: 'pointer' }}
+                          />
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+                  {recCategories.map((cat) => (
+                    <Box key={cat}>
+                      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+                        {catEmoji[cat] ?? '📌'} {catLabel[cat] ?? cat} ({recs[cat].length})
+                      </Typography>
+                      <Stack direction="row" spacing={0.8} flexWrap="wrap" useFlexGap>
+                        {recs[cat].map((item: any) => (
+                          <Chip
+                            key={item.id}
+                            size="small"
+                            color="secondary"
+                            label={item.title}
+                            onClick={() => navigate(`/discover/${cat}/${item.id}`)}
+                            sx={{ cursor: 'pointer' }}
+                          />
+                        ))}
+                      </Stack>
+                    </Box>
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          )}
+
+          {mutual.cards > 0 && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>互寄感谢卡</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  你们之间互寄了 {mutual.cards} 张感谢卡
+                </Typography>
+              </CardContent>
+            </Card>
+          )}
+        </Stack>
+        );
+      })()}
+
+      {/* ══════ 活动记忆 ══════ */}
+      {tabs[tab] === '活动记忆' && (() => {
         const filteredUpcoming = eventFilter === 'host'
           ? data.upcomingEvents.filter((e) => e.role === 'Host')
           : data.upcomingEvents;
@@ -450,13 +621,13 @@ export default function MemberDetailPage() {
         );
       })()}
 
-      {/* ══════ Tab 1: 电影 ══════ */}
-      {tab === 1 && (
+      {/* ══════ 品味 (movies + recommendations) ══════ */}
+      {tabs[tab] === '品味' && (
         <Stack spacing={2}>
-          {data.myMovies.length === 0 && data.votedMovies.length === 0 && (
+          {data.myMovies.length === 0 && data.votedMovies.length === 0 && recommendations.length === 0 && (
             <EmptyState
-              icon="🎬"
-              title={`${member.name} 还没有推荐或投票过电影`}
+              icon="✨"
+              title={`${member.name} 还没有推荐或投票过内容`}
             />
           )}
 
@@ -541,11 +712,50 @@ export default function MemberDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Recommendations by category */}
+          {Object.entries(recsByCategory).map(([cat, items]) => {
+            const catEmoji: Record<string, string> = { book: '📚', recipe: '🍜', music: '🎵', place: '📍', external_event: '🎭', movie: '🎬' };
+            const catLabel: Record<string, string> = { book: '图书', recipe: '食谱', music: '音乐', place: '好店', external_event: '演出/展览', movie: '电影推荐' };
+            return (
+              <Card key={cat}>
+                <CardContent>
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                    {catEmoji[cat] ?? '📌'} {catLabel[cat] ?? cat} ({items.length})
+                  </Typography>
+                  <Grid container spacing={1.5}>
+                    {items.map((rec: any) => (
+                      <Grid key={rec.id} size={{ xs: 12, sm: 6 }}>
+                        <CardActionArea
+                          onClick={() => navigate(`/discover/${cat}/${rec.id}`)}
+                          sx={{ borderRadius: 2 }}
+                        >
+                          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography variant="body2" fontWeight={700} noWrap>{rec.title}</Typography>
+                              {rec.description && (
+                                <Typography variant="caption" color="text.secondary" noWrap>
+                                  {String(rec.description).replace(/<[^>]*>/g, '')}
+                                </Typography>
+                              )}
+                              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.3, display: 'block' }}>
+                                {rec._count?.votes ?? 0} 票
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </CardActionArea>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </CardContent>
+              </Card>
+            );
+          })}
         </Stack>
       )}
 
-      {/* ══════ Tab 2: 感谢卡 ══════ */}
-      {tab === 2 && (
+      {/* ══════ 感谢卡 ══════ */}
+      {tabs[tab] === '感谢卡' && (
         <Stack spacing={2}>
           {data.recentCards.length > 0 && (
             <Card>
@@ -612,168 +822,6 @@ export default function MemberDetailPage() {
         </Stack>
       )}
 
-      {/* ══════ Tab 3: 关于TA ══════ */}
-      {tab === 3 && (
-        <Stack spacing={2}>
-          {(member.bio || member.selfAsFriend || member.idealFriend || member.participationPlan) ? (
-            <Card>
-              <CardContent>
-                {member.bio && (
-                  <>
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>关于TA</Typography>
-                    <RichTextViewer html={member.bio} />
-                  </>
-                )}
-                {(member.selfAsFriend || member.idealFriend || member.participationPlan) && (
-                  <>
-                    {member.selfAsFriend && (
-                      <>
-                        <Divider sx={{ my: 1.5 }} />
-                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>作为朋友</Typography>
-                        <RichTextViewer html={member.selfAsFriend} />
-                      </>
-                    )}
-                    {member.idealFriend && (
-                      <>
-                        <Divider sx={{ my: 1.5 }} />
-                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>理想中的朋友</Typography>
-                        <RichTextViewer html={member.idealFriend} />
-                      </>
-                    )}
-                    {member.participationPlan && (
-                      <>
-                        <Divider sx={{ my: 1.5 }} />
-                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>参与计划</Typography>
-                        <RichTextViewer html={member.participationPlan} />
-                      </>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <EmptyState
-              icon="📝"
-              title={`${member.name} 还没有填写个人介绍`}
-            />
-          )}
-        </Stack>
-      )}
-
-      {/* ══════ Tab 4: 我们的交集 ══════ */}
-      {hasMutual && tab === 4 && (() => {
-        const catEmoji: Record<string, string> = {
-          book: '📚', recipe: '🍜', music: '🎵', place: '📍', external_event: '🎭',
-        };
-        const catLabel: Record<string, string> = {
-          book: '图书', recipe: '食谱', music: '音乐', place: '地点', external_event: '演出/展览',
-        };
-        const recs = mutual.recommendations ?? {};
-        const recCategories = Object.keys(recs).filter((cat) => recs[cat].length > 0);
-
-        return (
-        <Stack spacing={2}>
-          {/* Mutual stats */}
-          <Grid container spacing={1.2}>
-            {[
-              { label: '📅 一起参加', value: mutual.evtCount },
-              { label: '🤝 共同品味', value: tasteCount },
-              { label: '💌 互寄卡片', value: mutual.cards },
-            ].filter((s) => s.value > 0).map((stat) => (
-              <Grid key={stat.label} size={{ xs: 4 }}>
-                <Card>
-                  <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                    <Typography variant="h5" color="primary.main" fontWeight={800}>{stat.value}</Typography>
-                    <Typography variant="caption" color="text.secondary">{stat.label}</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-
-          {/* Mutual events */}
-          {mutual.events.length > 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>一起参加的活动</Typography>
-                <Stack spacing={0.8}>
-                  {mutual.events.map((evt: any) => (
-                    <Typography
-                      key={evt.id}
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
-                      onClick={() => navigate(`/events/${evt.id}`)}
-                    >
-                      {sceneEmoji[evt.scene] ?? '📅'} {evt.title}
-                    </Typography>
-                  ))}
-                </Stack>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Unified taste card: movies + recommendations by category */}
-          {tasteCount > 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>共同品味</Typography>
-                <Stack spacing={1.5}>
-                  {mutual.movies.length > 0 && (
-                    <Box>
-                      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>🎬 电影 ({mutual.movies.length})</Typography>
-                      <Stack direction="row" spacing={0.8} flexWrap="wrap" useFlexGap>
-                        {mutual.movies.map((movie: any) => (
-                          <Chip
-                            key={movie.id}
-                            size="small"
-                            color="secondary"
-                            label={movie.title}
-                            onClick={() => navigate(`/discover/movies/${movie.id}`)}
-                            sx={{ cursor: 'pointer' }}
-                          />
-                        ))}
-                      </Stack>
-                    </Box>
-                  )}
-                  {recCategories.map((cat) => (
-                    <Box key={cat}>
-                      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-                        {catEmoji[cat] ?? '📌'} {catLabel[cat] ?? cat} ({recs[cat].length})
-                      </Typography>
-                      <Stack direction="row" spacing={0.8} flexWrap="wrap" useFlexGap>
-                        {recs[cat].map((item: any) => (
-                          <Chip
-                            key={item.id}
-                            size="small"
-                            color="secondary"
-                            label={item.title}
-                            onClick={() => navigate(`/discover/${cat}/${item.id}`)}
-                            sx={{ cursor: 'pointer' }}
-                          />
-                        ))}
-                      </Stack>
-                    </Box>
-                  ))}
-                </Stack>
-              </CardContent>
-            </Card>
-          )}
-
-          {mutual.cards > 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>互寄感谢卡</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  你们之间互寄了 {mutual.cards} 张感谢卡
-                  {/* TODO: 展示最近 2-3 张卡片预览（需要额外后端查询） */}
-                </Typography>
-              </CardContent>
-            </Card>
-          )}
-        </Stack>
-        );
-      })()}
 
       {/* ══════ Lightbox Dialog ══════ */}
       <Dialog

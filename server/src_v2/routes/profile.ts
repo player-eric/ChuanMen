@@ -34,6 +34,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
       votedMovies,
       upcomingEvents,
       pastEvents,
+      userRecommendations,
       galleryEvents,
     ] = await Promise.all([
       // Events user hosted (as host or co-host)
@@ -164,6 +165,14 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           coHosts: { select: { userId: true } },
           recapPhotoUrls: true,
         },
+      }),
+
+      // Recommendations by this user
+      prisma.recommendation.findMany({
+        where: { authorId: targetId },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+        include: { _count: { select: { votes: true } } },
       }),
 
       // Events with photos that user participated in (hide events viewer is excluded from)
@@ -310,6 +319,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
             createdAt: e.startsAt.toISOString(),
           }));
       }),
+      recommendations: userRecommendations,
       isOwnProfile,
       mutual,
     };
