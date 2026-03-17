@@ -72,7 +72,7 @@ export default function MembersPage() {
                     )}
                     {member.bio && (
                       <Typography variant="caption" color="text.secondary" sx={{ maxHeight: 40, overflow: 'hidden' }}>
-                        {(() => { const b = member.bio.replace(/\*\*/g, ''); return b.length > 50 ? b.slice(0, 50) + '...' : b; })()}
+                        {(() => { const b = member.bio.replace(/<[^>]*>/g, '').replace(/\*\*/g, ''); return b.length > 50 ? b.slice(0, 50) + '...' : b; })()}
                       </Typography>
                     )}
                     <Typography variant="caption" color="text.secondary">{member.role}</Typography>

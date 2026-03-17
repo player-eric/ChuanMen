@@ -263,14 +263,14 @@ export default function ProfilePage() {
             sx={{ mb: 1.5 }}
           >
             {[
-              { value: data.participationStats.eventCount, label: '场活动', action: () => { setTab(0); setEventFilter('all'); } },
-              { value: data.participationStats.hostCount, label: '次Host', action: () => { setTab(0); setEventFilter('host'); } },
-              { value: data.participationStats.movieCount, label: '部电影', action: () => { setTab(1); } },
+              { value: data.participationStats.eventCount, label: '场活动', action: () => { setTab(1); setEventFilter('all'); } },
+              { value: data.participationStats.hostCount, label: '次Host', action: () => { setTab(1); setEventFilter('host'); } },
+              { value: data.participationStats.movieCount, label: '部电影', action: () => { setTab(2); } },
             ].map((stat) => {
               const active =
-                (stat.label === '场活动' && tab === 0 && eventFilter === 'all') ||
-                (stat.label === '次Host' && tab === 0 && eventFilter === 'host') ||
-                (stat.label === '部电影' && tab === 1);
+                (stat.label === '场活动' && tab === 1 && eventFilter === 'all') ||
+                (stat.label === '次Host' && tab === 1 && eventFilter === 'host') ||
+                (stat.label === '部电影' && tab === 2);
               return (
                 <Box
                   key={stat.label}
@@ -375,15 +375,65 @@ export default function ProfilePage() {
           scrollButtons="auto"
           sx={{ minHeight: 40, '& .MuiTab-root': { minHeight: 40, py: 0, textTransform: 'none', fontSize: 14 } }}
         >
-          <Tab label="活动记忆" />
-          <Tab label="电影" />
-          <Tab label="感谢卡" />
           <Tab label="关于我" />
+          <Tab label="活动记忆" />
+          <Tab label="品味" />
+          <Tab label="感谢卡" />
         </Tabs>
       </Box>
 
-      {/* ══════ Tab 0: 活动记忆 ══════ */}
-      {tab === 0 && (() => {
+      {/* ══════ Tab 0: 关于我 ══════ */}
+      {tab === 0 && (
+        <Stack spacing={2}>
+          {(user?.bio || user?.selfAsFriend || user?.idealFriend || user?.participationPlan) ? (
+            <Card>
+              <CardContent>
+                {user?.bio && (
+                  <>
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>关于我</Typography>
+                    <RichTextViewer html={user.bio} />
+                  </>
+                )}
+                {user?.selfAsFriend && (
+                  <>
+                    <Divider sx={{ my: 1.5 }} />
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>作为朋友，我</Typography>
+                    <RichTextViewer html={user.selfAsFriend} />
+                  </>
+                )}
+                {user?.idealFriend && (
+                  <>
+                    <Divider sx={{ my: 1.5 }} />
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>我理想中的朋友</Typography>
+                    <RichTextViewer html={user.idealFriend} />
+                  </>
+                )}
+                {user?.participationPlan && (
+                  <>
+                    <Divider sx={{ my: 1.5 }} />
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>参与计划</Typography>
+                    <RichTextViewer html={user.participationPlan} />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                <Typography variant="body2" color="text.secondary">
+                  还没有填写个人介绍
+                </Typography>
+                <Button size="small" sx={{ mt: 1 }} onClick={() => navigate('/settings')}>
+                  去填写 →
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </Stack>
+      )}
+
+      {/* ══════ Tab 1: 活动记忆 ══════ */}
+      {tab === 1 && (() => {
         const filteredUpcoming = eventFilter === 'host'
           ? data.upcomingEvents.filter((e) => e.role === 'Host')
           : data.upcomingEvents;
@@ -632,8 +682,8 @@ export default function ProfilePage() {
         );
       })()}
 
-      {/* ══════ Tab 1: 电影 ══════ */}
-      {tab === 1 && (
+      {/* ══════ Tab 2: 品味 ══════ */}
+      {tab === 2 && (
         <>
           {data.myMovies.length === 0 && data.votedMovies.length === 0 && (
             <EmptyState
@@ -736,8 +786,8 @@ export default function ProfilePage() {
         </>
       )}
 
-      {/* ══════ Tab 2: 感谢卡 ══════ */}
-      {tab === 2 && (
+      {/* ══════ Tab 3: 感谢卡 ══════ */}
+      {tab === 3 && (
         <Stack spacing={2}>
           {/* Received Cards */}
           {data.recentCards.length > 0 && (
@@ -805,56 +855,6 @@ export default function ProfilePage() {
                 </Typography>
                 <Button size="small" sx={{ mt: 1 }} onClick={() => navigate('/cards')}>
                   写感谢卡 →
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </Stack>
-      )}
-
-      {/* ══════ Tab 3: 关于我 ══════ */}
-      {tab === 3 && (
-        <Stack spacing={2}>
-          {(user?.bio || user?.selfAsFriend || user?.idealFriend || user?.participationPlan) ? (
-            <Card>
-              <CardContent>
-                {user?.bio && (
-                  <>
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>关于我</Typography>
-                    <RichTextViewer html={user.bio} />
-                  </>
-                )}
-                {user?.selfAsFriend && (
-                  <>
-                    <Divider sx={{ my: 1.5 }} />
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>作为朋友，我</Typography>
-                    <RichTextViewer html={user.selfAsFriend} />
-                  </>
-                )}
-                {user?.idealFriend && (
-                  <>
-                    <Divider sx={{ my: 1.5 }} />
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>我理想中的朋友</Typography>
-                    <RichTextViewer html={user.idealFriend} />
-                  </>
-                )}
-                {user?.participationPlan && (
-                  <>
-                    <Divider sx={{ my: 1.5 }} />
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>参与计划</Typography>
-                    <RichTextViewer html={user.participationPlan} />
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                <Typography variant="body2" color="text.secondary">
-                  还没有填写个人介绍
-                </Typography>
-                <Button size="small" sx={{ mt: 1 }} onClick={() => navigate('/settings')}>
-                  去填写 →
                 </Button>
               </CardContent>
             </Card>
