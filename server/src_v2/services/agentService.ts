@@ -437,12 +437,12 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: sendNewEventNotif failed');
   }
 
-  // P2-B: New recommendation notification
-  try {
-    await sendNewRecNotif(prisma, log);
-  } catch (err) {
-    log.error({ err }, 'Agent: sendNewRecNotif failed');
-  }
+  // P2-B: New recommendation notification — disabled, included in daily digest instead
+  // try {
+  //   await sendNewRecNotif(prisma, log);
+  // } catch (err) {
+  //   log.error({ err }, 'Agent: sendNewRecNotif failed');
+  // }
 
   // P3-A: One-week onboarding check-in
   try {
