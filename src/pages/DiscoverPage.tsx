@@ -795,7 +795,7 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
                       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <Typography fontWeight={700} sx={{ fontSize: 15 }}>{r.title}</Typography>
                         {r.description && (
-                          <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description}</Typography>
+                          <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description.replace(/<[^>]*>/g, '')}</Typography>
                         )}
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{r.authorName} 推荐</Typography>
                       </Box>
@@ -951,7 +951,7 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
                             );
                           })()}
                           {r.description && (
-                            <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description}</Typography>
+                            <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description.replace(/<[^>]*>/g, '')}</Typography>
                           )}
                           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{r.authorName} 推荐</Typography>
                         </Box>

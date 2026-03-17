@@ -131,7 +131,7 @@ export default function RecommendationListPage() {
                         </Typography>
                       )}
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {String(item.description ?? '')}
+                        {String(item.description ?? '').replace(/<[^>]*>/g, '')}
                       </Typography>
                     </Box>
                   </Stack>
