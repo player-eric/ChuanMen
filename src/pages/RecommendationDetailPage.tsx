@@ -31,6 +31,7 @@ import { RichTextViewer, type RichTextEditorHandle } from '@/components/RichText
 
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 import { firstNonEmoji } from '@/components/Atoms';
+import { ImageUpload } from '@/components/ImageUpload';
 import CommentSection from '@/components/CommentSection';
 
 function isCategory(value: string | undefined): value is RecommendationCategory {
@@ -57,6 +58,7 @@ export default function RecommendationDetailPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [editEventDate, setEditEventDate] = useState('');
   const [editEventEndDate, setEditEventEndDate] = useState('');
+  const [editCoverUrl, setEditCoverUrl] = useState('');
   const descEditorRef = useRef<RichTextEditorHandle>(null);
   const [voted, setVoted] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
@@ -227,6 +229,7 @@ export default function RecommendationDetailPage() {
                       setEditDesc(description);
                       setEditEventDate(eventDate ? eventDate.toISOString().slice(0, 10) : '');
                       setEditEventEndDate(eventEndDate ? eventEndDate.toISOString().slice(0, 10) : '');
+                      setEditCoverUrl(coverUrl);
                       setEditing(true);
                     }}>
                       <EditIcon />
@@ -358,6 +361,19 @@ export default function RecommendationDetailPage() {
                 />
               </Stack>
             )}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>海报（可选）</Typography>
+              <ImageUpload
+                value={editCoverUrl}
+                onChange={setEditCoverUrl}
+                category="recommendation"
+                ownerId={user?.id ?? ''}
+                width="100%"
+                height={160}
+                shape="rect"
+                maxSize={10 * 1024 * 1024}
+              />
+            </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>简介</Typography>
             <Suspense fallback={<Typography color="text.secondary">加载编辑器...</Typography>}>
               <RichTextEditorLazy content={editDesc} onChange={setEditDesc} editorRef={descEditorRef} />
@@ -369,14 +385,15 @@ export default function RecommendationDetailPage() {
               if (!user?.id || !recommendationId) return;
               setEditSaving(true);
               const html = descEditorRef.current?.getHTML() ?? editDesc;
-              const patch: Parameters<typeof updateRecommendation>[2] = { title: editTitle, description: html };
+              const patch: Parameters<typeof updateRecommendation>[2] = { title: editTitle, description: html, coverUrl: editCoverUrl || undefined };
               if (isExternalEvent) {
                 patch.eventDate = editEventDate || null;
                 patch.eventEndDate = editEventEndDate || null;
               }
               try {
                 await updateRecommendation(recommendationId, user.id, patch);
-                setItem((prev) => prev ? { ...prev, title: editTitle, description: html, eventDate: editEventDate || null, eventEndDate: editEventEndDate || null } : prev);
+                setCoverUrl(editCoverUrl);
+                setItem((prev) => prev ? { ...prev, title: editTitle, description: html, coverUrl: editCoverUrl || null, eventDate: editEventDate || null, eventEndDate: editEventEndDate || null } : prev);
                 setEditing(false);
               } catch { /* ignore */ }
               setEditSaving(false);
