@@ -944,8 +944,8 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
                             const isPast = end ? end < now : d < now;
                             return (
                               <Typography variant="body2" sx={{ mt: 0.25, color: isPast ? 'text.disabled' : 'warning.main', fontSize: 12 }}>
-                                📅 {d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
-                                {end && ` — ${end.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}`}
+                                📅 {d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', timeZone: 'UTC' })}
+                                {end && ` — ${end.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', timeZone: 'UTC' })}`}
                                 {isPast && ' · 已结束'}
                               </Typography>
                             );

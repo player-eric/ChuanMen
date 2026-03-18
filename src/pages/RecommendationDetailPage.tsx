@@ -213,8 +213,8 @@ export default function RecommendationDetailPage() {
                     <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mt: 0.5, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
                       {eventDate && (
                         <>
-                          📅 {eventDate.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}
-                          {eventEndDate && ` — ${eventEndDate.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}`}
+                          📅 {eventDate.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', timeZone: 'UTC' })}
+                          {eventEndDate && ` — ${eventEndDate.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', timeZone: 'UTC' })}`}
                           {tags.length > 0 && ' · '}
                         </>
                       )}
