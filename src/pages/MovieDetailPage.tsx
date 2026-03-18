@@ -48,8 +48,8 @@ export default function MovieDetailPage() {
   })();
 
   const [voted, setVoted] = useState(serverVoted);
-  const [voters, setVoters] = useState<{ id: string; name: string }[]>(
-    (raw?.votes ?? []).map((v: any) => ({ id: v.user?.id ?? v.userId ?? '', name: v.user?.name ?? '?' })),
+  const [voters, setVoters] = useState<{ id: string; name: string; avatar?: string }[]>(
+    (raw?.votes ?? []).map((v: any) => ({ id: v.user?.id ?? v.userId ?? '', name: v.user?.name ?? '?', avatar: v.user?.avatar ?? undefined })),
   );
   const [nominateOpen, setNominateOpen] = useState(false);
   const [flash, setFlash] = useState<{ open: boolean; severity: 'success' | 'error'; message: string }>({ open: false, severity: 'success', message: '' });
@@ -382,7 +382,7 @@ export default function MovieDetailPage() {
             {voters.length > 0 && (
               <Box sx={{ cursor: voters.length > 5 ? 'pointer' : undefined }} onClick={voters.length > 5 ? () => setExpandVoters((v) => !v) : undefined}>
                 <AvaStack
-                  names={voters.map((v) => v.name)}
+                  names={voters.map((v) => ({ name: v.name, avatar: v.avatar }))}
                   tooltips={voters.map((v) => v.name)}
                   size={32}
                   max={expandVoters ? voters.length : 5}

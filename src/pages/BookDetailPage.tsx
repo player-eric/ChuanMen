@@ -287,10 +287,10 @@ export default function BookDetailPage() {
               <Box sx={{ cursor: book.voters.length > 5 ? 'pointer' : undefined }} onClick={book.voters.length > 5 ? () => setExpandVoters((v) => !v) : undefined}>
                 <AvaStack
                   names={book.voters}
-                  tooltips={book.voters}
+                  tooltips={book.voters.map((v) => typeof v === 'string' ? v : v.name)}
                   size={32}
                   max={expandVoters ? book.voters.length : 5}
-                  onClickItem={(i) => navigate(`/members/${encodeURIComponent(book.voters[i])}`)}
+                  onClickItem={(i) => { const v = book.voters[i]; navigate(`/members/${encodeURIComponent(typeof v === 'string' ? v : v.name)}`); }}
                 />
               </Box>
             )}

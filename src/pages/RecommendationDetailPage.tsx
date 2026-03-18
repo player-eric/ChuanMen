@@ -61,7 +61,7 @@ export default function RecommendationDetailPage() {
   const descEditorRef = useRef<RichTextEditorHandle>(null);
   const [voted, setVoted] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
-  const [voters, setVoters] = useState<{ id: string; name: string }[]>([]);
+  const [voters, setVoters] = useState<{ id: string; name: string; avatar?: string }[]>([]);
   const [coverUrl, setCoverUrl] = useState('');
   const [expandVoters, setExpandVoters] = useState(false);
 
@@ -104,6 +104,7 @@ export default function RecommendationDetailPage() {
         const voterList = voteList.map((v: any) => ({
           id: v.userId ?? v.user?.id ?? '',
           name: v.user?.name ?? '?',
+          avatar: v.user?.avatar ?? undefined,
         })).filter((v) => v.id);
         setVoters(voterList);
         setVoteCount((data as any)?._count?.votes ?? voterList.length);
@@ -321,7 +322,7 @@ export default function RecommendationDetailPage() {
             {voters.length > 0 && (
               <Box sx={{ cursor: voters.length > 5 ? 'pointer' : undefined }} onClick={voters.length > 5 ? () => setExpandVoters((v) => !v) : undefined}>
                 <AvaStack
-                  names={voters.map((v) => v.name)}
+                  names={voters.map((v) => ({ name: v.name, avatar: v.avatar }))}
                   tooltips={voters.map((v) => v.name)}
                   size={32}
                   max={expandVoters ? voters.length : 5}

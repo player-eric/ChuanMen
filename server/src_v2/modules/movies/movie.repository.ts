@@ -9,7 +9,7 @@ export class MovieRepository {
       orderBy: [{ createdAt: 'desc' }],
       include: {
         recommendedBy: { select: { id: true, name: true } },
-        votes: { include: { user: { select: { id: true, name: true } } } },
+        votes: { include: { user: { select: { id: true, name: true, avatar: true } } } },
         _count: { select: { votes: true } },
       },
     });
@@ -20,7 +20,7 @@ export class MovieRepository {
       where: { id },
       include: {
         recommendedBy: { select: { id: true, name: true } },
-        votes: { include: { user: { select: { id: true, name: true } } } },
+        votes: { include: { user: { select: { id: true, name: true, avatar: true } } } },
         screenedEvents: {
           include: {
             event: {

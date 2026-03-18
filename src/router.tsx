@@ -816,6 +816,7 @@ async function bookDetailLoader({ params }: { params: Record<string, string | un
       author: (rec.tags ?? []).find((t: any) => !(/^\d{4}$/.test(t.value)))?.value ?? rec.author?.name ?? '',
       v: rec._count?.votes ?? rec.voteCount ?? 0,
       voterIds: (rec.votes ?? []).map((v: any) => v.userId ?? v.user?.id).filter(Boolean),
+      voters: (rec.votes ?? []).map((v: any) => ({ name: v.user?.name ?? '?', avatar: v.user?.avatar ?? undefined })),
       status: rec.status ?? 'candidate',
       by: rec.author?.name ?? '',
       synopsis: rec.description ?? '',

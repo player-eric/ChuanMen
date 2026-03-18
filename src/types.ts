@@ -189,7 +189,7 @@ export interface BookDetailData {
   pages?: string;
   rating?: string;
   synopsis?: string;
-  voters: string[];
+  voters: (string | { name: string; avatar?: string })[];
   discussions: { date: string; host: string; eventTitle: string; eventId?: string }[];
   comments: { name: string; text: string; date: string }[];
 }
