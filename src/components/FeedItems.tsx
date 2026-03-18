@@ -798,8 +798,8 @@ export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   padding: '4px 12px', borderRadius: 6,
-                  background: v ? c.warm + '15' : c.s2,
-                  border: `1px solid ${v ? c.warm + '40' : c.line}`,
+                  background: v ? c.warm + '26' : c.s2,
+                  border: `1px solid ${v ? c.warm + '66' : c.line}`,
                   color: v ? c.warm : c.text2,
                   fontSize: 14, fontWeight: 700, cursor: 'pointer',
                 }}
@@ -936,8 +936,8 @@ export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV,
             onClick={handleVote}
             style={{
               display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
-              background: v ? c.warm + '15' : c.s2,
-              border: `1px solid ${v ? c.warm + '40' : c.line}`,
+              background: v ? c.warm + '26' : c.s2,
+              border: `1px solid ${v ? c.warm + '66' : c.line}`,
               color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}
           >
@@ -1061,8 +1061,8 @@ export function FeedRecommendation({ name, title, category, categoryIcon, coverU
             onClick={handleVote}
             style={{
               display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
-              background: v ? c.warm + '15' : c.s2,
-              border: `1px solid ${v ? c.warm + '40' : c.line}`,
+              background: v ? c.warm + '26' : c.s2,
+              border: `1px solid ${v ? c.warm + '66' : c.line}`,
               color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}
           >
@@ -1122,8 +1122,8 @@ export function FeedBook({ name, avatar, title, year, author, coverUrl, votes: i
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   padding: '4px 12px', borderRadius: 6,
-                  background: v ? c.warm + '15' : c.s2,
-                  border: `1px solid ${v ? c.warm + '40' : c.line}`,
+                  background: v ? c.warm + '26' : c.s2,
+                  border: `1px solid ${v ? c.warm + '66' : c.line}`,
                   color: v ? c.warm : c.text2,
                   fontSize: 14, fontWeight: 700, cursor: 'pointer',
                 }}
@@ -1323,8 +1323,8 @@ export function FeedCompactSmallGroup({ name, avatar, title, date, location, wee
             onClick={handleSignup}
             style={{
               padding: '3px 10px', borderRadius: 5,
-              background: joined ? c.warm + '15' : c.s2,
-              border: `1px solid ${joined ? c.warm + '40' : c.line}`,
+              background: joined ? c.warm + '26' : c.s2,
+              border: `1px solid ${joined ? c.warm + '66' : c.line}`,
               color: joined ? c.warm : c.text3, fontSize: 12, fontWeight: 600, cursor: 'pointer',
             }}
           >
@@ -1392,8 +1392,8 @@ export function FeedCompactBook({ name, title, year, author, coverUrl, votes: in
             onClick={handleVote}
             style={{
               display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
-              background: v ? c.warm + '15' : c.s2,
-              border: `1px solid ${v ? c.warm + '40' : c.line}`,
+              background: v ? c.warm + '26' : c.s2,
+              border: `1px solid ${v ? c.warm + '66' : c.line}`,
               color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}
           >
