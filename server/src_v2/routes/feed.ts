@@ -9,10 +9,13 @@ import { DailyQuestionService } from '../modules/daily-question/daily-question.s
  * Returns aggregated feed data: recent events, announcements, recommendations, postcards
  */
 export const feedRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/', async (request) => {
+  app.get('/', async (request, reply) => {
     const queryUserId = (request.query as { userId?: string }).userId;
     const headerUserId = (request.headers as Record<string, string>)['x-user-id'];
     const userId = queryUserId || headerUserId || undefined;
+    // Debug: expose which userId source was used (check in browser Network tab)
+    reply.header('x-feed-user', userId ?? 'none');
+    reply.header('x-feed-user-src', queryUserId ? 'query' : headerUserId ? 'header' : 'none');
     const prisma = app.prisma;
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);

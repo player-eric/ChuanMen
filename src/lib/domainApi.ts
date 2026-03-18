@@ -411,7 +411,9 @@ export async function selectEventRecommendation(eventId: string, recommendationI
    ═══════════════════════════════════════════════════════════════ */
 
 export async function fetchFeedApi(userId?: string) {
-  return requestJson<EntityMap>(`/api/feed${toQueryString({ userId: userId ?? '' })}`);
+  const headers: Record<string, string> = {};
+  if (userId) headers['x-user-id'] = userId;
+  return requestJson<EntityMap>(`/api/feed${toQueryString({ userId: userId ?? '' })}`, { headers });
 }
 
 /* ═══════════════════════════════════════════════════════════════

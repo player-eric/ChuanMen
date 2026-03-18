@@ -25,6 +25,7 @@ export async function createApp() {
   await app.register(cors, {
     origin: env.FRONTEND_ORIGIN,
     credentials: true,
+    allowedHeaders: ['Content-Type', 'x-user-id', 'x-migration-secret'],
   });
   await app.register(prismaPlugin);
 
