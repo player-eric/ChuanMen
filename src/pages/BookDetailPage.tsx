@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
 import {
   Avatar,
-  AvatarGroup,
   Box,
   Button,
   Card,
@@ -28,7 +27,7 @@ import { useColors } from '@/hooks/useColors';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { toggleRecommendationVote, updateRecommendation, deleteRecommendation } from '@/lib/domainApi';
 import { RichTextViewer } from '@/components/RichTextEditor';
-import { firstNonEmoji } from '@/components/Atoms';
+import { firstNonEmoji, AvaStack } from '@/components/Atoms';
 import CommentSection from '@/components/CommentSection';
 
 export default function BookDetailPage() {
@@ -47,6 +46,7 @@ export default function BookDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string>(() => (raw as any)?.coverUrl ?? '');
+  const [expandVoters, setExpandVoters] = useState(false);
 
   const bookIdForUpload = raw && 'id' in raw ? String((raw as any).id) : '';
   const { pickFile: pickCover, upload: uploadCover, isUploading: coverUploading } = useMediaUpload({
@@ -284,17 +284,15 @@ export default function BookDetailPage() {
               </Button>
             </Stack>
             {isDetail && book.voters.length > 0 && (
-              <AvatarGroup max={10} sx={{ justifyContent: 'flex-start' }}>
-                {book.voters.map((name) => (
-                  <Avatar
-                    key={name}
-                    sx={{ width: 32, height: 32, cursor: 'pointer' }}
-                    onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
-                  >
-                    {firstNonEmoji(name)}
-                  </Avatar>
-                ))}
-              </AvatarGroup>
+              <Box sx={{ cursor: book.voters.length > 5 ? 'pointer' : undefined }} onClick={book.voters.length > 5 ? () => setExpandVoters((v) => !v) : undefined}>
+                <AvaStack
+                  names={book.voters}
+                  tooltips={book.voters}
+                  size={32}
+                  max={expandVoters ? book.voters.length : 5}
+                  onClickItem={(i) => navigate(`/members/${encodeURIComponent(book.voters[i])}`)}
+                />
+              </Box>
             )}
           </CardContent>
         </Card>

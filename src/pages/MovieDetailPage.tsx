@@ -2,7 +2,6 @@ import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
 import {
   Avatar,
-  AvatarGroup,
   Box,
   Button,
   Card,
@@ -32,7 +31,7 @@ import { toggleMovieVote, updateMovie, deleteMovie } from '@/lib/domainApi';
 import { RichTextViewer, type RichTextEditorHandle } from '@/components/RichTextEditor';
 
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
-import { firstNonEmoji } from '@/components/Atoms';
+import { firstNonEmoji, AvaStack } from '@/components/Atoms';
 import CommentSection from '@/components/CommentSection';
 
 export default function MovieDetailPage() {
@@ -60,6 +59,7 @@ export default function MovieDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [posterState, setPosterState] = useState<string>(raw?.poster ?? '');
+  const [expandVoters, setExpandVoters] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editSynopsis, setEditSynopsis] = useState('');
@@ -380,17 +380,15 @@ export default function MovieDetailPage() {
               </Button>
             </Stack>
             {voters.length > 0 && (
-              <AvatarGroup max={10} sx={{ justifyContent: 'flex-start' }}>
-                {voters.map((voter) => (
-                  <Avatar
-                    key={voter.id}
-                    sx={{ width: 32, height: 32, cursor: 'pointer' }}
-                    onClick={() => navigate(`/members/${encodeURIComponent(voter.name)}`)}
-                  >
-                    {firstNonEmoji(voter.name)}
-                  </Avatar>
-                ))}
-              </AvatarGroup>
+              <Box sx={{ cursor: voters.length > 5 ? 'pointer' : undefined }} onClick={voters.length > 5 ? () => setExpandVoters((v) => !v) : undefined}>
+                <AvaStack
+                  names={voters.map((v) => v.name)}
+                  tooltips={voters.map((v) => v.name)}
+                  size={32}
+                  max={expandVoters ? voters.length : 5}
+                  onClickItem={(i) => navigate(`/members/${encodeURIComponent(voters[i].name)}`)}
+                />
+              </Box>
             )}
           </CardContent>
         </Card>

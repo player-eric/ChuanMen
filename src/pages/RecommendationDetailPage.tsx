@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router';
 import {
   Alert,
   Avatar,
-  AvatarGroup,
   Box,
   Button,
   Card,
@@ -30,7 +29,7 @@ import { getRecommendationById, deleteRecommendation, updateRecommendation, togg
 import { RichTextViewer, type RichTextEditorHandle } from '@/components/RichTextEditor';
 
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
-import { firstNonEmoji } from '@/components/Atoms';
+import { firstNonEmoji, AvaStack } from '@/components/Atoms';
 import { ImageUpload } from '@/components/ImageUpload';
 import CommentSection from '@/components/CommentSection';
 
@@ -64,6 +63,7 @@ export default function RecommendationDetailPage() {
   const [voteCount, setVoteCount] = useState(0);
   const [voters, setVoters] = useState<{ id: string; name: string }[]>([]);
   const [coverUrl, setCoverUrl] = useState('');
+  const [expandVoters, setExpandVoters] = useState(false);
 
   const { pickFile, upload: uploadCover, isUploading: coverUploading } = useMediaUpload({
     category: 'cover',
@@ -319,17 +319,15 @@ export default function RecommendationDetailPage() {
               </Button>
             </Stack>
             {voters.length > 0 && (
-              <AvatarGroup max={10} sx={{ justifyContent: 'flex-start' }}>
-                {voters.map((voter) => (
-                  <Avatar
-                    key={voter.id}
-                    sx={{ width: 32, height: 32, cursor: 'pointer' }}
-                    onClick={() => navigate(`/members/${encodeURIComponent(voter.name)}`)}
-                  >
-                    {firstNonEmoji(voter.name)}
-                  </Avatar>
-                ))}
-              </AvatarGroup>
+              <Box sx={{ cursor: voters.length > 5 ? 'pointer' : undefined }} onClick={voters.length > 5 ? () => setExpandVoters((v) => !v) : undefined}>
+                <AvaStack
+                  names={voters.map((v) => v.name)}
+                  tooltips={voters.map((v) => v.name)}
+                  size={32}
+                  max={expandVoters ? voters.length : 5}
+                  onClickItem={(i) => navigate(`/members/${encodeURIComponent(voters[i].name)}`)}
+                />
+              </Box>
             )}
           </CardContent>
         </Card>
