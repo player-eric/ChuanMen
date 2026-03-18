@@ -762,6 +762,8 @@ export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV
   const { user } = useAuth();
   const [v, setV] = useState(initVoted ?? false);
   const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -841,6 +843,8 @@ export function FeedProposal({ name, avatar, title, votes: initV, interested, en
   const { user } = useAuth();
   const [v, setV] = useState(initVoted ?? false);
   const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -898,6 +902,8 @@ export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV,
   const { user } = useAuth();
   const [v, setV] = useState(initVoted ?? false);
   const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
@@ -955,6 +961,8 @@ export function FeedCompactProposal({ name, avatar, title, votes: initV, entityI
   const { user } = useAuth();
   const [v, setV] = useState(initVoted ?? false);
   const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
@@ -1014,6 +1022,8 @@ export function FeedRecommendation({ name, title, category, categoryIcon, coverU
   const { user } = useAuth();
   const [v, setV] = useState(initVoted ?? false);
   const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
@@ -1076,6 +1086,8 @@ export function FeedBook({ name, avatar, title, year, author, coverUrl, votes: i
   const { user } = useAuth();
   const [v, setV] = useState(initVoted ?? false);
   const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -1346,6 +1358,8 @@ export function FeedCompactBook({ name, title, year, author, coverUrl, votes: in
   const { user } = useAuth();
   const [v, setV] = useState(initVoted ?? false);
   const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
