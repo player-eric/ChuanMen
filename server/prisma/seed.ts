@@ -1417,7 +1417,7 @@ async function seedSiteConfig() {
         timezone: 'America/New_York',
         frequency: 'daily',
         customDays: [true, true, true, true, true, false, false],
-        skipIfEmpty: false,
+        skipIfEmpty: true,
         minItems: 3,
         personalized: true,
         dedupeWindowHours: 24,

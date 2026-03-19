@@ -516,12 +516,19 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       }
 
       // 10. Co-comment notifications (someone else commented where I also commented)
+      // Pre-fetch recommendation categories for correct URLs
+      const recCommentIds = (coComments as any[]).filter((c: any) => c.entityType === 'recommendation').map((c: any) => c.entityId);
+      const recCatMap = new Map<string, string>();
+      if (recCommentIds.length > 0) {
+        const recs = await prisma.recommendation.findMany({ where: { id: { in: recCommentIds } }, select: { id: true, category: true } });
+        for (const r of recs) recCatMap.set(r.id, r.category);
+      }
       for (const c of coComments as any[]) {
         let nav = '/';
         if (c.entityType === 'event') nav = `/events/${c.entityId}`;
         else if (c.entityType === 'movie') nav = `/discover/movies/${c.entityId}`;
         else if (c.entityType === 'proposal') nav = `/events/proposals/${c.entityId}`;
-        else if (c.entityType === 'recommendation') nav = `/discover/recommendations/${c.entityId}`;
+        else if (c.entityType === 'recommendation') nav = `/discover/${recCatMap.get(c.entityId) ?? 'book'}/${c.entityId}`;
         notifications.push({
           action: 'comment_reply',
           name: c.author?.name ?? '',

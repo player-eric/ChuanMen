@@ -766,7 +766,7 @@ async function buildDigestSections(
       sortedSections.push({
         sortOrder: sourceMap.get('new_events')?.sortOrder ?? 0,
         section: {
-          icon: '🎬',
+          icon: '📅',
           title: '新活动',
           items: newEvents.map((e) => {
             const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'America/New_York' });
@@ -834,7 +834,7 @@ async function buildDigestSections(
         section: {
           icon: '💌',
           title: '感谢卡',
-          items: [{ text: `社区本周发出了 ${postcardCount} 张新感谢卡` }],
+          items: [{ text: `社区最近发出了 ${postcardCount} 张新感谢卡` }],
         },
       });
     }
@@ -927,6 +927,7 @@ async function buildDigestSections(
       const items: { text: string; url?: string }[] = [];
       for (const e of topEntities) {
         let title = '';
+        let recCat = 'book';
         if (e.entityType === 'event') {
           const ev = await prisma.event.findUnique({ where: { id: e.entityId }, select: { title: true } });
           title = ev?.title ?? '';
@@ -937,15 +938,16 @@ async function buildDigestSections(
           const pr = await prisma.proposal.findUnique({ where: { id: e.entityId }, select: { title: true } });
           title = pr?.title ?? '';
         } else if (e.entityType === 'recommendation') {
-          const rc = await prisma.recommendation.findUnique({ where: { id: e.entityId }, select: { title: true } });
+          const rc = await prisma.recommendation.findUnique({ where: { id: e.entityId }, select: { title: true, category: true } });
           title = rc?.title ?? '';
+          recCat = rc?.category ?? 'book';
         }
         if (title) {
           const pathMap: Record<string, string> = {
             event: `/events/${e.entityId}`,
             movie: `/discover/movies/${e.entityId}`,
             proposal: `/events/proposals/${e.entityId}`,
-            recommendation: `/discover/recommendations/${e.entityId}`,
+            recommendation: `/discover/${recCat}/${e.entityId}`,
           };
           items.push({
             text: `「${title}」收到 ${e.count} 条新评论`,
@@ -1657,7 +1659,7 @@ export async function sendNewRecNotif(
             recTitle: rec.title,
           },
           ctaLabel: '查看推荐',
-          ctaUrl: `https://chuanmener.club/discover/recommendations/${rec.id}`,
+          ctaUrl: `https://chuanmener.club/discover/${rec.category}/${rec.id}`,
         });
         await prisma.emailLog.create({
           data: { userId: user.id, ruleId: 'P2-B', refId: rec.id, messageId: result.MessageId },
@@ -1867,7 +1869,7 @@ export async function sendRecDigest(
   const categoryIcons: Record<string, string> = {
     book: '📖', recipe: '🍽', place: '📍', music: '🎵', external_event: '🎭', movie: '🎬',
   };
-  const recList = newRecs.map((r) => `${categoryIcons[r.category] ?? '📖'} [${r.title}](https://chuanmener.club/discover/recommendations/${r.id})`).join('\n');
+  const recList = newRecs.map((r) => `${categoryIcons[r.category] ?? '📖'} [${r.title}](https://chuanmener.club/discover/${r.category}/${r.id})`).join('\n');
 
   const allUsers: UserRow[] = await prisma.user.findMany({
     where: ELIGIBLE_USER_WHERE,

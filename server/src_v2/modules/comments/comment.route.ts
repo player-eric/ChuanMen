@@ -39,11 +39,16 @@ export const commentRoutes: FastifyPluginAsync = async (app) => {
           });
           const origin = env.FRONTEND_ORIGIN || 'https://chuanmener.club';
           // Build link to the entity detail page
+          let recPath = `/discover/book/${entityId}`;
+          if (entityType === 'recommendation') {
+            const rec = await app.prisma.recommendation.findUnique({ where: { id: entityId }, select: { category: true } });
+            recPath = `/discover/${rec?.category ?? 'book'}/${entityId}`;
+          }
           const pathMap: Record<string, string> = {
             event: `/events/${entityId}`,
             movie: `/discover/movies/${entityId}`,
             proposal: `/events/proposals/${entityId}`,
-            recommendation: `/discover/recommendations/${entityId}`,
+            recommendation: recPath,
             postcard: `/cards`,
           };
           const ctaUrl = `${origin}${pathMap[entityType] ?? '/'}`;
@@ -157,6 +162,7 @@ export const commentRoutes: FastifyPluginAsync = async (app) => {
 
           // Determine entity title for email
           let entityTitle = '';
+          let recCategory = 'book';
           if (comment.entityType === 'event') {
             const e = await app.prisma.event.findUnique({ where: { id: comment.entityId }, select: { title: true } });
             entityTitle = e?.title ?? '';
@@ -167,8 +173,9 @@ export const commentRoutes: FastifyPluginAsync = async (app) => {
             const p = await app.prisma.proposal.findUnique({ where: { id: comment.entityId }, select: { title: true } });
             entityTitle = p?.title ?? '';
           } else if (comment.entityType === 'recommendation') {
-            const r = await app.prisma.recommendation.findUnique({ where: { id: comment.entityId }, select: { title: true } });
+            const r = await app.prisma.recommendation.findUnique({ where: { id: comment.entityId }, select: { title: true, category: true } });
             entityTitle = r?.title ?? '';
+            recCategory = r?.category ?? 'book';
           }
 
           const authorName = comment.author?.name ?? '有人';
@@ -178,7 +185,7 @@ export const commentRoutes: FastifyPluginAsync = async (app) => {
             event: `/events/${comment.entityId}`,
             movie: `/discover/movies/${comment.entityId}`,
             proposal: `/events/proposals/${comment.entityId}`,
-            recommendation: `/discover/recommendations/${comment.entityId}`,
+            recommendation: `/discover/${recCategory}/${comment.entityId}`,
             postcard: `/cards`,
           };
           const ctaUrl = `${origin}${pathMap[comment.entityType] ?? '/'}`;
