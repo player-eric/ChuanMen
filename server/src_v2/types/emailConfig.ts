@@ -36,7 +36,7 @@ export interface GlobalEmailConfig {
 
 export const DEFAULT_DIGEST_CONFIG: DigestConfig = {
   maxTotalItems: 10,
-  sendTime: '09:00',
+  sendTime: '12:00',
   timezone: 'America/New_York',
   frequency: 'daily',
   customDays: [true, true, true, true, true, false, false],
