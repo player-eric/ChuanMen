@@ -718,20 +718,22 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         const candidates: { type: string; at: Date; userName: string }[] = [];
         if (latestComment && latestComment.at > e.createdAt) candidates.push({ type: 'comment', at: latestComment.at, userName: latestComment.userName });
         if (latestSignup && latestSignup.at > e.createdAt) candidates.push({ type: 'signup', at: latestSignup.at, userName: latestSignup.userName });
+        // Photos compete with comments/signups — most recent wins
+        if (e.recapPhotoUrls?.length > 0 && e.phase === 'ended' && e.updatedAt > e.createdAt) {
+          candidates.push({ type: 'photo', at: e.updatedAt, userName: '' });
+        }
         if (candidates.length > 0) {
           candidates.sort((a, b) => b.at.getTime() - a.at.getTime());
           activityHint = candidates[0].type;
-          activityHintUser = candidates[0].userName;
+          activityHintUser = candidates[0].userName || undefined;
           activityHintAt = candidates[0].at;
-        } else if (e.recapPhotoUrls?.length > 0) {
-          activityHint = 'photo';
         } else {
           activityHint = 'update';
         }
       }
       // Real activity time: comments and signups both bump sort order
       const now = new Date();
-      const interactionAt = (activityHint === 'comment' || activityHint === 'signup') ? activityHintAt : undefined;
+      const interactionAt = (activityHint === 'comment' || activityHint === 'signup' || activityHint === 'photo') ? activityHintAt : undefined;
       const realActivityAt = interactionAt
         ?? (e.startsAt && e.startsAt <= now ? e.startsAt : e.createdAt);
       const activityHintComment = activityHint === 'comment' && latestComment ? latestComment.content : undefined;

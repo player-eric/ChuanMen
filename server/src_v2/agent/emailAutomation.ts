@@ -751,7 +751,7 @@ async function buildDigestSections(
   if (isSourceEnabled('new_events')) {
     const newEvents = await prisma.event.findMany({
       where: {
-        phase: { not: 'cancelled' },
+        phase: { notIn: ['cancelled', 'ended'] },
         OR: [
           { createdAt: { gte: cutoff } },
           { updatedAt: { gte: cutoff } },
