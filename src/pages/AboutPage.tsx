@@ -23,10 +23,7 @@ export default function AboutPage() {
         <CardContent sx={{ textAlign: 'center' }}>
           <Typography variant="h4" fontWeight={800}>串门儿</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            一群住在新泽西的中国人，试着把陌生人变成邻居，把邻居变成朋友。
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            我们通过小型聚会认识彼此——电影夜、Potluck、徒步、咖啡闲聊。每次不超过 10 个人，在谁的客厅、谁的厨房。来了就是朋友，走了还是朋友。
+            交个真正的朋友
           </Typography>
           <Grid container spacing={1.5} sx={{ mt: 1 }}>
             {[
