@@ -12,7 +12,53 @@ function resend(): Resend {
   return _resend;
 }
 
-type SendEmailInput = { to: string; subject: string; text: string; html?: string };
+// ── Daily budget tracking (in-memory, resets each calendar day ET) ────
+
+let _budgetDate = ''; // YYYY-MM-DD in America/New_York
+let _budgetCount = 0;
+let _dailyBudgetLimit = 80; // updated from GlobalEmailConfig each agent cycle
+
+/** Called by agent cycle to sync budget limit from SiteConfig. */
+export function setDailyBudgetLimit(limit: number) {
+  _dailyBudgetLimit = limit;
+}
+
+function getTodayET(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // YYYY-MM-DD
+}
+
+function checkAndIncrementBudget(): boolean {
+  const today = getTodayET();
+  if (_budgetDate !== today) {
+    _budgetDate = today;
+    _budgetCount = 0;
+  }
+  if (_budgetCount >= _dailyBudgetLimit) return false;
+  _budgetCount++;
+  return true;
+}
+
+/** Read current budget state (for logging / monitoring). */
+export function getDailyBudgetStatus() {
+  const today = getTodayET();
+  return {
+    date: _budgetDate === today ? _budgetDate : today,
+    sent: _budgetDate === today ? _budgetCount : 0,
+    limit: _dailyBudgetLimit,
+    remaining: _budgetDate === today ? _dailyBudgetLimit - _budgetCount : _dailyBudgetLimit,
+  };
+}
+
+// ── Send email ───────────────────────────────────────────────
+
+type SendEmailInput = {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  /** Critical emails (login codes) bypass the daily budget. Default false. */
+  critical?: boolean;
+};
 
 export async function sendEmail(input: SendEmailInput) {
   if (!env.RESEND_API_KEY) {
@@ -27,6 +73,11 @@ export async function sendEmail(input: SendEmailInput) {
       console.log(`[EMAIL BLOCKED] (whitelist) to: ${input.to}, subject: ${input.subject}`);
       return { MessageId: `whitelist-blocked-${Date.now()}` };
     }
+  }
+  // Daily budget check — critical emails (login codes) bypass this
+  if (!input.critical && !checkAndIncrementBudget()) {
+    console.log(`[EMAIL BLOCKED] (daily budget ${_budgetCount}/${_dailyBudgetLimit}) to: ${input.to}, subject: ${input.subject}`);
+    return { MessageId: `budget-blocked-${Date.now()}` };
   }
   const { data, error } = await resend().emails.send({
     from: env.RESEND_FROM_EMAIL,

@@ -86,6 +86,7 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
           subject: rendered.subject,
           text: rendered.text,
           html: rendered.html,
+          critical: true,
         }).catch((err) => app.log.error(err, `Failed to notify admin ${admin.email}`));
       }
     } catch (err) {
@@ -110,6 +111,7 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
         subject: rendered.subject,
         text: rendered.text,
         html: rendered.html,
+        critical: true,
       });
     } catch (err) {
       app.log.error(err, 'Failed to send application confirmation email');
@@ -168,6 +170,7 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
         subject: rendered.subject,
         text: rendered.text,
         html: rendered.html,
+        critical: true,
       });
 
       await app.prisma.emailLog.create({

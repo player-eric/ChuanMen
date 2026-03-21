@@ -397,6 +397,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
             subject: rendered.subject,
             text: rendered.text,
             html: rendered.html,
+            critical: true,
           }).catch((err) => {
             app.log.error({ err }, 'Application notification to host failed');
           });
@@ -463,6 +464,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
               subject: rendered.subject,
               text: rendered.text,
               html: rendered.html,
+              critical: true,
             }).catch((err) => {
               app.log.error({ err }, 'Direct signup notification to host failed');
             });
@@ -519,6 +521,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
             subject: rendered.subject,
             text: rendered.text,
             html: rendered.html,
+            critical: true,
           }).catch((err) => {
             app.log.error({ err }, 'Signup cancellation notification to host failed');
           });

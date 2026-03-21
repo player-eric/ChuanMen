@@ -109,6 +109,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         subject: rendered.subject,
         text: rendered.text,
         html: rendered.html,
+        critical: true,
       });
     } catch (err) {
       app.log.error(err, 'Failed to send login code email (code logged above for dev)');

@@ -435,6 +435,7 @@ export class EventService {
           subject: rendered.subject,
           text: rendered.text,
           html: rendered.html,
+          critical: true,
         });
       }
     } catch { /* best effort */ }
@@ -472,6 +473,7 @@ export class EventService {
           subject: rendered.subject,
           text: rendered.text,
           html: rendered.html,
+          critical: true,
         });
       }
     } catch { /* best effort */ }

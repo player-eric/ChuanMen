@@ -52,7 +52,7 @@ export const emailRoutes: FastifyPluginAsync = async (app) => {
     if (!userId) return reply.code(401).send({ error: '需要登录' });
 
     const payload = safeParse(sendSchema, request.body);
-    const result = await sendEmail(payload);
+    const result = await sendEmail({ ...payload, critical: true });
     return reply.send({ ok: true, messageId: result.MessageId });
   });
 
@@ -209,6 +209,7 @@ export const emailRoutes: FastifyPluginAsync = async (app) => {
           subject: rendered.subject,
           text: rendered.text,
           html: rendered.html,
+          critical: true,
         }),
       ),
     );

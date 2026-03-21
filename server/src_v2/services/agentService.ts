@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { sendTemplatedEmail } from './emailService.js';
+import { sendTemplatedEmail, setDailyBudgetLimit } from './emailService.js';
 import { detectMilestones, generateHostTribute, processAnnouncedUsers } from '../agent/contentAutomation.js';
 import {
   sendPostEventRecap,
@@ -11,8 +11,6 @@ import {
   sendConsecutiveEventsReminder,
   sendSameDayReminder,
   sendFirstEventFollowup,
-  sendNewEventNotif,
-  sendNewRecNotif,
   sendOnboardingCheckin,
   sendSecondRecall,
   sendMilestoneNotif,
@@ -369,6 +367,7 @@ export async function runAgentCycle(app: FastifyInstance) {
   try {
     const globalCfgRow = await prisma.siteConfig.findUnique({ where: { key: 'emailConfig.global' } });
     const globalCfg = parseGlobalConfig(globalCfgRow?.value);
+    setDailyBudgetLimit(globalCfg.dailyBudget);
     if (globalCfg.systemPaused) {
       log.info('Agent: email system is paused globally, skipping all email phases');
       emailPaused = true;
@@ -430,19 +429,9 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: sendConsecutiveEventsReminder failed');
   }
 
-  // P2-A: New event notification (10-20 min after creation)
-  try {
-    await sendNewEventNotif(prisma, log);
-  } catch (err) {
-    log.error({ err }, 'Agent: sendNewEventNotif failed');
-  }
-
-  // P2-B: New recommendation notification
-  try {
-    await sendNewRecNotif(prisma, log);
-  } catch (err) {
-    log.error({ err }, 'Agent: sendNewRecNotif failed');
-  }
+  // P2-A & P2-B: Merged into DIGEST to reduce daily email volume.
+  // New events and recommendations are already covered by DIGEST's
+  // "new_events" and "movies" sources.
 
   // P3-A: One-week onboarding check-in
   try {

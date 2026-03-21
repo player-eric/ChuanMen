@@ -631,8 +631,9 @@ async function buildDigestSections(
   userId?: string,
   digestCfg?: DigestConfig,
 ): Promise<DigestSection[] | null> {
+  const windowHours = digestCfg?.dedupeWindowHours ?? 24;
   const cutoff = new Date();
-  cutoff.setTime(cutoff.getTime() - 24 * 60 * 60 * 1000);
+  cutoff.setTime(cutoff.getTime() - windowHours * 60 * 60 * 1000);
 
   const now = new Date();
   const in7Days = new Date();
@@ -1182,12 +1183,15 @@ export async function sendDailyDigest(
     select: { id: true, name: true, email: true },
   });
 
-  // 1-day cooldown: one digest per user per day
+  // Cooldown: prevent duplicate digests. DB value of 0 is a misconfiguration
+  // that disables cooldown entirely (cutoff = now), so enforce minimum of 3 days
+  // (matches twice-weekly frequency — Tue/Fri have 3-4 day gaps).
+  const cooldown = Math.max(rule.cooldownDays, 3);
   const eligible = await filterByCooldown(
     prisma,
     candidates.map((u) => u.id),
     'DIGEST',
-    rule.cooldownDays,
+    cooldown,
   );
 
   log.info(`DIGEST: ${candidates.length} candidates, ${eligible.size} eligible after cooldown`);

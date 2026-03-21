@@ -29,6 +29,8 @@ export interface DigestConfig {
 export interface GlobalEmailConfig {
   systemPaused: boolean;
   maxDailyPerUser: number;
+  /** Max non-critical emails per calendar day (UTC-5). Login codes bypass this. Default 80. */
+  dailyBudget: number;
   // Other fields exist (fromEmail, replyTo, etc.) but are not consumed by backend
 }
 
@@ -38,20 +40,20 @@ export const DEFAULT_DIGEST_CONFIG: DigestConfig = {
   maxTotalItems: 10,
   sendTime: '09:00',
   timezone: 'America/New_York',
-  frequency: 'daily',
-  customDays: [true, true, true, true, true, false, false],
-  skipIfEmpty: false,
+  frequency: 'custom',
+  customDays: [false, false, true, false, false, true, false], // Tue + Fri
+  skipIfEmpty: true,
   minItems: 3,
   personalized: true,
-  dedupeWindowHours: 24,
-  subjectTemplate: '串门儿 · {date} 社区动态',
-  headerText: '嘿 {userName}，这是今天的串门儿动态：',
+  dedupeWindowHours: 84,           // ~3.5 days to cover gap between Tue→Fri
+  subjectTemplate: '串门儿 · {date} 社区近况',
+  headerText: '嘿 {userName}，这是最近的串门儿动态：',
   footerText: '— 串门儿团队',
   ctaLabel: '查看更多动态',
   ctaUrl: 'https://chuanmener.club/',
   sources: [
     { key: 'new_events', label: '新活动发布', enabled: true, sortOrder: 0, maxItems: 3 },
-    { key: 'signups', label: '活动报名动态', enabled: true, sortOrder: 1, maxItems: 2 },
+    { key: 'signups', label: '即将开始', enabled: true, sortOrder: 1, maxItems: 2 },
     { key: 'postcards', label: '新感谢卡(公开)', enabled: true, sortOrder: 2, maxItems: 2 },
     { key: 'announcements', label: '社群公告', enabled: true, sortOrder: 3, maxItems: 1 },
     { key: 'movies', label: '新电影推荐', enabled: true, sortOrder: 4, maxItems: 2 },
@@ -63,6 +65,7 @@ export const DEFAULT_DIGEST_CONFIG: DigestConfig = {
 export const DEFAULT_GLOBAL_CONFIG: GlobalEmailConfig = {
   systemPaused: false,
   maxDailyPerUser: 1,
+  dailyBudget: 80,
 };
 
 // ── Helpers ──

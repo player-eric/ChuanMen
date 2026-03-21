@@ -64,6 +64,7 @@ export const commentRoutes: FastifyPluginAsync = async (app) => {
               subject: rendered.subject,
               text: rendered.text,
               html: rendered.html,
+
             });
           }
         } catch {
@@ -108,6 +109,7 @@ export const commentRoutes: FastifyPluginAsync = async (app) => {
                 subject: rendered.subject,
                 text: rendered.text,
                 html: rendered.html,
+  
               });
             }
           }
@@ -200,6 +202,7 @@ export const commentRoutes: FastifyPluginAsync = async (app) => {
               subject: rendered.subject,
               text: rendered.text,
               html: rendered.html,
+
             });
           }
         } catch {

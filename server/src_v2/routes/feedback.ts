@@ -118,6 +118,7 @@ export const feedbackRoutes: FastifyPluginAsync = async (app) => {
           subject: rendered.subject,
           text: rendered.text,
           html: rendered.html,
+          critical: true,
         });
         emailSent = true;
       } catch (fallbackErr) {
