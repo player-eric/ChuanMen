@@ -132,11 +132,16 @@ export default function EventCreatePage() {
         title: m.title,
         category: 'movie',
         description: [m.year, m.director].filter(Boolean).join(' · '),
-        voteCount: m.votes?.length ?? m._count?.votes ?? 0,
+        voteCount: m._count?.votes ?? m.votes?.length ?? 0,
         author: m.recommendedBy ?? m.author,
         _fromMovieTable: true,
       }));
-      setAllRecs([...recs, ...movieRecs]);
+      // Normalize recommendation voteCount: prefer _count.votes over stale voteCount field
+      const normalizedRecs = recs.map((r: any) => ({
+        ...r,
+        voteCount: r._count?.votes ?? r.voteCount ?? 0,
+      }));
+      setAllRecs([...normalizedRecs, ...movieRecs]);
     });
   }, []);
 
@@ -701,7 +706,7 @@ export default function EventCreatePage() {
                 return filtered.length > 0 ? (
                   <Stack spacing={1}>
                     {filtered.slice(0, 20).map((r: any) => {
-                      const votes = r.voteCount ?? r._count?.votes ?? 0;
+                      const votes = r._count?.votes ?? r.voteCount ?? 0;
                       return (
                         <Card key={r.id} variant="outlined">
                           <CardActionArea onClick={() => {

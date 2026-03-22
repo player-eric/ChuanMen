@@ -1209,20 +1209,30 @@ export default function EventDetailPage() {
                         if (!eventId) return;
                         const isNom = event.recSelectionMode === 'nominate';
                         const isMovie = r._fromMovieTable;
+                        const autoSelect = !isNom && !isMovie;
                         try {
                           if (isMovie) {
                             await linkEventMovie(eventId, r.id);
                           } else {
                             await linkEventRecommendation(eventId, r.id, user?.id, isNom);
                           }
+                          // Auto-select when mode is "直接选定" (not nominate)
+                          if (autoSelect) {
+                            await selectEventRecommendation(eventId, r.id);
+                          }
                           setEvent((prev) => {
                             if (!prev) return prev;
-                            const linked = [...(prev.linkedRecommendations ?? []), {
+                            // If auto-selecting, deselect other recs of same category first
+                            let existing = prev.linkedRecommendations ?? [];
+                            if (autoSelect) {
+                              existing = existing.map((lr) => lr.category === r.category ? { ...lr, isSelected: false } : lr);
+                            }
+                            const linked = [...existing, {
                               id: r.id, title: r.title, category: r.category,
                               linkedById: isMovie ? undefined : user?.id,
                               linkedByName: isMovie ? undefined : user?.name,
-                              isSelected: false, isNomination: isNom,
-                              globalVotes: r.voteCount ?? 0, attendeeVotes: 0, attendeeTotal: 0,
+                              isSelected: autoSelect, isNomination: isNom,
+                              globalVotes: r._count?.votes ?? r.voteCount ?? 0, attendeeVotes: 0, attendeeTotal: 0,
                               _fromMovieTable: isMovie || undefined,
                             }];
                             return { ...prev, linkedRecommendations: linked };
@@ -1230,7 +1240,7 @@ export default function EventDetailPage() {
                           setRecLinkOpen(false);
                           setRecSearch('');
                           setRecCategory('all');
-                          setFlash({ open: true, severity: 'success', message: isNom ? `已提名「${r.title}」` : `已关联「${r.title}」` });
+                          setFlash({ open: true, severity: 'success', message: autoSelect ? `已选定「${r.title}」` : isNom ? `已提名「${r.title}」` : `已关联「${r.title}」` });
                         } catch {
                           setFlash({ open: true, severity: 'error', message: '操作失败' });
                         }
