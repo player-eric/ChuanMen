@@ -4,6 +4,7 @@ import { CssBaseline, ThemeProvider } from '@mui/material';
 import { createAppTheme } from '@/muiTheme';
 import type { AppColorMode } from '@/muiTheme';
 import { AuthProvider } from '@/auth/AuthContext';
+import { Analytics } from '@vercel/analytics/react';
 
 type ColorModeContextValue = {
   mode: AppColorMode;
@@ -52,6 +53,7 @@ export default function AppProviders({ children }: { children: ReactNode }) {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>{children}</AuthProvider>
+        <Analytics />
       </ThemeProvider>
     </ColorModeContext.Provider>
   );
