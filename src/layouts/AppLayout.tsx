@@ -78,7 +78,7 @@ function getTitle(pathname: string): string {
   if (pathname === '/cards') return '感谢卡';
   if (pathname === '/profile') return '我的页面';
   if (pathname === '/settings') return '账号设置';
-  if (pathname === '/members') return '成员墙';
+  if (pathname === '/members') return '朋友们';
   if (pathname.startsWith('/members/')) return decodeURIComponent(pathname.split('/members/')[1]);
   if (pathname === '/about') return '关于串门儿';
   if (pathname === '/about/principle') return '串门原则';
@@ -186,7 +186,7 @@ export default function AppLayout() {
         {user && (
           <ListItemButton onClick={() => handleDrawerNav('/members')}>
             <ListItemIcon><PeopleRoundedIcon /></ListItemIcon>
-            <ListItemText primary="成员墙" />
+            <ListItemText primary="朋友们" />
           </ListItemButton>
         )}
         <ListItemButton onClick={() => handleDrawerNav('/about')}>
@@ -280,7 +280,7 @@ export default function AppLayout() {
               {user && (
                 <ListItemButton selected={pathname === '/members'} onClick={() => navigate('/members')}>
                   <ListItemIcon><PeopleRoundedIcon /></ListItemIcon>
-                  <ListItemText primary="成员墙" />
+                  <ListItemText primary="朋友们" />
                 </ListItemButton>
               )}
               <ListItemButton selected={pathname.startsWith('/about')} onClick={() => navigate('/about')}>

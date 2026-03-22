@@ -25,9 +25,6 @@ export default function AboutPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             交个真正的朋友
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            我们通过小型聚会认识彼此——电影夜、Potluck、徒步、咖啡闲聊。每次不超过 10 个人，在谁的客厅、谁的厨房。来了就是朋友，走了还是朋友。
-          </Typography>
           <Grid container spacing={1.5} sx={{ mt: 1 }}>
             {[
               { n: data.memberCount, l: '成员' },
