@@ -69,6 +69,31 @@ export async function createUploadUrl(key: string, contentType: string) {
   return { uploadUrl, publicUrl };
 }
 
+/** Fetch an S3 object as a Buffer (for direct serving, e.g. avatars). */
+export async function getObject(key: string): Promise<{ buffer: Buffer; contentType: string }> {
+  if (!s3Configured) {
+    // Local filesystem fallback
+    const filePath = path.join(LOCAL_UPLOADS_DIR, key);
+    if (!fs.existsSync(filePath)) throw new Error(`File not found: ${key}`);
+    const buffer = fs.readFileSync(filePath);
+    const ext = path.extname(filePath).slice(1);
+    const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
+    return { buffer, contentType: mimeMap[ext] || 'application/octet-stream' };
+  }
+
+  const command = new GetObjectCommand({
+    Bucket: env.AWS_S3_BUCKET,
+    Key: key,
+  });
+
+  const response = await s3().send(command);
+  const bodyBytes = await response.Body!.transformToByteArray();
+  return {
+    buffer: Buffer.from(bodyBytes),
+    contentType: response.ContentType || 'application/octet-stream',
+  };
+}
+
 export async function createDownloadUrl(key: string) {
   const command = new GetObjectCommand({
     Bucket: env.AWS_S3_BUCKET,

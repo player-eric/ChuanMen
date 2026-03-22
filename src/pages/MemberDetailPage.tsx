@@ -29,6 +29,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { useColors } from '@/hooks/useColors';
 import { photos } from '@/theme';
 import { hostMilestoneBadge } from '@/lib/mappings';
+import { thumbnailUrl } from '@/lib/domainApi';
 
 const sceneEmoji: Record<string, string> = {
   movieNight: '🎬',
@@ -549,7 +550,7 @@ export default function MemberDetailPage() {
                     >
                       <Box
                         component="img"
-                        src={photo.url}
+                        src={thumbnailUrl(photo.url)}
                         alt={photo.eventTitle}
                         sx={{
                           width: '100%',

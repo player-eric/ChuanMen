@@ -1,0 +1,40 @@
+name: Daily DB Backup
+
+on:
+  schedule:
+    - cron: '0 8 * * *' # Every day at UTC 08:00 (ET 4:00 AM)
+  workflow_dispatch: {} # Allow manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: backup
+          fetch-depth: 1
+
+      - name: Install PostgreSQL 16 client
+        run: |
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-16
+
+      - name: Dump database
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+        run: |
+          FILENAME="backup_$(date +%Y%m%d_%H%M%S).sql.gz"
+          pg_dump "$DATABASE_URL" --no-owner --no-acl --clean --if-exists | gzip > "$FILENAME"
+          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+
+      - name: Cleanup old backups (keep 30 days)
+        run: find . -name 'backup_*.sql.gz' -mtime +30 -delete
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "backup: ${{ env.FILENAME }}" || echo "No changes"
+          git push

@@ -28,7 +28,7 @@ import { PostCard } from '@/components/PostCard';
 import { Poster } from '@/components/Poster';
 import { EmptyState } from '@/components/EmptyState';
 import { useColors } from '@/hooks/useColors';
-import { fetchProfileApi } from '@/lib/domainApi';
+import { fetchProfileApi, thumbnailUrl } from '@/lib/domainApi';
 import { photos } from '@/theme';
 import { firstNonEmoji } from '@/components/Atoms';
 
@@ -565,7 +565,7 @@ export default function ProfilePage() {
                                 >
                                   <Box
                                     component="img"
-                                    src={photo.url}
+                                    src={thumbnailUrl(photo.url)}
                                     alt={photo.eventTitle}
                                     sx={{
                                       width: '100%',
