@@ -88,8 +88,15 @@ export default function ProfilePage() {
     role: raw.user?.role ?? raw.role ?? '',
     participationStats: raw.stats ?? raw.participationStats ?? { eventCount: 0, hostCount: 0, movieCount: 0, screenedCount: 0, proposalCount: 0, voteCount: 0 },
     contribution: raw.stats ?? raw.contribution ?? { hostCount: 0, eventCount: 0, movieCount: 0, cardsSent: 0, cardsReceived: 0 },
-    myMovies: raw.recentMovies ?? raw.myMovies ?? [],
-    votedMovies: raw.votedMovies ?? [],
+    myMovies: (raw.recentMovies ?? raw.myMovies ?? []).map((m: any) => ({
+      id: m.id, title: m.title, year: m.year, poster: m.poster,
+      dir: m.director ?? m.dir ?? '', v: m._count?.votes ?? m.v ?? 0, status: m.status,
+    })),
+    votedMovies: (raw.votedMovies ?? []).map((m: any) => ({
+      id: m.id, title: m.title, year: m.year, poster: m.poster,
+      dir: m.director ?? m.dir ?? '', v: m._count?.votes ?? m.v ?? 0, status: m.status,
+      by: m.recommendedBy?.name ?? m.by ?? '',
+    })),
     upcomingEvents: (raw.upcomingEvents ?? []).map((e: any) => ({
       id: e.id,
       title: e.title ?? '',
@@ -684,7 +691,7 @@ export default function ProfilePage() {
 
       {/* ══════ Tab 2: 品味 ══════ */}
       {tab === 2 && (
-        <>
+        <Stack spacing={2}>
           {data.myMovies.length === 0 && data.votedMovies.length === 0 && (
             <EmptyState
               icon="🎬"
@@ -694,96 +701,88 @@ export default function ProfilePage() {
             />
           )}
 
-          {(data.myMovies.length > 0 || data.votedMovies.length > 0) && (
-            <Grid container spacing={2}>
-              {/* My Recommended Movies */}
-              {data.myMovies.length > 0 && (
-                <Grid size={{ xs: 12, md: data.votedMovies.length > 0 ? 6 : 12 }}>
-                  <Card sx={{ height: '100%' }}>
-                    <CardContent>
-                      <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-                        🎬 我推荐的电影 ({data.myMovies.length})
-                      </Typography>
-                      <Stack spacing={1}>
-                        {data.myMovies.map((movie) => (
-                          <CardActionArea
-                            key={movie.id}
-                            onClick={() => navigate(`/discover/movies/${movie.id}`)}
-                            sx={{ borderRadius: 2 }}
-                          >
-                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
-                              <Poster title={movie.title} w={40} h={56} />
-                              <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {movie.year} · {movie.dir}
-                                </Typography>
-                                <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
-                                  <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
-                                  {movie.status && (
-                                    <Chip
-                                      size="small"
-                                      label={movie.status}
-                                      color={movie.status === '本周放映' ? 'warning' : 'default'}
-                                      sx={{ height: 20, fontSize: 11 }}
-                                    />
-                                  )}
-                                </Stack>
-                              </Box>
+          {data.myMovies.length > 0 && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                  🎬 我推荐的电影 ({data.myMovies.length})
+                </Typography>
+                <Grid container spacing={1.5}>
+                  {data.myMovies.map((movie) => (
+                    <Grid key={movie.id} size={{ xs: 12, sm: 6 }}>
+                      <CardActionArea
+                        onClick={() => navigate(`/discover/movies/${movie.id}`)}
+                        sx={{ borderRadius: 2 }}
+                      >
+                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
+                          <Poster title={movie.title} src={movie.poster} w={40} h={56} />
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {movie.year} · {movie.dir}
+                            </Typography>
+                            <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
+                              <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
+                              {movie.status && (
+                                <Chip
+                                  size="small"
+                                  label={movie.status}
+                                  color={movie.status === '本周放映' ? 'warning' : 'default'}
+                                  sx={{ height: 20, fontSize: 11 }}
+                                />
+                              )}
                             </Stack>
-                          </CardActionArea>
-                        ))}
-                      </Stack>
-                    </CardContent>
-                  </Card>
+                          </Box>
+                        </Stack>
+                      </CardActionArea>
+                    </Grid>
+                  ))}
                 </Grid>
-              )}
-
-              {/* Voted Movies */}
-              {data.votedMovies.length > 0 && (
-                <Grid size={{ xs: 12, md: data.myMovies.length > 0 ? 6 : 12 }}>
-                  <Card sx={{ height: '100%' }}>
-                    <CardContent>
-                      <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-                        👍 我投票的电影 ({data.votedMovies.length})
-                      </Typography>
-                      <Stack spacing={1}>
-                        {data.votedMovies.map((movie) => (
-                          <CardActionArea
-                            key={movie.id}
-                            onClick={() => navigate(`/discover/movies/${movie.id}`)}
-                            sx={{ borderRadius: 2 }}
-                          >
-                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
-                              <Poster title={movie.title} w={40} h={56} />
-                              <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {movie.year} · {movie.dir} · 推荐人: {movie.by}
-                                </Typography>
-                                <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
-                                  <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
-                                  {movie.status && (
-                                    <Chip
-                                      size="small"
-                                      label={movie.status}
-                                      color={movie.status === '本周放映' ? 'warning' : 'default'}
-                                      sx={{ height: 20, fontSize: 11 }}
-                                    />
-                                  )}
-                                </Stack>
-                              </Box>
-                            </Stack>
-                          </CardActionArea>
-                        ))}
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )}
-            </Grid>
+              </CardContent>
+            </Card>
           )}
-        </>
+
+          {data.votedMovies.length > 0 && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                  👍 我投票的电影 ({data.votedMovies.length})
+                </Typography>
+                <Grid container spacing={1.5}>
+                  {data.votedMovies.map((movie) => (
+                    <Grid key={movie.id} size={{ xs: 12, sm: 6 }}>
+                      <CardActionArea
+                        onClick={() => navigate(`/discover/movies/${movie.id}`)}
+                        sx={{ borderRadius: 2 }}
+                      >
+                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
+                          <Poster title={movie.title} src={movie.poster} w={40} h={56} />
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {movie.year} · {movie.dir} · 推荐人: {movie.by}
+                            </Typography>
+                            <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
+                              <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
+                              {movie.status && (
+                                <Chip
+                                  size="small"
+                                  label={movie.status}
+                                  color={movie.status === '本周放映' ? 'warning' : 'default'}
+                                  sx={{ height: 20, fontSize: 11 }}
+                                />
+                              )}
+                            </Stack>
+                          </Box>
+                        </Stack>
+                      </CardActionArea>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+        </Stack>
       )}
 
       {/* ══════ Tab 3: 感谢卡 ══════ */}

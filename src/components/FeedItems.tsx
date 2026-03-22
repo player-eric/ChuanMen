@@ -793,19 +793,9 @@ export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV
             <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
             <div style={{ fontSize: 12, color: c.text3, marginTop: 2 }}>{year}  {dir}</div>
             <div style={{ marginTop: 6 }}>
-              <button
-                onClick={handleVote}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  padding: '4px 12px', borderRadius: 6,
-                  background: v ? c.warm + '26' : c.s2,
-                  border: `1px solid ${v ? c.warm + '66' : c.line}`,
-                  color: v ? c.warm : c.text2,
-                  fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                }}
-              >
+              <Button onClick={handleVote} variant={v ? 'contained' : 'outlined'} size="small">
                 ▲ {count}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -932,17 +922,9 @@ export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV,
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flexShrink: 0 }}>
-          <button
-            onClick={handleVote}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
-              background: v ? c.warm + '26' : c.s2,
-              border: `1px solid ${v ? c.warm + '66' : c.line}`,
-              color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
+          <Button onClick={handleVote} variant={v ? 'contained' : 'outlined'} size="small">
             ▲ {count}
-          </button>
+          </Button>
         </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact {...extractEntity(navTarget)} />
@@ -1057,17 +1039,9 @@ export function FeedRecommendation({ name, title, category, categoryIcon, coverU
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flexShrink: 0 }}>
-          <button
-            onClick={handleVote}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
-              background: v ? c.warm + '26' : c.s2,
-              border: `1px solid ${v ? c.warm + '66' : c.line}`,
-              color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
+          <Button onClick={handleVote} variant={v ? 'contained' : 'outlined'} size="small">
             ▲ {count}
-          </button>
+          </Button>
         </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
@@ -1117,19 +1091,9 @@ export function FeedBook({ name, avatar, title, year, author, coverUrl, votes: i
             <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
             <div style={{ fontSize: 12, color: c.text3, marginTop: 2 }}>{year} · {author}</div>
             <div style={{ marginTop: 6 }}>
-              <button
-                onClick={handleVote}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  padding: '4px 12px', borderRadius: 6,
-                  background: v ? c.warm + '26' : c.s2,
-                  border: `1px solid ${v ? c.warm + '66' : c.line}`,
-                  color: v ? c.warm : c.text2,
-                  fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                }}
-              >
+              <Button onClick={handleVote} variant={v ? 'contained' : 'outlined'} size="small">
                 ▲ {count}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1388,17 +1352,9 @@ export function FeedCompactBook({ name, title, year, author, coverUrl, votes: in
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flexShrink: 0 }}>
-          <button
-            onClick={handleVote}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
-              background: v ? c.warm + '26' : c.s2,
-              border: `1px solid ${v ? c.warm + '66' : c.line}`,
-              color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
+          <Button onClick={handleVote} variant={v ? 'contained' : 'outlined'} size="small">
             ▲ {count}
-          </button>
+          </Button>
         </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
