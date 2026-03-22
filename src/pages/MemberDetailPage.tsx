@@ -69,11 +69,13 @@ export default function MemberDetailPage() {
       ...m,
       v: m._count?.votes ?? m.v ?? 0,
       dir: m.director ?? m.dir ?? '',
+      poster: m.poster,
     })),
     votedMovies: (raw.votedMovies ?? []).map((m: any) => ({
       ...m,
       v: m._count?.votes ?? m.v ?? 0,
       dir: m.director ?? m.dir ?? '',
+      poster: m.poster,
       by: m.recommendedBy?.name ?? m.by ?? '',
     })),
     upcomingEvents: (raw.upcomingEvents ?? []).map((e: any) => ({
@@ -645,7 +647,7 @@ export default function MemberDetailPage() {
                         sx={{ borderRadius: 2 }}
                       >
                         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
-                          <Poster title={movie.title} w={40} h={56} />
+                          <Poster title={movie.title} src={movie.poster} w={40} h={56} />
                           <Box sx={{ flex: 1, minWidth: 0 }}>
                             <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
                             <Typography variant="caption" color="text.secondary">
@@ -686,7 +688,7 @@ export default function MemberDetailPage() {
                         sx={{ borderRadius: 2 }}
                       >
                         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
-                          <Poster title={movie.title} w={40} h={56} />
+                          <Poster title={movie.title} src={movie.poster} w={40} h={56} />
                           <Box sx={{ flex: 1, minWidth: 0 }}>
                             <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
                             <Typography variant="caption" color="text.secondary">

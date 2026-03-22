@@ -1187,12 +1187,14 @@ export async function sendDailyDigest(
     select: { id: true, name: true, email: true },
   });
 
-  // 1-day cooldown: one digest per user per day
+  // Cooldown: prevent duplicate digests. DB value of 0 is a misconfiguration
+  // that disables cooldown entirely (cutoff = now), so enforce a minimum of 1.
+  const cooldown = Math.max(rule.cooldownDays, 1);
   const eligible = await filterByCooldown(
     prisma,
     candidates.map((u) => u.id),
     'DIGEST',
-    rule.cooldownDays,
+    cooldown,
   );
 
   log.info(`DIGEST: ${candidates.length} candidates, ${eligible.size} eligible after cooldown`);

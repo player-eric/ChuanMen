@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
 import {
+  Autocomplete,
   Avatar,
   Box,
   Button,
@@ -27,11 +28,11 @@ import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
-import { toggleMovieVote, updateMovie, deleteMovie } from '@/lib/domainApi';
+import { toggleMovieVote, updateMovie, deleteMovie, fetchMembersApi } from '@/lib/domainApi';
 import { RichTextViewer, type RichTextEditorHandle } from '@/components/RichTextEditor';
 
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
-import { firstNonEmoji, AvaStack } from '@/components/Atoms';
+import { Ava, firstNonEmoji, AvaStack } from '@/components/Atoms';
 import CommentSection from '@/components/CommentSection';
 
 export default function MovieDetailPage() {
@@ -67,6 +68,22 @@ export default function MovieDetailPage() {
   const [movieTitle, setMovieTitle] = useState<string>(raw?.title ?? '');
   const [movieSynopsis, setMovieSynopsis] = useState<string>(raw?.synopsis ?? '');
   const synopsisEditorRef = useRef<RichTextEditorHandle>(null);
+
+  // Admin: change recommender
+  const isAdmin = user?.role === 'admin';
+  const [members, setMembers] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
+  const [editAuthor, setEditAuthor] = useState<{ id: string; name: string; avatar: string | null } | null>(null);
+  const [recommenderName, setRecommenderName] = useState<string>('');
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetchMembersApi().then((list) => {
+      const mapped = (list as { id: string; name: string; avatar?: string | null }[]).map((m) => ({
+        id: m.id, name: m.name, avatar: m.avatar ?? null,
+      }));
+      setMembers(mapped);
+    });
+  }, [isAdmin]);
 
   const { pickFile: pickPoster, upload: uploadPoster, isUploading: posterUploading } = useMediaUpload({
     category: 'cover',
@@ -111,7 +128,7 @@ export default function MovieDetailPage() {
   const title = movie.title;
   const year = movie.year;
   const dir = movie.director ?? (movie as any).dir ?? '';
-  const by = movie.recommendedBy?.name ?? (movie as any).by ?? '';
+  const by = recommenderName || (movie.recommendedBy?.name ?? (movie as any).by ?? '');
   const status = movie.status;
   const v = movie._count?.votes ?? (movie as any).v ?? 0;
 
@@ -271,7 +288,7 @@ export default function MovieDetailPage() {
               </Box>
               {canEditLink && (
                 <Stack direction="row" spacing={0.5}>
-                  <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => { setEditTitle(movieTitle); setEditSynopsis(movieSynopsis); setEditing(true); }}>
+                  <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => { setEditTitle(movieTitle); setEditSynopsis(movieSynopsis); if (isAdmin) { setEditAuthor(members.find((m) => m.id === recommenderId) ?? null); } setEditing(true); }}>
                     <EditIcon />
                   </IconButton>
                   <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => setConfirmDelete(true)}>
@@ -486,7 +503,26 @@ export default function MovieDetailPage() {
         <Dialog open={editing} onClose={() => setEditing(false)} fullWidth maxWidth="md" fullScreen={window.innerWidth < 600}>
           <DialogTitle>编辑电影</DialogTitle>
           <DialogContent>
-            <TextField label="标题" fullWidth value={editTitle} onChange={(e) => setEditTitle(e.target.value)} sx={{ mt: 1, mb: 2 }} />
+            {isAdmin && (
+              <Autocomplete
+                options={members}
+                value={editAuthor}
+                onChange={(_, v) => setEditAuthor(v)}
+                getOptionLabel={(o) => o.name}
+                isOptionEqualToValue={(a, b) => a.id === b.id}
+                renderOption={(props, option) => (
+                  <li {...props} key={option.id}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Ava name={option.name} src={option.avatar ?? undefined} size={24} />
+                      <span>{option.name}</span>
+                    </Stack>
+                  </li>
+                )}
+                renderInput={(params) => <TextField {...params} label="推荐人" />}
+                sx={{ mt: 1, mb: 2 }}
+              />
+            )}
+            <TextField label="标题" fullWidth value={editTitle} onChange={(e) => setEditTitle(e.target.value)} sx={{ mt: isAdmin ? 0 : 1, mb: 2 }} />
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>简介</Typography>
             <Suspense fallback={<Typography color="text.secondary">加载编辑器...</Typography>}>
               <RichTextEditorLazy content={editSynopsis} onChange={setEditSynopsis} editorRef={synopsisEditorRef} />
