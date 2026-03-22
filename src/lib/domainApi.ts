@@ -558,7 +558,7 @@ export async function toggleProposalVote(proposalId: string, userId: string) {
   });
 }
 
-export async function updateProposal(proposalId: string, payload: { description?: string; status?: string }) {
+export async function updateProposal(proposalId: string, payload: { description?: string; status?: string; authorId?: string }) {
   return requestJson<EntityMap>(`/api/proposals/${proposalId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -1047,7 +1047,7 @@ export async function deleteRecommendation(id: string, userId: string) {
   });
 }
 
-export async function updateRecommendation(id: string, userId: string, data: { title?: string; description?: string; sourceUrl?: string; coverUrl?: string; eventDate?: string | null; eventEndDate?: string | null }) {
+export async function updateRecommendation(id: string, userId: string, data: { title?: string; description?: string; sourceUrl?: string; coverUrl?: string; eventDate?: string | null; eventEndDate?: string | null; authorId?: string }) {
   return requestJson<EntityMap>(`/api/recommendations/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
@@ -1151,7 +1151,7 @@ export async function fetchCancelledEventsApi() {
    Admin: Movie operations
    ═══════════════════════════════════════════════════════════════ */
 
-export async function updateMovie(movieId: string, payload: { title?: string; status?: string; director?: string; synopsis?: string; doubanUrl?: string; poster?: string }) {
+export async function updateMovie(movieId: string, payload: { title?: string; status?: string; director?: string; synopsis?: string; doubanUrl?: string; poster?: string; recommendedById?: string }) {
   return requestJson<{ ok: boolean; movie: EntityMap }>(`/api/movies/${movieId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

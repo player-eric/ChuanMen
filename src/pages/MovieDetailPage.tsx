@@ -535,9 +535,10 @@ export default function MovieDetailPage() {
               setEditSaving(true);
               const html = synopsisEditorRef.current?.getHTML() ?? editSynopsis;
               try {
-                await updateMovie(String(movie.id), { title: editTitle, synopsis: html });
+                await updateMovie(String(movie.id), { title: editTitle, synopsis: html, ...(isAdmin && editAuthor ? { recommendedById: editAuthor.id } : {}) });
                 setMovieTitle(editTitle);
                 setMovieSynopsis(html);
+                if (editAuthor) setRecommenderName(editAuthor.name);
                 setEditing(false);
               } catch { /* ignore */ }
               setEditSaving(false);

@@ -65,7 +65,7 @@ export class RecommendationRepository {
     return this.prisma.recommendation.delete({ where: { id } });
   }
 
-  update(id: string, data: { title?: string; description?: string; sourceUrl?: string; coverUrl?: string; eventDate?: Date | null; eventEndDate?: Date | null }) {
+  update(id: string, data: { title?: string; description?: string; sourceUrl?: string; coverUrl?: string; eventDate?: Date | null; eventEndDate?: Date | null; authorId?: string }) {
     return this.prisma.recommendation.update({
       where: { id },
       data,

@@ -66,8 +66,8 @@ export class MovieRepository {
     return { voted: true };
   }
 
-  create(data: { title: string; year?: number; director?: string; poster?: string; doubanUrl?: string; doubanRating?: number; synopsis?: string; recommendedById: string }) {
-    return this.prisma.movie.create({
+  async create(data: { title: string; year?: number; director?: string; poster?: string; doubanUrl?: string; doubanRating?: number; synopsis?: string; recommendedById: string }) {
+    const movie = await this.prisma.movie.create({
       data: {
         title: data.title,
         year: data.year,
@@ -77,12 +77,14 @@ export class MovieRepository {
         doubanRating: data.doubanRating,
         synopsis: data.synopsis ?? '',
         recommendedById: data.recommendedById,
+        votes: { create: { userId: data.recommendedById } },
       },
       include: {
         recommendedBy: { select: { id: true, name: true } },
         _count: { select: { votes: true } },
       },
     });
+    return movie;
   }
 
   screened() {
@@ -107,7 +109,7 @@ export class MovieRepository {
     });
   }
 
-  update(id: string, data: { title?: string; status?: string; director?: string; synopsis?: string }) {
+  update(id: string, data: { title?: string; status?: string; director?: string; synopsis?: string; recommendedById?: string }) {
     return this.prisma.movie.update({ where: { id }, data: data as any });
   }
 

@@ -36,7 +36,7 @@ export class ProposalRepository {
     });
   }
 
-  update(id: string, data: { title?: string; description?: string; status?: string }) {
+  update(id: string, data: { title?: string; description?: string; status?: string; authorId?: string }) {
     return this.prisma.proposal.update({ where: { id }, data: data as any });
   }
 

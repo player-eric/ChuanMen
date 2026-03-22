@@ -824,6 +824,8 @@ async function bookDetailLoader({ params }: { params: Record<string, string | un
       sourceUrl: rec.sourceUrl ?? '',
       coverUrl: rec.coverUrl ?? '',
       authorId: rec.authorId ?? rec.author?.id ?? '',
+      discussions: [],
+      comments: [],
     };
   } catch {
     return null;

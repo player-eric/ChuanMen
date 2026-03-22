@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
   Alert,
+  Autocomplete,
   Avatar,
   Box,
   Button,
@@ -25,11 +26,11 @@ import EditIcon from '@mui/icons-material/Edit';
 import { useAuth } from '@/auth/AuthContext';
 import { useColors } from '@/hooks/useColors';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
-import { getRecommendationById, deleteRecommendation, updateRecommendation, toggleRecommendationVote, type RecommendationCategory } from '@/lib/domainApi';
+import { getRecommendationById, deleteRecommendation, updateRecommendation, toggleRecommendationVote, fetchMembersApi, type RecommendationCategory } from '@/lib/domainApi';
 import { RichTextViewer, type RichTextEditorHandle } from '@/components/RichTextEditor';
 
 const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
-import { firstNonEmoji, AvaStack } from '@/components/Atoms';
+import { Ava, firstNonEmoji, AvaStack } from '@/components/Atoms';
 import { ImageUpload } from '@/components/ImageUpload';
 import CommentSection from '@/components/CommentSection';
 
@@ -64,6 +65,21 @@ export default function RecommendationDetailPage() {
   const [voters, setVoters] = useState<{ id: string; name: string; avatar?: string }[]>([]);
   const [coverUrl, setCoverUrl] = useState('');
   const [expandVoters, setExpandVoters] = useState(false);
+
+  // Admin: change author
+  const isAdmin = user?.role === 'admin';
+  const [members, setMembers] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
+  const [editAuthor, setEditAuthor] = useState<{ id: string; name: string; avatar: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetchMembersApi().then((list) => {
+      const mapped = (list as { id: string; name: string; avatar?: string | null }[]).map((m) => ({
+        id: m.id, name: m.name, avatar: m.avatar ?? null,
+      }));
+      setMembers(mapped);
+    });
+  }, [isAdmin]);
 
   const { pickFile, upload: uploadCover, isUploading: coverUploading } = useMediaUpload({
     category: 'cover',
@@ -161,6 +177,7 @@ export default function RecommendationDetailPage() {
   const tags: string[] = ((item.tags as any[]) ?? []).map((t: any) => t.value ?? t).filter(Boolean);
   const eventDate = item.eventDate ? new Date(item.eventDate as string) : null;
   const eventEndDate = item.eventEndDate ? new Date(item.eventEndDate as string) : null;
+  const isPlace = currentCategory === 'place';
   const isExternalEvent = currentCategory === 'external_event';
 
   // Hero background
@@ -231,6 +248,10 @@ export default function RecommendationDetailPage() {
                       setEditEventDate(eventDate ? eventDate.toISOString().slice(0, 10) : '');
                       setEditEventEndDate(eventEndDate ? eventEndDate.toISOString().slice(0, 10) : '');
                       setEditCoverUrl(coverUrl);
+                      if (isAdmin) {
+                        const authorId = item.authorId as string | undefined;
+                        setEditAuthor(members.find((m) => m.id === authorId) ?? null);
+                      }
                       setEditing(true);
                     }}>
                       <EditIcon />
@@ -248,19 +269,21 @@ export default function RecommendationDetailPage() {
           <CardContent sx={{ pt: 1.5, pb: 1.5 }}>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {sourceUrl && !editingLink && (
-                <Chip size="small" variant="outlined" label="🔗 查看链接" clickable
-                  component="a" href={sourceUrl} target="_blank" rel="noreferrer" />
+                isPlace
+                  ? <Chip size="small" variant="outlined" label={`📍 ${sourceUrl}`} />
+                  : <Chip size="small" variant="outlined" label="🔗 查看链接" clickable
+                      component="a" href={sourceUrl} target="_blank" rel="noreferrer" />
               )}
               {canModify && !editingLink && (
                 <Chip size="small" variant="outlined"
-                  label={sourceUrl ? '编辑链接' : '+ 添加链接'}
+                  label={sourceUrl ? (isPlace ? '编辑地址' : '编辑链接') : (isPlace ? '+ 添加地址' : '+ 添加链接')}
                   onClick={() => { setLinkDraft(sourceUrl); setEditingLink(true); }}
                 />
               )}
             </Stack>
             {editingLink && (
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-                <TextField size="small" fullWidth placeholder="https://..." value={linkDraft}
+                <TextField size="small" fullWidth placeholder={isPlace ? '123 Main St, New York, NY' : 'https://...'} value={linkDraft}
                   onChange={(e) => setLinkDraft(e.target.value)} />
                 <Button size="small" variant="contained" disabled={linkDraft === sourceUrl}
                   onClick={async () => {
@@ -339,6 +362,25 @@ export default function RecommendationDetailPage() {
         <Dialog open={editing} onClose={() => setEditing(false)} fullWidth maxWidth="md" fullScreen={window.innerWidth < 600}>
           <DialogTitle>编辑推荐</DialogTitle>
           <DialogContent>
+            {isAdmin && (
+              <Autocomplete
+                options={members}
+                value={editAuthor}
+                onChange={(_, v) => setEditAuthor(v)}
+                getOptionLabel={(o) => o.name}
+                isOptionEqualToValue={(a, b) => a.id === b.id}
+                renderOption={(props, option) => (
+                  <li {...props} key={option.id}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Ava name={option.name} src={option.avatar ?? undefined} size={24} />
+                      <span>{option.name}</span>
+                    </Stack>
+                  </li>
+                )}
+                renderInput={(params) => <TextField {...params} label="推荐人" />}
+                sx={{ mt: 1, mb: 2 }}
+              />
+            )}
             <TextField label="标题" fullWidth value={editTitle} onChange={(e) => setEditTitle(e.target.value)} sx={{ mt: 1, mb: 2 }} />
             {isExternalEvent && (
               <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
@@ -384,7 +426,7 @@ export default function RecommendationDetailPage() {
               if (!user?.id || !recommendationId) return;
               setEditSaving(true);
               const html = descEditorRef.current?.getHTML() ?? editDesc;
-              const patch: Parameters<typeof updateRecommendation>[2] = { title: editTitle, description: html, coverUrl: editCoverUrl || undefined };
+              const patch: Parameters<typeof updateRecommendation>[2] = { title: editTitle, description: html, coverUrl: editCoverUrl || undefined, ...(isAdmin && editAuthor ? { authorId: editAuthor.id } : {}) };
               if (isExternalEvent) {
                 patch.eventDate = editEventDate || null;
                 patch.eventEndDate = editEventEndDate || null;
@@ -392,7 +434,7 @@ export default function RecommendationDetailPage() {
               try {
                 await updateRecommendation(recommendationId, user.id, patch);
                 setCoverUrl(editCoverUrl);
-                setItem((prev) => prev ? { ...prev, title: editTitle, description: html, coverUrl: editCoverUrl || null, eventDate: editEventDate || null, eventEndDate: editEventEndDate || null } : prev);
+                setItem((prev) => prev ? { ...prev, title: editTitle, description: html, coverUrl: editCoverUrl || null, eventDate: editEventDate || null, eventEndDate: editEventEndDate || null, ...(editAuthor ? { authorId: editAuthor.id, author: { ...(prev.author as any), id: editAuthor.id, name: editAuthor.name, avatar: editAuthor.avatar } } : {}) } : prev);
                 setEditing(false);
               } catch { /* ignore */ }
               setEditSaving(false);
