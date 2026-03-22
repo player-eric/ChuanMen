@@ -301,6 +301,8 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       _key: `announce-${a.id}`,
       type: 'milestone',
       text: a.title ?? '',
+      body: a.body ?? '',
+      url: a.url ?? '',
       emoji: emojiMap[a.type] ?? '📣',
       likes: a.likes ?? 0,
       likedBy: a.likedBy ?? [],

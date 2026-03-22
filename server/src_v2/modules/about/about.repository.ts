@@ -48,14 +48,14 @@ export class AboutRepository {
     });
   }
 
-  createAnnouncement(data: { title: string; body: string; type: string; pinned: boolean; authorId: string }) {
+  createAnnouncement(data: { title: string; body: string; url?: string; type: string; pinned: boolean; authorId: string }) {
     return this.prisma.announcement.create({
       data: { ...data, published: true },
       include: { author: { select: { id: true, name: true, avatar: true } } },
     });
   }
 
-  updateAnnouncement(id: string, data: { title?: string; body?: string; type?: string; pinned?: boolean }) {
+  updateAnnouncement(id: string, data: { title?: string; body?: string; url?: string; type?: string; pinned?: boolean }) {
     return this.prisma.announcement.update({
       where: { id },
       data,

@@ -727,6 +727,7 @@ model Announcement {
   authorId   String
   title      String
   body       String
+  url        String   @default("")
   type       String   @default("announcement")
   pinned     Boolean  @default(false)
   published  Boolean  @default(false)

@@ -1179,7 +1179,7 @@ export async function fetchAnnouncementsAdminApi() {
   return requestJson<EntityMap[]>('/api/about/announcements/admin/list');
 }
 
-export async function createAnnouncement(payload: { title: string; body: string; type: string; pinned: boolean; authorId: string }) {
+export async function createAnnouncement(payload: { title: string; body: string; url?: string; type: string; pinned: boolean; authorId: string }) {
   return requestJson<EntityMap>('/api/about/announcements', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1187,7 +1187,7 @@ export async function createAnnouncement(payload: { title: string; body: string;
   });
 }
 
-export async function updateAnnouncement(id: string, payload: { title?: string; body?: string; type?: string; pinned?: boolean }) {
+export async function updateAnnouncement(id: string, payload: { title?: string; body?: string; url?: string; type?: string; pinned?: boolean }) {
   return requestJson<{ ok: boolean; announcement: EntityMap }>(`/api/about/announcements/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

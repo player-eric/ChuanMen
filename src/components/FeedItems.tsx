@@ -807,15 +807,25 @@ export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV
 
 /* ═══ FeedMilestone ═══ */
 interface FeedMilestoneProps extends InteractionProps {
-  text: string; emoji: string;
+  text: string; emoji: string; body?: string; url?: string;
 }
 
-export function FeedMilestone({ text, emoji, likes, likedBy, comments, newComments, commentCount }: FeedMilestoneProps) {
+export function FeedMilestone({ text, emoji, body, url, likes, likedBy, comments, newComments, commentCount }: FeedMilestoneProps) {
+  const c = useColors();
   return (
     <Card glow>
       <div style={{ padding: 16, textAlign: 'center' }}>
         <div style={{ fontSize: 28, marginBottom: 6 }}>{emoji}</div>
-        <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{text}</div>
+        {url ? (
+          <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6, color: c.warm, textDecoration: 'underline' }}>
+            {text}
+          </a>
+        ) : (
+          <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{text}</div>
+        )}
+        {body && (
+          <div style={{ fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-line', marginTop: 8, opacity: 0.8 }}>{body}</div>
+        )}
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
     </Card>
