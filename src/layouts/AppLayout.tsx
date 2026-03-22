@@ -344,6 +344,24 @@ export default function AppLayout() {
               >
                 {title}
               </Typography>
+              {import.meta.env.VITE_APP_ENV === 'dev' && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    ml: 1,
+                    px: 0.8,
+                    py: 0.2,
+                    borderRadius: 1,
+                    bgcolor: 'warning.main',
+                    color: 'warning.contrastText',
+                    fontWeight: 700,
+                    fontSize: '0.65rem',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  DEV
+                </Typography>
+              )}
             </Stack>
             <Box id="presence-slot" sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end', mx: 1 }} />
             <Stack direction="row" spacing={1} alignItems="center">

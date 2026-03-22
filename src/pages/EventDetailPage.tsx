@@ -34,7 +34,7 @@ import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EditIcon from '@mui/icons-material/Edit';
 import ImageIcon from '@mui/icons-material/Image';
 import type { EventData, EventPhoto, EventTaskData, FoodOption, SignupStatus, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, approveApplication, rejectApplication, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask, addCoHost, removeCoHost, toggleMovieVote, toggleRecommendationVote, getEventExclusions, setEventExclusions } from '@/lib/domainApi';
+import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, approveApplication, rejectApplication, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask, addCoHost, removeCoHost, toggleMovieVote, toggleRecommendationVote, getEventExclusions, setEventExclusions, thumbnailUrl } from '@/lib/domainApi';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import CommentSection from '@/components/CommentSection';
 import { useAuth } from '@/auth/AuthContext';
@@ -535,10 +535,10 @@ export default function EventDetailPage() {
   const isAdmin = user?.role === 'admin';
 
   /** Convert a photo URL to a CSS background value — handles both gradient strings and real URLs */
-  const photoBg = (url: string) =>
+  const photoBg = (url: string, useThumb = false) =>
     url.startsWith('linear-gradient') || url.startsWith('radial-gradient')
       ? url
-      : `url(${url}) center/cover no-repeat`;
+      : `url(${useThumb ? thumbnailUrl(url) : url}) center/cover no-repeat`;
 
   return (
     <Box sx={{ maxWidth: isImageUrl(event.scene) ? 800 : 680, mx: 'auto' }}>
@@ -2028,7 +2028,7 @@ export default function EventDetailPage() {
                       borderRadius: 1,
                       overflow: 'hidden',
                       cursor: 'pointer',
-                      background: photoBg(photo.url),
+                      background: photoBg(photo.url, true),
                       filter: 'saturate(0.85) contrast(1.05)',
                       transition: 'transform 0.15s',
                       '&:hover': { transform: 'scale(1.03)' },

@@ -33,7 +33,7 @@ export interface UseMediaUploadReturn {
   reset: () => void;
 }
 
-const DEFAULT_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+const DEFAULT_MAX_SIZE = 20 * 1024 * 1024; // 20 MB
 const DEFAULT_ACCEPT = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export function useMediaUpload(options: UseMediaUploadOptions): UseMediaUploadReturn {

@@ -1865,4 +1865,11 @@ export async function saveSignals(
   });
 }
 
-
+/**
+ * Convert a media URL to its thumbnail variant.
+ * Thumbnail keys use a `_thumb` suffix before the extension.
+ * Falls back to original URL if pattern doesn't match.
+ */
+export function thumbnailUrl(url: string): string {
+  return url.replace(/(\.\w+)$/, '_thumb$1');
+}

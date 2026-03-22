@@ -17,7 +17,7 @@ export async function createApp() {
   const app = Fastify({
     logger: env.NODE_ENV !== 'test',
     trustProxy: env.TRUST_PROXY,
-    bodyLimit: 10 * 1024 * 1024, // 10 MB — matches image upload limit
+    bodyLimit: 20 * 1024 * 1024, // 20 MB — matches image upload limit
   });
 
   await app.register(sensible);
@@ -41,7 +41,7 @@ export async function createApp() {
   // Parse image content types as raw Buffer for direct file upload
   app.addContentTypeParser(
     ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'image/jpg', 'application/octet-stream'],
-    { parseAs: 'buffer', bodyLimit: 10 * 1024 * 1024 },
+    { parseAs: 'buffer', bodyLimit: 20 * 1024 * 1024 },
     (_req, body, done) => { done(null, body); },
   );
 

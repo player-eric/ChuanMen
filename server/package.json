@@ -48,6 +48,7 @@
     "google-auth-library": "^10.6.1",
     "pg": "^8.16.3",
     "resend": "^6.9.2",
+    "sharp": "^0.34.5",
     "zod": "^4.1.5"
   },
   "devDependencies": {
