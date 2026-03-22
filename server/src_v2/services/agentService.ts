@@ -15,7 +15,6 @@ import {
   sendSecondRecall,
   sendMilestoneNotif,
   sendHostTributeNotif,
-  sendRecDigest,
 } from '../agent/emailAutomation.js';
 import { drawWeeklyHost } from '../modules/lottery/lottery.service.js';
 import { getWeekKey } from '../utils/weekKey.js';
@@ -474,14 +473,7 @@ export async function runAgentCycle(app: FastifyInstance) {
     }
   }
 
-  // P4-B: Weekly recommendation digest (Sundays only)
-  if (new Date().getDay() === 0) {
-    try {
-      await sendRecDigest(prisma, log);
-    } catch (err) {
-      log.error({ err }, 'Agent: sendRecDigest failed');
-    }
-  }
+  // P4-B: Weekly recommendation digest — merged into DIGEST, no longer sent separately.
   } // end if (!emailPaused)
 
   return { milestones, tribute };
