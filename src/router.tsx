@@ -191,6 +191,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       likedBy: p.likedBy ?? [],
       comments: [],
       commentCount: p.commentCount ?? 0,
+      cardId: p.id,
     }, p.createdAt);
   }
 

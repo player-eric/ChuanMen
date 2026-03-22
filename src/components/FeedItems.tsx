@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/auth/AuthContext';
-import { signupEvent, cancelSignup, addComment, fetchCommentsApi, fetchMembersApi, fetchEventTasks, claimEventTask, volunteerEventTask, toggleMovieVote, toggleProposalVote, toggleRecommendationVote } from '@/lib/domainApi';
+import { signupEvent, cancelSignup, addComment, fetchCommentsApi, fetchMembersApi, fetchEventTasks, claimEventTask, volunteerEventTask, toggleMovieVote, toggleProposalVote, toggleRecommendationVote, toggleLike } from '@/lib/domainApi';
 import type { EventTaskData } from '@/types';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import type { FeedComment } from '@/types';
@@ -31,6 +31,8 @@ function extractEntity(navTarget?: string): { entityType: string; entityId: stri
   if (m) return { entityType: 'event', entityId: m[1] };
   m = navTarget.match(/^\/discover\/movies\/([^/]+)$/);
   if (m) return { entityType: 'movie', entityId: m[1] };
+  m = navTarget.match(/^\/postcards\/([^/]+)$/);
+  if (m) return { entityType: 'postcard', entityId: m[1] };
   return undefined;
 }
 import { PostCard } from './PostCard';
@@ -88,9 +90,15 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   const c = useColors();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [likedLocal, setLikedLocal] = useState(false);
+  const alreadyLiked = !!(user && likedBy.includes(user.name));
+  const [likedLocal, setLikedLocal] = useState(alreadyLiked);
   const liked = likedProp ?? likedLocal;
-  const setLiked = onLike ?? (() => setLikedLocal((v) => !v));
+  const setLiked = onLike ?? (() => {
+    setLikedLocal((v) => !v);
+    if (entityType && entityId && user) {
+      toggleLike(entityType, entityId, user.id).catch(() => {});
+    }
+  });
   const [expanded, setExpanded] = useState(defaultExpanded ?? false);
   const [likesExpanded, setLikesExpanded] = useState(false);
   const [localComments, setLocalComments] = useState(comments ?? []);
@@ -111,7 +119,8 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
     }
   }, [expanded, loaded, entityType, entityId]);
 
-  const likeCount = likes + (liked ? 1 : 0);
+  // likes from API already includes current user's like, so adjust delta
+  const likeCount = likes + (liked === alreadyLiked ? 0 : liked ? 1 : -1);
   const px = compact ? 10 : 14;
 
   const isEmptyHtml = (html: string) => html.replace(/<[^>]*>/g, '').trim().length === 0;
@@ -722,10 +731,10 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
 /* ═══ FeedCard ═══ */
 interface FeedCardProps extends InteractionProps {
   from: string; to: string; fromAvatar?: string; toAvatar?: string; message: string; photo?: string; stamp?: string; navTarget?: string;
-  time?: string; visibility?: string;
+  time?: string; visibility?: string; cardId?: string;
 }
 
-export function FeedCard({ from, to, fromAvatar, toAvatar, message, photo, stamp, navTarget, likes, likedBy, comments, newComments, commentCount, time, visibility }: FeedCardProps) {
+export function FeedCard({ from, to, fromAvatar, toAvatar, message, photo, stamp, navTarget, likes, likedBy, comments, newComments, commentCount, time, visibility, cardId }: FeedCardProps) {
   const c = useColors();
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -746,7 +755,7 @@ export function FeedCard({ from, to, fromAvatar, toAvatar, message, photo, stamp
         </div>
         <PostCard from={from} to={to} fromAvatar={fromAvatar} toAvatar={toAvatar} message={message} stamp={stamp} photo={photo} layout="horizontal" />
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...(cardId ? { entityType: 'postcard', entityId: cardId } : extractEntity(navTarget))} />
     </Card>
   );
 }
