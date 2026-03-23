@@ -8,7 +8,7 @@ export class ProposalRepository {
       orderBy: { createdAt: 'desc' },
       include: {
         author: { select: { id: true, name: true, avatar: true } },
-        votes: { include: { user: { select: { id: true, name: true } } } },
+        votes: { include: { user: { select: { id: true, name: true, avatar: true } } } },
         _count: { select: { votes: true, events: true } },
       },
     });
@@ -19,7 +19,7 @@ export class ProposalRepository {
       where: { id },
       include: {
         author: { select: { id: true, name: true, avatar: true } },
-        votes: { include: { user: { select: { id: true, name: true } } } },
+        votes: { include: { user: { select: { id: true, name: true, avatar: true } } } },
         _count: { select: { votes: true } },
       },
     });
