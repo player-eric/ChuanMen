@@ -104,6 +104,13 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
     return [sort, label];
   };
 
+  /** Pick the more recent of createdAt and latestCommentAt for feed sorting */
+  const activityDate = (item: { createdAt?: string; latestCommentAt?: string }): string | undefined => {
+    if (!item.latestCommentAt) return item.createdAt;
+    if (!item.createdAt) return item.latestCommentAt;
+    return item.latestCommentAt > item.createdAt ? item.latestCommentAt : item.createdAt;
+  };
+
   // Events → activity items (grouped by real activity time)
   for (const e of (data.events ?? [])) {
     const [sortKey, sortLabel] = dateParts(e.activityAt ?? e.createdAt);
@@ -175,7 +182,8 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
 
   // Postcards → card items
   for (const p of (data.postcards ?? [])) {
-    const [sk, d] = dateParts(p.createdAt);
+    const ad = activityDate(p);
+    const [sk, d] = dateParts(ad);
     addToDate(sk, d, {
       _key: `card-${p.id}`,
       type: 'card',
@@ -194,12 +202,13 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       commentCount: p.commentCount ?? 0,
       newComments: p.newCommentCount ?? 0,
       cardId: p.id,
-    }, p.createdAt);
+    }, ad);
   }
 
   // Movies → compactMovie items
   for (const m of (data.recentMovies ?? [])) {
-    const [sk, d] = dateParts(m.createdAt);
+    const ad = activityDate(m);
+    const [sk, d] = dateParts(ad);
     const time = m.createdAt ? timeAgo(m.createdAt) : '';
     addToDate(sk, d, {
       _key: `movie-${m.id}`,
@@ -220,7 +229,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       comments: [],
       commentCount: m.commentCount ?? 0,
       newComments: m.newCommentCount ?? 0,
-    }, m.createdAt);
+    }, ad);
   }
 
   // New members → newMember items (introducing + welcomed)
@@ -228,7 +237,8 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
     const isAnnounced = m.userStatus === 'announced';
     const phase = isAnnounced ? 'introducing' : 'welcomed';
     const dateStr = isAnnounced ? m.announcedAt : m.approvedAt;
-    const [sk, d] = dateParts(dateStr);
+    const ad = m.latestCommentAt && m.latestCommentAt > (dateStr ?? '') ? m.latestCommentAt : dateStr;
+    const [sk, d] = dateParts(ad);
     addToDate(sk, d, {
       _key: `newMember-${m.id}`,
       type: 'newMember',
@@ -249,7 +259,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       comments: [],
       commentCount: m.commentCount ?? 0,
       newComments: m.newCommentCount ?? 0,
-    }, dateStr);
+    }, ad);
   }
 
   // Birthday users → collected separately to pin at top
@@ -274,7 +284,8 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
     book: '📖', recipe: '🍽️', place: '📍', music: '🎵', external_event: '🎭', movie: '🎬',
   };
   for (const r of (data.recommendations ?? [])) {
-    const [sk, d] = dateParts(r.createdAt);
+    const ad = activityDate(r);
+    const [sk, d] = dateParts(ad);
     const time = r.createdAt ? timeAgo(r.createdAt) : '';
     const cat = r.category ?? 'book';
     addToDate(sk, d, {
@@ -296,7 +307,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       comments: [],
       commentCount: r.commentCount ?? 0,
       newComments: r.newCommentCount ?? 0,
-    }, r.createdAt);
+    }, ad);
   }
 
   // Announcements → milestone items
@@ -352,7 +363,8 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
 
   // Proposals → compactProposal items
   for (const p of (data.recentProposals ?? [])) {
-    const [sk, d] = dateParts(p.createdAt);
+    const ad = activityDate(p);
+    const [sk, d] = dateParts(ad);
     const time = p.createdAt ? timeAgo(p.createdAt) : '';
     addToDate(sk, d, {
       _key: `proposal-${p.id}`,
@@ -370,7 +382,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       likedBy: p.likedBy ?? [],
       comments: [],
       commentCount: p.commentCount ?? 0,
-    }, p.createdAt);
+    }, ad);
   }
 
   // Sort dates descending (YYYY-MM-DD keys sort correctly)
