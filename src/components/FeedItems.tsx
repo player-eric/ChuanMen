@@ -100,12 +100,18 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
     }
   });
   const [expanded, setExpanded] = useState(defaultExpanded ?? false);
+  const [badgeDismissed, setBadgeDismissed] = useState(false);
   const [likesExpanded, setLikesExpanded] = useState(false);
   const [localComments, setLocalComments] = useState(comments ?? []);
   const [canSend, setCanSend] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const editorRef = useRef<{ clear: () => void; getHTML: () => string; insertImage: (src: string) => void } | null>(null);
   const members = useFeedMembers();
+
+  // Dismiss "new comments" badge once comments section has been opened
+  useEffect(() => {
+    if (expanded && !badgeDismissed) setBadgeDismissed(true);
+  }, [expanded, badgeDismissed]);
 
   // Load persisted comments from API when section is first expanded
   useEffect(() => {
@@ -143,7 +149,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   return (
     <div onClick={e => e.stopPropagation()}>
       {/* New comment badge */}
-      {newComments != null && newComments > 0 && (
+      {!badgeDismissed && newComments != null && newComments > 0 && (
         <div
           onClick={() => setExpanded(true)}
           style={{
