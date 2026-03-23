@@ -299,15 +299,19 @@ function MoviesSection() {
                           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{m.by} 推荐</Typography>
                           {m.status && <Chip sx={{ mt: 0.75, alignSelf: 'flex-start' }} size="small" color="success" label={`✓ ${m.status}`} />}
                         </Box>
-                        <Button
-                          onClick={(event) => { event.stopPropagation(); toggle(m.id); }}
-                          variant={votes[m.id] ? 'contained' : 'outlined'}
-                          size="small"
-                          disabled={!user}
-                          sx={{ alignSelf: 'flex-start', flexShrink: 0 }}
-                        >
-                          ▲ {m.v + (votes[m.id] && !m.voterIds.includes(user?.id ?? '') ? 1 : !votes[m.id] && m.voterIds.includes(user?.id ?? '') ? -1 : 0)}
-                        </Button>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5, flexShrink: 0 }}>
+                          <Button
+                            onClick={(event) => { event.stopPropagation(); toggle(m.id); }}
+                            variant={votes[m.id] ? 'contained' : 'outlined'}
+                            size="small"
+                            disabled={!user}
+                          >
+                            ▲ {m.v + (votes[m.id] && !m.voterIds.includes(user?.id ?? '') ? 1 : !votes[m.id] && m.voterIds.includes(user?.id ?? '') ? -1 : 0)}
+                          </Button>
+                          {(m.commentCount ?? 0) > 0 && (
+                            <Typography variant="caption" color="text.secondary">💬 {m.commentCount}</Typography>
+                          )}
+                        </Box>
                       </Stack>
                     </CardContent>
                   </CardActionArea>
@@ -573,15 +577,19 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
                           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{b.by} 推荐</Typography>
                           {b.status && <Chip sx={{ mt: 0.75, alignSelf: 'flex-start' }} size="small" color="success" label={`✓ ${b.status}`} />}
                         </Box>
-                        <Button
-                          onClick={(event) => { event.stopPropagation(); toggle(b.id); }}
-                          variant={votes[b.id] ? 'contained' : 'outlined'}
-                          size="small"
-                          disabled={!user}
-                          sx={{ alignSelf: 'flex-start', flexShrink: 0 }}
-                        >
-                          ▲ {b.v + (votes[b.id] && !b.voterIds.includes(user?.id ?? '') ? 1 : !votes[b.id] && b.voterIds.includes(user?.id ?? '') ? -1 : 0)}
-                        </Button>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5, flexShrink: 0 }}>
+                          <Button
+                            onClick={(event) => { event.stopPropagation(); toggle(b.id); }}
+                            variant={votes[b.id] ? 'contained' : 'outlined'}
+                            size="small"
+                            disabled={!user}
+                          >
+                            ▲ {b.v + (votes[b.id] && !b.voterIds.includes(user?.id ?? '') ? 1 : !votes[b.id] && b.voterIds.includes(user?.id ?? '') ? -1 : 0)}
+                          </Button>
+                          {(b.commentCount ?? 0) > 0 && (
+                            <Typography variant="caption" color="text.secondary">💬 {b.commentCount}</Typography>
+                          )}
+                        </Box>
                       </Stack>
                     </CardContent>
                   </CardActionArea>
@@ -828,15 +836,19 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
                         )}
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{r.authorName} 推荐</Typography>
                       </Box>
-                      <Button
-                        onClick={(event) => { event.stopPropagation(); toggle(r.id); }}
-                        variant={votes[r.id] ? 'contained' : 'outlined'}
-                        size="small"
-                        disabled={!user}
-                        sx={{ alignSelf: 'flex-start', flexShrink: 0 }}
-                      >
-                        ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
-                      </Button>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5, flexShrink: 0 }}>
+                        <Button
+                          onClick={(event) => { event.stopPropagation(); toggle(r.id); }}
+                          variant={votes[r.id] ? 'contained' : 'outlined'}
+                          size="small"
+                          disabled={!user}
+                        >
+                          ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
+                        </Button>
+                        {(r.commentCount ?? 0) > 0 && (
+                          <Typography variant="caption" color="text.secondary">💬 {r.commentCount}</Typography>
+                        )}
+                      </Box>
                     </Stack>
                   </CardContent>
                 </CardActionArea>
@@ -986,15 +998,19 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
                           )}
                           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{r.authorName} 推荐</Typography>
                         </Box>
-                        <Button
-                          onClick={(event) => { event.stopPropagation(); toggle(r.id); }}
-                          variant={votes[r.id] ? 'contained' : 'outlined'}
-                          size="small"
-                          disabled={!user}
-                          sx={{ alignSelf: 'flex-start', flexShrink: 0 }}
-                        >
-                          ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
-                        </Button>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5, flexShrink: 0 }}>
+                          <Button
+                            onClick={(event) => { event.stopPropagation(); toggle(r.id); }}
+                            variant={votes[r.id] ? 'contained' : 'outlined'}
+                            size="small"
+                            disabled={!user}
+                          >
+                            ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
+                          </Button>
+                          {(r.commentCount ?? 0) > 0 && (
+                            <Typography variant="caption" color="text.secondary">💬 {r.commentCount}</Typography>
+                          )}
+                        </Box>
                       </Stack>
                     </CardContent>
                   </CardActionArea>
