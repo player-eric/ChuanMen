@@ -222,6 +222,7 @@ export interface Collaborator {
 // Feed comment (shared shape with EventComment / MovieDetailData.comments)
 export interface FeedComment {
   name: string;
+  avatar?: string;
   text: string;
   date: string;
 }
