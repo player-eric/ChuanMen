@@ -469,16 +469,16 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
         </div>
       )}
 
-      {isImageUrl(scene) ? (
+      {(isImageUrl(scene) || filmPoster) ? (
         /* ── Poster hero layout: blur-fill bg + centered poster ── */
         <>
           <div style={{ position: 'relative', overflow: 'hidden', display: 'flex', justifyContent: 'center', padding: '16px 0' }}>
             {/* Blurred poster background fill */}
-            <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${scene})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px) brightness(0.5)', transform: 'scale(1.3)' }} />
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${isImageUrl(scene) ? scene : filmPoster})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px) brightness(0.5)', transform: 'scale(1.3)' }} />
             {/* Bottom gradient for text readability */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', zIndex: 1 }} />
             {/* Centered poster — no cropping, auto height */}
-            <img src={scene} alt="" style={{ position: 'relative', zIndex: 2, display: 'block', maxHeight: 220, maxWidth: '85%', objectFit: 'contain', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }} />
+            <img src={isImageUrl(scene) ? scene : filmPoster!} alt="" style={{ position: 'relative', zIndex: 2, display: 'block', maxHeight: 220, maxWidth: '85%', objectFit: 'contain', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }} />
             {/* Chips top-right */}
             <div style={{ position: 'absolute', top: 8, right: 10, display: 'flex', gap: 6, zIndex: 3 }}>
               {pc && (
