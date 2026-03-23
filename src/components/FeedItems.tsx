@@ -143,7 +143,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   return (
     <div onClick={e => e.stopPropagation()}>
       {/* New comment badge */}
-      {newComments && newComments > 0 && (
+      {newComments != null && newComments > 0 && (
         <div
           onClick={() => setExpanded(true)}
           style={{
