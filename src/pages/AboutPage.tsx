@@ -14,7 +14,6 @@ export default function AboutPage() {
     { icon: '📖', title: '串门原则', desc: '我们怎么定义这个社群', action: () => navigate('/about/principle') },
     { icon: '🏠', title: 'Host 手册', desc: '如何在家里办一场串门', action: () => navigate('/about/host_guide') },
     { icon: '✉', title: '串门来信', desc: '写给还没来串门的你', action: () => window.open('https://chengdaorange.substack.com/', '_blank') },
-    { icon: '💬', title: '关于我们', desc: '串门儿是怎么开始的', action: () => navigate('/about/about') },
   ];
 
   return (
@@ -60,16 +59,6 @@ export default function AboutPage() {
         ))}
       </Grid>
 
-      <Card>
-        <CardContent>
-          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>串门的信念</Typography>
-          <Stack spacing={0.8}>
-            {['对的人 > 更多人', '相互支持 > 社交隔绝', '客厅 > 写字楼', '真诚 > 客气'].map((value) => (
-              <Typography key={value} variant="body2">• {value}</Typography>
-            ))}
-          </Stack>
-        </CardContent>
-      </Card>
 
       {data.milestones?.length > 0 && (
         <Card>
