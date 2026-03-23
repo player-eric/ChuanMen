@@ -621,6 +621,7 @@ async function eventsLoader() {
         return {
           id: p.id,
           name: p.author?.name ?? p.name ?? '?',
+          avatar: p.author?.avatar ?? undefined,
           title: p.title ?? '',
           description: p.description ?? '',
           status: effectiveStatus,
