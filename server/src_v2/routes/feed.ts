@@ -22,8 +22,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const todayMonth = today.getUTCMonth() + 1;
     const todayDay = today.getUTCDate();
 
-    // Pre-fetch: event IDs with recent comments or signups (so old events with new activity get included)
-    const [recentCommentEventIds, recentSignupEventIds] = await Promise.all([
+    // Pre-fetch: entity IDs with recent comments (so old items with new activity get included)
+    const [recentCommentEventIds, recentSignupEventIds, recentCommentMovieIds] = await Promise.all([
       prisma.comment.findMany({
         where: { entityType: 'event', createdAt: { gte: sevenDaysAgo } },
         select: { entityId: true },
@@ -34,7 +34,13 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         select: { eventId: true },
         distinct: ['eventId'],
       }),
+      prisma.comment.findMany({
+        where: { entityType: 'movie', createdAt: { gte: sevenDaysAgo } },
+        select: { entityId: true },
+        distinct: ['entityId'],
+      }),
     ]);
+    const activeMovieIds = recentCommentMovieIds.map((r) => r.entityId);
     const activeEventIds = [
       ...new Set([
         ...recentCommentEventIds.map((r) => r.entityId),
@@ -143,10 +149,16 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           },
         }),
 
-        // Recently active movies (any status)
+        // Recently active movies (any status, including old ones with recent comments)
         prisma.movie.findMany({
+          where: {
+            OR: [
+              { createdAt: { gte: sevenDaysAgo } },
+              ...(activeMovieIds.length > 0 ? [{ id: { in: activeMovieIds } }] : []),
+            ],
+          },
           orderBy: { createdAt: 'desc' },
-          take: 10,
+          take: 20,
           include: {
             recommendedBy: { select: { id: true, name: true, avatar: true } },
             _count: { select: { votes: true } },
