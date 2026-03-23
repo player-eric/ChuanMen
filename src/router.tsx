@@ -754,6 +754,7 @@ function mapRecommendation(r: any) {
     voteCount: r._count?.votes ?? r.voteCount ?? 0,
     voterIds: (r.votes ?? []).map((v: any) => v.userId ?? v.user?.id).filter(Boolean),
     category: r.category ?? '',
+    commentCount: r.commentCount ?? 0,
   };
 }
 
@@ -778,6 +779,7 @@ async function discoverLoader() {
       status: m.status === 'candidate' ? undefined : m.status,
       by: m.recommendedBy?.name ?? '',
       poster: m.poster || undefined,
+      commentCount: m.commentCount ?? 0,
     }));
     const screened = (rawScreened as any[]).map((s: any) => {
       const ev = s.screenedEvents?.[0]?.event;
@@ -801,6 +803,7 @@ async function discoverLoader() {
       by: b.author?.name ?? '',
       status: b.status === 'candidate' ? undefined : b.status,
       coverUrl: b.coverUrl || undefined,
+      commentCount: b.commentCount ?? 0,
     }));
     return {
       pool, screened, bookPool, bookRead: [],

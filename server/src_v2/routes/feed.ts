@@ -143,9 +143,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           },
         }),
 
-        // Recently recommended movies
+        // Recently active movies (any status)
         prisma.movie.findMany({
-          where: { status: 'candidate' },
           orderBy: { createdAt: 'desc' },
           take: 10,
           include: {

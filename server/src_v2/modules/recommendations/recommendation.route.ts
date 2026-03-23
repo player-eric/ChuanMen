@@ -5,7 +5,18 @@ import { RecommendationService } from './recommendation.service.js';
 export const recommendationRoutes: FastifyPluginAsync = async (app) => {
   const service = new RecommendationService(new RecommendationRepository(app.prisma));
 
-  app.get('/', async (request) => service.listRecommendations(request.query));
+  app.get('/', async (request) => {
+    const recs = await service.listRecommendations(request.query);
+    const ids = (recs as any[]).map((r: any) => r.id);
+    if (ids.length === 0) return recs;
+    const counts = await app.prisma.comment.groupBy({
+      by: ['entityId'],
+      where: { entityType: 'recommendation', entityId: { in: ids } },
+      _count: true,
+    });
+    const countMap = new Map(counts.map((c) => [c.entityId, c._count]));
+    return (recs as any[]).map((r: any) => ({ ...r, commentCount: countMap.get(r.id) ?? 0 }));
+  });
 
   app.get('/search', async (request) => {
     const items = await service.search(request.query);

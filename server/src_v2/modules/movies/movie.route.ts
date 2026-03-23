@@ -5,7 +5,18 @@ import { MovieService } from './movie.service.js';
 export const movieRoutes: FastifyPluginAsync = async (app) => {
   const service = new MovieService(new MovieRepository(app.prisma));
 
-  app.get('/', async () => service.list());
+  app.get('/', async () => {
+    const movies = await service.list();
+    const ids = movies.map((m: any) => m.id);
+    if (ids.length === 0) return movies;
+    const counts = await app.prisma.comment.groupBy({
+      by: ['entityId'],
+      where: { entityType: 'movie', entityId: { in: ids } },
+      _count: true,
+    });
+    const countMap = new Map(counts.map((c) => [c.entityId, c._count]));
+    return movies.map((m: any) => ({ ...m, commentCount: countMap.get(m.id) ?? 0 }));
+  });
 
   app.get('/screened', async (request) => {
     const userId = request.headers['x-user-id'] as string | undefined;

@@ -146,6 +146,7 @@ export interface MoviePool {
   status?: string;
   by: string;
   poster?: string;
+  commentCount?: number;
 }
 
 export interface MovieScreened {
@@ -167,6 +168,7 @@ export interface BookPool {
   status?: string;
   by: string;
   coverUrl?: string;
+  commentCount?: number;
 }
 
 export interface BookRead {
@@ -477,6 +479,7 @@ export interface RecommendationItem {
   voteCount: number;
   voterIds: string[];
   category: string;
+  commentCount?: number;
 }
 
 export interface DiscoverPageData {
