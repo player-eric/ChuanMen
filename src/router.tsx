@@ -363,7 +363,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       title: p.title,
       votes: p._count?.votes ?? 0,
       voted: votedProposals.has(p.id),
-      interested: [],
+      interested: Array.isArray(p.votes) ? p.votes.map((v: any) => ({ name: v.user?.name ?? '?', avatar: v.user?.avatar ?? undefined })) : [],
       time,
       navTarget: `/events/proposals/${p.id}`,
       likes: p.likes ?? 0,
@@ -625,7 +625,7 @@ async function eventsLoader() {
           description: p.description ?? '',
           status: effectiveStatus,
           votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
-          interested: Array.isArray(p.votes) ? p.votes.map((v: any) => v.user?.name ?? '?') : p.interested ?? [],
+          interested: Array.isArray(p.votes) ? p.votes.map((v: any) => ({ name: v.user?.name ?? '?', avatar: v.user?.avatar ?? undefined })) : p.interested ?? [],
           time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
         };
       }),

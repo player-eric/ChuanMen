@@ -161,6 +161,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           take: 10,
           include: {
             author: { select: { id: true, name: true, avatar: true } },
+            votes: { include: { user: { select: { id: true, name: true, avatar: true } } } },
             _count: { select: { votes: true } },
           },
         }),
