@@ -144,7 +144,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
       setLoaded(true);
       fetchCommentsApi(entityType, entityId).then((list) => {
         if (Array.isArray(list) && list.length > 0) {
-          setLocalComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '' })));
+          setLocalComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', avatar: c.author?.avatar ?? undefined, text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '' })));
         }
       }).catch(() => {});
     }
@@ -159,7 +159,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   const handleSubmit = async () => {
     const html = editorRef.current?.getHTML() ?? '';
     if (isEmptyHtml(html) || !user) return;
-    setLocalComments(prev => [...prev, { name: user.name, text: html, date: '刚刚' }]);
+    setLocalComments(prev => [...prev, { name: user.name, avatar: user.avatar, text: html, date: '刚刚' }]);
     editorRef.current?.clear();
     setCanSend(false);
     if (entityType && entityId) {
@@ -238,7 +238,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
           )}
           {localComments.map((cm, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <Ava name={cm.name} size={compact ? 20 : 24} onTap={() => goMember(cm.name)} />
+              <Ava name={cm.name} src={cm.avatar} size={compact ? 20 : 24} onTap={() => goMember(cm.name)} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12 }}>
                   <b onClick={() => goMember(cm.name)} style={{ cursor: 'pointer' }}>{cm.name}</b>
