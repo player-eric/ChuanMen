@@ -791,6 +791,7 @@ async function discoverLoader() {
         date: ev?.startsAt ? new Date(ev.startsAt).toLocaleDateString('zh-CN', { timeZone: 'America/New_York' }) : '',
         host: ev?.host?.name ?? '',
         poster: s.poster || undefined,
+        commentCount: s.commentCount ?? 0,
       };
     });
     const bookPool = (rawBooks as any[]).map((b: any) => ({
