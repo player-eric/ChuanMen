@@ -262,7 +262,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
           {/* Comment input */}
           {user && (
             <div style={{ display: 'flex', gap: 8, marginTop: localComments.length > 0 ? 4 : 0, alignItems: 'flex-start' }}>
-              <Ava name={user.name} size={compact ? 20 : 24} />
+              <Ava name={user.name} src={user.avatar} size={compact ? 20 : 24} />
               <div style={{ flex: 1 }}>
                 <RichTextEditor
                   content=""
