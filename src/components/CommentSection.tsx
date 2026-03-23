@@ -21,6 +21,7 @@ interface CommentSectionProps {
 
 interface CommentItem {
   name: string;
+  avatar?: string;
   html: string;
   date: string;
 }
@@ -46,6 +47,7 @@ export default function CommentSection({ entityType, entityId }: CommentSectionP
           setComments(
             list.map((c: any) => ({
               name: c.author?.name ?? '匿名',
+              avatar: c.author?.avatar ?? undefined,
               html: c.content ?? '',
               date: c.createdAt
                 ? new Date(c.createdAt).toLocaleString('zh-CN', {
@@ -119,6 +121,7 @@ export default function CommentSection({ entityType, entityId }: CommentSectionP
             {comments.map((cm, i) => (
               <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
                 <Avatar
+                  src={cm.avatar}
                   sx={{ width: 28, height: 28, fontSize: 12, cursor: 'pointer', mt: 0.25 }}
                   onClick={() => navigate(`/members/${encodeURIComponent(cm.name)}`)}
                 >
@@ -143,7 +146,7 @@ export default function CommentSection({ entityType, entityId }: CommentSectionP
         {/* Input */}
         {user ? (
           <Stack direction="row" spacing={1} alignItems="flex-start">
-            <Avatar sx={{ width: 28, height: 28, fontSize: 12, mt: 0.5 }}>
+            <Avatar src={user.avatar || undefined} sx={{ width: 28, height: 28, fontSize: 12, mt: 0.5 }}>
               {firstNonEmoji(user.name ?? 'U')}
             </Avatar>
             <Box sx={{ flex: 1 }}>
