@@ -428,12 +428,12 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: sendConsecutiveEventsReminder failed');
   }
 
-  // P2-A: New event notification (10-20 min after creation)
-  try {
-    await sendNewEventNotif(prisma, log);
-  } catch (err) {
-    log.error({ err }, 'Agent: sendNewEventNotif failed');
-  }
+  // P2-A: New event notification — disabled, included in daily digest (new_events section) instead
+  // try {
+  //   await sendNewEventNotif(prisma, log);
+  // } catch (err) {
+  //   log.error({ err }, 'Agent: sendNewEventNotif failed');
+  // }
 
   // P2-B: New recommendation notification — disabled, included in daily digest instead
   // try {
@@ -465,14 +465,14 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: sendDailyDigest failed');
   }
 
-  // P4-A: Milestone notification (uses milestones from Phase 1)
-  if (milestones.length > 0) {
-    try {
-      await sendMilestoneNotif(prisma, log, milestones);
-    } catch (err) {
-      log.error({ err }, 'Agent: sendMilestoneNotif failed');
-    }
-  }
+  // P4-A: Milestone notification — disabled, included in daily digest (announcements section) instead
+  // if (milestones.length > 0) {
+  //   try {
+  //     await sendMilestoneNotif(prisma, log, milestones);
+  //   } catch (err) {
+  //     log.error({ err }, 'Agent: sendMilestoneNotif failed');
+  //   }
+  // }
 
   // P4-C: Host tribute notification (uses tribute from Phase 1)
   if (tribute) {
