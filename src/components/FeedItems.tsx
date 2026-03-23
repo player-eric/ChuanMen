@@ -100,7 +100,16 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
     }
   });
   const [expanded, setExpanded] = useState(defaultExpanded ?? false);
-  const [badgeDismissed, setBadgeDismissed] = useState(false);
+  const [badgeDismissed, setBadgeDismissed] = useState(() => {
+    // Check localStorage for persisted read timestamp
+    if (!entityType || !entityId) return false;
+    try {
+      const raw = localStorage.getItem('chuanmen.commentRead');
+      if (!raw) return false;
+      const map = JSON.parse(raw);
+      return !!map[`${entityType}:${entityId}`];
+    } catch { return false; }
+  });
   const [likesExpanded, setLikesExpanded] = useState(false);
   const [localComments, setLocalComments] = useState(comments ?? []);
   const [canSend, setCanSend] = useState(false);
@@ -108,10 +117,26 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   const editorRef = useRef<{ clear: () => void; getHTML: () => string; insertImage: (src: string) => void } | null>(null);
   const members = useFeedMembers();
 
-  // Dismiss "new comments" badge once comments section has been opened
+  // Persist "read" to localStorage when comments section is opened
   useEffect(() => {
-    if (expanded && !badgeDismissed) setBadgeDismissed(true);
-  }, [expanded, badgeDismissed]);
+    if (expanded && !badgeDismissed && entityType && entityId) {
+      setBadgeDismissed(true);
+      try {
+        const raw = localStorage.getItem('chuanmen.commentRead');
+        const map = raw ? JSON.parse(raw) : {};
+        map[`${entityType}:${entityId}`] = Date.now();
+        // Prune old entries (keep last 200)
+        const entries = Object.entries(map);
+        if (entries.length > 200) {
+          entries.sort((a, b) => (b[1] as number) - (a[1] as number));
+          const pruned = Object.fromEntries(entries.slice(0, 200));
+          localStorage.setItem('chuanmen.commentRead', JSON.stringify(pruned));
+        } else {
+          localStorage.setItem('chuanmen.commentRead', JSON.stringify(map));
+        }
+      } catch { /* localStorage full or unavailable */ }
+    }
+  }, [expanded, badgeDismissed, entityType, entityId]);
 
   // Load persisted comments from API when section is first expanded
   useEffect(() => {
