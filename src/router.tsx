@@ -167,6 +167,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       likedBy: e.likedBy ?? [],
       comments: [],
       commentCount: e.commentCount ?? 0,
+      newComments: e.newCommentCount ?? 0,
       photoCount: e.photoCount ?? 0,
       taskSummary: feedTasks.length > 0 ? feedTasks : undefined,
     }, e.activityAt ?? e.createdAt);
@@ -191,6 +192,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       likedBy: p.likedBy ?? [],
       comments: [],
       commentCount: p.commentCount ?? 0,
+      newComments: p.newCommentCount ?? 0,
       cardId: p.id,
     }, p.createdAt);
   }
@@ -217,6 +219,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       likedBy: m.likedBy ?? [],
       comments: [],
       commentCount: m.commentCount ?? 0,
+      newComments: m.newCommentCount ?? 0,
     }, m.createdAt);
   }
 
@@ -245,6 +248,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       likedBy: m.likedBy ?? [],
       comments: [],
       commentCount: m.commentCount ?? 0,
+      newComments: m.newCommentCount ?? 0,
     }, dateStr);
   }
 
@@ -291,6 +295,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       likedBy: r.likedBy ?? [],
       comments: [],
       commentCount: r.commentCount ?? 0,
+      newComments: r.newCommentCount ?? 0,
     }, r.createdAt);
   }
 
@@ -309,6 +314,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       likedBy: a.likedBy ?? [],
       comments: [],
       commentCount: a.commentCount ?? 0,
+      newComments: a.newCommentCount ?? 0,
     }, a.createdAt);
   }
 

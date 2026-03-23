@@ -251,9 +251,11 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     // If user has notifReadAt, use it as a floor so older notifs are excluded
     let notifCutoff = fourteenDaysAgo;
     let notifReadAtISO: string | null = null;
+    let notifReadAtDate: Date | null = null;
     if (userId) {
       const pref = await prisma.userPreference.findUnique({ where: { userId }, select: { notifReadAt: true } });
       if (pref?.notifReadAt) {
+        notifReadAtDate = pref.notifReadAt;
         notifReadAtISO = pref.notifReadAt.toISOString();
         if (pref.notifReadAt > fourteenDaysAgo) {
           notifCutoff = pref.notifReadAt;
@@ -568,7 +570,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const allEntityIds = [...eventIds, ...postcardIds, ...movieIds, ...proposalIds, ...newMemberIds];
 
     // Batch fetch likes, comment counts, and latest comment time for events
-    const [allLikes, commentCounts, latestEventComments, latestEventSignups] = await Promise.all([
+    const [allLikes, commentCounts, newCommentCounts, latestEventComments, latestEventSignups] = await Promise.all([
       allEntityIds.length > 0
         ? prisma.like.findMany({
             where: { entityId: { in: allEntityIds } },
@@ -579,6 +581,14 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         ? prisma.comment.groupBy({
             by: ['entityType', 'entityId'],
             where: { entityId: { in: allEntityIds } },
+            _count: true,
+          })
+        : [],
+      // New comments per entity (comments created after user's last notifReadAt)
+      allEntityIds.length > 0 && notifReadAtDate
+        ? prisma.comment.groupBy({
+            by: ['entityType', 'entityId'],
+            where: { entityId: { in: allEntityIds }, createdAt: { gt: notifReadAtDate } },
             _count: true,
           })
         : [],
@@ -605,6 +615,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     ]) as [
       Awaited<ReturnType<typeof prisma.like.findMany<{ where: any; include: { user: { select: { id: true; name: true } } } }>>>,
       { entityType: string; entityId: string; _count: number }[],
+      { entityType: string; entityId: string; _count: number }[],
       { entityId: string; createdAt: Date; userName: string; content: string }[],
       { eventId: string; createdAt: Date; userName: string }[],
     ];
@@ -624,6 +635,12 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       commentCountMap.set(row.entityId, row._count);
     }
 
+    // Group new comment counts by entityId
+    const newCommentCountMap = new Map<string, number>();
+    for (const row of newCommentCounts) {
+      newCommentCountMap.set(row.entityId, row._count);
+    }
+
     // Map: eventId → latest comment/signup { at, userName }
     const latestCommentMap = new Map<string, { at: Date; userName: string; content: string }>();
     for (const row of latestEventComments) {
@@ -634,7 +651,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       latestSignupMap.set(row.eventId, { at: row.createdAt, userName: row.userName });
     }
 
-    // Helper to attach likes + commentCount to an entity
+    // Helper to attach likes + commentCount + newCommentCount to an entity
     const withInteraction = <T extends { id: string }>(entity: T) => {
       const likeData = likesMap.get(entity.id);
       return {
@@ -642,6 +659,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         likes: likeData?.count ?? 0,
         likedBy: likeData?.names ?? [],
         commentCount: commentCountMap.get(entity.id) ?? 0,
+        newCommentCount: newCommentCountMap.get(entity.id) ?? 0,
       };
     };
 
