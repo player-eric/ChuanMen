@@ -129,6 +129,7 @@ export default function MovieDetailPage() {
   const year = movie.year;
   const dir = movie.director ?? (movie as any).dir ?? '';
   const by = recommenderName || (movie.recommendedBy?.name ?? (movie as any).by ?? '');
+  const byAvatar = (movie.recommendedBy as any)?.avatar ?? undefined;
   const status = movie.status;
   const v = movie._count?.votes ?? (movie as any).v ?? 0;
 
@@ -351,7 +352,7 @@ export default function MovieDetailPage() {
             <CardContent>
               <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>推荐人</Typography>
               <Stack direction="row" spacing={1.5} alignItems="center">
-                <Avatar sx={{ width: 36, height: 36 }}>{firstNonEmoji(by)}</Avatar>
+                <Ava name={by} src={byAvatar} size={36} />
                 <Typography variant="body1">{by}</Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto !important' }}>查看主页 →</Typography>
               </Stack>
