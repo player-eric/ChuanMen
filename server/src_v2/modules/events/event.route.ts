@@ -372,36 +372,53 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
 
     // Fire-and-forget: notify host when someone applies (application mode)
     if (result.wasPending && result.user) {
-      const event = await app.prisma.event.findUnique({
-        where: { id },
-        select: { title: true, hostId: true, host: { select: { name: true, email: true, preferences: true } } },
-      });
-      if (event?.host?.email) {
-        const prefs = event.host.preferences as { emailState?: string } | null;
-        if (prefs?.emailState !== 'unsubscribed') {
-          const note = (request.body as any)?.note ?? '';
+      const applicantName = result.user.name ?? '';
+      const applicantUserId = result.userId ?? result.user?.id;
+      const note = (request.body as any)?.note ?? '';
+      void (async () => {
+        try {
+          const event = await app.prisma.event.findUnique({
+            where: { id },
+            select: { title: true, hostId: true, host: { select: { name: true, email: true, preferences: true } } },
+          });
+          if (!event?.host?.email) return;
+          const prefs = event.host.preferences as { emailState?: string } | null;
+          if (prefs?.emailState === 'unsubscribed') return;
+
+          // Dedup: check if we already sent this notification for this applicant+event
+          const refId = `apply:${id}:${applicantUserId}`;
+          const alreadySent = await app.prisma.emailLog.findFirst({
+            where: { userId: event.hostId, ruleId: 'TXN-APPLY', refId },
+          });
+          if (alreadySent) return;
+
           const rendered = renderNotificationEmail({
-            subject: `${result.user.name} 申请参加「${event.title}」`,
+            subject: `${applicantName} 申请参加「${event.title}」`,
             body: `Hi {hostName}，\n\n**{applicantName}** 申请参加「**{eventTitle}**」。`,
             variables: {
               hostName: event.host.name ?? '',
-              applicantName: result.user.name ?? '',
+              applicantName,
               eventTitle: event.title,
             },
             linkLabel: '前往活动页审批 →',
             linkUrl: `https://chuanmener.club/events/${id}`,
             quote: note || undefined,
           });
-          sendEmail({
+          await sendEmail({
             to: event.host.email,
             subject: rendered.subject,
             text: rendered.text,
             html: rendered.html,
-          }).catch((err) => {
-            app.log.error({ err }, 'Application notification to host failed');
           });
+          // Log to prevent duplicates
+          await app.prisma.emailLog.create({
+            data: { userId: event.hostId, ruleId: 'TXN-APPLY', refId },
+          }).catch(() => {});
+          app.log.info({ hostEmail: event.host.email, applicant: applicantName }, 'Application notification sent to host');
+        } catch (err) {
+          app.log.error({ err }, 'Application notification to host failed');
         }
-      }
+      })();
     }
 
     // Fire-and-forget: TXN-3 signup confirmation (only for accepted, not waitlisted/pending)
