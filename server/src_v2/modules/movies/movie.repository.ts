@@ -8,7 +8,7 @@ export class MovieRepository {
       where: { status: 'candidate' },
       orderBy: [{ createdAt: 'desc' }],
       include: {
-        recommendedBy: { select: { id: true, name: true } },
+        recommendedBy: { select: { id: true, name: true, avatar: true } },
         votes: { include: { user: { select: { id: true, name: true, avatar: true } } } },
         _count: { select: { votes: true } },
       },
@@ -19,7 +19,7 @@ export class MovieRepository {
     return this.prisma.movie.findUnique({
       where: { id },
       include: {
-        recommendedBy: { select: { id: true, name: true } },
+        recommendedBy: { select: { id: true, name: true, avatar: true } },
         votes: { include: { user: { select: { id: true, name: true, avatar: true } } } },
         screenedEvents: {
           include: {
@@ -48,7 +48,7 @@ export class MovieRepository {
       },
       orderBy: { createdAt: 'desc' },
       include: {
-        recommendedBy: { select: { id: true, name: true } },
+        recommendedBy: { select: { id: true, name: true, avatar: true } },
         _count: { select: { votes: true } },
       },
     });
@@ -80,7 +80,7 @@ export class MovieRepository {
         votes: { create: { userId: data.recommendedById } },
       },
       include: {
-        recommendedBy: { select: { id: true, name: true } },
+        recommendedBy: { select: { id: true, name: true, avatar: true } },
         _count: { select: { votes: true } },
       },
     });
