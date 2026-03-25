@@ -174,6 +174,7 @@ export default function RecommendationDetailPage() {
   const title = String(item.title ?? '');
   const description = String(item.description ?? '');
   const authorName = (item.author as any)?.name ?? '';
+  const authorAvatar = (item.author as any)?.avatar ?? '';
   const tags: string[] = ((item.tags as any[]) ?? []).map((t: any) => t.value ?? t).filter(Boolean);
   const eventDate = item.eventDate ? new Date(item.eventDate as string) : null;
   const eventEndDate = item.eventEndDate ? new Date(item.eventEndDate as string) : null;
@@ -317,7 +318,7 @@ export default function RecommendationDetailPage() {
               <CardContent>
                 <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>推荐人</Typography>
                 <Stack direction="row" spacing={1.5} alignItems="center">
-                  <Avatar sx={{ width: 36, height: 36 }}>{firstNonEmoji(authorName)}</Avatar>
+                  <Avatar src={authorAvatar || undefined} sx={{ width: 36, height: 36 }}>{firstNonEmoji(authorName)}</Avatar>
                   <Typography variant="body1">{authorName}</Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto !important' }}>查看主页 →</Typography>
                 </Stack>
