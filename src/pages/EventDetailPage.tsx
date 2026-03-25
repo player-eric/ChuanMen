@@ -535,10 +535,10 @@ export default function EventDetailPage() {
   const isAdmin = user?.role === 'admin';
 
   /** Convert a photo URL to a CSS background value — handles both gradient strings and real URLs */
-  const photoBg = (url: string, useThumb = false) =>
+  const photoBg = (url: string) =>
     url.startsWith('linear-gradient') || url.startsWith('radial-gradient')
       ? url
-      : `url(${useThumb ? thumbnailUrl(url) : url}) center/cover no-repeat`;
+      : `url(${url}) center/cover no-repeat`;
 
   return (
     <Box sx={{ maxWidth: isImageUrl(event.scene) ? 800 : 680, mx: 'auto' }}>
@@ -2028,7 +2028,7 @@ export default function EventDetailPage() {
                       borderRadius: 1,
                       overflow: 'hidden',
                       cursor: 'pointer',
-                      background: photoBg(photo.url, true),
+                      background: photoBg(photo.url),
                       filter: 'saturate(0.85) contrast(1.05)',
                       transition: 'transform 0.15s',
                       '&:hover': { transform: 'scale(1.03)' },
