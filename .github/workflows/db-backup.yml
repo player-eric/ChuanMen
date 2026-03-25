@@ -25,7 +25,16 @@ jobs:
           DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
         run: |
           FILENAME="backup_$(date +%Y%m%d_%H%M%S).sql.gz"
-          pg_dump "$DATABASE_URL" --no-owner --no-acl --clean --if-exists | gzip > "$FILENAME"
+          pg_dump "$DATABASE_URL" --no-owner --no-acl --clean --if-exists 2>&1 | gzip > "$FILENAME"
+          # Verify the backup is not empty (must be > 100 bytes)
+          FILESIZE=$(stat --format=%s "$FILENAME")
+          echo "Backup file size: $FILESIZE bytes"
+          if [ "$FILESIZE" -lt 100 ]; then
+            echo "ERROR: Backup file too small, pg_dump likely failed"
+            # Show what pg_dump produced for debugging
+            zcat "$FILENAME" || true
+            exit 1
+          fi
           echo "FILENAME=$FILENAME" >> $GITHUB_ENV
 
       - name: Cleanup old backups (keep 30 days)
