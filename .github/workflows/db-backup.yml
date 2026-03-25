@@ -25,7 +25,7 @@ jobs:
           DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
         run: |
           FILENAME="backup_$(date +%Y%m%d_%H%M%S).sql.gz"
-          pg_dump "$DATABASE_URL" --no-owner --no-acl --clean --if-exists 2>&1 | gzip > "$FILENAME"
+          pg_dump --dbname="$DATABASE_URL" --no-owner --no-acl --clean --if-exists 2>&1 | gzip > "$FILENAME"
           # Verify the backup is not empty (must be > 100 bytes)
           FILESIZE=$(stat --format=%s "$FILENAME")
           echo "Backup file size: $FILESIZE bytes"
