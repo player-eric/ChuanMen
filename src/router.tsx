@@ -716,12 +716,15 @@ async function proposalDetailLoader({ params }: { params: Record<string, string 
       id: p.id,
       name: p.author?.name ?? p.name ?? '?',
       authorId: p.author?.id ?? p.authorId ?? '',
+      authorAvatar: p.author?.avatar ?? '',
       title: p.title ?? '',
       description: p.description ?? '',
       descriptionHtml: p.descriptionHtml ?? p.description ?? '',
       status: p.status ?? 'discussing',
       votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
-      interested: Array.isArray(p.votes) ? p.votes.map((v: any) => v.user?.name ?? '?') : p.interested ?? [],
+      interested: Array.isArray(p.votes)
+        ? p.votes.map((v: any) => ({ name: v.user?.name ?? '?', avatar: v.user?.avatar ?? '' }))
+        : p.interested ?? [],
       time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
       comments: p.comments ?? [],
       likes: p.likes ?? 0,
