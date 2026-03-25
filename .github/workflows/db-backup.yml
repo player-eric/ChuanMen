@@ -30,11 +30,11 @@ jobs:
             exit 1
           fi
           FILENAME="backup_$(date +%Y%m%d_%H%M%S).sql.gz"
-          pg_dump --dbname="$PGURL" --no-owner --no-acl --clean --if-exists 2>&1 | gzip > "$FILENAME"
+          /usr/lib/postgresql/17/bin/pg_dump --dbname="$PGURL" --no-owner --no-acl --clean --if-exists 2>&1 | gzip > "$FILENAME"
           # Verify the backup is not empty (must be > 100 bytes)
           FILESIZE=$(stat --format=%s "$FILENAME")
           echo "Backup file size: $FILESIZE bytes"
-          if [ "$FILESIZE" -lt 100 ]; then
+          if [ "$FILESIZE" -lt 500 ]; then
             echo "ERROR: Backup file too small, pg_dump likely failed"
             # Show what pg_dump produced for debugging
             zcat "$FILENAME" || true
