@@ -14,18 +14,31 @@ jobs:
           ref: backup
           fetch-depth: 1
 
-      - name: Install PostgreSQL 16 client
+      - name: Install PostgreSQL 17 client
         run: |
           sudo apt-get install -y postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-          sudo apt-get install -y postgresql-client-16
+          sudo apt-get install -y postgresql-client-17
 
       - name: Dump database
         env:
-          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          PGURL: ${{ secrets.PROD_DATABASE_URL }}
         run: |
+          echo "Secret length: ${#PGURL}"
+          if [ -z "$PGURL" ]; then
+            echo "ERROR: PROD_DATABASE_URL secret is empty or not set"
+            exit 1
+          fi
           FILENAME="backup_$(date +%Y%m%d_%H%M%S).sql.gz"
-          pg_dump "$DATABASE_URL" --no-owner --no-acl --clean --if-exists | gzip > "$FILENAME"
+          /usr/lib/postgresql/17/bin/pg_dump --dbname="$PGURL" --no-owner --no-acl --clean --if-exists 2>&1 | gzip > "$FILENAME"
+          # Verify the backup is not empty (must be > 100 bytes)
+          FILESIZE=$(stat --format=%s "$FILENAME")
+          echo "Backup file size: $FILESIZE bytes"
+          if [ "$FILESIZE" -lt 500 ]; then
+            echo "ERROR: Backup file too small, pg_dump likely failed"
+            zcat "$FILENAME" || true
+            exit 1
+          fi
           echo "FILENAME=$FILENAME" >> $GITHUB_ENV
 
       - name: Cleanup old backups (keep 30 days)
