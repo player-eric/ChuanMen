@@ -16,17 +16,20 @@ export default function ProposalDetailPage() {
   const c = useColors();
   const raw = useLoaderData() as Proposal | null;
 
-  const serverList = raw?.interested ?? [];
+  const serverList: { name: string; avatar?: string }[] = (raw?.interested ?? []).map((v: any) =>
+    typeof v === 'string' ? { name: v } : v,
+  );
   const [interested, setInterested] = useState(
-    () => !!user?.name && serverList.includes(user.name)
+    () => !!user?.name && serverList.some((v) => v.name === user.name)
   );
   const [editing, setEditing] = useState(false);
   const [descHtml, setDescHtml] = useState(raw?.descriptionHtml ?? '');
+  const authorAvatar = (raw as any)?.authorAvatar ?? '';
 
   // Build display list: add/remove current user optimistically
   const interestedList = (() => {
-    const base = serverList.filter((n) => n !== user?.name);
-    if (interested && user?.name) base.push(user.name);
+    const base = serverList.filter((v) => v.name !== user?.name);
+    if (interested && user?.name) base.push({ name: user.name, avatar: user.avatar ?? '' });
     return base;
   })();
 
@@ -108,7 +111,7 @@ export default function ProposalDetailPage() {
               ))}
             </Stack>
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <Ava name={authorName} size={36} onTap={() => goMember(authorName)} />
+              <Ava name={authorName} src={authorAvatar} size={36} onTap={() => goMember(authorName)} />
               <Box>
                 <Typography
                   variant="body2"
@@ -192,9 +195,9 @@ export default function ProposalDetailPage() {
 
             {interestedList.length > 0 && (
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
-                <AvaStack names={interestedList} size={28} />
+                <AvaStack names={interestedList.map((v) => ({ name: v.name, avatar: v.avatar }))} size={28} />
                 <Typography variant="body2" color="text.secondary">
-                  {interestedList.slice(0, 3).join('、')}{interestedList.length > 3 ? ` 等 ${interestedList.length} 人` : ''}
+                  {interestedList.slice(0, 3).map((v) => v.name).join('、')}{interestedList.length > 3 ? ` 等 ${interestedList.length} 人` : ''}
                 </Typography>
               </Stack>
             )}
