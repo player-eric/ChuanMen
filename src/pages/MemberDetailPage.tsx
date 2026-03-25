@@ -550,7 +550,7 @@ export default function MemberDetailPage() {
                     >
                       <Box
                         component="img"
-                        src={thumbnailUrl(photo.url)}
+                        src={photo.url}
                         alt={photo.eventTitle}
                         sx={{
                           width: '100%',
