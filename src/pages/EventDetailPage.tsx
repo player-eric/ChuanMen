@@ -180,6 +180,7 @@ export default function EventDetailPage() {
   const [assignTaskId, setAssignTaskId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<EventPhoto[]>(loadedEvent?.photos ?? []);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const [showOriginal, setShowOriginal] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadPreviews, setUploadPreviews] = useState<{ file: File; preview: string; caption: string }[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -2099,7 +2100,7 @@ export default function EventDetailPage() {
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', px: 6 }}>
                   {lightboxIndex > 0 && (
                     <IconButton
-                      onClick={() => setLightboxIndex((i) => i - 1)}
+                      onClick={() => { setLightboxIndex((i) => i - 1); setShowOriginal(false); }}
                       sx={{ position: 'absolute', left: 8, color: '#fff' }}
                     >
                       <ArrowBackIosNewIcon />
@@ -2107,7 +2108,7 @@ export default function EventDetailPage() {
                   )}
                     <Box
                     component="img"
-                    src={photo.url.startsWith('linear-gradient') || photo.url.startsWith('radial-gradient') ? undefined : photo.url}
+                    src={photo.url.startsWith('linear-gradient') || photo.url.startsWith('radial-gradient') ? undefined : (showOriginal ? photo.url : thumbnailUrl(photo.url))}
                     alt={photo.caption || '照片'}
                     sx={{
                       maxWidth: '90%',
@@ -2119,7 +2120,7 @@ export default function EventDetailPage() {
                   />
                   {lightboxIndex < photos.length - 1 && (
                     <IconButton
-                      onClick={() => setLightboxIndex((i) => i + 1)}
+                      onClick={() => { setLightboxIndex((i) => i + 1); setShowOriginal(false); }}
                       sx={{ position: 'absolute', right: 8, color: '#fff' }}
                     >
                       <ArrowForwardIosIcon />
@@ -2135,6 +2136,20 @@ export default function EventDetailPage() {
                   <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
                     {photo.uploadedBy} · {photo.createdAt}
                   </Typography>
+                  {!showOriginal && !photo.url.startsWith('linear-gradient') && !photo.url.startsWith('radial-gradient') && (
+                    <Button
+                      size="small"
+                      onClick={() => setShowOriginal(true)}
+                      sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5, fontSize: '0.75rem' }}
+                    >
+                      查看原图
+                    </Button>
+                  )}
+                  {showOriginal && (
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mt: 0.5, display: 'block' }}>
+                      已加载原图
+                    </Typography>
+                  )}
                 </Box>
               </Box>
             );

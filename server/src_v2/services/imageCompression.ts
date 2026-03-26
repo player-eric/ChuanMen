@@ -128,14 +128,18 @@ export async function compressAvatar(buffer: Buffer): Promise<{ buffer: Buffer; 
 }
 
 /**
- * Generate a thumbnail: max 800px wide, JPEG quality 75.
+ * Generate a thumbnail: max 2560px wide, JPEG quality 90.
+ * iPhone retina full screen quality — much smaller than raw originals.
  */
-export async function generateThumbnail(buffer: Buffer): Promise<{ buffer: Buffer; contentType: string }> {
+export async function generateThumbnail(buffer: Buffer): Promise<{ buffer: Buffer; contentType: string } | null> {
   const result = await sharp(buffer)
     .rotate()
-    .resize(800, undefined, { fit: 'inside', withoutEnlargement: true })
-    .jpeg({ quality: 75 })
+    .resize(2560, undefined, { fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 90 })
     .toBuffer();
+
+  // Skip if thumb is larger than original (already optimized)
+  if (result.length >= buffer.length) return null;
 
   return { buffer: result, contentType: 'image/jpeg' };
 }

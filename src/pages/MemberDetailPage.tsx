@@ -123,6 +123,7 @@ export default function MemberDetailPage() {
   const [tab, setTab] = useState(0);
   const [eventFilter, setEventFilter] = useState<'all' | 'host'>('all');
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const [showOriginal, setShowOriginal] = useState(false);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
 
@@ -846,7 +847,7 @@ export default function MemberDetailPage() {
               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', px: 6 }}>
                 {lightboxIndex > 0 && (
                   <IconButton
-                    onClick={() => setLightboxIndex((i) => i - 1)}
+                    onClick={() => { setLightboxIndex((i) => i - 1); setShowOriginal(false); }}
                     sx={{ position: 'absolute', left: 8, color: '#fff' }}
                   >
                     <ArrowBackIosNewIcon />
@@ -854,7 +855,7 @@ export default function MemberDetailPage() {
                 )}
                 <Box
                   component="img"
-                  src={photo.url}
+                  src={showOriginal ? photo.url : thumbnailUrl(photo.url)}
                   alt={photo.caption || '照片'}
                   sx={{
                     maxWidth: '90%',
@@ -866,7 +867,7 @@ export default function MemberDetailPage() {
                 />
                 {lightboxIndex < allGalleryPhotos.length - 1 && (
                   <IconButton
-                    onClick={() => setLightboxIndex((i) => i + 1)}
+                    onClick={() => { setLightboxIndex((i) => i + 1); setShowOriginal(false); }}
                     sx={{ position: 'absolute', right: 8, color: '#fff' }}
                   >
                     <ArrowForwardIosIcon />
@@ -877,6 +878,20 @@ export default function MemberDetailPage() {
                 <Typography variant="body2" sx={{ color: '#fff' }}>
                   {photo.eventTitle}
                 </Typography>
+                {!showOriginal && (
+                  <Button
+                    size="small"
+                    onClick={() => setShowOriginal(true)}
+                    sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5, fontSize: '0.75rem' }}
+                  >
+                    查看原图
+                  </Button>
+                )}
+                {showOriginal && (
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mt: 0.5, display: 'block' }}>
+                    已加载原图
+                  </Typography>
+                )}
               </Box>
             </Box>
           );

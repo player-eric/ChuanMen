@@ -183,14 +183,16 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     const key = buildKey(category, ownerId, finalContentType);
     const { publicUrl } = await uploadObject(key, body, finalContentType);
 
-    // Generate thumbnail from ORIGINAL buffer (avoid double compression)
+    // Generate thumbnail from ORIGINAL buffer (skip if thumb would be larger)
     let thumbnailUrl: string | undefined;
     if (category === 'event-recap') {
       try {
         const thumb = await generateThumbnail(originalBody);
-        const thumbKey = key.replace(/(\.\w+)$/, '_thumb$1');
-        const thumbResult = await uploadObject(thumbKey, thumb.buffer, thumb.contentType);
-        thumbnailUrl = thumbResult.publicUrl;
+        if (thumb) {
+          const thumbKey = key.replace(/(\.\w+)$/, '_thumb$1');
+          const thumbResult = await uploadObject(thumbKey, thumb.buffer, thumb.contentType);
+          thumbnailUrl = thumbResult.publicUrl;
+        }
       } catch (err) {
         request.log.warn({ err, category }, 'Thumbnail generation failed, skipping');
       }
