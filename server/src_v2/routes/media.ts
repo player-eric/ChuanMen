@@ -230,15 +230,22 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     }
 
     try {
-      const url = await createDownloadUrl(key);
-      return reply.redirect(url);
+      // 1h presigned URL, cache for 50min
+      const url = await createDownloadUrl(key, 3600);
+      return reply
+        .header('cache-control', 'public, max-age=3000, s-maxage=3000, immutable')
+        .code(302)
+        .redirect(url);
     } catch (err: any) {
       // Thumbnail fallback: if _thumb key not found, try original
       if (key.includes('_thumb')) {
         const originalKey = key.replace('_thumb', '');
         try {
-          const url = await createDownloadUrl(originalKey);
-          return reply.redirect(url);
+          const url = await createDownloadUrl(originalKey, 3600);
+          return reply
+            .header('cache-control', 'public, max-age=3000, s-maxage=3000, immutable')
+            .code(302)
+            .redirect(url);
         } catch {
           // fall through to 404
         }
