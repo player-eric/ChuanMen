@@ -141,6 +141,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState(0);
   const [eventFilter, setEventFilter] = useState<'all' | 'host'>('all');
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const [showOriginal, setShowOriginal] = useState(false);
   const [visibleGroupCount, setVisibleGroupCount] = useState(3);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [timelineExpanded, setTimelineExpanded] = useState(false);
@@ -565,7 +566,7 @@ export default function ProfilePage() {
                                 >
                                   <Box
                                     component="img"
-                                    src={photo.url}
+                                    src={thumbnailUrl(photo.url)}
                                     alt={photo.eventTitle}
                                     sx={{
                                       width: '100%',
@@ -881,7 +882,7 @@ export default function ProfilePage() {
               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', px: 6 }}>
                 {lightboxIndex > 0 && (
                   <IconButton
-                    onClick={() => setLightboxIndex((i) => i - 1)}
+                    onClick={() => { setLightboxIndex((i) => i - 1); setShowOriginal(false); }}
                     sx={{ position: 'absolute', left: 8, color: '#fff' }}
                   >
                     <ArrowBackIosNewIcon />
@@ -889,7 +890,7 @@ export default function ProfilePage() {
                 )}
                 <Box
                   component="img"
-                  src={photo.url}
+                  src={showOriginal ? photo.url : thumbnailUrl(photo.url)}
                   alt={photo.caption || '照片'}
                   sx={{
                     maxWidth: '90%',
@@ -901,7 +902,7 @@ export default function ProfilePage() {
                 />
                 {lightboxIndex < flatPhotosFromGroups.length - 1 && (
                   <IconButton
-                    onClick={() => setLightboxIndex((i) => i + 1)}
+                    onClick={() => { setLightboxIndex((i) => i + 1); setShowOriginal(false); }}
                     sx={{ position: 'absolute', right: 8, color: '#fff' }}
                   >
                     <ArrowForwardIosIcon />
@@ -915,6 +916,20 @@ export default function ProfilePage() {
                 {photo.caption && (
                   <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                     {photo.caption} · {photo.uploadedBy}
+                  </Typography>
+                )}
+                {!showOriginal && (
+                  <Button
+                    size="small"
+                    onClick={() => setShowOriginal(true)}
+                    sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5, fontSize: '0.75rem' }}
+                  >
+                    查看原图
+                  </Button>
+                )}
+                {showOriginal && (
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mt: 0.5, display: 'block' }}>
+                    已加载原图
                   </Typography>
                 )}
               </Box>

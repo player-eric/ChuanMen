@@ -3,6 +3,28 @@ import sharp from 'sharp';
 const DEFAULT_MAX_BYTES = 20 * 1024 * 1024; // 20 MB
 
 /**
+ * Detect the actual image format from buffer metadata via sharp.
+ * Returns a normalized MIME type, or null if sharp can't identify the format.
+ */
+async function detectContentType(buffer: Buffer): Promise<string | null> {
+  try {
+    const meta = await sharp(buffer).metadata();
+    if (!meta.format) return null;
+    const formatMap: Record<string, string> = {
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+      gif: 'image/gif',
+      tiff: 'image/jpeg', // will be converted
+      heif: 'image/jpeg', // will be converted
+    };
+    return formatMap[meta.format] ?? 'image/jpeg';
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Compress an image buffer to stay under maxBytes while maintaining the highest possible quality.
  * - JPEG/WebP: binary-search quality from 95 down to 60
  * - PNG: optimize, then convert to JPEG if still too large
@@ -14,6 +36,17 @@ export async function compressImage(
   contentType: string,
   maxBytes: number = DEFAULT_MAX_BYTES,
 ): Promise<{ buffer: Buffer; contentType: string }> {
+  // If content type is unknown/octet-stream, detect from buffer
+  if (!contentType || contentType === 'application/octet-stream') {
+    const detected = await detectContentType(buffer);
+    if (detected) {
+      contentType = detected;
+    } else {
+      // Can't detect format — return as-is, treat as JPEG
+      contentType = 'image/jpeg';
+    }
+  }
+
   // GIF: skip compression to preserve animation
   if (contentType === 'image/gif') {
     return { buffer, contentType };
@@ -95,14 +128,18 @@ export async function compressAvatar(buffer: Buffer): Promise<{ buffer: Buffer; 
 }
 
 /**
- * Generate a thumbnail: max 800px wide, JPEG quality 75.
+ * Generate a thumbnail: max 2560px wide, JPEG quality 90.
+ * iPhone retina full screen quality — much smaller than raw originals.
  */
-export async function generateThumbnail(buffer: Buffer): Promise<{ buffer: Buffer; contentType: string }> {
+export async function generateThumbnail(buffer: Buffer): Promise<{ buffer: Buffer; contentType: string } | null> {
   const result = await sharp(buffer)
     .rotate()
-    .resize(800, undefined, { fit: 'inside', withoutEnlargement: true })
-    .jpeg({ quality: 75 })
+    .resize(2560, undefined, { fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 90 })
     .toBuffer();
+
+  // Skip if thumb is larger than original (already optimized)
+  if (result.length >= buffer.length) return null;
 
   return { buffer: result, contentType: 'image/jpeg' };
 }

@@ -157,30 +157,45 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.badRequest('请求体为空');
     }
 
+    const originalBody = body; // keep original for thumbnail generation
     let finalContentType = contentType;
 
-    // Avatar: resize to 400×400 and compress
-    if (category === 'avatar') {
-      const compressed = await compressAvatar(body);
-      body = compressed.buffer;
-      finalContentType = compressed.contentType;
-    } else {
-      // General compression: ensure highest quality under 20MB
-      const compressed = await compressImage(body, contentType);
-      body = compressed.buffer;
-      finalContentType = compressed.contentType;
+    // Compress image via sharp (graceful fallback: upload original if compression fails)
+    try {
+      if (category === 'avatar') {
+        const compressed = await compressAvatar(body);
+        body = compressed.buffer;
+        finalContentType = compressed.contentType;
+      } else {
+        const compressed = await compressImage(body, contentType);
+        body = compressed.buffer;
+        finalContentType = compressed.contentType;
+      }
+    } catch (err) {
+      // sharp failed — log and upload original file as-is
+      request.log.warn({ err, contentType, category, bodyLen: body.length }, 'Image compression failed, uploading original');
+      // If content type is still octet-stream, default to jpeg for S3
+      if (finalContentType === 'application/octet-stream') {
+        finalContentType = 'image/jpeg';
+      }
     }
 
     const key = buildKey(category, ownerId, finalContentType);
     const { publicUrl } = await uploadObject(key, body, finalContentType);
 
-    // Generate thumbnail for event recap photos
+    // Generate thumbnail from ORIGINAL buffer (skip if thumb would be larger)
     let thumbnailUrl: string | undefined;
     if (category === 'event-recap') {
-      const thumb = await generateThumbnail(body);
-      const thumbKey = key.replace(/(\.\w+)$/, '_thumb$1');
-      const thumbResult = await uploadObject(thumbKey, thumb.buffer, thumb.contentType);
-      thumbnailUrl = thumbResult.publicUrl;
+      try {
+        const thumb = await generateThumbnail(originalBody);
+        if (thumb) {
+          const thumbKey = key.replace(/(\.\w+)$/, '_thumb$1');
+          const thumbResult = await uploadObject(thumbKey, thumb.buffer, thumb.contentType);
+          thumbnailUrl = thumbResult.publicUrl;
+        }
+      } catch (err) {
+        request.log.warn({ err, category }, 'Thumbnail generation failed, skipping');
+      }
     }
 
     // Validate ownerId exists before setting FK (walkthrough/demo users may not exist)
@@ -213,39 +228,30 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     const key = (request.params as { '*': string })['*'];
     if (!key) return reply.badRequest('Missing S3 key');
 
-    // Avatars: redirect to long-lived presigned URL with cache headers.
-    // Much faster than proxying binary through serverless — only CPU signing, no S3 download.
+    // Avatars: serve directly with long cache headers for CDN caching
     if (key.startsWith('avatars/')) {
       try {
-        // 24h presigned URL; cache redirect for 23h (slightly less to avoid stale URLs)
-        const url = await createDownloadUrl(key, 86400);
+        const obj = await getObject(key);
         return reply
-          .header('cache-control', 'public, max-age=82800, s-maxage=82800, immutable')
-          .code(302)
-          .redirect(url);
+          .header('content-type', obj.contentType)
+          .header('cache-control', 'public, max-age=604800, s-maxage=604800')
+          .send(obj.buffer);
       } catch (err: any) {
-        request.log.error({ err, key }, 'Failed to presign avatar URL');
+        request.log.error({ err, key }, 'Failed to fetch avatar from S3');
         return reply.code(404).send({ message: 'Media not found' });
       }
     }
 
     try {
-      // 1h presigned URL, cache for 50min
-      const url = await createDownloadUrl(key, 3600);
-      return reply
-        .header('cache-control', 'public, max-age=3000, s-maxage=3000, immutable')
-        .code(302)
-        .redirect(url);
+      const url = await createDownloadUrl(key);
+      return reply.redirect(url);
     } catch (err: any) {
       // Thumbnail fallback: if _thumb key not found, try original
       if (key.includes('_thumb')) {
         const originalKey = key.replace('_thumb', '');
         try {
-          const url = await createDownloadUrl(originalKey, 3600);
-          return reply
-            .header('cache-control', 'public, max-age=3000, s-maxage=3000, immutable')
-            .code(302)
-            .redirect(url);
+          const url = await createDownloadUrl(originalKey);
+          return reply.redirect(url);
         } catch {
           // fall through to 404
         }
