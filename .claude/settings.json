@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // \"\"' | grep -q 'server/prisma/schema.prisma' && echo '{\"systemMessage\": \"⚠️  Schema changed! Remember to run: npx prisma generate && npx prisma migrate dev --name <name>\"}' || true"
+          }
+        ]
+      }
+    ]
+  }
+}
