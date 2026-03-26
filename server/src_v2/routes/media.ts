@@ -159,16 +159,24 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
 
     let finalContentType = contentType;
 
-    // Avatar: resize to 400×400 and compress
-    if (category === 'avatar') {
-      const compressed = await compressAvatar(body);
-      body = compressed.buffer;
-      finalContentType = compressed.contentType;
-    } else {
-      // General compression: ensure highest quality under 20MB
-      const compressed = await compressImage(body, contentType);
-      body = compressed.buffer;
-      finalContentType = compressed.contentType;
+    // Compress image via sharp (graceful fallback: upload original if compression fails)
+    try {
+      if (category === 'avatar') {
+        const compressed = await compressAvatar(body);
+        body = compressed.buffer;
+        finalContentType = compressed.contentType;
+      } else {
+        const compressed = await compressImage(body, contentType);
+        body = compressed.buffer;
+        finalContentType = compressed.contentType;
+      }
+    } catch (err) {
+      // sharp failed — log and upload original file as-is
+      request.log.warn({ err, contentType, category, bodyLen: body.length }, 'Image compression failed, uploading original');
+      // If content type is still octet-stream, default to jpeg for S3
+      if (finalContentType === 'application/octet-stream') {
+        finalContentType = 'image/jpeg';
+      }
     }
 
     const key = buildKey(category, ownerId, finalContentType);
@@ -177,10 +185,14 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     // Generate thumbnail for event recap photos
     let thumbnailUrl: string | undefined;
     if (category === 'event-recap') {
-      const thumb = await generateThumbnail(body);
-      const thumbKey = key.replace(/(\.\w+)$/, '_thumb$1');
-      const thumbResult = await uploadObject(thumbKey, thumb.buffer, thumb.contentType);
-      thumbnailUrl = thumbResult.publicUrl;
+      try {
+        const thumb = await generateThumbnail(body);
+        const thumbKey = key.replace(/(\.\w+)$/, '_thumb$1');
+        const thumbResult = await uploadObject(thumbKey, thumb.buffer, thumb.contentType);
+        thumbnailUrl = thumbResult.publicUrl;
+      } catch (err) {
+        request.log.warn({ err, category }, 'Thumbnail generation failed, skipping');
+      }
     }
 
     // Validate ownerId exists before setting FK (walkthrough/demo users may not exist)
