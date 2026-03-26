@@ -157,6 +157,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.badRequest('请求体为空');
     }
 
+    const originalBody = body; // keep original for thumbnail generation
     let finalContentType = contentType;
 
     // Compress image via sharp (graceful fallback: upload original if compression fails)
@@ -182,11 +183,11 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     const key = buildKey(category, ownerId, finalContentType);
     const { publicUrl } = await uploadObject(key, body, finalContentType);
 
-    // Generate thumbnail for event recap photos
+    // Generate thumbnail from ORIGINAL buffer (avoid double compression)
     let thumbnailUrl: string | undefined;
     if (category === 'event-recap') {
       try {
-        const thumb = await generateThumbnail(body);
+        const thumb = await generateThumbnail(originalBody);
         const thumbKey = key.replace(/(\.\w+)$/, '_thumb$1');
         const thumbResult = await uploadObject(thumbKey, thumb.buffer, thumb.contentType);
         thumbnailUrl = thumbResult.publicUrl;
