@@ -29,7 +29,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
 import { useTaskPresets } from '@/hooks/useTaskPresets';
-import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, fetchMoviesApi, linkEventRecommendation, linkEventMovie, completeLottery, uploadMedia } from '@/lib/domainApi';
+import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, fetchMoviesApi, linkEventRecommendation, linkEventMovie, completeLottery } from '@/lib/domainApi';
 import type { FoodOption } from '@/types';
 
 interface CreateTaskItem {

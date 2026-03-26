@@ -213,16 +213,18 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     const key = (request.params as { '*': string })['*'];
     if (!key) return reply.badRequest('Missing S3 key');
 
-    // Avatars: serve directly with long cache headers for CDN caching
+    // Avatars: redirect to long-lived presigned URL with cache headers.
+    // Much faster than proxying binary through serverless — only CPU signing, no S3 download.
     if (key.startsWith('avatars/')) {
       try {
-        const obj = await getObject(key);
+        // 24h presigned URL; cache redirect for 23h (slightly less to avoid stale URLs)
+        const url = await createDownloadUrl(key, 86400);
         return reply
-          .header('content-type', obj.contentType)
-          .header('cache-control', 'public, max-age=604800, s-maxage=604800')
-          .send(obj.buffer);
+          .header('cache-control', 'public, max-age=82800, s-maxage=82800, immutable')
+          .code(302)
+          .redirect(url);
       } catch (err: any) {
-        request.log.error({ err, key }, 'Failed to fetch avatar from S3');
+        request.log.error({ err, key }, 'Failed to presign avatar URL');
         return reply.code(404).send({ message: 'Media not found' });
       }
     }

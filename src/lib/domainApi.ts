@@ -95,12 +95,14 @@ export async function deleteMediaAsset(assetId: string): Promise<void> {
   });
 }
 
+/** Vercel serverless body limit */
+const VERCEL_BODY_LIMIT = 4 * 1024 * 1024; // 4 MB (safe margin under 4.5MB)
+
 /**
- * Upload a file via the server-side upload endpoint (avoids browser→S3 CORS).
- * Sends the raw file bytes to /api/media/upload with metadata in query params.
- * Returns the public URL of the uploaded file.
+ * Upload via server (browser → Vercel serverless → S3).
+ * Only for files under Vercel's 4.5MB limit.
  */
-export async function uploadMedia(
+async function uploadViaServer(
   file: File,
   category: MediaCategory,
   ownerId?: string,
@@ -114,8 +116,6 @@ export async function uploadMedia(
   if (ownerId) params.set('ownerId', ownerId);
 
   const arrayBuffer = await file.arrayBuffer();
-  // Always send as application/octet-stream to avoid mobile browser Content-Type issues
-  // (e.g. image/heic, image/jpg, charset suffixes). Actual type is in query param.
   const response = await fetch(getApiUrl(`/api/media/upload?${params}`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/octet-stream' },
@@ -126,6 +126,83 @@ export async function uploadMedia(
     throw new Error(data?.message ?? '上传失败');
   }
   return data as { publicUrl: string; asset: MediaAsset };
+}
+
+/**
+ * Upload via presigned URL (browser → S3 direct, bypasses Vercel limit).
+ * Used for large files to preserve original quality.
+ */
+async function uploadViaPresign(
+  file: File,
+  category: MediaCategory,
+  ownerId?: string,
+): Promise<{ publicUrl: string; asset: MediaAsset }> {
+  const contentType = file.type || 'application/octet-stream';
+
+  // 1. Get presigned URL
+  const { uploadUrl, publicUrl, asset } = await requestJson<{
+    uploadUrl: string; publicUrl: string; asset: MediaAsset;
+  }>('/api/media/presign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category, contentType, fileSize: file.size, ownerId }),
+  });
+
+  // 2. PUT directly to S3
+  const putRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType },
+    body: file,
+  });
+  if (!putRes.ok) {
+    throw new Error(`S3 上传失败: ${putRes.status}`);
+  }
+
+  // 3. Confirm
+  const { asset: confirmed } = await requestJson<{ asset: MediaAsset }>('/api/media/confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ assetId: asset.id }),
+  });
+
+  return { publicUrl, asset: confirmed };
+}
+
+/**
+ * Upload a file with automatic routing:
+ * - Avatars: compress in browser (400×400) → server upload
+ * - ≤ 4MB: original via server upload (preserves quality)
+ * - > 4MB: original via presign direct to S3 (bypasses Vercel limit, preserves quality)
+ */
+export async function uploadMedia(
+  file: File,
+  category: MediaCategory,
+  ownerId?: string,
+  onProgress?: (progress: number) => void,
+): Promise<{ publicUrl: string; asset: MediaAsset }> {
+  let toUpload = file;
+
+  // Avatars: always compress (don't need originals for 400×400 thumbnails)
+  if (category === 'avatar') {
+    const { compressImageInBrowser } = await import('@/lib/imageCompression');
+    toUpload = await compressImageInBrowser(file, 'avatar');
+  }
+  onProgress?.(0.2);
+
+  let result: { publicUrl: string; asset: MediaAsset };
+
+  if (toUpload.size <= VERCEL_BODY_LIMIT) {
+    // Small enough: server upload (preserves original, server does thumbnails)
+    onProgress?.(0.4);
+    result = await uploadViaServer(toUpload, category, ownerId);
+  } else {
+    // Too large for Vercel: presign direct to S3 (preserves original)
+    onProgress?.(0.3);
+    result = await uploadViaPresign(toUpload, category, ownerId);
+  }
+
+  onProgress?.(1);
+  return result;
 }
 
 export type RecommendationCategory = 'movie' | 'book' | 'recipe' | 'music' | 'place' | 'external_event';

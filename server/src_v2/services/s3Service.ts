@@ -94,14 +94,14 @@ export async function getObject(key: string): Promise<{ buffer: Buffer; contentT
   };
 }
 
-export async function createDownloadUrl(key: string) {
+export async function createDownloadUrl(key: string, expiresIn?: number) {
   const command = new GetObjectCommand({
     Bucket: env.AWS_S3_BUCKET,
     Key: key,
   });
 
   return getSignedUrl(s3(), command, {
-    expiresIn: env.S3_PRESIGN_EXPIRES_SECONDS,
+    expiresIn: expiresIn ?? env.S3_PRESIGN_EXPIRES_SECONDS,
   });
 }
 
