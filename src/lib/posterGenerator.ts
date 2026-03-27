@@ -898,70 +898,47 @@ function drawAccentDiamond(
 /* ── Image loading ── */
 
 async function loadImage(url: string): Promise<HTMLImageElement> {
-  // For local API media URLs (e.g. /api/media/s3/...), fetch as blob to avoid
-  // cross-origin canvas tainting from S3 redirects
+  const blob = await fetchImageBlob(url);
+  // Use createImageBitmap for guaranteed correct dimensions
+  const bitmap = await createImageBitmap(blob);
+  // Draw bitmap to a canvas → export as HTMLImageElement with correct width/height
+  const c = document.createElement('canvas');
+  c.width = bitmap.width;
+  c.height = bitmap.height;
+  c.getContext('2d')!.drawImage(bitmap, 0, 0);
+  bitmap.close();
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to create image from canvas'));
+    img.src = c.toDataURL();
+  });
+}
+
+async function fetchImageBlob(url: string): Promise<Blob> {
+  // Local API media URLs — fetch as blob to avoid CORS tainting from S3 redirects
   if (url.startsWith('/api/media/')) {
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error(`Media fetch failed: ${res.status}`);
-    const blob = await res.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    try {
-      const img = await imgFromSrc(objectUrl);
-      // Don't revoke yet — canvas needs the blob URL alive during drawImage
-      return img;
-    } catch {
-      URL.revokeObjectURL(objectUrl);
-      throw new Error(`Failed to load media image: ${url}`);
-    }
+    return res.blob();
   }
 
   if (url.startsWith('/') && !url.startsWith('//')) {
-    return imgFromSrc(url);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Local fetch failed: ${res.status}`);
+    return res.blob();
   }
 
+  // External URL — try direct CORS first, fallback to proxy
   try {
     const res = await fetch(url, { mode: 'cors' });
-    if (res.ok) {
-      const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      try {
-        const img = await imgFromSrc(objectUrl);
-        URL.revokeObjectURL(objectUrl);
-        return img;
-      } catch {
-        URL.revokeObjectURL(objectUrl);
-      }
-    }
-  } catch { /* CORS blocked — try proxy */ }
+    if (res.ok) return res.blob();
+  } catch { /* CORS blocked */ }
 
   const proxyUrl = `/api/media/proxy?url=${encodeURIComponent(url)}`;
   const res = await fetch(proxyUrl);
   if (!res.ok) throw new Error(`Proxy fetch failed: ${res.status}`);
-  const blob = await res.blob();
-  const objectUrl = URL.createObjectURL(blob);
-  try {
-    const img = await imgFromSrc(objectUrl);
-    URL.revokeObjectURL(objectUrl);
-    return img;
-  } catch {
-    URL.revokeObjectURL(objectUrl);
-    throw new Error(`Failed to load image: ${url}`);
-  }
-}
-
-async function imgFromSrc(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = async () => {
-      try {
-        // Ensure full decode so naturalWidth/Height are correct
-        await img.decode();
-      } catch { /* decode() not supported or failed — onload dimensions should still work */ }
-      resolve(img);
-    };
-    img.onerror = () => reject(new Error(`Image load error: ${src}`));
-    img.src = src;
-  });
+  return res.blob();
 }
 
 /* ── Depth & atmosphere layers ── */
