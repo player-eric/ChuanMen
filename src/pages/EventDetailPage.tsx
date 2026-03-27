@@ -822,7 +822,8 @@ export default function EventDetailPage() {
                         const eventTag = resolveEventTag(event.scene, (event as any).tags);
                         const recs = event.linkedRecommendations ?? [];
                         const primaryRec = recs.find((r) => r.isSelected) ?? recs.find((r) => r.coverUrl) ?? recs[0];
-                        const coverImageUrl = primaryRec?.coverUrl || event.filmPoster || (isImageUrl(event.scene) ? event.scene : undefined);
+                        const eventCover = isImageUrl(event.scene) ? event.scene : undefined;
+                        const coverImageUrl = eventCover || primaryRec?.coverUrl || event.filmPoster;
                         const isMovie = eventTag === 'movie';
                         const movieRec = isMovie ? (recs.find((r) => r.category === 'movie') ?? primaryRec) : undefined;
                         const blob = await generateEventPoster({
@@ -864,7 +865,8 @@ export default function EventDetailPage() {
                       const eventTag = resolveEventTag(event.scene, (event as any).tags);
                       const recs = event.linkedRecommendations ?? [];
                       const primaryRec = recs.find((r) => r.isSelected) ?? recs.find((r) => r.coverUrl) ?? recs[0];
-                      const coverImageUrl = primaryRec?.coverUrl || event.filmPoster || (isImageUrl(event.scene) ? event.scene : undefined);
+                      const eventCover = isImageUrl(event.scene) ? event.scene : undefined;
+                      const coverImageUrl = eventCover || primaryRec?.coverUrl || event.filmPoster;
                       const isMovie = eventTag === 'movie';
                       const movieRec = isMovie ? (recs.find((r) => r.category === 'movie') ?? primaryRec) : undefined;
                       const blob = await generateEventPoster({
