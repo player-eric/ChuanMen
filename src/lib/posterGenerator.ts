@@ -570,7 +570,8 @@ function drawLayoutWithImage(
   const MAX_IMG_H = Math.min(580, availH - textAndGapsH - availH * 0.12);
 
   // Adaptive image frame — fit to natural aspect ratio
-  const imgR = img.width / img.height;
+  const imgR = img.naturalWidth / img.naturalHeight || img.width / img.height;
+  console.log('[poster] img dimensions:', img.naturalWidth, 'x', img.naturalHeight, 'ratio:', imgR);
   let frameW: number, frameH: number;
   if (imgR >= 1) {
     frameW = MAX_IMG_W;
@@ -579,6 +580,7 @@ function drawLayoutWithImage(
     frameH = MAX_IMG_H;
     frameW = Math.min(MAX_IMG_H * imgR, MAX_IMG_W);
   }
+  console.log('[poster] frame:', frameW, 'x', frameH);
 
   const totalH = catH + catToImgGap + frameH + imgToAccent + accentToTitle + titleBlockH + titleToInfo + infoH;
 
