@@ -571,7 +571,6 @@ function drawLayoutWithImage(
 
   // Adaptive image frame — fit to natural aspect ratio
   const imgR = img.naturalWidth / img.naturalHeight || img.width / img.height;
-  console.log('[poster] img dimensions:', img.naturalWidth, 'x', img.naturalHeight, 'ratio:', imgR);
   let frameW: number, frameH: number;
   if (imgR >= 1) {
     frameW = MAX_IMG_W;
@@ -580,7 +579,6 @@ function drawLayoutWithImage(
     frameH = MAX_IMG_H;
     frameW = Math.min(MAX_IMG_H * imgR, MAX_IMG_W);
   }
-  console.log('[poster] frame:', frameW, 'x', frameH);
 
   const totalH = catH + catToImgGap + frameH + imgToAccent + accentToTitle + titleBlockH + titleToInfo + infoH;
 
@@ -903,7 +901,9 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   // For local API media URLs (e.g. /api/media/s3/...), fetch as blob to avoid
   // cross-origin canvas tainting from S3 redirects
   if (url.startsWith('/api/media/')) {
-    const res = await fetch(url);
+    // Cache bust to always fetch latest image (cover image may have been replaced)
+    const bustUrl = url + (url.includes('?') ? '&' : '?') + `_t=${Date.now()}`;
+    const res = await fetch(bustUrl);
     if (!res.ok) throw new Error(`Media fetch failed: ${res.status}`);
     const blob = await res.blob();
     const objectUrl = URL.createObjectURL(blob);
