@@ -909,7 +909,7 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
     const objectUrl = URL.createObjectURL(blob);
     try {
       const img = await imgFromSrc(objectUrl);
-      URL.revokeObjectURL(objectUrl);
+      // Don't revoke yet — canvas needs the blob URL alive during drawImage
       return img;
     } catch {
       URL.revokeObjectURL(objectUrl);
@@ -951,10 +951,16 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   }
 }
 
-function imgFromSrc(src: string): Promise<HTMLImageElement> {
+async function imgFromSrc(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
+    img.onload = async () => {
+      try {
+        // Ensure full decode so naturalWidth/Height are correct
+        await img.decode();
+      } catch { /* decode() not supported or failed — onload dimensions should still work */ }
+      resolve(img);
+    };
     img.onerror = () => reject(new Error(`Image load error: ${src}`));
     img.src = src;
   });
