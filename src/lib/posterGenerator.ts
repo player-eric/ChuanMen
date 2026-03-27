@@ -901,9 +901,7 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   // For local API media URLs (e.g. /api/media/s3/...), fetch as blob to avoid
   // cross-origin canvas tainting from S3 redirects
   if (url.startsWith('/api/media/')) {
-    // Cache bust to always fetch latest image (cover image may have been replaced)
-    const bustUrl = url + (url.includes('?') ? '&' : '?') + `_t=${Date.now()}`;
-    const res = await fetch(bustUrl);
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error(`Media fetch failed: ${res.status}`);
     const blob = await res.blob();
     const objectUrl = URL.createObjectURL(blob);
