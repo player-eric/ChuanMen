@@ -64,6 +64,7 @@ import {
   fetchSiteConfig,
 } from '@/lib/domainApi';
 import { eventTagToScene, hostMilestoneBadge, type HostBadgeTier } from '@/lib/mappings';
+import { mapUser, mapPeople } from '@/lib/mappers';
 
 /* ── Loader helpers (call real backend) ── */
 
@@ -123,12 +124,12 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
     const allSignups = (e.signups ?? []) as any[];
     const feedOccupying = allSignups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
     const feedWaitlist = allSignups.filter((s: any) => s.status === 'waitlist');
-    const feedCoHosts: { name: string; avatar?: string }[] = (e.coHosts ?? []).map((ch: any) => ({ name: ch.user?.name, avatar: ch.user?.avatar })).filter((x: any) => x.name);
+    const feedCoHosts: { name: string; avatar?: string }[] = mapPeople(e.coHosts ?? []);
     // People displayed: host + co-hosts + accepted/offered (invited hidden)
     const feedAccepted = allSignups.filter((s: any) => ['accepted', 'offered'].includes(s.status));
-    const people: { name: string; avatar?: string }[] = feedAccepted.map((s: any) => ({ name: s.user?.name, avatar: s.user?.avatar })).filter((x: any) => x.name);
+    const people: { name: string; avatar?: string }[] = mapPeople(feedAccepted);
     // Host 默认也是参与者之一
-    const hostAvatar = e.host?.avatar ?? undefined;
+    const hostAvatar = mapUser(e.host).avatar;
     if (hostName && !people.some(p => p.name === hostName)) {
       people.unshift({ name: hostName, avatar: hostAvatar });
     }
@@ -214,8 +215,8 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       _key: `movie-${m.id}`,
       type: 'compactMovie',
       entityId: m.id,
-      name: m.recommendedBy?.name ?? '',
-      avatar: m.recommendedBy?.avatar ?? undefined,
+      name: mapUser(m.recommendedBy).name,
+      avatar: mapUser(m.recommendedBy).avatar,
       title: m.title,
       year: String(m.year ?? ''),
       dir: m.director ?? '',
@@ -292,8 +293,8 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       _key: `rec-${r.id}`,
       type: 'compactRecommendation',
       entityId: r.id,
-      name: r.author?.name ?? '',
-      avatar: r.author?.avatar ?? undefined,
+      name: mapUser(r.author).name,
+      avatar: mapUser(r.author).avatar,
       title: r.title,
       category: cat,
       categoryIcon: categoryIcons[cat] ?? '📖',
@@ -370,12 +371,12 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       _key: `proposal-${p.id}`,
       type: 'compactProposal',
       entityId: p.id,
-      name: p.author?.name ?? '',
-      avatar: p.author?.avatar ?? undefined,
+      name: mapUser(p.author).name,
+      avatar: mapUser(p.author).avatar,
       title: p.title,
       votes: p._count?.votes ?? 0,
       voted: votedProposals.has(p.id),
-      interested: Array.isArray(p.votes) ? p.votes.map((v: any) => ({ name: v.user?.name ?? '?', avatar: v.user?.avatar ?? undefined })) : [],
+      interested: Array.isArray(p.votes) ? mapPeople(p.votes) : [],
       time,
       navTarget: `/events/proposals/${p.id}`,
       likes: p.likes ?? 0,
@@ -492,16 +493,19 @@ function mapApiEvent(e: any): any {
 
   // People displayed: host + co-hosts + accepted/offered only (invited hidden from display)
   const accepted = signups.filter((s: any) => ['accepted', 'offered'].includes(s.status));
-  const people: { name: string; avatar?: string }[] = accepted.map((s: any) => ({ name: s.user?.name ?? s.userName ?? '?', avatar: s.user?.avatar }));
+  const people: { name: string; avatar?: string }[] = accepted.map((s: any) => {
+    const u = mapUser(s.user);
+    return { name: u.name !== '?' ? u.name : (s.userName ?? '?'), avatar: u.avatar };
+  });
   // Host 默认也是参与者之一
-  const hostAvatar = typeof e.host === 'string' ? undefined : e.host?.avatar;
+  const hostAvatar = typeof e.host === 'string' ? undefined : mapUser(e.host).avatar;
   if (hostName && hostName !== '?' && !people.some(p => p.name === hostName)) {
     people.unshift({ name: hostName, avatar: hostAvatar });
   }
   // Add co-hosts to people list
   for (const ch of (e.coHosts ?? []) as any[]) {
-    const chName = ch.user?.name;
-    if (chName && !people.some((p: any) => p.name === chName)) people.push({ name: chName, avatar: ch.user?.avatar });
+    const chUser = mapUser(ch.user);
+    if (chUser.name !== '?' && !people.some((p: any) => p.name === chUser.name)) people.push({ name: chUser.name, avatar: chUser.avatar });
   }
 
   // Collect signup user IDs for visibility checks (invite phase) — include all non-removed
@@ -632,13 +636,13 @@ async function eventsLoader() {
         const effectiveStatus = (p.status === 'discussing' && hasEvents) ? 'scheduled' : (p.status ?? 'discussing');
         return {
           id: p.id,
-          name: p.author?.name ?? p.name ?? '?',
-          avatar: p.author?.avatar ?? undefined,
+          name: mapUser(p.author).name !== '?' ? mapUser(p.author).name : (p.name ?? '?'),
+          avatar: mapUser(p.author).avatar,
           title: p.title ?? '',
           description: p.description ?? '',
           status: effectiveStatus,
           votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
-          interested: Array.isArray(p.votes) ? p.votes.map((v: any) => ({ name: v.user?.name ?? '?', avatar: v.user?.avatar ?? undefined })) : p.interested ?? [],
+          interested: Array.isArray(p.votes) ? mapPeople(p.votes) : p.interested ?? [],
           time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
         };
       }),
@@ -714,16 +718,16 @@ async function proposalDetailLoader({ params }: { params: Record<string, string 
     if (!p) return null;
     return {
       id: p.id,
-      name: p.author?.name ?? p.name ?? '?',
-      authorId: p.author?.id ?? p.authorId ?? '',
-      authorAvatar: p.author?.avatar ?? '',
+      name: mapUser(p.author).name !== '?' ? mapUser(p.author).name : (p.name ?? '?'),
+      authorId: mapUser(p.author).id || (p.authorId ?? ''),
+      authorAvatar: mapUser(p.author).avatar ?? '',
       title: p.title ?? '',
       description: p.description ?? '',
       descriptionHtml: p.descriptionHtml ?? p.description ?? '',
       status: p.status ?? 'discussing',
       votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
       interested: Array.isArray(p.votes)
-        ? p.votes.map((v: any) => ({ name: v.user?.name ?? '?', avatar: v.user?.avatar ?? '' }))
+        ? mapPeople(p.votes)
         : p.interested ?? [],
       time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
       comments: p.comments ?? [],
@@ -748,8 +752,8 @@ function mapRecommendation(r: any) {
     id: r.id,
     title: r.title ?? '',
     description: r.description ?? '',
-    authorName: r.author?.name ?? '',
-    authorId: r.author?.id ?? r.authorId ?? '',
+    authorName: mapUser(r.author).name !== '?' ? mapUser(r.author).name : '',
+    authorId: mapUser(r.author).id || (r.authorId ?? ''),
     coverUrl: r.coverUrl || undefined,
     sourceUrl: r.sourceUrl || undefined,
     eventDate: r.eventDate || undefined,
@@ -780,7 +784,7 @@ async function discoverLoader() {
       v: m._count?.votes ?? 0,
       voterIds: (m.votes ?? []).map((v: any) => v.user?.id ?? v.userId).filter(Boolean),
       status: m.status === 'candidate' ? undefined : m.status,
-      by: m.recommendedBy?.name ?? '',
+      by: mapUser(m.recommendedBy).name !== '?' ? mapUser(m.recommendedBy).name : '',
       poster: m.poster || undefined,
       commentCount: m.commentCount ?? 0,
     }));
@@ -804,7 +808,7 @@ async function discoverLoader() {
       author: b.author?.name ?? b.description ?? '',
       v: b._count?.votes ?? b.voteCount ?? 0,
       voterIds: (b.votes ?? []).map((v: any) => v.userId ?? v.user?.id).filter(Boolean),
-      by: b.author?.name ?? '',
+      by: mapUser(b.author).name !== '?' ? mapUser(b.author).name : '',
       status: b.status === 'candidate' ? undefined : b.status,
       coverUrl: b.coverUrl || undefined,
       commentCount: b.commentCount ?? 0,
@@ -845,9 +849,9 @@ async function bookDetailLoader({ params }: { params: Record<string, string | un
       author: (rec.tags ?? []).find((t: any) => !(/^\d{4}$/.test(t.value)))?.value ?? rec.author?.name ?? '',
       v: rec._count?.votes ?? rec.voteCount ?? 0,
       voterIds: (rec.votes ?? []).map((v: any) => v.userId ?? v.user?.id).filter(Boolean),
-      voters: (rec.votes ?? []).map((v: any) => ({ name: v.user?.name ?? '?', avatar: v.user?.avatar ?? undefined })),
+      voters: mapPeople(rec.votes ?? []),
       status: rec.status ?? 'candidate',
-      by: rec.author?.name ?? '',
+      by: mapUser(rec.author).name !== '?' ? mapUser(rec.author).name : '',
       synopsis: rec.description ?? '',
       genre: (rec.tags ?? []).map((t: any) => t.value).join(', '),
       sourceUrl: rec.sourceUrl ?? '',

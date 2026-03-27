@@ -83,8 +83,17 @@ route.ts → service.ts → repository.ts
 ### Backend
 1. Request hits Fastify route handler (`*.route.ts`)
 2. Route calls service layer (`*.service.ts`) for business logic
-3. Service calls Prisma for data access
+3. Service calls Prisma for data access, using `USER_BRIEF_SELECT` for all user relations
 4. Response serialized and returned
+
+### User Data Contract
+All backend endpoints that return user data (host, author, voter, participant, etc.) MUST include `{ id, name, avatar }` via the shared `USER_BRIEF_SELECT` constant from `server/src_v2/utils/prisma-selects.ts`. This is enforced by structural tests.
+
+### Mapper Layer (Frontend)
+All raw API responses are transformed through shared mapper functions in `src/lib/mappers.ts` before reaching components. This ensures:
+- **One place to fix** — a missing avatar fix in `mapUser()` applies to every page
+- **Consistent field names** — raw API data may vary, mapper output is standardized
+- **No inline construction** — loaders call mappers, never manually build `{ name: x.name, avatar: x.avatar }`
 
 ### SSR Architecture
 - **`ssr-server.mjs`**: Dev mode uses Vite middleware; prod mode forks Fastify as child process on port 4000

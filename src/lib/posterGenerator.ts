@@ -622,7 +622,20 @@ function drawLayoutWithImage(
   ctx.save();
   roundRect(ctx, frameX, frameY, frameW, frameH, radius);
   ctx.clip();
-  ctx.drawImage(img, frameX, frameY, frameW, frameH);
+  // Draw image with cover fit (preserve aspect ratio, crop to fill)
+  const srcR = img.width / img.height;
+  const dstR = frameW / frameH;
+  let sx = 0, sy = 0, sw = img.width, sh = img.height;
+  if (srcR > dstR) {
+    // Source wider — crop sides
+    sw = img.height * dstR;
+    sx = (img.width - sw) / 2;
+  } else {
+    // Source taller — crop top/bottom
+    sh = img.width / dstR;
+    sy = (img.height - sh) / 2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, frameX, frameY, frameW, frameH);
 
   // Bottom fade overlay
   const fadeY = frameY + frameH * 0.65;

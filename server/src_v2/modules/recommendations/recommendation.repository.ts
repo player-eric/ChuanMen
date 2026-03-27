@@ -1,4 +1,5 @@
 import type { PrismaClient, RecommendationCategory, RecommendationStatus } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 export class RecommendationRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -22,7 +23,7 @@ export class RecommendationRepository {
       include: {
         author: true,
         tags: true,
-        votes: { select: { userId: true, user: { select: { id: true, name: true, avatar: true } } } },
+        votes: { select: { userId: true, user: { select: USER_BRIEF_SELECT } } },
         _count: { select: { votes: true } },
       },
     });

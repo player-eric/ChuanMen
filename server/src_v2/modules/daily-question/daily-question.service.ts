@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 /** Signal tag → matching question filter conditions */
 const SIGNAL_TO_QUESTION: Record<string, { targetCategory?: string; targetType?: string; targetEntityType?: string }[]> = {
@@ -91,7 +92,7 @@ export class DailyQuestionService {
     if (question.targetType === 'recommendation') {
       const recs = await this.prisma.recommendation.findMany({
         where: { dailyQuestionId: question.id, createdAt: { gte: todayStart, lt: tomorrowStart } },
-        include: { author: { select: { id: true, name: true, avatar: true } } },
+        include: { author: { select: USER_BRIEF_SELECT } },
         orderBy: { createdAt: 'asc' },
       });
       answers = recs.map((r) => ({
@@ -109,7 +110,7 @@ export class DailyQuestionService {
       const props = await this.prisma.proposal.findMany({
         where: { dailyQuestionId: question.id, createdAt: { gte: todayStart, lt: tomorrowStart } },
         include: {
-          author: { select: { id: true, name: true, avatar: true } },
+          author: { select: USER_BRIEF_SELECT },
           _count: { select: { votes: true } },
         },
         orderBy: { createdAt: 'asc' },
@@ -148,7 +149,7 @@ export class DailyQuestionService {
             entityId: recentEvent.id,
             createdAt: { gte: todayStart, lt: tomorrowStart },
           },
-          include: { author: { select: { id: true, name: true, avatar: true } } },
+          include: { author: { select: USER_BRIEF_SELECT } },
           orderBy: { createdAt: 'asc' },
         });
         answers = comments.map((c) => ({
@@ -177,7 +178,7 @@ export class DailyQuestionService {
             entityId: recentRec.id,
             createdAt: { gte: todayStart, lt: tomorrowStart },
           },
-          include: { author: { select: { id: true, name: true, avatar: true } } },
+          include: { author: { select: USER_BRIEF_SELECT } },
           orderBy: { createdAt: 'asc' },
         });
         answers = comments.map((c) => ({
@@ -264,7 +265,7 @@ export class DailyQuestionService {
           authorId: userId,
           dailyQuestionId: questionId,
         },
-        include: { author: { select: { id: true, name: true, avatar: true } } },
+        include: { author: { select: USER_BRIEF_SELECT } },
       });
       return { type: 'recommendation', entity: rec };
     }
@@ -276,7 +277,7 @@ export class DailyQuestionService {
           authorId: userId,
           dailyQuestionId: questionId,
         },
-        include: { author: { select: { id: true, name: true, avatar: true } } },
+        include: { author: { select: USER_BRIEF_SELECT } },
       });
       return { type: 'proposal', entity: proposal };
     }
@@ -315,7 +316,7 @@ export class DailyQuestionService {
           authorId: userId,
           content: text,
         },
-        include: { author: { select: { id: true, name: true, avatar: true } } },
+        include: { author: { select: USER_BRIEF_SELECT } },
       });
       return { type: 'comment', entity: comment };
     }

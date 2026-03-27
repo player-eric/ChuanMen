@@ -50,7 +50,11 @@ npx prisma db push       # Quick local schema sync
 
 ## CRITICAL: Backward Compatibility
 
-**NEVER make changes that lose existing data.** Schema changes MUST be additive (ADD COLUMN with defaults, never DROP COLUMN without approval). Always think about existing data impact.
+**NEVER make changes that lose existing data.** Schema changes MUST be additive (ADD COLUMN with defaults, never DROP COLUMN without approval). API response fields can only be added, never removed or renamed without keeping the old name. Always think about existing data and existing consumers.
+
+## CRITICAL: Single Source of Truth for Data Mapping
+
+**NEVER manually construct user/entity objects inline.** All data mapping must use shared mapper functions in `src/lib/mappers.ts` (frontend) and `USER_BRIEF_SELECT` constant (backend). When adding a new page or loader, import and reuse existing mappers. When a field is missing, fix the mapper — not the individual call site. This prevents the "fix one place, miss another" class of bugs.
 
 ## Documentation Index
 

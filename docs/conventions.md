@@ -62,3 +62,35 @@ Do NOT create local duplicates of these:
 - `QuickActionDialog.tsx` — search dialog for quick actions (postcards, events, etc.)
 - `ConfirmDialog.tsx` — confirmation modal
 - `RichTextEditor.tsx` — TipTap-based rich text editor/viewer
+
+## Design Principles
+
+### Data Mapping — Single Source of Truth
+All entity data mapping (user, event, proposal, movie, etc.) MUST go through shared mapper functions in `src/lib/mappers.ts`. **Never construct user/entity objects inline** in loaders or components.
+
+- `mapUser(raw)` — user name/avatar/id mapping (single place to fix avatar bugs)
+- `mapUsers(list)` — voter/participant lists
+- Existing mappers: `mapApiEvent()`, `mapApiCard()`, `mapApiMember()`, `mapRecommendation()` in `router.tsx`
+
+When a field is missing from the UI, fix the **mapper function** — not the individual call site.
+
+### Backend User Data Contract
+All backend API endpoints that return user data MUST include `{ id, name, avatar }` via the shared `USER_BRIEF_SELECT` constant (`server/src_v2/utils/prisma-selects.ts`). Never write `{ select: { id: true, name: true } }` without avatar.
+
+### Field Naming Consistency
+- Vote counts: always `voteCount` (not `v` or `votes`)
+- Author name: always `authorName` (not `by` or `name` when ambiguous)
+- These conventions are enforced by mappers — raw API data may vary, but mapper output is consistent.
+
+### Backward Compatibility
+- API response fields can only be **added**, never removed
+- Field renames must keep the old name alongside the new one until all consumers migrate
+- DB schema changes must be additive (ADD COLUMN with defaults, never DROP COLUMN)
+- When changing capacity/count semantics, migrate existing data in the migration SQL
+
+### New Page/Loader Checklist
+When adding a new page or loader, verify:
+1. All user data uses `mapUser()` / `mapUsers()` — never inline `{ name: x.name, avatar: x.avatar }`
+2. All entity data uses existing mappers where available
+3. Backend includes use `USER_BRIEF_SELECT` for user relations
+4. Avatar displays correctly for all user references on the page

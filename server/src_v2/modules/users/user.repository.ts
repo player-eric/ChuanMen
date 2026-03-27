@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 export class UserRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -20,7 +21,7 @@ export class UserRepository {
         userStatus: 'approved',
         ...(q ? { name: { contains: q, mode: 'insensitive' as const } } : {}),
       },
-      select: { id: true, name: true, avatar: true },
+      select: USER_BRIEF_SELECT,
       orderBy: { name: 'asc' },
       take: 20,
     });

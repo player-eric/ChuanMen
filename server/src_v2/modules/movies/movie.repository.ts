@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 export class MovieRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -8,8 +9,8 @@ export class MovieRepository {
       where: { status: 'candidate' },
       orderBy: [{ createdAt: 'desc' }],
       include: {
-        recommendedBy: { select: { id: true, name: true, avatar: true } },
-        votes: { include: { user: { select: { id: true, name: true, avatar: true } } } },
+        recommendedBy: { select: USER_BRIEF_SELECT },
+        votes: { include: { user: { select: USER_BRIEF_SELECT } } },
         _count: { select: { votes: true } },
       },
     });
@@ -19,8 +20,8 @@ export class MovieRepository {
     return this.prisma.movie.findUnique({
       where: { id },
       include: {
-        recommendedBy: { select: { id: true, name: true, avatar: true } },
-        votes: { include: { user: { select: { id: true, name: true, avatar: true } } } },
+        recommendedBy: { select: USER_BRIEF_SELECT },
+        votes: { include: { user: { select: USER_BRIEF_SELECT } } },
         screenedEvents: {
           include: {
             event: {
@@ -48,7 +49,7 @@ export class MovieRepository {
       },
       orderBy: { createdAt: 'desc' },
       include: {
-        recommendedBy: { select: { id: true, name: true, avatar: true } },
+        recommendedBy: { select: USER_BRIEF_SELECT },
         _count: { select: { votes: true } },
       },
     });
@@ -80,7 +81,7 @@ export class MovieRepository {
         votes: { create: { userId: data.recommendedById } },
       },
       include: {
-        recommendedBy: { select: { id: true, name: true, avatar: true } },
+        recommendedBy: { select: USER_BRIEF_SELECT },
         _count: { select: { votes: true } },
       },
     });

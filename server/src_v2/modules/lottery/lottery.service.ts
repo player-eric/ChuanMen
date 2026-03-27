@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import type { FastifyBaseLogger } from 'fastify';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 // Re-export from shared utils for backward compatibility
 export { getWeekKey, getWeekNumber } from '../../utils/weekKey.js';
@@ -50,7 +51,7 @@ export async function drawWeeklyHost(
       hostCandidate: true,
       userStatus: 'approved',
     },
-    select: { id: true, name: true },
+    select: USER_BRIEF_SELECT,
   });
 
   // Filter out excluded users
@@ -95,7 +96,7 @@ export async function getCurrentLottery(prisma: PrismaClient) {
   const current = await prisma.weeklyLottery.findFirst({
     where: { weekKey, status: { not: 'skipped' } },
     include: {
-      drawnMember: { select: { id: true, name: true, avatar: true } },
+      drawnMember: { select: USER_BRIEF_SELECT },
       event: { select: { id: true, title: true, startsAt: true } },
     },
   });
@@ -112,7 +113,7 @@ export async function getLotteryHistory(prisma: PrismaClient, take = 20, skip = 
     take,
     skip,
     include: {
-      drawnMember: { select: { id: true, name: true, avatar: true } },
+      drawnMember: { select: USER_BRIEF_SELECT },
       event: { select: { id: true, title: true } },
     },
   });
@@ -131,7 +132,7 @@ export async function acceptLottery(prisma: PrismaClient, lotteryId: string, use
     where: { id: lotteryId },
     data: { status: 'accepted' },
     include: {
-      drawnMember: { select: { id: true, name: true, avatar: true } },
+      drawnMember: { select: USER_BRIEF_SELECT },
     },
   });
 }
@@ -175,7 +176,7 @@ export async function completeLottery(prisma: PrismaClient, lotteryId: string, e
     where: { id: lotteryId },
     data: { status: 'completed', eventId },
     include: {
-      drawnMember: { select: { id: true, name: true, avatar: true } },
+      drawnMember: { select: USER_BRIEF_SELECT },
       event: { select: { id: true, title: true } },
     },
   });

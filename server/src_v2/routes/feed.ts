@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { USER_BRIEF_SELECT } from '../utils/prisma-selects.js';
 import { getWeekKey } from '../utils/weekKey.js';
 import { getFutureWeekKeys, weekKeyToLabel } from '../utils/weekKey.js';
 import { getSignalSummary, getMySignals } from '../modules/signals/signal.service.js';
@@ -64,11 +65,11 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           orderBy: { updatedAt: 'desc' },
           take: 40,
           include: {
-            host: { select: { id: true, name: true, avatar: true } },
-            coHosts: { include: { user: { select: { id: true, name: true, avatar: true } } } },
+            host: { select: USER_BRIEF_SELECT },
+            coHosts: { include: { user: { select: USER_BRIEF_SELECT } } },
             signups: {
               where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } },
-              include: { user: { select: { id: true, name: true, avatar: true } } },
+              include: { user: { select: USER_BRIEF_SELECT } },
             },
             screenedMovies: {
               include: { movie: { select: { id: true, title: true, poster: true, _count: { select: { votes: true } } } } },
@@ -80,7 +81,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
               },
             },
             tasks: {
-              include: { claimedBy: { select: { id: true, name: true } } },
+              include: { claimedBy: { select: USER_BRIEF_SELECT } },
               orderBy: { createdAt: 'asc' as const },
             },
           },
@@ -91,7 +92,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           where: { published: true },
           orderBy: { createdAt: 'desc' },
           take: 5,
-          include: { author: { select: { id: true, name: true, avatar: true } } },
+          include: { author: { select: USER_BRIEF_SELECT } },
         }),
 
         // Recent recommendations
@@ -99,7 +100,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           orderBy: { createdAt: 'desc' },
           take: 10,
           include: {
-            author: { select: { id: true, name: true, avatar: true } },
+            author: { select: USER_BRIEF_SELECT },
             tags: true,
             _count: { select: { votes: true } },
           },
@@ -143,8 +144,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           orderBy: { createdAt: 'desc' },
           take: 10,
           include: {
-            from: { select: { id: true, name: true, avatar: true } },
-            to: { select: { id: true, name: true, avatar: true } },
+            from: { select: USER_BRIEF_SELECT },
+            to: { select: USER_BRIEF_SELECT },
             tags: true,
           },
         }),
@@ -160,7 +161,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           orderBy: { createdAt: 'desc' },
           take: 20,
           include: {
-            recommendedBy: { select: { id: true, name: true, avatar: true } },
+            recommendedBy: { select: USER_BRIEF_SELECT },
             _count: { select: { votes: true } },
           },
         }),
@@ -171,8 +172,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           orderBy: { createdAt: 'desc' },
           take: 10,
           include: {
-            author: { select: { id: true, name: true, avatar: true } },
-            votes: { include: { user: { select: { id: true, name: true, avatar: true } } } },
+            author: { select: USER_BRIEF_SELECT },
+            votes: { include: { user: { select: USER_BRIEF_SELECT } } },
             _count: { select: { votes: true } },
           },
         }),
@@ -281,7 +282,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             where: { mentionedUserIds: { has: userId }, createdAt: { gte: notifCutoff } },
             select: {
               id: true, entityType: true, entityId: true, createdAt: true,
-              author: { select: { id: true, name: true } },
+              author: { select: USER_BRIEF_SELECT },
             },
             take: 10,
             orderBy: { createdAt: 'desc' },
@@ -311,7 +312,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             where: { toId: userId, createdAt: { gte: notifCutoff } },
             select: {
               createdAt: true,
-              from: { select: { id: true, name: true } },
+              from: { select: USER_BRIEF_SELECT },
             },
             take: 10,
             orderBy: { createdAt: 'desc' },
@@ -339,7 +340,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             },
             select: {
               createdAt: true, note: true,
-              user: { select: { id: true, name: true } },
+              user: { select: USER_BRIEF_SELECT },
               event: { select: { id: true, title: true } },
             },
             take: 10,
@@ -400,7 +401,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
               },
               select: {
                 id: true, entityType: true, entityId: true, createdAt: true,
-                author: { select: { id: true, name: true } },
+                author: { select: USER_BRIEF_SELECT },
               },
               take: 20,
               orderBy: { createdAt: 'desc' },
@@ -558,7 +559,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const currentLottery = await prisma.weeklyLottery.findFirst({
       where: { weekKey, status: { not: 'skipped' } },
       include: {
-        drawnMember: { select: { id: true, name: true, avatar: true } },
+        drawnMember: { select: USER_BRIEF_SELECT },
         event: { select: { id: true, title: true, startsAt: true } },
       },
     });
@@ -586,7 +587,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       allEntityIds.length > 0
         ? prisma.like.findMany({
             where: { entityId: { in: allEntityIds } },
-            include: { user: { select: { id: true, name: true } } },
+            include: { user: { select: USER_BRIEF_SELECT } },
           })
         : [],
       allEntityIds.length > 0

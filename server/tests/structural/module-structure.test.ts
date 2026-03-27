@@ -173,6 +173,36 @@ describe('Frontend/Backend Boundary', () => {
   });
 });
 
+describe('Backend User Data Contract', () => {
+  it('all user selects include avatar field', () => {
+    // Scan backend files for { select: { id: true, name: true } } without avatar
+    const backendFiles = getAllTsFiles(SERVER_SRC);
+    const selectPattern = /select:\s*\{\s*id:\s*true,\s*name:\s*true\s*\}/g;
+    const selectWithAvatarPattern = /select:\s*\{\s*id:\s*true,\s*name:\s*true,\s*avatar:\s*true/;
+    const userBriefSelectPattern = /USER_BRIEF_SELECT/;
+
+    for (const file of backendFiles) {
+      const content = fs.readFileSync(file, 'utf-8');
+      const lines = content.split('\n');
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (selectPattern.test(line)) {
+          // Reset regex lastIndex
+          selectPattern.lastIndex = 0;
+          // Check it's not already using USER_BRIEF_SELECT or includes avatar
+          const hasAvatar = selectWithAvatarPattern.test(line) || userBriefSelectPattern.test(line);
+          const relPath = path.relative(SERVER_SRC, file);
+          expect(
+            hasAvatar,
+            `${relPath}:${i + 1} has { id, name } without avatar. Use USER_BRIEF_SELECT from utils/prisma-selects.ts`,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+});
+
 describe('Mappings Single Source of Truth', () => {
   it('mapping keys only exist in src/lib/mappings.ts', () => {
     const MAPPING_KEYS = [

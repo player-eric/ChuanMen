@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 export class PostcardRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -8,8 +9,8 @@ export class PostcardRepository {
       where: { toId: userId },
       orderBy: { createdAt: 'desc' },
       include: {
-        from: { select: { id: true, name: true, avatar: true } },
-        to: { select: { id: true, name: true, avatar: true } },
+        from: { select: USER_BRIEF_SELECT },
+        to: { select: USER_BRIEF_SELECT },
         event: { select: { id: true, title: true } },
         tags: true,
       },
@@ -21,8 +22,8 @@ export class PostcardRepository {
       where: { fromId: userId },
       orderBy: { createdAt: 'desc' },
       include: {
-        from: { select: { id: true, name: true, avatar: true } },
-        to: { select: { id: true, name: true, avatar: true } },
+        from: { select: USER_BRIEF_SELECT },
+        to: { select: USER_BRIEF_SELECT },
         event: { select: { id: true, title: true } },
         tags: true,
       },
@@ -53,8 +54,8 @@ export class PostcardRepository {
           : undefined,
       },
       include: {
-        from: { select: { id: true, name: true, avatar: true } },
-        to: { select: { id: true, name: true, avatar: true } },
+        from: { select: USER_BRIEF_SELECT },
+        to: { select: USER_BRIEF_SELECT },
         tags: true,
       },
     });
@@ -139,7 +140,7 @@ export class PostcardRepository {
       select: {
         userId: true,
         eventId: true,
-        user: { select: { id: true, name: true, avatar: true } },
+        user: { select: USER_BRIEF_SELECT },
       },
     });
 
@@ -149,8 +150,8 @@ export class PostcardRepository {
       select: {
         id: true,
         hostId: true,
-        host: { select: { id: true, name: true, avatar: true } },
-        coHosts: { select: { userId: true, user: { select: { id: true, name: true, avatar: true } } } },
+        host: { select: USER_BRIEF_SELECT },
+        coHosts: { select: { userId: true, user: { select: USER_BRIEF_SELECT } } },
       },
     });
     for (const e of eventsWithHosts) {
@@ -197,8 +198,8 @@ export class PostcardRepository {
     return this.prisma.postcard.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        from: { select: { id: true, name: true, avatar: true } },
-        to: { select: { id: true, name: true, avatar: true } },
+        from: { select: USER_BRIEF_SELECT },
+        to: { select: USER_BRIEF_SELECT },
         event: { select: { id: true, title: true } },
         tags: true,
       },

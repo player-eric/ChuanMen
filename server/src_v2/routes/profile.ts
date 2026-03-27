@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { USER_BRIEF_SELECT } from '../utils/prisma-selects.js';
 /**
  * GET /api/profile?userId=xxx  OR  ?name=xxx
  * Optional: viewerId (via query or x-user-id header) for mutual computation
@@ -74,7 +75,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         orderBy: { createdAt: 'desc' },
         take: 10,
         include: {
-          to: { select: { id: true, name: true, avatar: true } },
+          to: { select: USER_BRIEF_SELECT },
           tags: true,
         },
       }),
@@ -94,7 +95,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         orderBy: { createdAt: 'desc' },
         take: 10,
         include: {
-          from: { select: { id: true, name: true, avatar: true } },
+          from: { select: USER_BRIEF_SELECT },
           tags: true,
         },
       }),
@@ -113,7 +114,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         include: {
           movie: {
             include: {
-              recommendedBy: { select: { id: true, name: true } },
+              recommendedBy: { select: USER_BRIEF_SELECT },
               _count: { select: { votes: true } },
             },
           },
@@ -137,7 +138,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         orderBy: { startsAt: 'asc' },
         take: 10,
         include: {
-          host: { select: { id: true, name: true } },
+          host: { select: USER_BRIEF_SELECT },
           coHosts: { select: { userId: true } },
         },
       }),
@@ -161,7 +162,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           hostId: true,
           tags: true,
           status: true,
-          host: { select: { id: true, name: true } },
+          host: { select: USER_BRIEF_SELECT },
           coHosts: { select: { userId: true } },
           recapPhotoUrls: true,
         },

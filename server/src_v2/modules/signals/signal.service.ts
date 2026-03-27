@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 import type { SaveSignalsInput } from './signal.schema.js';
 
 /**
@@ -50,7 +51,7 @@ export async function getSignalSummary(prisma: PrismaClient, weekKeys: string[])
     select: {
       tag: true,
       weekKey: true,
-      user: { select: { id: true, name: true, avatar: true } },
+      user: { select: USER_BRIEF_SELECT },
     },
   });
 

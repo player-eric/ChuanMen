@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import type { FastifyBaseLogger } from 'fastify';
+import { USER_BRIEF_SELECT } from '../utils/prisma-selects.js';
 import { sendTemplatedEmail } from '../services/emailService.js';
 import { filterByCooldown, filterByRefId, ELIGIBLE_USER_WHERE } from './helpers.js';
 import type { HostTributeResult } from './contentAutomation.js';
@@ -133,7 +134,7 @@ export async function sendEventReminder(
         include: { user: { select: { id: true, name: true, email: true } } },
       },
       tasks: {
-        include: { claimedBy: { select: { id: true, name: true } } },
+        include: { claimedBy: { select: USER_BRIEF_SELECT } },
         orderBy: { createdAt: 'asc' },
       },
     },
@@ -1499,7 +1500,7 @@ export async function sendSameDayReminder(
         include: { user: { select: { id: true, name: true, email: true } } },
       },
       tasks: {
-        include: { claimedBy: { select: { id: true, name: true } } },
+        include: { claimedBy: { select: USER_BRIEF_SELECT } },
         orderBy: { createdAt: 'asc' },
       },
     },
@@ -1571,7 +1572,7 @@ export async function sendNewEventNotif(
       phase: { not: 'cancelled' },
     },
     include: {
-      host: { select: { id: true, name: true } },
+      host: { select: USER_BRIEF_SELECT },
     },
   });
 
@@ -1635,7 +1636,7 @@ export async function sendNewRecNotif(
 
   const newRecs = await prisma.recommendation.findMany({
     where: { createdAt: { gte: twentyMinAgo, lte: tenMinAgo } },
-    include: { author: { select: { id: true, name: true } } },
+    include: { author: { select: USER_BRIEF_SELECT } },
   });
 
   if (newRecs.length === 0) return 0;
