@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { CSSProperties, ReactNode, MouseEventHandler } from 'react';
 import { useTheme } from '@mui/material/styles';
 import Tooltip from '@mui/material/Tooltip';
@@ -29,17 +30,21 @@ export function Ava({ name: rawName, src, size = 28, border, badge, onTap }: Ava
   const name = typeof rawName === 'string' ? rawName : String(rawName ?? '?');
   const c = useColors();
   const letter = firstNonEmoji(name);
+  const [imgFailed, setImgFailed] = useState(false);
+  const showImg = src && !imgFailed;
+  const hue = `hsl(${name.charCodeAt(0) * 37 % 360}, 25%, 22%)`;
   return (
     <div style={{ position: 'relative', flexShrink: 0, cursor: onTap ? 'pointer' : undefined }} onClick={onTap}>
-      {src ? (
+      {showImg ? (
         <img
           src={src}
           alt={name}
           loading="lazy"
+          onError={() => setImgFailed(true)}
           style={{
             width: size, height: size, borderRadius: '50%',
             objectFit: 'cover',
-            background: `hsl(${name.charCodeAt(0) * 37 % 360}, 25%, 22%)`,
+            background: hue,
             border: border ? `2px solid ${c.s1}` : 'none',
           }}
         />
@@ -47,7 +52,7 @@ export function Ava({ name: rawName, src, size = 28, border, badge, onTap }: Ava
         <div
           style={{
             width: size, height: size, borderRadius: '50%',
-            background: `hsl(${name.charCodeAt(0) * 37 % 360}, 25%, 22%)`,
+            background: hue,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: size * 0.38, color: c.text2, fontWeight: 600,
             border: border ? `2px solid ${c.s1}` : 'none',
