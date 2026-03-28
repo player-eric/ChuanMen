@@ -573,7 +573,7 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
         /* ── Gradient banner layout (unchanged) ── */
         <>
           {scene && (
-            <ScenePhoto scene={scene} h={90}>
+            <ScenePhoto scene={scene} h={90} style={{ borderRadius: '10px 10px 0 0' }}>
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(transparent, rgba(0,0,0,0.45))' }} />
               <div style={{ position: 'absolute', top: 8, right: 10, display: 'flex', gap: 6 }}>
                 {isList && pc ? (

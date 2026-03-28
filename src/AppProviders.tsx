@@ -24,7 +24,7 @@ export function useColorMode() {
 }
 
 export default function AppProviders({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<AppColorMode>('dark');
+  const [mode, setMode] = useState<AppColorMode>('light');
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
