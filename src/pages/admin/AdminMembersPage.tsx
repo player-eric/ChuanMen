@@ -624,9 +624,9 @@ export default function AdminMembersPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button color="error" disabled={busy} onClick={() => { setConfirmDeny(applicantDialog); }}>拒绝</Button>
-          <Button variant="outlined" color="success" disabled={busy} onClick={() => { setConfirmApprove(applicantDialog); }}>直接通过</Button>
-          <Button variant="contained" color="primary" disabled={busy} onClick={() => { setConfirmAnnounce(applicantDialog); }}>发起介绍</Button>
+          <Button color="error" disabled={busy} onClick={() => { setConfirmDeny(applicantDialog); setApplicantDialog(null); }}>拒绝</Button>
+          <Button variant="outlined" color="success" disabled={busy} onClick={() => { setConfirmApprove(applicantDialog); setApplicantDialog(null); }}>直接通过</Button>
+          <Button variant="contained" color="primary" disabled={busy} onClick={() => { setConfirmAnnounce(applicantDialog); setApplicantDialog(null); }}>发起介绍</Button>
         </DialogActions>
       </Dialog>
 

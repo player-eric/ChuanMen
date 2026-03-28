@@ -739,7 +739,7 @@ export async function fetchAnnouncementByIdApi(id: string) {
    ═══════════════════════════════════════════════════════════════ */
 
 export async function fetchProfileApi(userId: string) {
-  return requestJson<EntityMap>(`/api/profile${toQueryString({ userId })}`);
+  return requestJson<EntityMap>(`/api/profile${toQueryString({ userId, viewerId: userId })}`);
 }
 
 export async function fetchProfileByNameApi(name: string, viewerId?: string) {
