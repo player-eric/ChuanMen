@@ -1,4 +1,5 @@
 import type { PrismaClient, InteractionEntityType } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 export class CommentRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -7,7 +8,7 @@ export class CommentRepository {
     return this.prisma.comment.findMany({
       where: { entityType, entityId },
       orderBy: { createdAt: 'asc' },
-      include: { author: { select: { id: true, name: true, avatar: true } } },
+      include: { author: { select: USER_BRIEF_SELECT } },
     });
   }
 
@@ -21,7 +22,7 @@ export class CommentRepository {
   }) {
     return this.prisma.comment.create({
       data: input,
-      include: { author: { select: { id: true, name: true, avatar: true } } },
+      include: { author: { select: USER_BRIEF_SELECT } },
     });
   }
 
@@ -33,7 +34,7 @@ export class CommentRepository {
     return this.prisma.comment.findMany({
       orderBy: { createdAt: 'desc' },
       take: 200,
-      include: { author: { select: { id: true, name: true, avatar: true } } },
+      include: { author: { select: USER_BRIEF_SELECT } },
     });
   }
 }

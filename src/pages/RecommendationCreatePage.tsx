@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -13,8 +14,9 @@ import {
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
-import { createRecommendation, createMovie, type RecommendationCategory } from '@/lib/domainApi';
+import { createRecommendation, createMovie, fetchMembersApi, type RecommendationCategory } from '@/lib/domainApi';
 import { ImageUpload } from '@/components/ImageUpload';
+import { Ava } from '@/components/Atoms';
 
 const categoryMap: Record<string, string> = {
   movie: '电影',
@@ -22,7 +24,7 @@ const categoryMap: Record<string, string> = {
   recipe: '菜谱',
   music: '音乐',
   place: '好店',
-  external_event: '演出和其他',
+  external_event: '演出与展览',
 };
 
 function isCategory(value: string | undefined): value is RecommendationCategory {
@@ -41,8 +43,31 @@ export default function RecommendationCreatePage() {
   const [sourceUrl, setSourceUrl] = useState('');
   const [tagsText, setTagsText] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [eventEndDate, setEventEndDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Admin: pick author on behalf of another member
+  const isAdmin = user?.role === 'admin';
+  const [members, setMembers] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
+  const [selectedAuthor, setSelectedAuthor] = useState<{ id: string; name: string; avatar: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetchMembersApi().then((list) => {
+      const mapped = (list as { id: string; name: string; avatar?: string | null }[]).map((m) => ({
+        id: m.id,
+        name: m.name,
+        avatar: m.avatar ?? null,
+      }));
+      setMembers(mapped);
+      if (user) {
+        const me = mapped.find((m) => m.id === user.id);
+        if (me) setSelectedAuthor(me);
+      }
+    });
+  }, [isAdmin, user]);
 
   useEffect(() => {
     if (!user) {
@@ -55,6 +80,8 @@ export default function RecommendationCreatePage() {
   }
 
   const isBook = currentCategory === 'book';
+  const isPlace = currentCategory === 'place';
+  const isExternalEvent = currentCategory === 'external_event';
 
   const onSubmit = async () => {
     if (!user?.id) {
@@ -78,7 +105,7 @@ export default function RecommendationCreatePage() {
         const movie = await createMovie({
           title: title.trim(),
           synopsis: description.trim(),
-          recommendedById: user.id,
+          recommendedById: (isAdmin && selectedAuthor?.id) || user.id,
         });
         navigate(`/discover/movies/${String((movie as any).id ?? '')}`);
       } else {
@@ -88,8 +115,10 @@ export default function RecommendationCreatePage() {
           description: description.trim(),
           sourceUrl: sourceUrl.trim(),
           coverUrl: coverUrl || undefined,
+          eventDate: eventDate || undefined,
+          eventEndDate: eventEndDate || undefined,
           tags,
-          authorId: user.id,
+          authorId: (isAdmin && selectedAuthor?.id) || user.id,
         });
         navigate(`/discover/${currentCategory}/${String((recommendation as any).id ?? '')}`);
       }
@@ -110,11 +139,52 @@ export default function RecommendationCreatePage() {
           </Stack>
           {error && <Alert severity="error">{error}</Alert>}
 
-          <TextField label="标题" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth placeholder={isBook ? '书名' : undefined} />
-          <TextField label="描述" value={description} onChange={(e) => setDescription(e.target.value)} multiline minRows={4} fullWidth placeholder={isBook ? '作者、推荐理由…' : undefined} />
+          {isAdmin && (
+            <Autocomplete
+              options={members}
+              value={selectedAuthor}
+              onChange={(_, v) => setSelectedAuthor(v)}
+              getOptionLabel={(o) => o.name}
+              isOptionEqualToValue={(a, b) => a.id === b.id}
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Ava name={option.name} src={option.avatar ?? undefined} size={24} />
+                    <span>{option.name}</span>
+                  </Stack>
+                </li>
+              )}
+              renderInput={(params) => <TextField {...params} label="代谁发" />}
+            />
+          )}
+
+          <TextField label={isPlace ? '店名' : '标题'} value={title} onChange={(e) => setTitle(e.target.value)} fullWidth placeholder={isBook ? '书名' : isPlace ? '店名' : undefined} />
+          <TextField label="描述" value={description} onChange={(e) => setDescription(e.target.value)} multiline minRows={4} fullWidth placeholder={isBook ? '作者、推荐理由…' : isExternalEvent ? '地点、票价、推荐理由…' : isPlace ? '推荐理由、特色菜…' : undefined} />
+
+          {/* Date fields for external_event */}
+          {isExternalEvent && (
+            <Stack direction="row" spacing={2}>
+              <TextField
+                label="日期"
+                type="date"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+                fullWidth
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+              <TextField
+                label="结束日期（可选）"
+                type="date"
+                value={eventEndDate}
+                onChange={(e) => setEventEndDate(e.target.value)}
+                fullWidth
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Stack>
+          )}
 
           {/* Link field */}
-          <TextField label={isBook ? '豆瓣/商品链接（可选）' : '链接（可选）'} value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} fullWidth />
+          <TextField label={isBook ? '豆瓣/商品链接（可选）' : isExternalEvent ? '购票/详情链接（可选）' : isPlace ? '地址' : '链接（可选）'} value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} fullWidth placeholder={isPlace ? '123 Main St, New York, NY' : undefined} />
 
           <TextField label="标签（逗号分隔）" value={tagsText} onChange={(e) => setTagsText(e.target.value)} fullWidth />
 

@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { USER_BRIEF_SELECT } from '../utils/prisma-selects.js';
 import { getWeekKey } from '../utils/weekKey.js';
 import { getFutureWeekKeys, weekKeyToLabel } from '../utils/weekKey.js';
 import { getSignalSummary, getMySignals } from '../modules/signals/signal.service.js';
@@ -9,8 +10,10 @@ import { DailyQuestionService } from '../modules/daily-question/daily-question.s
  * Returns aggregated feed data: recent events, announcements, recommendations, postcards
  */
 export const feedRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/', async (request) => {
-    const { userId } = request.query as { userId?: string };
+  app.get('/', async (request, reply) => {
+    const queryUserId = (request.query as { userId?: string }).userId;
+    const headerUserId = (request.headers as Record<string, string>)['x-user-id'];
+    const userId = queryUserId || headerUserId || undefined;
     const prisma = app.prisma;
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -20,8 +23,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const todayMonth = today.getUTCMonth() + 1;
     const todayDay = today.getUTCDate();
 
-    // Pre-fetch: event IDs with recent comments or signups (so old events with new activity get included)
-    const [recentCommentEventIds, recentSignupEventIds] = await Promise.all([
+    // Pre-fetch: entity IDs with recent comments (so old items with new activity get included)
+    const [recentCommentEventIds, recentSignupEventIds, recentCommentMovieIds] = await Promise.all([
       prisma.comment.findMany({
         where: { entityType: 'event', createdAt: { gte: sevenDaysAgo } },
         select: { entityId: true },
@@ -32,7 +35,13 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         select: { eventId: true },
         distinct: ['eventId'],
       }),
+      prisma.comment.findMany({
+        where: { entityType: 'movie', createdAt: { gte: sevenDaysAgo } },
+        select: { entityId: true },
+        distinct: ['entityId'],
+      }),
     ]);
+    const activeMovieIds = recentCommentMovieIds.map((r) => r.entityId);
     const activeEventIds = [
       ...new Set([
         ...recentCommentEventIds.map((r) => r.entityId),
@@ -56,11 +65,11 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           orderBy: { updatedAt: 'desc' },
           take: 40,
           include: {
-            host: { select: { id: true, name: true, avatar: true } },
-            coHosts: { include: { user: { select: { id: true, name: true, avatar: true } } } },
+            host: { select: USER_BRIEF_SELECT },
+            coHosts: { include: { user: { select: USER_BRIEF_SELECT } } },
             signups: {
               where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } },
-              include: { user: { select: { id: true, name: true, avatar: true } } },
+              include: { user: { select: USER_BRIEF_SELECT } },
             },
             screenedMovies: {
               include: { movie: { select: { id: true, title: true, poster: true, _count: { select: { votes: true } } } } },
@@ -72,7 +81,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
               },
             },
             tasks: {
-              include: { claimedBy: { select: { id: true, name: true } } },
+              include: { claimedBy: { select: USER_BRIEF_SELECT } },
               orderBy: { createdAt: 'asc' as const },
             },
           },
@@ -83,7 +92,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           where: { published: true },
           orderBy: { createdAt: 'desc' },
           take: 5,
-          include: { author: { select: { id: true, name: true, avatar: true } } },
+          include: { author: { select: USER_BRIEF_SELECT } },
         }),
 
         // Recent recommendations
@@ -91,8 +100,9 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           orderBy: { createdAt: 'desc' },
           take: 10,
           include: {
-            author: { select: { id: true, name: true, avatar: true } },
+            author: { select: USER_BRIEF_SELECT },
             tags: true,
+            _count: { select: { votes: true } },
           },
         }),
 
@@ -134,19 +144,24 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           orderBy: { createdAt: 'desc' },
           take: 10,
           include: {
-            from: { select: { id: true, name: true, avatar: true } },
-            to: { select: { id: true, name: true, avatar: true } },
+            from: { select: USER_BRIEF_SELECT },
+            to: { select: USER_BRIEF_SELECT },
             tags: true,
           },
         }),
 
-        // Recently recommended movies
+        // Recently active movies (any status, including old ones with recent comments)
         prisma.movie.findMany({
-          where: { status: 'candidate' },
+          where: {
+            OR: [
+              { createdAt: { gte: sevenDaysAgo } },
+              ...(activeMovieIds.length > 0 ? [{ id: { in: activeMovieIds } }] : []),
+            ],
+          },
           orderBy: { createdAt: 'desc' },
-          take: 10,
+          take: 20,
           include: {
-            recommendedBy: { select: { id: true, name: true, avatar: true } },
+            recommendedBy: { select: USER_BRIEF_SELECT },
             _count: { select: { votes: true } },
           },
         }),
@@ -157,7 +172,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           orderBy: { createdAt: 'desc' },
           take: 10,
           include: {
-            author: { select: { id: true, name: true, avatar: true } },
+            author: { select: USER_BRIEF_SELECT },
+            votes: { include: { user: { select: USER_BRIEF_SELECT } } },
             _count: { select: { votes: true } },
           },
         }),
@@ -245,21 +261,35 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
 
     // ── Personal notifications (14 days, only when userId is present) ──
     const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000);
+    // If user has notifReadAt, use it as a floor so older notifs are excluded
+    let notifCutoff = fourteenDaysAgo;
+    let notifReadAtISO: string | null = null;
+    let notifReadAtDate: Date | null = null;
+    if (userId) {
+      const pref = await prisma.userPreference.findUnique({ where: { userId }, select: { notifReadAt: true } });
+      if (pref?.notifReadAt) {
+        notifReadAtDate = pref.notifReadAt;
+        notifReadAtISO = pref.notifReadAt.toISOString();
+        if (pref.notifReadAt > fourteenDaysAgo) {
+          notifCutoff = pref.notifReadAt;
+        }
+      }
+    }
     const notificationQueries = userId
       ? await Promise.all([
           // 1. 被@提及
           prisma.comment.findMany({
-            where: { mentionedUserIds: { has: userId }, createdAt: { gte: fourteenDaysAgo } },
+            where: { mentionedUserIds: { has: userId }, createdAt: { gte: notifCutoff } },
             select: {
               id: true, entityType: true, entityId: true, createdAt: true,
-              author: { select: { id: true, name: true } },
+              author: { select: USER_BRIEF_SELECT },
             },
             take: 10,
             orderBy: { createdAt: 'desc' },
           }),
           // 2. 被邀请活动
           prisma.eventSignup.findMany({
-            where: { userId, status: 'invited', createdAt: { gte: fourteenDaysAgo } },
+            where: { userId, status: 'invited', createdAt: { gte: notifCutoff } },
             select: {
               createdAt: true, invitedById: true,
               event: { select: { id: true, title: true } },
@@ -269,7 +299,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           }),
           // 3. 被安排分工 (someone else assigned me)
           prisma.eventTask.findMany({
-            where: { claimedById: userId, updatedAt: { gte: fourteenDaysAgo } },
+            where: { claimedById: userId, updatedAt: { gte: notifCutoff } },
             select: {
               role: true, updatedAt: true,
               event: { select: { id: true, title: true, hostId: true } },
@@ -279,10 +309,10 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           }),
           // 4. 收到感谢卡
           prisma.postcard.findMany({
-            where: { toId: userId, createdAt: { gte: fourteenDaysAgo } },
+            where: { toId: userId, createdAt: { gte: notifCutoff } },
             select: {
               createdAt: true,
-              from: { select: { id: true, name: true } },
+              from: { select: USER_BRIEF_SELECT },
             },
             take: 10,
             orderBy: { createdAt: 'desc' },
@@ -292,7 +322,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             where: {
               userId,
               status: { in: ['offered', 'accepted'] },
-              offeredAt: { gte: fourteenDaysAgo },
+              offeredAt: { gte: notifCutoff },
             },
             select: {
               status: true, offeredAt: true, respondedAt: true,
@@ -305,12 +335,12 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           prisma.eventSignup.findMany({
             where: {
               status: 'pending',
-              createdAt: { gte: fourteenDaysAgo },
+              createdAt: { gte: notifCutoff },
               event: { hostId: userId, signupMode: 'application' },
             },
             select: {
               createdAt: true, note: true,
-              user: { select: { id: true, name: true } },
+              user: { select: USER_BRIEF_SELECT },
               event: { select: { id: true, title: true } },
             },
             take: 10,
@@ -321,7 +351,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             where: {
               userId,
               status: 'accepted',
-              respondedAt: { gte: fourteenDaysAgo },
+              respondedAt: { gte: notifCutoff },
               event: { signupMode: 'application' },
             },
             select: {
@@ -339,7 +369,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
                 select: {
                   id: true, title: true,
                   events: {
-                    where: { createdAt: { gte: fourteenDaysAgo } },
+                    where: { createdAt: { gte: notifCutoff } },
                     select: { id: true, title: true, createdAt: true },
                     take: 1,
                   },
@@ -365,13 +395,13 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
               where: {
                 OR: orConditions,
                 authorId: { not: userId },
-                createdAt: { gte: fourteenDaysAgo },
+                createdAt: { gte: notifCutoff },
                 // Exclude comments where user is already @mentioned (they get 'mention' notification)
                 NOT: { mentionedUserIds: { has: userId } },
               },
               select: {
                 id: true, entityType: true, entityId: true, createdAt: true,
-                author: { select: { id: true, name: true } },
+                author: { select: USER_BRIEF_SELECT },
               },
               take: 20,
               orderBy: { createdAt: 'desc' },
@@ -501,12 +531,19 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       }
 
       // 10. Co-comment notifications (someone else commented where I also commented)
+      // Pre-fetch recommendation categories for correct URLs
+      const recCommentIds = (coComments as any[]).filter((c: any) => c.entityType === 'recommendation').map((c: any) => c.entityId);
+      const recCatMap = new Map<string, string>();
+      if (recCommentIds.length > 0) {
+        const recs = await prisma.recommendation.findMany({ where: { id: { in: recCommentIds } }, select: { id: true, category: true } });
+        for (const r of recs) recCatMap.set(r.id, r.category);
+      }
       for (const c of coComments as any[]) {
         let nav = '/';
         if (c.entityType === 'event') nav = `/events/${c.entityId}`;
         else if (c.entityType === 'movie') nav = `/discover/movies/${c.entityId}`;
         else if (c.entityType === 'proposal') nav = `/events/proposals/${c.entityId}`;
-        else if (c.entityType === 'recommendation') nav = `/discover/recommendations/${c.entityId}`;
+        else if (c.entityType === 'recommendation') nav = `/discover/${recCatMap.get(c.entityId) ?? 'book'}/${c.entityId}`;
         notifications.push({
           action: 'comment_reply',
           name: c.author?.name ?? '',
@@ -522,7 +559,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const currentLottery = await prisma.weeklyLottery.findFirst({
       where: { weekKey, status: { not: 'skipped' } },
       include: {
-        drawnMember: { select: { id: true, name: true, avatar: true } },
+        drawnMember: { select: USER_BRIEF_SELECT },
         event: { select: { id: true, title: true, startsAt: true } },
       },
     });
@@ -546,11 +583,11 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const allEntityIds = [...eventIds, ...postcardIds, ...movieIds, ...proposalIds, ...newMemberIds];
 
     // Batch fetch likes, comment counts, and latest comment time for events
-    const [allLikes, commentCounts, latestEventComments, latestEventSignups] = await Promise.all([
+    const [allLikes, commentCounts, newCommentCounts, latestCommentTimes, latestEventComments, latestEventSignups] = await Promise.all([
       allEntityIds.length > 0
         ? prisma.like.findMany({
             where: { entityId: { in: allEntityIds } },
-            include: { user: { select: { id: true, name: true } } },
+            include: { user: { select: USER_BRIEF_SELECT } },
           })
         : [],
       allEntityIds.length > 0
@@ -559,6 +596,24 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             where: { entityId: { in: allEntityIds } },
             _count: true,
           })
+        : [],
+      // New comments per entity (comments created after user's last notifReadAt)
+      allEntityIds.length > 0 && notifReadAtDate
+        ? prisma.comment.groupBy({
+            by: ['entityType', 'entityId'],
+            where: { entityId: { in: allEntityIds }, createdAt: { gt: notifReadAtDate } },
+            _count: true,
+          })
+        : [],
+      // Latest comment time per entity (for sorting non-event items by activity)
+      allEntityIds.length > 0
+        ? prisma.$queryRawUnsafe<{ entityId: string; latestCommentAt: Date }[]>(
+            `SELECT c."entityId", MAX(c."createdAt") AS "latestCommentAt"
+             FROM "Comment" c
+             WHERE c."entityId" = ANY($1::text[])
+             GROUP BY c."entityId"`,
+            allEntityIds,
+          )
         : [],
       // Latest comment per event (for activity hint — who commented)
       eventIds.length > 0
@@ -583,6 +638,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     ]) as [
       Awaited<ReturnType<typeof prisma.like.findMany<{ where: any; include: { user: { select: { id: true; name: true } } } }>>>,
       { entityType: string; entityId: string; _count: number }[],
+      { entityType: string; entityId: string; _count: number }[],
+      { entityId: string; latestCommentAt: Date }[],
       { entityId: string; createdAt: Date; userName: string; content: string }[],
       { eventId: string; createdAt: Date; userName: string }[],
     ];
@@ -602,6 +659,18 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       commentCountMap.set(row.entityId, row._count);
     }
 
+    // Group new comment counts by entityId
+    const newCommentCountMap = new Map<string, number>();
+    for (const row of newCommentCounts) {
+      newCommentCountMap.set(row.entityId, row._count);
+    }
+
+    // Map: entityId → latest comment time (for sorting all entity types)
+    const latestCommentAtMap = new Map<string, Date>();
+    for (const row of latestCommentTimes) {
+      latestCommentAtMap.set(row.entityId, row.latestCommentAt);
+    }
+
     // Map: eventId → latest comment/signup { at, userName }
     const latestCommentMap = new Map<string, { at: Date; userName: string; content: string }>();
     for (const row of latestEventComments) {
@@ -612,22 +681,36 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       latestSignupMap.set(row.eventId, { at: row.createdAt, userName: row.userName });
     }
 
-    // Helper to attach likes + commentCount to an entity
+    // Helper to attach likes + commentCount + newCommentCount + latestCommentAt to an entity
     const withInteraction = <T extends { id: string }>(entity: T) => {
       const likeData = likesMap.get(entity.id);
+      const lca = latestCommentAtMap.get(entity.id);
       return {
         ...entity,
         likes: likeData?.count ?? 0,
         likedBy: likeData?.names ?? [],
         commentCount: commentCountMap.get(entity.id) ?? 0,
+        newCommentCount: newCommentCountMap.get(entity.id) ?? 0,
+        latestCommentAt: lca ? lca.toISOString() : undefined,
       };
     };
 
-    // Fetch user's current postcard credits (for credit change toast)
+    // Fetch user's current postcard credits + voted entity IDs
     let postcardCredits: number | undefined;
+    let myVotedIds: { movieIds: string[]; proposalIds: string[]; recommendationIds: string[] } = { movieIds: [], proposalIds: [], recommendationIds: [] };
     if (userId) {
-      const u = await prisma.user.findUnique({ where: { id: userId }, select: { postcardCredits: true } });
+      const [u, movieVotes, proposalVotes2, recVotes] = await Promise.all([
+        prisma.user.findUnique({ where: { id: userId }, select: { postcardCredits: true } }),
+        prisma.movieVote.findMany({ where: { userId }, select: { movieId: true } }),
+        prisma.proposalVote.findMany({ where: { userId }, select: { proposalId: true } }),
+        prisma.recommendationVote.findMany({ where: { userId }, select: { recommendationId: true } }),
+      ]);
       postcardCredits = u?.postcardCredits ?? undefined;
+      myVotedIds = {
+        movieIds: movieVotes.map(v => v.movieId),
+        proposalIds: proposalVotes2.map(v => v.proposalId),
+        recommendationIds: recVotes.map(v => v.recommendationId),
+      };
     }
 
     // ── Daily question + demand signal ──
@@ -685,20 +768,22 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         const candidates: { type: string; at: Date; userName: string }[] = [];
         if (latestComment && latestComment.at > e.createdAt) candidates.push({ type: 'comment', at: latestComment.at, userName: latestComment.userName });
         if (latestSignup && latestSignup.at > e.createdAt) candidates.push({ type: 'signup', at: latestSignup.at, userName: latestSignup.userName });
+        // Photos compete with comments/signups — most recent wins
+        if (e.recapPhotoUrls?.length > 0 && e.phase === 'ended' && e.updatedAt > e.createdAt) {
+          candidates.push({ type: 'photo', at: e.updatedAt, userName: '' });
+        }
         if (candidates.length > 0) {
           candidates.sort((a, b) => b.at.getTime() - a.at.getTime());
           activityHint = candidates[0].type;
-          activityHintUser = candidates[0].userName;
+          activityHintUser = candidates[0].userName || undefined;
           activityHintAt = candidates[0].at;
-        } else if (e.recapPhotoUrls?.length > 0) {
-          activityHint = 'photo';
         } else {
           activityHint = 'update';
         }
       }
       // Real activity time: comments and signups both bump sort order
       const now = new Date();
-      const interactionAt = (activityHint === 'comment' || activityHint === 'signup') ? activityHintAt : undefined;
+      const interactionAt = (activityHint === 'comment' || activityHint === 'signup' || activityHint === 'photo') ? activityHintAt : undefined;
       const realActivityAt = interactionAt
         ?? (e.startsAt && e.startsAt <= now ? e.startsAt : e.createdAt);
       const activityHintComment = activityHint === 'comment' && latestComment ? latestComment.content : undefined;
@@ -709,6 +794,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
 
     return {
       events: enrichedEvents.slice(0, 20),
+      notifReadAt: notifReadAtISO,
       announcements,
       recommendations,
       members,
@@ -721,8 +807,23 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       lotteryUserStatus,
       notifications,
       postcardCredits,
+      myVotedIds,
       dailyQuestion,
       demandSignal,
     };
+  });
+
+  // ── Mark all notifications as read ──
+  app.post('/mark-read', async (request, reply) => {
+    const userId = (request.headers as Record<string, string>)['x-user-id'];
+    if (!userId) return reply.status(401).send({ message: 'Missing x-user-id' });
+
+    await app.prisma.userPreference.upsert({
+      where: { userId },
+      update: { notifReadAt: new Date() },
+      create: { userId, notifReadAt: new Date() },
+    });
+
+    return { ok: true };
   });
 };

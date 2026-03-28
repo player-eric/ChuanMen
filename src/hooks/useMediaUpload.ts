@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { uploadMedia, type MediaAsset, type MediaCategory } from '@/lib/domainApi';
+import { type MediaAsset, type MediaCategory } from '@/lib/domainApi';
 
 export interface UseMediaUploadOptions {
   /** S3 folder category (avatar, cover, event-image, poster …) */
@@ -33,7 +33,7 @@ export interface UseMediaUploadReturn {
   reset: () => void;
 }
 
-const DEFAULT_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+const DEFAULT_MAX_SIZE = 20 * 1024 * 1024; // 20 MB
 const DEFAULT_ACCEPT = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export function useMediaUpload(options: UseMediaUploadOptions): UseMediaUploadReturn {
@@ -69,12 +69,11 @@ export function useMediaUpload(options: UseMediaUploadOptions): UseMediaUploadRe
 
       setIsUploading(true);
       setError(null);
-      setProgress(0.1);
+      setProgress(0.05);
 
       try {
-        setProgress(0.3);
-        const result = await uploadMedia(file, category, ownerId);
-        setProgress(1);
+        const { uploadMedia } = await import('@/lib/domainApi');
+        const result = await uploadMedia(file, category, ownerId, setProgress);
         setPublicUrl(result.publicUrl);
         onSuccess?.(result.publicUrl, result.asset);
         return result;

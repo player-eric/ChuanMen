@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
-import { Box, Button, Card, CardContent, Chip, IconButton, Stack, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, Card, CardContent, Chip, IconButton, Stack, TextField, Typography } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import type { Proposal } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
@@ -8,7 +8,7 @@ import { useColors } from '@/hooks/useColors';
 import { Ava, AvaStack } from '@/components/Atoms';
 import { FeedActions } from '@/components/FeedItems';
 import { RichTextViewer } from '@/components/RichTextEditor';
-import { toggleProposalVote, updateProposal } from '@/lib/domainApi';
+import { toggleProposalVote, updateProposal, fetchMembersApi } from '@/lib/domainApi';
 
 export default function ProposalDetailPage() {
   const navigate = useNavigate();
@@ -16,17 +16,20 @@ export default function ProposalDetailPage() {
   const c = useColors();
   const raw = useLoaderData() as Proposal | null;
 
-  const serverList = raw?.interested ?? [];
+  const serverList: { name: string; avatar?: string }[] = (raw?.interested ?? []).map((v: any) =>
+    typeof v === 'string' ? { name: v } : v,
+  );
   const [interested, setInterested] = useState(
-    () => !!user?.name && serverList.includes(user.name)
+    () => !!user?.name && serverList.some((v) => v.name === user.name)
   );
   const [editing, setEditing] = useState(false);
   const [descHtml, setDescHtml] = useState(raw?.descriptionHtml ?? '');
+  const authorAvatar = (raw as any)?.authorAvatar ?? '';
 
   // Build display list: add/remove current user optimistically
   const interestedList = (() => {
-    const base = serverList.filter((n) => n !== user?.name);
-    if (interested && user?.name) base.push(user.name);
+    const base = serverList.filter((v) => v.name !== user?.name);
+    if (interested && user?.name) base.push({ name: user.name, avatar: user.avatar ?? '' });
     return base;
   })();
 
@@ -43,7 +46,25 @@ export default function ProposalDetailPage() {
 
   const isAuthor = user?.id === raw.authorId || user?.name === raw.name;
   const isAdmin = user?.role === 'admin';
+  const canEdit = isAuthor || isAdmin;
   const canEditStatus = isAuthor || isAdmin;
+
+  // Admin: change author
+  const [members, setMembers] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
+  const [editAuthor, setEditAuthor] = useState<{ id: string; name: string; avatar: string | null } | null>(null);
+  const [authorName, setAuthorName] = useState(raw.name);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetchMembersApi().then((list) => {
+      const mapped = (list as { id: string; name: string; avatar?: string | null }[]).map((m) => ({
+        id: m.id, name: m.name, avatar: m.avatar ?? null,
+      }));
+      setMembers(mapped);
+      const current = mapped.find((m) => m.id === raw.authorId);
+      if (current) setEditAuthor(current);
+    });
+  }, [isAdmin, raw.authorId]);
   const [status, setStatus] = useState(raw?.status ?? 'discussing');
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
 
@@ -90,15 +111,15 @@ export default function ProposalDetailPage() {
               ))}
             </Stack>
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <Ava name={raw.name} size={36} onTap={() => goMember(raw.name)} />
+              <Ava name={authorName} src={authorAvatar} size={36} onTap={() => goMember(authorName)} />
               <Box>
                 <Typography
                   variant="body2"
                   fontWeight={700}
                   sx={{ cursor: 'pointer' }}
-                  onClick={() => goMember(raw.name)}
+                  onClick={() => goMember(authorName)}
                 >
-                  {raw.name}
+                  {authorName}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {raw.time}
@@ -109,17 +130,22 @@ export default function ProposalDetailPage() {
         </Card>
 
         {/* 2. Description */}
-        {(descHtml || isAuthor) && (
+        {(descHtml || canEdit) && (
           <Card>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                 <Typography variant="subtitle1" fontWeight={700}>创意描述</Typography>
-                {isAuthor && (
+                {canEdit && (
                   <Button
                     size="small"
                     onClick={async () => {
                       if (editing) {
-                        try { await updateProposal(String(raw.id), { description: descHtml }); } catch { /* ignore */ }
+                        const payload: Parameters<typeof updateProposal>[1] = { description: descHtml };
+                        if (isAdmin && editAuthor) {
+                          payload.authorId = editAuthor.id;
+                          setAuthorName(editAuthor.name);
+                        }
+                        try { await updateProposal(String(raw.id), payload); } catch { /* ignore */ }
                         setEditing(false);
                       } else {
                         setEditing(true);
@@ -130,6 +156,26 @@ export default function ProposalDetailPage() {
                   </Button>
                 )}
               </Stack>
+
+              {editing && isAdmin && (
+                <Autocomplete
+                  options={members}
+                  value={editAuthor}
+                  onChange={(_, v) => setEditAuthor(v)}
+                  getOptionLabel={(o) => o.name}
+                  isOptionEqualToValue={(a, b) => a.id === b.id}
+                  renderOption={(props, option) => (
+                    <li {...props} key={option.id}>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Ava name={option.name} src={option.avatar ?? undefined} size={24} />
+                        <span>{option.name}</span>
+                      </Stack>
+                    </li>
+                  )}
+                  renderInput={(params) => <TextField {...params} label="发起人" />}
+                  sx={{ mb: 2 }}
+                />
+              )}
 
               {editing ? (
                 <EditorLazy content={descHtml} onChange={setDescHtml} />
@@ -149,9 +195,9 @@ export default function ProposalDetailPage() {
 
             {interestedList.length > 0 && (
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
-                <AvaStack names={interestedList} size={28} />
+                <AvaStack names={interestedList.map((v) => ({ name: v.name, avatar: v.avatar }))} size={28} />
                 <Typography variant="body2" color="text.secondary">
-                  {interestedList.slice(0, 3).join('、')}{interestedList.length > 3 ? ` 等 ${interestedList.length} 人` : ''}
+                  {interestedList.slice(0, 3).map((v) => v.name).join('、')}{interestedList.length > 3 ? ` 等 ${interestedList.length} 人` : ''}
                 </Typography>
               </Stack>
             )}

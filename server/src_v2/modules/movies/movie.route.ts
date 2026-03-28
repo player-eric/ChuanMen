@@ -5,14 +5,32 @@ import { MovieService } from './movie.service.js';
 export const movieRoutes: FastifyPluginAsync = async (app) => {
   const service = new MovieService(new MovieRepository(app.prisma));
 
-  app.get('/', async () => service.list());
+  app.get('/', async () => {
+    const movies = await service.list();
+    const ids = movies.map((m: any) => m.id);
+    if (ids.length === 0) return movies;
+    const counts = await app.prisma.comment.groupBy({
+      by: ['entityId'],
+      where: { entityType: 'movie', entityId: { in: ids } },
+      _count: true,
+    });
+    const countMap = new Map(counts.map((c) => [c.entityId, c._count]));
+    return movies.map((m: any) => ({ ...m, commentCount: countMap.get(m.id) ?? 0 }));
+  });
 
   app.get('/screened', async (request) => {
     const userId = request.headers['x-user-id'] as string | undefined;
     const movies = await service.screened();
-    if (!userId) return movies;
+    // Attach comment counts
+    const ids = (movies as any[]).map((m: any) => m.id);
+    const commentCounts = ids.length > 0
+      ? await app.prisma.comment.groupBy({ by: ['entityId'], where: { entityType: 'movie', entityId: { in: ids } }, _count: true })
+      : [];
+    const ccMap = new Map(commentCounts.map((c) => [c.entityId, c._count]));
+    const withComments = (movies as any[]).map((m: any) => ({ ...m, commentCount: ccMap.get(m.id) ?? 0 }));
+    if (!userId) return withComments;
     // Filter out screenedEvents the user is excluded from
-    return (movies as any[]).map((m: any) => ({
+    return withComments.map((m: any) => ({
       ...m,
       screenedEvents: m.screenedEvents?.filter((se: any) =>
         !se.event?.visibilityExclusions?.some((ex: any) => ex.userId === userId),

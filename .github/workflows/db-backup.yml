@@ -1,0 +1,53 @@
+name: Daily DB Backup
+
+on:
+  schedule:
+    - cron: '0 8 * * *' # Every day at UTC 08:00 (ET 4:00 AM)
+  workflow_dispatch: {} # Allow manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: backup
+          fetch-depth: 1
+
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Dump database
+        env:
+          PGURL: ${{ secrets.PROD_DATABASE_URL }}
+        run: |
+          echo "Secret length: ${#PGURL}"
+          if [ -z "$PGURL" ]; then
+            echo "ERROR: PROD_DATABASE_URL secret is empty or not set"
+            exit 1
+          fi
+          FILENAME="backup_$(date +%Y%m%d_%H%M%S).sql.gz"
+          /usr/lib/postgresql/17/bin/pg_dump --dbname="$PGURL" --no-owner --no-acl --clean --if-exists 2>&1 | gzip > "$FILENAME"
+          # Verify the backup is not empty (must be > 100 bytes)
+          FILESIZE=$(stat --format=%s "$FILENAME")
+          echo "Backup file size: $FILESIZE bytes"
+          if [ "$FILESIZE" -lt 500 ]; then
+            echo "ERROR: Backup file too small, pg_dump likely failed"
+            zcat "$FILENAME" || true
+            exit 1
+          fi
+          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+
+      - name: Cleanup old backups (keep 30 days)
+        run: find . -name 'backup_*.sql.gz' -mtime +30 -delete
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "backup: ${{ env.FILENAME }}" || echo "No changes"
+          git push

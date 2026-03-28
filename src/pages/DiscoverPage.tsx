@@ -18,6 +18,7 @@ import {
   Typography,
 } from '@mui/material';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import ChatBubbleOutlineRounded from '@mui/icons-material/ChatBubbleOutlineRounded';
 import FavoriteRoundedIcon from '@mui/icons-material/FavoriteRounded';
 import type { DiscoverPageData, RecommendationItem } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
@@ -34,7 +35,7 @@ const categoryTabs: { key: Category; label: string }[] = [
   { key: 'music', label: '🎵 音乐' },
   { key: 'recipe', label: '🍜 菜谱' },
   { key: 'place', label: '📍 好店' },
-  { key: 'external_event', label: '🎭 演出和其他' },
+  { key: 'external_event', label: '🎭 演出与展览' },
 ];
 
 const categoryAddLabels: Record<Category, string> = {
@@ -43,13 +44,13 @@ const categoryAddLabels: Record<Category, string> = {
   recipe: '添加菜谱',
   music: '添加音乐',
   place: '添加好店',
-  external_event: '添加演出',
+  external_event: '添加演出/展览',
 };
 
 const mineEmptyLabel: Record<string, string> = {
   recipe: '菜谱',
   place: '好店',
-  external_event: '演出',
+  external_event: '演出/展览',
 };
 
 /* ═══ DiscoverPage ═══ */
@@ -120,10 +121,23 @@ function MoviesSection() {
   const filteredPool = q
     ? pool.filter((m) => m.title.toLowerCase().includes(q) || m.dir.toLowerCase().includes(q))
     : pool;
+  const filteredScreened = q
+    ? screened.filter((m: any) => m.title.toLowerCase().includes(q) || m.dir.toLowerCase().includes(q))
+    : screened;
   const displayedPool = showMine
     ? filteredPool.filter((m) => votes[m.id] || m.by === user?.name)
     : filteredPool;
   const sortedPool = sort === 'votes' ? [...displayedPool].sort((a, b) => b.v - a.v) : displayedPool;
+
+  // Smart tab switch: if current tab has no results but the other does, auto-switch
+  useEffect(() => {
+    if (!q) return;
+    if (tab === 'pool' && filteredPool.length === 0 && filteredScreened.length > 0) {
+      setTab('screened');
+    } else if (tab === 'screened' && filteredScreened.length === 0 && filteredPool.length > 0) {
+      setTab('pool');
+    }
+  }, [q, tab, filteredPool.length, filteredScreened.length]);
 
   // Debounced external search
   const handleSearch = useCallback((value: string) => {
@@ -262,6 +276,8 @@ function MoviesSection() {
         sortedPool.length === 0 ? (
           showMine ? (
             <EmptyState icon="🎬" title="你还没有投票或推荐过电影" />
+          ) : q ? (
+            <EmptyState icon="🎬" title="没有找到匹配的候选电影" />
           ) : (
             <EmptyState
               icon="🎬"
@@ -294,6 +310,12 @@ function MoviesSection() {
                           ▲ {m.v + (votes[m.id] && !m.voterIds.includes(user?.id ?? '') ? 1 : !votes[m.id] && m.voterIds.includes(user?.id ?? '') ? -1 : 0)}
                         </Button>
                       </Stack>
+                      {(m.commentCount ?? 0) > 0 && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1, color: 'text.secondary' }}>
+                          <ChatBubbleOutlineRounded sx={{ fontSize: 14 }} />
+                          <Typography variant="caption" color="text.secondary">{m.commentCount}</Typography>
+                        </Box>
+                      )}
                     </CardContent>
                   </CardActionArea>
                 </Card>
@@ -304,15 +326,15 @@ function MoviesSection() {
       )}
 
       {tab === 'screened' && (
-        screened.length === 0 ? (
+        filteredScreened.length === 0 ? (
           <EmptyState
             icon="📽"
-            title="还没有放映记录"
-            description="电影放映后，记录会出现在这里。"
+            title={q ? '没有找到匹配的已放映电影' : '还没有放映记录'}
+            description={q ? undefined : '电影放映后，记录会出现在这里。'}
           />
         ) : (
           <Grid container spacing={1.5}>
-            {screened.map((m: any, i: number) => {
+            {filteredScreened.map((m: any, i: number) => {
               return (
                 <Grid key={i} size={{ xs: 12, md: 6 }}>
                   <Card>
@@ -329,6 +351,12 @@ function MoviesSection() {
                             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{m.date} · {m.host} Host</Typography>
                           </Box>
                         </Stack>
+                        {(m.commentCount ?? 0) > 0 && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1, color: 'text.secondary' }}>
+                            <ChatBubbleOutlineRounded sx={{ fontSize: 14 }} />
+                            <Typography variant="caption" color="text.secondary">{m.commentCount}</Typography>
+                          </Box>
+                        )}
                       </CardContent>
                     </CardActionArea>
                   </Card>
@@ -387,6 +415,16 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
   const filteredRead = q
     ? data.bookRead.filter((b) => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q))
     : data.bookRead;
+
+  // Smart tab switch: if current tab has no results but the other does, auto-switch
+  useEffect(() => {
+    if (!q) return;
+    if (tab === 'pool' && filteredPool.length === 0 && filteredRead.length > 0) {
+      setTab('read');
+    } else if (tab === 'read' && filteredRead.length === 0 && filteredPool.length > 0) {
+      setTab('pool');
+    }
+  }, [q, tab, filteredPool.length, filteredRead.length]);
 
   // Debounced external search
   const handleSearch = useCallback((value: string) => {
@@ -523,6 +561,8 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
         sortedPool.length === 0 ? (
           showMine ? (
             <EmptyState icon="📖" title="你还没有投票或推荐过图书" />
+          ) : q ? (
+            <EmptyState icon="📖" title="没有找到匹配的候选图书" />
           ) : (
             <EmptyState
               icon="📖"
@@ -556,6 +596,12 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
                           ▲ {b.v + (votes[b.id] && !b.voterIds.includes(user?.id ?? '') ? 1 : !votes[b.id] && b.voterIds.includes(user?.id ?? '') ? -1 : 0)}
                         </Button>
                       </Stack>
+                      {(b.commentCount ?? 0) > 0 && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1, color: 'text.secondary' }}>
+                          <ChatBubbleOutlineRounded sx={{ fontSize: 14 }} />
+                          <Typography variant="caption" color="text.secondary">{b.commentCount}</Typography>
+                        </Box>
+                      )}
                     </CardContent>
                   </CardActionArea>
                 </Card>
@@ -569,8 +615,8 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
         filteredRead.length === 0 ? (
           <EmptyState
             icon="📚"
-            title="还没有已读记录"
-            description="读书活动结束后，记录会出现在这里。"
+            title={q ? '没有找到匹配的已读图书' : '还没有已读记录'}
+            description={q ? undefined : '读书活动结束后，记录会出现在这里。'}
           />
         ) : (
           <Grid container spacing={1.5}>
@@ -771,6 +817,8 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
       {sortedItems.length === 0 && !addedTitle ? (
         showMine ? (
           <EmptyState icon="🎵" title="你还没有投票或推荐过音乐" />
+        ) : q ? (
+          <EmptyState icon="🎵" title="没有找到匹配的音乐" />
         ) : (
           <EmptyState
             icon="🎵"
@@ -795,7 +843,7 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
                       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <Typography fontWeight={700} sx={{ fontSize: 15 }}>{r.title}</Typography>
                         {r.description && (
-                          <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description}</Typography>
+                          <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description.replace(/<[^>]*>/g, '')}</Typography>
                         )}
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{r.authorName} 推荐</Typography>
                       </Box>
@@ -809,6 +857,12 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
                         ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
                       </Button>
                     </Stack>
+                    {(r.commentCount ?? 0) > 0 && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1, color: 'text.secondary' }}>
+                        <ChatBubbleOutlineRounded sx={{ fontSize: 14 }} />
+                        <Typography variant="caption" color="text.secondary">{r.commentCount}</Typography>
+                      </Box>
+                    )}
                   </CardContent>
                 </CardActionArea>
               </Card>
@@ -868,7 +922,7 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
   const emptyMap: Record<string, { icon: string; title: string; desc: string }> = {
     recipe: { icon: '🍜', title: '还没有推荐菜谱', desc: '分享你的拿手菜或发现的好菜谱。' },
     place: { icon: '📍', title: '还没有推荐好店', desc: '分享你发现的好店好去处。' },
-    external_event: { icon: '🎭', title: '还没有推荐演出', desc: '分享你发现的演出、展览或其他活动。' },
+    external_event: { icon: '🎭', title: '还没有推荐演出与展览', desc: '分享你发现的演出、展览或其他活动。' },
   };
   const empty = emptyMap[category];
 
@@ -912,6 +966,8 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
       {sortedItems.length === 0 ? (
         showMine ? (
           <EmptyState icon={empty.icon} title={`你还没有投票或推荐过${mineEmptyLabel[category]}`} />
+        ) : q ? (
+          <EmptyState icon={empty.icon} title={`没有找到匹配的${mineEmptyLabel[category]}`} />
         ) : (
           <EmptyState
             icon={empty.icon}
@@ -937,8 +993,21 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
                         )}
                         <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                           <Typography fontWeight={700} sx={{ fontSize: 15 }}>{r.title}</Typography>
+                          {category === 'external_event' && r.eventDate && (() => {
+                            const d = new Date(r.eventDate);
+                            const end = r.eventEndDate ? new Date(r.eventEndDate) : null;
+                            const now = new Date();
+                            const isPast = end ? end < now : d < now;
+                            return (
+                              <Typography variant="body2" sx={{ mt: 0.25, color: isPast ? 'text.disabled' : 'warning.main', fontSize: 12 }}>
+                                📅 {d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', timeZone: 'UTC' })}
+                                {end && ` — ${end.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', timeZone: 'UTC' })}`}
+                                {isPast && ' · 已结束'}
+                              </Typography>
+                            );
+                          })()}
                           {r.description && (
-                            <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description}</Typography>
+                            <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description.replace(/<[^>]*>/g, '')}</Typography>
                           )}
                           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{r.authorName} 推荐</Typography>
                         </Box>
@@ -952,6 +1021,12 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
                           ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
                         </Button>
                       </Stack>
+                      {(r.commentCount ?? 0) > 0 && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1, color: 'text.secondary' }}>
+                          <ChatBubbleOutlineRounded sx={{ fontSize: 14 }} />
+                          <Typography variant="caption" color="text.secondary">{r.commentCount}</Typography>
+                        </Box>
+                      )}
                     </CardContent>
                   </CardActionArea>
                 </Card>

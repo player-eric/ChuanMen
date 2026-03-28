@@ -24,6 +24,20 @@ import { siteConfigRoutes } from '../modules/site-config/site-config.route.js';
 import { lotteryRoutes } from '../modules/lottery/lottery.route.js';
 import { dailyQuestionRoutes } from '../modules/daily-question/daily-question.route.js';
 import { signalRoutes } from '../modules/signals/signal.route.js';
+import { migrationRoutes } from './migration.js';
+
+/** Convert a Date to "YYYY-MM-DD" in America/New_York timezone */
+function nycDateStr(d: Date = new Date()): string {
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+
+/** Get "YYYY-MM-DD" for N days ago in NYC timezone */
+function nycDaysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  // Approximate — shift enough to land on the right NYC date
+  return nycDateStr(d);
+}
 
 export const apiRoutes: FastifyPluginAsync = async (app) => {
   // Touch lastActiveAt on meaningful API activity (throttled per user, fire-and-forget)
@@ -39,7 +53,7 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
     const now = Date.now();
     if (now - (activeCache.get(userId) ?? 0) < TOUCH_INTERVAL) return;
     activeCache.set(userId, now);
-    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const today = nycDateStr(); // "YYYY-MM-DD" in NYC timezone
     Promise.all([
       app.prisma.user.update({
         where: { id: userId },
@@ -78,6 +92,7 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
   app.register(lotteryRoutes, { prefix: '/lottery' });
   app.register(dailyQuestionRoutes, { prefix: '/daily-question' });
   app.register(signalRoutes, { prefix: '/signals' });
+  app.register(migrationRoutes, { prefix: '/migration' });
 
   // Admin dashboard stats
   app.get('/admin/stats', async () => {
@@ -488,26 +503,24 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
     // Combine activity records (comments, postcards, signups, likes, recs) + lastActiveAt
     // lastActiveAt alone only shows LAST active day per user; activity records capture multiple days
     const dauTrend: { date: string; count: number; userIds: string[] }[] = [];
+    const toNyc = (d: Date) => nycDateStr(d); // convert UTC timestamp to NYC date
     for (let i = 13; i >= 0; i--) {
-      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const dayEnd = new Date(dayStart.getTime() + 86400000);
-      const inRange = (d: Date) => d >= dayStart && d < dayEnd;
+      const dateStr = nycDaysAgo(i); // "YYYY-MM-DD" in NYC timezone
       const dayUsers = new Set<string>();
-      const dateStr = dayStart.toISOString().slice(0, 10); // "YYYY-MM-DD"
       // DailyActiveLog — most accurate source (tracks all visits)
       for (const log of dauActiveLogs) { if (log.date === dateStr) dayUsers.add(log.userId); }
-      // Also count content creation activity
-      for (const c of dauComments) { if (inRange(c.createdAt)) dayUsers.add(c.authorId); }
-      for (const p of dauPostcards) { if (inRange(p.createdAt)) dayUsers.add(p.fromId); }
-      for (const s of dauSignups) { if (inRange(s.createdAt)) dayUsers.add(s.userId); }
-      for (const l of dauLikes) { if (inRange(l.createdAt)) dayUsers.add(l.userId); }
-      for (const r of dauRecs) { if (inRange(r.createdAt)) dayUsers.add(r.authorId); }
+      // Also count content creation activity (convert timestamps to NYC date)
+      for (const c of dauComments) { if (toNyc(c.createdAt) === dateStr) dayUsers.add(c.authorId); }
+      for (const p of dauPostcards) { if (toNyc(p.createdAt) === dateStr) dayUsers.add(p.fromId); }
+      for (const s of dauSignups) { if (toNyc(s.createdAt) === dateStr) dayUsers.add(s.userId); }
+      for (const l of dauLikes) { if (toNyc(l.createdAt) === dateStr) dayUsers.add(l.userId); }
+      for (const r of dauRecs) { if (toNyc(r.createdAt) === dateStr) dayUsers.add(r.authorId); }
       // Fallback: lastActiveAt (for users who browsed but no DailyActiveLog entry yet)
       for (const m of allMembers) {
-        if (m.lastActiveAt && inRange(m.lastActiveAt)) dayUsers.add(m.id);
+        if (m.lastActiveAt && toNyc(m.lastActiveAt) === dateStr) dayUsers.add(m.id);
       }
       dauTrend.push({
-        date: dayStart.toISOString().slice(5, 10), // "MM-DD"
+        date: dateStr.slice(5), // "MM-DD"
         count: dayUsers.size,
         userIds: [...dayUsers],
       });

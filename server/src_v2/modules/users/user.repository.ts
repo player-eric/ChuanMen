@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 export class UserRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -9,6 +10,7 @@ export class UserRepository {
       include: {
         preferences: true,
         socialTitles: true,
+        _count: { select: { hostedEvents: true, coHostedEvents: true } },
       },
     });
   }
@@ -19,7 +21,7 @@ export class UserRepository {
         userStatus: 'approved',
         ...(q ? { name: { contains: q, mode: 'insensitive' as const } } : {}),
       },
-      select: { id: true, name: true, avatar: true },
+      select: USER_BRIEF_SELECT,
       orderBy: { name: 'asc' },
       take: 20,
     });
@@ -59,6 +61,7 @@ export class UserRepository {
             postcardsSent: true,
             postcardsReceived: true,
             hostedEvents: true,
+            coHostedEvents: true,
           },
         },
       },
@@ -75,6 +78,37 @@ export class UserRepository {
         postcardsSent: { where: {}, select: { toId: true } },
         postcardsReceived: { where: {}, select: { fromId: true } },
       },
+    });
+  }
+
+  /** Get event signups for a set of users, filtered to specific event IDs */
+  getEventSignupsForUsers(userIds: string[], eventIds: string[]) {
+    return this.prisma.eventSignup.findMany({
+      where: {
+        userId: { in: userIds },
+        eventId: { in: eventIds },
+        status: 'accepted',
+      },
+      select: { userId: true, eventId: true },
+    });
+  }
+
+  /** Get hosted event IDs for a single user */
+  getHostedEventIds(userId: string) {
+    return this.prisma.event.findMany({
+      where: { hostId: userId },
+      select: { id: true },
+    }).then((events) => events.map((e) => e.id));
+  }
+
+  /** Get hosted events for a set of users, filtered to specific event IDs */
+  getHostedEventsForUsers(userIds: string[], eventIds: string[]) {
+    return this.prisma.event.findMany({
+      where: {
+        hostId: { in: userIds },
+        id: { in: eventIds },
+      },
+      select: { id: true, hostId: true },
     });
   }
 

@@ -29,7 +29,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
 import { useTaskPresets } from '@/hooks/useTaskPresets';
-import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, fetchMoviesApi, linkEventRecommendation, linkEventMovie, completeLottery, uploadMedia } from '@/lib/domainApi';
+import { createEvent, inviteToEvent, fetchMembersApi, fetchRecommendationsApi, fetchMoviesApi, linkEventRecommendation, linkEventMovie, completeLottery } from '@/lib/domainApi';
 import type { FoodOption } from '@/types';
 
 interface CreateTaskItem {
@@ -132,11 +132,16 @@ export default function EventCreatePage() {
         title: m.title,
         category: 'movie',
         description: [m.year, m.director].filter(Boolean).join(' · '),
-        voteCount: m.votes?.length ?? m._count?.votes ?? 0,
+        voteCount: m._count?.votes ?? m.votes?.length ?? 0,
         author: m.recommendedBy ?? m.author,
         _fromMovieTable: true,
       }));
-      setAllRecs([...recs, ...movieRecs]);
+      // Normalize recommendation voteCount: prefer _count.votes over stale voteCount field
+      const normalizedRecs = recs.map((r: any) => ({
+        ...r,
+        voteCount: r._count?.votes ?? r.voteCount ?? 0,
+      }));
+      setAllRecs([...normalizedRecs, ...movieRecs]);
     });
   }, []);
 
@@ -263,7 +268,7 @@ export default function EventCreatePage() {
     { key: 'recipe', label: '🍳 食谱' },
     { key: 'place', label: '📍 地方' },
     { key: 'music', label: '🎵 音乐' },
-    { key: 'external_event', label: '🎭 演出' },
+    { key: 'external_event', label: '🎭 演出与展览' },
   ];
 
   return (
@@ -677,7 +682,7 @@ export default function EventCreatePage() {
 
           {/* Recommendation picker dialog */}
           <Dialog open={recPickerOpen} onClose={() => { setRecPickerOpen(false); setRecSearch(''); setRecCategory('all'); }} maxWidth="xs" fullWidth>
-            <DialogTitle>选择推荐{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' }[recCategory] ?? ''}` : ''}</DialogTitle>
+            <DialogTitle>选择推荐{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出/展览' }[recCategory] ?? ''}` : ''}</DialogTitle>
             <DialogContent>
               <TextField
                 size="small"
@@ -697,11 +702,11 @@ export default function EventCreatePage() {
                   if (rq && !(r.title ?? '').toLowerCase().includes(rq) && !(r.description ?? '').toLowerCase().includes(rq)) return false;
                   return true;
                 });
-                const categoryLabel: Record<string, string> = { book: '书', recipe: '食谱', place: '地方', movie: '电影', music: '音乐', external_event: '演出' };
+                const categoryLabel: Record<string, string> = { book: '书', recipe: '食谱', place: '地方', movie: '电影', music: '音乐', external_event: '演出/展览' };
                 return filtered.length > 0 ? (
                   <Stack spacing={1}>
                     {filtered.slice(0, 20).map((r: any) => {
-                      const votes = r.voteCount ?? r._count?.votes ?? 0;
+                      const votes = r._count?.votes ?? r.voteCount ?? 0;
                       return (
                         <Card key={r.id} variant="outlined">
                           <CardActionArea onClick={() => {

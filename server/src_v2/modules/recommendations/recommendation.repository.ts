@@ -1,4 +1,5 @@
 import type { PrismaClient, RecommendationCategory, RecommendationStatus } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 export class RecommendationRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -22,7 +23,7 @@ export class RecommendationRepository {
       include: {
         author: true,
         tags: true,
-        votes: { select: { userId: true, user: { select: { id: true, name: true } } } },
+        votes: { select: { userId: true, user: { select: USER_BRIEF_SELECT } } },
         _count: { select: { votes: true } },
       },
     });
@@ -65,7 +66,7 @@ export class RecommendationRepository {
     return this.prisma.recommendation.delete({ where: { id } });
   }
 
-  update(id: string, data: { title?: string; description?: string; sourceUrl?: string; coverUrl?: string }) {
+  update(id: string, data: { title?: string; description?: string; sourceUrl?: string; coverUrl?: string; eventDate?: Date | null; eventEndDate?: Date | null; authorId?: string }) {
     return this.prisma.recommendation.update({
       where: { id },
       data,
@@ -73,17 +74,19 @@ export class RecommendationRepository {
     });
   }
 
-  create(input: {
+  async create(input: {
     category: RecommendationCategory;
     title: string;
     authorId: string;
     description?: string;
     sourceUrl?: string;
     coverUrl?: string;
+    eventDate?: Date;
+    eventEndDate?: Date;
     status?: RecommendationStatus;
     tags?: string[];
   }) {
-    return this.prisma.recommendation.create({
+    const rec = await this.prisma.recommendation.create({
       data: {
         category: input.category,
         title: input.title,
@@ -91,16 +94,21 @@ export class RecommendationRepository {
         description: input.description ?? '',
         sourceUrl: input.sourceUrl ?? '',
         coverUrl: input.coverUrl ?? '',
+        eventDate: input.eventDate ?? null,
+        eventEndDate: input.eventEndDate ?? null,
         status: input.status ?? 'candidate',
         tags: input.tags?.length
           ? {
               create: input.tags.map((value) => ({ value })),
             }
           : undefined,
+        // Auto-vote by recommender
+        votes: { create: { userId: input.authorId } },
       },
       include: {
         tags: true,
       },
     });
+    return rec;
   }
 }

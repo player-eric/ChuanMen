@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src_v2/index.ts",
+    "lint": "eslint src_v2/",
     "build": "prisma generate && tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "docker:up": "docker compose up -d",
@@ -48,6 +49,7 @@
     "google-auth-library": "^10.6.1",
     "pg": "^8.16.3",
     "resend": "^6.9.2",
+    "sharp": "^0.34.5",
     "zod": "^4.1.5"
   },
   "devDependencies": {

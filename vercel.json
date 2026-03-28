@@ -1,0 +1,22 @@
+{
+  "framework": "vite",
+  "buildCommand": "cd server && (npx prisma migrate deploy || echo 'Migration skipped (DB unreachable)') && cd .. && npm run build:client",
+  "outputDirectory": "dist/client",
+  "installCommand": "npm install && cd server && npm install && npx prisma generate",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 30,
+      "includeFiles": "server/node_modules/.prisma/**"
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/agent/tick",
+      "schedule": "0 12 * * *"
+    }
+  ]
+}

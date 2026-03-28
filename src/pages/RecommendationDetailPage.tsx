@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
   Alert,
+  Autocomplete,
   Avatar,
-  AvatarGroup,
   Box,
   Button,
   Card,
@@ -22,12 +22,16 @@ import {
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import EditIcon from '@mui/icons-material/Edit';
 import { useAuth } from '@/auth/AuthContext';
 import { useColors } from '@/hooks/useColors';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
-import { getRecommendationById, deleteRecommendation, updateRecommendation, toggleRecommendationVote, type RecommendationCategory } from '@/lib/domainApi';
-import { RichTextViewer } from '@/components/RichTextEditor';
-import { firstNonEmoji } from '@/components/Atoms';
+import { getRecommendationById, deleteRecommendation, updateRecommendation, toggleRecommendationVote, fetchMembersApi, type RecommendationCategory } from '@/lib/domainApi';
+import { RichTextViewer, type RichTextEditorHandle } from '@/components/RichTextEditor';
+
+const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
+import { Ava, firstNonEmoji, AvaStack } from '@/components/Atoms';
+import { ImageUpload } from '@/components/ImageUpload';
 import CommentSection from '@/components/CommentSection';
 
 function isCategory(value: string | undefined): value is RecommendationCategory {
@@ -48,10 +52,34 @@ export default function RecommendationDetailPage() {
   const [editingLink, setEditingLink] = useState(false);
   const [linkDraft, setLinkDraft] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editEventDate, setEditEventDate] = useState('');
+  const [editEventEndDate, setEditEventEndDate] = useState('');
+  const [editCoverUrl, setEditCoverUrl] = useState('');
+  const descEditorRef = useRef<RichTextEditorHandle>(null);
   const [voted, setVoted] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
-  const [voters, setVoters] = useState<{ id: string; name: string }[]>([]);
+  const [voters, setVoters] = useState<{ id: string; name: string; avatar?: string }[]>([]);
   const [coverUrl, setCoverUrl] = useState('');
+  const [expandVoters, setExpandVoters] = useState(false);
+
+  // Admin: change author
+  const isAdmin = user?.role === 'admin';
+  const [members, setMembers] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
+  const [editAuthor, setEditAuthor] = useState<{ id: string; name: string; avatar: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetchMembersApi().then((list) => {
+      const mapped = (list as { id: string; name: string; avatar?: string | null }[]).map((m) => ({
+        id: m.id, name: m.name, avatar: m.avatar ?? null,
+      }));
+      setMembers(mapped);
+    });
+  }, [isAdmin]);
 
   const { pickFile, upload: uploadCover, isUploading: coverUploading } = useMediaUpload({
     category: 'cover',
@@ -92,6 +120,7 @@ export default function RecommendationDetailPage() {
         const voterList = voteList.map((v: any) => ({
           id: v.userId ?? v.user?.id ?? '',
           name: v.user?.name ?? '?',
+          avatar: v.user?.avatar ?? undefined,
         })).filter((v) => v.id);
         setVoters(voterList);
         setVoteCount((data as any)?._count?.votes ?? voterList.length);
@@ -145,7 +174,12 @@ export default function RecommendationDetailPage() {
   const title = String(item.title ?? '');
   const description = String(item.description ?? '');
   const authorName = (item.author as any)?.name ?? '';
+  const authorAvatar = (item.author as any)?.avatar ?? '';
   const tags: string[] = ((item.tags as any[]) ?? []).map((t: any) => t.value ?? t).filter(Boolean);
+  const eventDate = item.eventDate ? new Date(item.eventDate as string) : null;
+  const eventEndDate = item.eventEndDate ? new Date(item.eventEndDate as string) : null;
+  const isPlace = currentCategory === 'place';
+  const isExternalEvent = currentCategory === 'external_event';
 
   // Hero background
   const heroBg = coverUrl
@@ -194,16 +228,39 @@ export default function RecommendationDetailPage() {
                   <Typography variant="h4" fontWeight={800} sx={{ color: '#fff', textShadow: '0 2px 12px rgba(0,0,0,0.6)', lineHeight: 1.2 }}>
                     {title}
                   </Typography>
-                  {tags.length > 0 && (
+                  {(tags.length > 0 || eventDate) && (
                     <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mt: 0.5, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                      {eventDate && (
+                        <>
+                          📅 {eventDate.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', timeZone: 'UTC' })}
+                          {eventEndDate && ` — ${eventEndDate.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', timeZone: 'UTC' })}`}
+                          {tags.length > 0 && ' · '}
+                        </>
+                      )}
                       {tags.join(' · ')}
                     </Typography>
                   )}
                 </Box>
                 {canModify && (
-                  <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => setConfirmDelete(true)}>
-                    <DeleteOutlineIcon />
-                  </IconButton>
+                  <Stack direction="row" spacing={0.5}>
+                    <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => {
+                      setEditTitle(title);
+                      setEditDesc(description);
+                      setEditEventDate(eventDate ? eventDate.toISOString().slice(0, 10) : '');
+                      setEditEventEndDate(eventEndDate ? eventEndDate.toISOString().slice(0, 10) : '');
+                      setEditCoverUrl(coverUrl);
+                      if (isAdmin) {
+                        const authorId = item.authorId as string | undefined;
+                        setEditAuthor(members.find((m) => m.id === authorId) ?? null);
+                      }
+                      setEditing(true);
+                    }}>
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => setConfirmDelete(true)}>
+                      <DeleteOutlineIcon />
+                    </IconButton>
+                  </Stack>
                 )}
               </Stack>
             </Box>
@@ -213,19 +270,21 @@ export default function RecommendationDetailPage() {
           <CardContent sx={{ pt: 1.5, pb: 1.5 }}>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {sourceUrl && !editingLink && (
-                <Chip size="small" variant="outlined" label="🔗 查看链接" clickable
-                  component="a" href={sourceUrl} target="_blank" rel="noreferrer" />
+                isPlace
+                  ? <Chip size="small" variant="outlined" label={`📍 ${sourceUrl}`} />
+                  : <Chip size="small" variant="outlined" label="🔗 查看链接" clickable
+                      component="a" href={sourceUrl} target="_blank" rel="noreferrer" />
               )}
               {canModify && !editingLink && (
                 <Chip size="small" variant="outlined"
-                  label={sourceUrl ? '编辑链接' : '+ 添加链接'}
+                  label={sourceUrl ? (isPlace ? '编辑地址' : '编辑链接') : (isPlace ? '+ 添加地址' : '+ 添加链接')}
                   onClick={() => { setLinkDraft(sourceUrl); setEditingLink(true); }}
                 />
               )}
             </Stack>
             {editingLink && (
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-                <TextField size="small" fullWidth placeholder="https://..." value={linkDraft}
+                <TextField size="small" fullWidth placeholder={isPlace ? '123 Main St, New York, NY' : 'https://...'} value={linkDraft}
                   onChange={(e) => setLinkDraft(e.target.value)} />
                 <Button size="small" variant="contained" disabled={linkDraft === sourceUrl}
                   onClick={async () => {
@@ -259,7 +318,7 @@ export default function RecommendationDetailPage() {
               <CardContent>
                 <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>推荐人</Typography>
                 <Stack direction="row" spacing={1.5} alignItems="center">
-                  <Avatar sx={{ width: 36, height: 36 }}>{firstNonEmoji(authorName)}</Avatar>
+                  <Avatar src={authorAvatar || undefined} sx={{ width: 36, height: 36 }}>{firstNonEmoji(authorName)}</Avatar>
                   <Typography variant="body1">{authorName}</Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto !important' }}>查看主页 →</Typography>
                 </Stack>
@@ -285,23 +344,104 @@ export default function RecommendationDetailPage() {
               </Button>
             </Stack>
             {voters.length > 0 && (
-              <AvatarGroup max={10} sx={{ justifyContent: 'flex-start' }}>
-                {voters.map((voter) => (
-                  <Avatar
-                    key={voter.id}
-                    sx={{ width: 32, height: 32, cursor: 'pointer' }}
-                    onClick={() => navigate(`/members/${encodeURIComponent(voter.name)}`)}
-                  >
-                    {firstNonEmoji(voter.name)}
-                  </Avatar>
-                ))}
-              </AvatarGroup>
+              <Box sx={{ cursor: voters.length > 5 ? 'pointer' : undefined }} onClick={voters.length > 5 ? () => setExpandVoters((v) => !v) : undefined}>
+                <AvaStack
+                  names={voters.map((v) => ({ name: v.name, avatar: v.avatar }))}
+                  tooltips={voters.map((v) => v.name)}
+                  size={32}
+                  max={expandVoters ? voters.length : 5}
+                  onClickItem={(i) => navigate(`/members/${encodeURIComponent(voters[i].name)}`)}
+                />
+              </Box>
             )}
           </CardContent>
         </Card>
 
         {/* 5. Comments */}
         {recommendationId && <CommentSection entityType="recommendation" entityId={recommendationId} />}
+
+        <Dialog open={editing} onClose={() => setEditing(false)} fullWidth maxWidth="md" fullScreen={window.innerWidth < 600}>
+          <DialogTitle>编辑推荐</DialogTitle>
+          <DialogContent>
+            {isAdmin && (
+              <Autocomplete
+                options={members}
+                value={editAuthor}
+                onChange={(_, v) => setEditAuthor(v)}
+                getOptionLabel={(o) => o.name}
+                isOptionEqualToValue={(a, b) => a.id === b.id}
+                renderOption={(props, option) => (
+                  <li {...props} key={option.id}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Ava name={option.name} src={option.avatar ?? undefined} size={24} />
+                      <span>{option.name}</span>
+                    </Stack>
+                  </li>
+                )}
+                renderInput={(params) => <TextField {...params} label="推荐人" />}
+                sx={{ mt: 1, mb: 2 }}
+              />
+            )}
+            <TextField label="标题" fullWidth value={editTitle} onChange={(e) => setEditTitle(e.target.value)} sx={{ mt: 1, mb: 2 }} />
+            {isExternalEvent && (
+              <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+                <TextField
+                  label="日期"
+                  type="date"
+                  value={editEventDate}
+                  onChange={(e) => setEditEventDate(e.target.value)}
+                  fullWidth
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+                <TextField
+                  label="结束日期（可选）"
+                  type="date"
+                  value={editEventEndDate}
+                  onChange={(e) => setEditEventEndDate(e.target.value)}
+                  fullWidth
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+              </Stack>
+            )}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>海报（可选）</Typography>
+              <ImageUpload
+                value={editCoverUrl}
+                onChange={setEditCoverUrl}
+                category="recommendation"
+                ownerId={user?.id ?? ''}
+                width="100%"
+                height={160}
+                shape="rect"
+                maxSize={10 * 1024 * 1024}
+              />
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>简介</Typography>
+            <Suspense fallback={<Typography color="text.secondary">加载编辑器...</Typography>}>
+              <RichTextEditorLazy content={editDesc} onChange={setEditDesc} editorRef={descEditorRef} />
+            </Suspense>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditing(false)}>取消</Button>
+            <Button variant="contained" disabled={editSaving || !editTitle.trim()} onClick={async () => {
+              if (!user?.id || !recommendationId) return;
+              setEditSaving(true);
+              const html = descEditorRef.current?.getHTML() ?? editDesc;
+              const patch: Parameters<typeof updateRecommendation>[2] = { title: editTitle, description: html, coverUrl: editCoverUrl || undefined, ...(isAdmin && editAuthor ? { authorId: editAuthor.id } : {}) };
+              if (isExternalEvent) {
+                patch.eventDate = editEventDate || null;
+                patch.eventEndDate = editEventEndDate || null;
+              }
+              try {
+                await updateRecommendation(recommendationId, user.id, patch);
+                setCoverUrl(editCoverUrl);
+                setItem((prev) => prev ? { ...prev, title: editTitle, description: html, coverUrl: editCoverUrl || null, eventDate: editEventDate || null, eventEndDate: editEventEndDate || null, ...(editAuthor ? { authorId: editAuthor.id, author: { ...(prev.author as any), id: editAuthor.id, name: editAuthor.name, avatar: editAuthor.avatar } } : {}) } : prev);
+                setEditing(false);
+              } catch { /* ignore */ }
+              setEditSaving(false);
+            }}>{editSaving ? '保存中...' : '保存'}</Button>
+          </DialogActions>
+        </Dialog>
 
         <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
           <DialogTitle>确认删除</DialogTitle>

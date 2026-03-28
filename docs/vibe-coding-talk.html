@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vibe Coding — 一个人 + AI 的 27 天</title>
+<link rel="stylesheet" href="https://unpkg.com/reveal.js@4.6.1/dist/reveal.css">
+<link rel="stylesheet" href="https://unpkg.com/reveal.js@4.6.1/dist/theme/black.css">
+<link rel="stylesheet" href="https://unpkg.com/reveal.js@4.6.1/plugin/highlight/monokai.css">
+<style>
+  /* ═══ Section icon badges ═══ */
+  .s-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2em; height: 2em; border-radius: 10px;
+    font-size: 0.8em; margin-right: 0.35em; vertical-align: middle;
+    position: relative;
+  }
+  .s-icon.warm-icon  { background: linear-gradient(135deg, rgba(212,165,116,0.2), rgba(212,165,116,0.05)); color: var(--warm); box-shadow: 0 0 16px rgba(212,165,116,0.15); }
+  .s-icon.red-icon   { background: linear-gradient(135deg, rgba(232,93,93,0.2), rgba(232,93,93,0.05)); color: var(--red); box-shadow: 0 0 16px rgba(232,93,93,0.15); }
+  .s-icon.green-icon { background: linear-gradient(135deg, rgba(107,203,119,0.2), rgba(107,203,119,0.05)); color: var(--green); box-shadow: 0 0 16px rgba(107,203,119,0.15); }
+  .s-icon.blue-icon  { background: linear-gradient(135deg, rgba(91,141,239,0.2), rgba(91,141,239,0.05)); color: var(--blue); box-shadow: 0 0 16px rgba(91,141,239,0.15); }
+  .s-icon.sec-icon   { background: linear-gradient(135deg, rgba(111,157,143,0.2), rgba(111,157,143,0.05)); color: var(--secondary); box-shadow: 0 0 16px rgba(111,157,143,0.15); }
+
+  /* ═══ Gradient text ═══ */
+  .gradient-text {
+    background: linear-gradient(135deg, var(--warm) 0%, #e8c9a0 50%, var(--warm) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ═══ Glass card ═══ */
+  .glass-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 1.2em 1.4em;
+    position: relative;
+    overflow: hidden;
+  }
+  .glass-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  }
+
+  /* ═══ Takeaway icon circles ═══ */
+  .tk-circle {
+    width: 3em; height: 3em; border-radius: 50%; margin: 0 auto 0.5em;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1em;
+  }
+  .tk-circle svg { width: 1.4em; height: 1.4em; }
+
+  /* ═══ Decorative corner lines ═══ */
+  .corner-decor { position: relative; }
+  .corner-decor::before, .corner-decor::after {
+    content: ''; position: absolute; width: 24px; height: 24px;
+    border-color: rgba(212,165,116,0.2); border-style: solid;
+  }
+  .corner-decor::before { top: -4px; left: -4px; border-width: 1px 0 0 1px; border-radius: 4px 0 0 0; }
+  .corner-decor::after { bottom: -4px; right: -4px; border-width: 0 1px 1px 0; border-radius: 0 0 4px 0; }
+  /* ═══ 串门儿 Design Tokens (from theme.ts) ═══ */
+  :root {
+    --bg:       #121214;
+    --s1:       #1E1E22;
+    --s2:       #26262B;
+    --s3:       #2E2E33;
+    --line:     #3E3E44;
+    --text:     #E8E6E2;
+    --text2:    #9A9894;
+    --text3:    #5A5854;
+    --warm:     #D4A574;
+    --warm-dim: rgba(212,165,116,0.07);
+    --warm-glow:rgba(212,165,116,0.15);
+    --paper:    #1E1C1A;
+    --ink:      #E0D8CE;
+    --ink-light:#9A9088;
+    --green:    #6BCB77;
+    --blue:     #5B8DEF;
+    --red:      #E85D5D;
+    --stamp:    #D4A574;
+    --secondary:#6f9d8f;
+    --purple:   #a78bfa;
+  }
+
+  /* ═══ Global / Reveal overrides ═══ */
+  .reveal-viewport { background: var(--bg); }
+  .reveal { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-weight: 400; color: var(--text); font-size: 22px; }
+  .reveal .slides { text-align: left; }
+  .reveal .slides section { padding: 40px 60px; }
+  .reveal .slides section section { padding: 40px 60px; }
+
+  .reveal h1 { font-family: Georgia, "Noto Serif SC", serif; font-weight: 700; font-size: 1.8em; letter-spacing: 0.02em; color: var(--ink); text-transform: none; margin-bottom: 0.4em; }
+  .reveal h2 { font-family: Georgia, "Noto Serif SC", serif; font-weight: 700; font-size: 1.35em; color: var(--warm); text-transform: none; letter-spacing: 0.01em; margin-bottom: 0.5em; }
+  .reveal h3 { font-family: Georgia, "Noto Serif SC", serif; font-weight: 700; font-size: 1.05em; color: var(--ink); text-transform: none; margin-bottom: 0.4em; }
+
+  .reveal p { line-height: 1.7; color: var(--text2); margin-bottom: 0.6em; }
+  .reveal li { line-height: 1.8; color: var(--text2); }
+  .reveal code { font-family: "SF Mono", "Fira Code", "JetBrains Mono", monospace; font-size: 0.88em; }
+  .reveal pre { width: 100%; margin: 0.8em 0; border-radius: 12px; background: var(--s1); border: 1px solid var(--line); }
+  .reveal pre code { font-size: 0.72em; line-height: 1.6; padding: 1em 1.2em; }
+
+  /* ═══ Utility ═══ */
+  .warm { color: var(--warm); }
+  .green { color: var(--green); }
+  .red { color: var(--red); }
+  .blue { color: var(--blue); }
+  .dim { color: var(--text3); }
+  .ink { color: var(--ink); }
+  .ink-light { color: var(--ink-light); }
+  .secondary { color: var(--secondary); }
+  .bold { font-weight: 700; }
+  .mono { font-family: "SF Mono", "Fira Code", "JetBrains Mono", monospace; }
+  .serif { font-family: Georgia, "Noto Serif SC", serif; }
+  .small { font-size: 0.78em; }
+  .smaller { font-size: 0.68em; }
+  .tiny { font-size: 0.6em; }
+
+  /* ═══ 串门儿 Card ═══ */
+  .cm-card {
+    background: var(--s1);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 1.1em 1.3em;
+    margin: 0.35em 0;
+  }
+  .cm-card.glow {
+    border-color: rgba(212,165,116,0.2);
+    background: linear-gradient(135deg, var(--s1) 0%, rgba(212,165,116,0.04) 100%);
+  }
+  .cm-card.warm-border { border-color: rgba(212,165,116,0.3); }
+
+  /* ═══ Stats Grid ═══ */
+  .stats-grid {
+    display: grid;
+    gap: 0.7em;
+    margin: 1em 0;
+  }
+  .stats-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .stats-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .stats-grid.cols-6 { grid-template-columns: repeat(6, 1fr); }
+
+  .stat-item {
+    background: var(--s1);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 0.9em 0.7em;
+    text-align: center;
+    transition: border-color 0.3s;
+  }
+  .stat-item:hover { border-color: rgba(212,165,116,0.3); }
+  .stat-num {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 1.7em;
+    font-weight: 800;
+    color: var(--warm);
+    line-height: 1.2;
+  }
+  .stat-label {
+    font-size: 0.62em;
+    color: var(--text3);
+    margin-top: 0.2em;
+    line-height: 1.3;
+  }
+
+  /* ═══ Two-col layout ═══ */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1em; margin: 0.8em 0; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8em; margin: 0.8em 0; }
+
+  /* ═══ Layer / Steps ═══ */
+  .layer-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8em;
+    padding: 0.65em 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .layer-item:last-child { border-bottom: none; }
+  .layer-badge {
+    flex-shrink: 0;
+    width: 2em;
+    height: 2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--warm-glow);
+    color: var(--warm);
+    font-weight: 800;
+    font-family: "SF Mono", monospace;
+    font-size: 0.75em;
+  }
+  .layer-content { flex: 1; }
+  .layer-title { font-weight: 700; color: var(--ink); font-size: 0.88em; }
+  .layer-desc { color: var(--text3); font-size: 0.72em; margin-top: 0.15em; line-height: 1.5; }
+
+  /* ═══ Quote / Callout ═══ */
+  .callout {
+    margin: 0.8em 0;
+    padding: 0.7em 1.1em;
+    border-left: 3px solid var(--warm);
+    background: rgba(212,165,116,0.06);
+    border-radius: 0 8px 8px 0;
+    color: var(--ink-light);
+    font-size: 0.82em;
+    font-style: italic;
+    line-height: 1.7;
+  }
+  .callout.green-callout { border-color: var(--green); background: rgba(107,203,119,0.06); }
+  .callout.red-callout { border-color: var(--red); background: rgba(232,93,93,0.06); }
+
+  /* ═══ Tag / Chip ═══ */
+  .tag {
+    display: inline-block;
+    padding: 0.25em 0.7em;
+    border-radius: 16px;
+    font-size: 0.72em;
+    font-weight: 600;
+    margin: 0.15em 0.2em;
+  }
+  .tag.warm { background: rgba(212,165,116,0.15); color: var(--warm); }
+  .tag.red { background: rgba(232,93,93,0.15); color: var(--red); }
+  .tag.blue { background: rgba(91,141,239,0.15); color: var(--blue); }
+  .tag.green { background: rgba(107,203,119,0.15); color: var(--green); }
+  .tag.purple { background: rgba(167,139,250,0.15); color: var(--purple); }
+  .tag.secondary { background: rgba(111,157,143,0.15); color: var(--secondary); }
+
+  /* ═══ Separator ═══ */
+  .sep { width: 40px; height: 2px; background: var(--warm); opacity: 0.4; margin: 0.8em 0; border-radius: 1px; }
+
+  /* ═══ Timeline dots ═══ */
+  .timeline { position: relative; padding-left: 1.5em; margin: 0.6em 0; }
+  .timeline::before { content: ''; position: absolute; left: 0.35em; top: 0.5em; bottom: 0.5em; width: 2px; background: var(--line); }
+  .timeline-item { position: relative; padding: 0.4em 0; }
+  .timeline-item::before { content: ''; position: absolute; left: -1.15em; top: 0.65em; width: 8px; height: 8px; border-radius: 50%; background: var(--warm); }
+  .timeline-item .tl-label { font-size: 0.72em; color: var(--text3); }
+  .timeline-item .tl-text { font-size: 0.82em; color: var(--text2); }
+
+  /* ═══ Postcard style box ═══ */
+  .postcard {
+    background: linear-gradient(135deg, var(--paper) 0%, #1a1714 100%);
+    border: 1px solid rgba(212,165,116,0.15);
+    border-radius: 12px;
+    padding: 1.2em 1.5em;
+    position: relative;
+    overflow: hidden;
+  }
+  .postcard::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, transparent 50%, rgba(212,165,116,0.08) 50%);
+    border-radius: 0 12px 0 0;
+  }
+  .postcard .stamp {
+    position: absolute;
+    top: 12px; right: 14px;
+    font-size: 1.4em;
+    opacity: 0.5;
+    transform: rotate(8deg);
+  }
+
+  /* ═══ Diagram box ═══ */
+  .diagram-box {
+    text-align: center;
+    padding: 0.5em 1em;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--s2);
+    font-size: 0.78em;
+    color: var(--ink-light);
+  }
+  .diagram-arrow {
+    text-align: center;
+    color: var(--text3);
+    font-size: 0.8em;
+    padding: 0.15em 0;
+  }
+
+  /* ═══ Slide-specific ornaments ═══ */
+  .slide-accent {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--warm), transparent);
+    opacity: 0.3;
+  }
+
+  /* Cover special */
+  .cover-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 2em;
+    margin-top: 1.5em;
+  }
+  .cover-emoji-stack {
+    font-size: 1.8em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
+    opacity: 0.6;
+    align-items: center;
+  }
+
+  /* Glow accent on section titles */
+  .glow-underline {
+    display: inline-block;
+    position: relative;
+  }
+  .glow-underline::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0; right: 0;
+    height: 2px;
+    background: var(--warm);
+    opacity: 0.4;
+    border-radius: 1px;
+  }
+
+  /* Project cards for slide 8 */
+  .project-card {
+    background: var(--s1);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 0.8em;
+    text-align: center;
+    transition: all 0.3s;
+  }
+  .project-card:hover { border-color: rgba(212,165,116,0.3); transform: translateY(-2px); }
+  .project-card .pc-emoji { font-size: 1.6em; margin-bottom: 0.2em; }
+  .project-card .pc-title { font-size: 0.78em; font-weight: 700; color: var(--ink); }
+  .project-card .pc-desc { font-size: 0.6em; color: var(--text3); margin-top: 0.15em; line-height: 1.4; }
+
+  /* Final takeaway */
+  .takeaway-item {
+    background: linear-gradient(135deg, var(--s1) 0%, rgba(212,165,116,0.03) 100%);
+    border: 1px solid rgba(212,165,116,0.12);
+    border-radius: 12px;
+    padding: 1em 1.2em;
+    text-align: center;
+  }
+  .takeaway-item .tk-icon { font-size: 1.4em; margin-bottom: 0.3em; }
+  .takeaway-item .tk-title { font-size: 0.82em; font-weight: 700; color: var(--warm); margin-bottom: 0.2em; }
+  .takeaway-item .tk-desc { font-size: 0.65em; color: var(--text3); line-height: 1.6; }
+
+  /* Patch reveal transitions */
+  .reveal .slide-background { background: var(--bg) !important; }
+  .reveal .progress span { background: var(--warm); }
+  .reveal .controls button { color: var(--warm); }
+
+  /* list resets */
+  .reveal ul { list-style: none; padding: 0; margin: 0; }
+  .reveal ul.disc { list-style: disc; padding-left: 1.2em; }
+  .reveal ul.disc li { margin: 0.15em 0; }
+
+  /* inline code */
+  .reveal code:not(pre code) {
+    background: var(--s2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+    font-size: 0.85em;
+    color: var(--ink-light);
+  }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 1 — 封面
+     ════════════════════════════════════════════════════════ -->
+<section data-transition="fade">
+  <div style="display:flex; flex-direction:column; justify-content:center; align-items:flex-start; min-height: 70vh;">
+    <div style="font-size:0.72em; color:var(--text3); margin-bottom:0.6em; letter-spacing:0.05em;">TECH TALK · 2026.03</div>
+    <h1 style="font-size:2.2em; margin-bottom:0.15em;"><span class="gradient-text">Vibe Coding</span></h1>
+    <p style="font-size:1.1em; color:var(--ink-light); margin-bottom:0.1em; font-family:Georgia,'Noto Serif SC',serif;">两个人 + AI 的 27 天</p>
+    <div class="sep" style="margin:0.6em 0;"></div>
+    <p style="font-size:0.82em; color:var(--text3); line-height:1.7;">
+      串门儿社区平台的开发实录<br>
+      <span class="warm mono" style="font-size:0.9em;">chuanmener.club</span>
+    </p>
+    <div style="margin-top:2em; display:flex; gap:0.5em; align-items:center;">
+      <span style="font-size:0.68em; color:var(--text3);">React 19 · Fastify 5 · Prisma 6 · PostgreSQL · S3 · SSR</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 2 — 27 天交付了什么
+     ════════════════════════════════════════════════════════ -->
+<section>
+  <div class="slide-accent"></div>
+  <h2><span class="glow-underline">27 天交付了什么</span></h2>
+  <p class="small dim">从零开始，两个非工程师 + Claude Code，到一个完整运营中的社区平台</p>
+
+  <div class="stats-grid cols-3" style="max-width:700px;">
+    <div class="stat-item fragment">
+      <div class="stat-num">48K</div>
+      <div class="stat-label">行 TypeScript 代码<br>前端 + 后端 + 测试</div>
+    </div>
+    <div class="stat-item fragment">
+      <div class="stat-num">52</div>
+      <div class="stat-label">Prisma 数据模型<br>用户/活动/卡片/投票/邮件…</div>
+    </div>
+    <div class="stat-item fragment">
+      <div class="stat-num">181</div>
+      <div class="stat-label">API Endpoints<br>15 个业务模块</div>
+    </div>
+    <div class="stat-item fragment">
+      <div class="stat-num">39</div>
+      <div class="stat-label">前端页面<br>用户端 26 + 后台 13</div>
+    </div>
+    <div class="stat-item fragment">
+      <div class="stat-num">170+</div>
+      <div class="stat-label">Vitest 自动化测试<br>17 个测试文件</div>
+    </div>
+    <div class="stat-item fragment">
+      <div class="stat-num">353</div>
+      <div class="stat-label">Git Commits<br>日均 13 次提交</div>
+    </div>
+  </div>
+
+  <div class="fragment" style="margin-top:0.8em;">
+    <div class="callout" style="max-width:700px;">
+      这不是 demo，是一个真实运营中的社区——<span class="ink">40+ 成员、每周活动、邮件通知、感谢卡系统、小局抽签、管理后台</span>，全在跑。
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 3 — "我把数据库删了"
+     ════════════════════════════════════════════════════════ -->
+<section>
+  <section data-transition="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, transparent, var(--red), transparent);"></div>
+    <h2 style="color:var(--red);"><span class="s-icon red-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+    </span>"我把生产数据库删了"</h2>
+    <p class="small dim">Day 12，凌晨两点。AI 说"我来帮你重置一下本地数据库"</p>
+
+    <div class="postcard" style="max-width:650px; margin:1.2em 0;">
+      <div class="stamp" style="font-size:1em; opacity:0.3;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      </div>
+      <p style="font-size:0.82em; color:var(--ink); margin-bottom:0.3em; font-weight:600;">发生了什么</p>
+      <p style="font-size:0.75em; color:var(--text2); line-height:1.8;">
+        我让 Claude 帮我推一下 schema 到本地数据库<br>
+        它跑了 <code>prisma db push --force-reset</code><br>
+        我以为操作的是 localhost Docker 里的 Postgres<br>
+        <span class="red bold">实际清空的是远程 Render 上的生产数据</span>
+      </p>
+    </div>
+
+    <p class="small dim fragment">↓ 怎么发生的</p>
+  </section>
+
+  <section>
+    <h3>根本原因：<code>.env</code> 软链接陷阱</h3>
+
+    <pre><code class="language-typescript" data-trim data-noescape>
+// server/prisma.config.ts
+import dotenv from 'dotenv';
+dotenv.config();   // ← 静默加载 .env 文件
+
+export default defineConfig({
+  earlyAccess: true,
+  schema: './prisma/schema.prisma',
+});
+    </code></pre>
+
+    <div class="two-col" style="max-width:650px; margin-top:0.6em;">
+      <div class="cm-card">
+        <p class="smaller dim" style="margin:0;">server/.env → 软链接</p>
+        <p class="small" style="margin:0.3em 0 0;">
+          <code>.env.development</code> = localhost ✅<br>
+          <code>.env.dev</code> = <span class="red">远程生产库</span> ❌
+        </p>
+      </div>
+      <div class="cm-card">
+        <p class="smaller dim" style="margin:0;">陷阱在于</p>
+        <p class="small" style="margin:0.3em 0 0;">
+          <code>dotenv.config()</code> 会覆盖<br>
+          命令行传入的 <code>DATABASE_URL</code><br>
+          <span class="dim">→ 你以为指定了，其实没用</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="callout red-callout fragment" style="max-width:650px; margin-top:0.8em;">
+      AI 比人还会"手滑"——但它的手滑是<span class="ink bold">系统性的</span>。人不会连续两次犯同一个错，AI 会。每次遇到类似情况，它都会用<span class="red">同样的方式</span>搞砸。
+    </div>
+  </section>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 4 — 5 层防护体系
+     ════════════════════════════════════════════════════════ -->
+<section>
+  <section>
+    <div class="slide-accent"></div>
+    <h2><span class="s-icon green-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </span>同一条规则，5 层执行</h2>
+    <p class="small dim">删库之后，我把"不许碰远程数据库"这条规则，写进了 5 个不同的地方</p>
+
+    <div style="max-width:700px; margin-top:0.8em;">
+      <div class="layer-item fragment">
+        <div class="layer-badge">L1</div>
+        <div class="layer-content">
+          <div class="layer-title">CLAUDE.md — 写给 AI 的项目说明书</div>
+          <div class="layer-desc">用自然语言告诉 AI：什么能做、什么不能做。相当于给 AI 写了一份入职手册。每次对话开始时自动加载。</div>
+        </div>
+      </div>
+      <div class="layer-item fragment">
+        <div class="layer-badge">L2</div>
+        <div class="layer-content">
+          <div class="layer-title">Memory — AI 的事故记忆</div>
+          <div class="layer-desc">把这次删库事件写进持久记忆文件，跨会话保留。下次 AI 要碰数据库，会想起"上次这么干出事了"。</div>
+        </div>
+      </div>
+      <div class="layer-item fragment">
+        <div class="layer-badge">L3</div>
+        <div class="layer-content">
+          <div class="layer-title">settings.json deny 规则 — 硬性拦截</div>
+          <div class="layer-desc">在 Claude Code 配置里禁止执行包含 <code>force-reset</code> 的命令。AI 甚至无法尝试执行这个命令。</div>
+        </div>
+      </div>
+      <div class="layer-item fragment">
+        <div class="layer-badge">L4</div>
+        <div class="layer-content">
+          <div class="layer-title">guard-db.sh — 运行时检查脚本</div>
+          <div class="layer-desc">每次执行 Prisma 命令前自动跑，检查 <code>.env</code> 软链接指向哪个文件。如果不是 localhost，直接报错退出。</div>
+        </div>
+      </div>
+      <div class="layer-item fragment">
+        <div class="layer-badge">L5</div>
+        <div class="layer-content">
+          <div class="layer-title">pre-commit hook — 提交时拦截</div>
+          <div class="layer-desc">schema 文件有改动但没有对应 migration SQL 文件？拒绝提交。防止"改了 schema 忘了写迁移"。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3>实际长什么样</h3>
+    <div class="two-col" style="max-width:750px;">
+      <div>
+        <p class="tiny dim" style="margin:0 0 0.3em;">settings.json — deny 规则（L3）</p>
+        <pre style="margin:0;"><code class="language-json" data-trim data-noescape>
+{
+  "permissions": {
+    "deny": [
+      "Bash(npx prisma db push --force-reset:*)",
+      "Bash(npx prisma migrate reset:*)",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION:*)"
+    ]
+  }
+}
+        </code></pre>
+      </div>
+      <div>
+        <p class="tiny dim" style="margin:0 0 0.3em;">guard-db.sh — 运行时拦截（L4）</p>
+        <pre style="margin:0;"><code class="language-bash" data-trim data-noescape>
+# 检查 .env 软链接指向
+if echo "$DB_URL" | grep -q "localhost"; then
+  exit 0  # 本地库，放行
+fi
+echo "🚨 BLOCKED: .env points to REMOTE database!"
+echo "   Switch: npm run db:local"
+exit 2  # 非零退出 = 拦截命令
+        </code></pre>
+      </div>
+    </div>
+
+    <div class="fragment" style="max-width:750px; margin-top:0.5em;">
+      <p class="tiny dim" style="margin:0 0 0.3em;">Memory 文件（L2）——AI 的"事故报告"，跨会话持久</p>
+      <pre style="margin:0;"><code class="language-markdown" data-trim data-noescape>
+# feedback_no_force_reset.md
+**NEVER run destructive Prisma commands.**
+### Incident history:
+- 2026-03-17: `prisma db push --force-reset` wiped dev DB
+  because prisma.config.ts loads dotenv first.
+### Why: .env file wins over shell DATABASE_URL.
+      </code></pre>
+    </div>
+
+    <div class="callout fragment" style="max-width:750px; margin-top:0.4em;">
+      AI 不会"记住教训"——你需要把教训变成<span class="ink bold">基础设施</span>。
+    </div>
+  </section>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 5 — 螺旋式前进
+     ════════════════════════════════════════════════════════ -->
+<section>
+  <section>
+    <div class="slide-accent"></div>
+    <h2><span class="s-icon warm-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><polyline points="21 3 21 9 15 9"/></svg>
+    </span>不是一次做对，是快速试错</h2>
+    <p class="small dim">353 次提交，近一半是修修补补。这不是质量差——是速度够快。</p>
+
+    <div style="max-width:720px; margin-top:0.8em;">
+      <div class="cm-card glow" style="margin-bottom:0.6em;">
+        <p class="small ink bold" style="margin:0 0 0.4em;">📧 邮件通知：一个功能改了 11 版</p>
+        <div class="timeline" style="margin:0;">
+          <div class="timeline-item fragment">
+            <div class="tl-text"><span class="warm">v1</span> — 有新活动就马上发邮件通知所有人</div>
+          </div>
+          <div class="timeline-item fragment">
+            <div class="tl-text"><span class="warm">v2</span> — 太吵了！成员抱怨收到太多邮件。改成每天汇总一封</div>
+          </div>
+          <div class="timeline-item fragment">
+            <div class="tl-text"><span class="warm">v3</span> — 活动邀请不能等到第二天，改成：活动立即发，其他每日汇总</div>
+          </div>
+          <div class="timeline-item fragment">
+            <div class="tl-text"><span class="warm">v4</span> — 加了"几点发"的配置。默认中午 12 点发</div>
+          </div>
+          <div class="timeline-item fragment">
+            <div class="tl-text"><span class="warm">v5</span> — 发送时间判断逻辑写反了，所有人都收不到。紧急修复</div>
+          </div>
+          <div class="timeline-item fragment">
+            <div class="tl-text"><span class="warm">v6-11</span> — 加生日提醒、热门讨论、活动回顾三个新内容源…继续修</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout fragment" style="max-width:720px;">
+        每一版都是用户反馈驱动的。不是"一开始没想到"——是<span class="ink bold">用了才知道该怎么做</span>。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3>更多螺旋</h3>
+    <div class="two-col" style="max-width:720px;">
+      <div class="cm-card fragment">
+        <p class="small ink bold" style="margin:0 0 0.3em;">🕐 "活动显示日期差一天"</p>
+        <p class="smaller dim" style="margin:0; line-height:1.7;">
+          纽约时间和服务器时间不一样。<br>
+          活动页面修了 → 发现邮件里也差一天 →<br>
+          修了 → 发现 Feed 里也差一天 →<br>
+          修了 → 发现生日卡又差一天……<br>
+          <span class="warm bold">同一个 bug，在 5 个地方各修了一遍。</span><br>
+          一共 35 次相关提交。
+        </p>
+      </div>
+      <div class="cm-card fragment">
+        <p class="small ink bold" style="margin:0 0 0.3em;">👍 "我明明投过票了但没显示"</p>
+        <p class="smaller dim" style="margin:0; line-height:1.7;">
+          先做了点赞动画（纯前端假的）→<br>
+          接上后端发现状态不同步 →<br>
+          修了 → 发现推荐人没自动给自己投票 →<br>
+          修了 → 发现投票者头像没传过来 →<br>
+          <span class="warm bold">6 次修复才做出一个稳定的投票。</span>
+        </p>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:0.5em; flex-wrap:wrap; margin:0.8em 0;">
+      <span class="tag red fragment">修复: 160 次（45%）</span>
+      <span class="tag blue fragment">新功能: 116 次（33%）</span>
+      <span class="tag green fragment">重构 / 杂务: 77 次（22%）</span>
+    </div>
+
+    <div class="callout fragment" style="max-width:720px;">
+      以前：想清楚 → 画原型 → 排期 → 开发 → 测试 → 上线（按周算）<br>
+      现在：<span class="ink">说一句话 → 写完了 → 试一下 → 不对 → 改 → 好了</span>（按分钟算）
+    </div>
+  </section>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 6 — 核心哲学：就两件事
+     ════════════════════════════════════════════════════════ -->
+<section>
+  <div class="slide-accent"></div>
+  <h2><span class="s-icon sec-icon">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+  </span>就两件事</h2>
+  <p class="small dim">Vibe coding 能不能跑起来，取决于你能不能搭好这两个底座</p>
+
+  <div class="two-col" style="max-width:750px; margin-top:0.8em;">
+    <div class="cm-card glow fragment">
+      <p style="margin:0 0 0.4em; font-size:0.95em;"><span class="secondary bold">安全的 Playground</span></p>
+      <ul class="disc small" style="color:var(--text2); line-height:2;">
+        <li>Docker 本地数据库——搞坏了重建</li>
+        <li><code>.env</code> 软链接切换环境</li>
+        <li><code>guard-db.sh</code> 自动检查指向</li>
+        <li>隔离的测试数据库（<code>chuanmen_test</code>）</li>
+        <li>环境变量优雅降级（S3、邮件、OAuth 都可缺省）</li>
+      </ul>
+      <div class="smaller dim" style="margin-top:0.5em;">让 AI 放心大胆地试，因为它能搞坏的只有你想让它搞坏的东西。</div>
+    </div>
+    <div class="cm-card glow fragment">
+      <p style="margin:0 0 0.4em; font-size:0.95em;"><span class="secondary bold">规范的 CI/CD</span></p>
+      <ul class="disc small" style="color:var(--text2); line-height:2;">
+        <li>pre-commit：类型检查 + schema 迁移检查</li>
+        <li>push 前必须 <code>tsc --noEmit</code> + <code>build</code> 通过</li>
+        <li>Additive migration only（只加不删）</li>
+        <li>170+ 自动化测试覆盖核心 API</li>
+        <li>Schema 变更必须附带 migration SQL</li>
+      </ul>
+      <div class="smaller dim" style="margin-top:0.5em;">AI 写的代码必须通过和人一样的质量门槛，没有例外。</div>
+    </div>
+  </div>
+
+  <div class="callout fragment" style="max-width:750px; margin-top:0.6em;">
+    有了这两个底线，中间怎么 vibe 都行。<br>
+    <span class="smaller dim">playground 负责"不怕搞坏"，CI/CD 负责"搞坏了也上不了线"。</span>
+  </div>
+</section>
+
+<section>
+  <h2><span class="s-icon sec-icon">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+  </span>两个实际场景</h2>
+
+  <div class="two-col" style="max-width:750px; margin-top:0.6em;">
+    <div class="cm-card glow">
+      <p class="small secondary bold" style="margin:0 0 0.4em;">Playground 救命</p>
+      <p class="smaller" style="color:var(--text2); line-height:1.7; margin:0;">
+        Render → Vercel 迁移，<span class="warm bold">8 个 commit</span>：
+      </p>
+      <div class="tiny dim" style="margin-top:0.3em; line-height:1.8;">
+        <code>feat: add Vercel full-stack deployment</code><br>
+        <code>fix: reduce serverless function size below 250MB</code><br>
+        <code>fix: add SPA catch-all rewrite</code><br>
+        <code>fix: add directUrl for Neon pooled connection</code><br>
+        <code>fix: make prisma migrate deploy non-fatal</code>
+      </div>
+      <p class="tiny" style="color:var(--text2); margin-top:0.4em;">
+        每一个 fix 都是在本地 Docker 里试出来的。<br>如果直接推生产，每个都是 downtime。
+      </p>
+    </div>
+    <div class="cm-card glow">
+      <p class="small secondary bold" style="margin:0 0 0.4em;">CI 兜底</p>
+      <p class="smaller" style="color:var(--text2); line-height:1.7; margin:0;">
+        等位功能 <code>waitlist</code>，pre-commit 拦了两次：
+      </p>
+      <div class="tiny dim" style="margin-top:0.3em; line-height:1.8;">
+        ❶ schema 加了 <code>offered</code> 状态但没写 migration SQL → 拒绝提交<br>
+        ❷ <code>tsc</code> 报错：<code>offeredAt</code> 字段类型是 <code>DateTime?</code> 但 service 里没做 null check → 修了才能 commit
+      </div>
+      <p class="tiny" style="color:var(--text2); margin-top:0.4em;">
+        AI 写的代码必须过和人一样的质量门槛。<br>
+        <code>feat: implement complete waitlist system</code><br>
+        <code>fix: feed sort — signups bump position; waitlist show correct status</code>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 7 — 反共识：工具链越简单越好
+     ════════════════════════════════════════════════════════ -->
+<section>
+  <section>
+    <div class="slide-accent"></div>
+    <h2><span class="s-icon blue-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+    </span>反共识：工具链越简单越好</h2>
+    <p class="small dim">不需要复杂的 agent 编排。你需要的比你想的少得多。</p>
+
+    <div class="two-col" style="max-width:700px; margin-top:0.8em;">
+      <div class="cm-card fragment">
+        <p class="small red bold" style="margin:0 0 0.4em;">你不需要的 ❌</p>
+        <ul class="disc smaller" style="color:var(--text2); line-height:1.9;">
+          <li>Skill system / Agent framework</li>
+          <li>多 agent 协作编排</li>
+          <li>RAG / 向量知识库</li>
+          <li>"Prompt Engineering"</li>
+        </ul>
+        <div class="tiny dim" style="margin-top:0.3em;">这些都是在解决你还没有的问题。</div>
+      </div>
+      <div class="cm-card warm-border fragment">
+        <p class="small warm bold" style="margin:0 0 0.4em;">你需要的 ✅</p>
+        <ul class="disc smaller" style="color:var(--text2); line-height:1.9;">
+          <li><span class="warm">CLAUDE.md</span> — 项目规则，写一次，自动加载</li>
+          <li><span class="warm">临时 prompt</span> — 当场写，用完即弃</li>
+          <li><span class="warm">Memory</span> — 跨会话持久记忆</li>
+        </ul>
+        <div class="tiny dim" style="margin-top:0.3em;">prompt 不用"工程"。定义<span class="warm">角色</span>、给<span class="warm">上下文</span>、说清<span class="warm">任务</span>，就行了。</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3>Prompt 不用"工程"</h3>
+    <p class="small dim">三件事说清楚就行：<span class="warm">角色</span> · <span class="warm">上下文</span> · <span class="warm">任务</span></p>
+
+    <div class="cm-card glow" style="max-width:700px; margin:0.6em 0;">
+      <p class="tiny dim" style="margin:0 0 0.3em;">真实例子 —— 我在设计新成员审核流程时的 prompt：</p>
+      <div style="background:var(--s2); border-radius:8px; padding:0.7em 1em; margin:0.4em 0;">
+        <p class="smaller" style="margin:0; color:var(--ink-light); line-height:1.8;">
+          <span class="warm">[角色]</span> 你是一个做过 10 年社区运营的资深 PM<br>
+          <span class="warm">[上下文]</span> 我们的新成员流程：申请 → 管理员审核 → 内部公示 3 天 → 自动通过。社区 40 人，每月新增 2-3 人<br>
+          <span class="warm">[任务]</span> 站在申请者的角度，这个流程有哪些让人困惑或焦虑的地方？
+        </p>
+      </div>
+    </div>
+
+    <div class="fragment cm-card" style="max-width:700px; margin-top:0.5em;">
+      <p class="tiny dim" style="margin:0 0 0.3em;">又比如这个 PPT 本身：</p>
+      <div style="background:var(--s2); border-radius:8px; padding:0.7em 1em; margin:0.4em 0;">
+        <p class="smaller" style="margin:0; color:var(--ink-light); line-height:1.8;">
+          "帮我 review 一下月度企划这个功能的实现"<br>
+          <span class="dim">→ Claude Code 自动拆成 3 个并行 agent（后端/前端/QA），我没有配置任何东西</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="callout fragment" style="max-width:700px; margin-top:0.5em;">
+      真正有价值的不是 prompt 写得多精妙，是你知道<span class="ink bold">该在什么时候问什么问题</span>。<br>
+      <span class="smaller dim">AI 是放大器，不是替代品。放大零还是零。</span>
+    </div>
+  </section>
+
+  <section>
+    <h3>活例子：刚才准备这个 PPT 的时候</h3>
+
+    <div class="cm-card glow" style="max-width:700px; margin:0.6em 0;">
+      <p class="small ink" style="margin:0 0 0.3em;">我的 prompt：</p>
+      <div style="background:var(--s2); border-radius:8px; padding:0.7em 1em; margin:0.4em 0;">
+        <p class="smaller" style="margin:0; color:var(--ink-light); line-height:1.8; font-style:italic;">
+          "帮我 review 一下月度企划这个功能的实现"
+        </p>
+      </div>
+      <p class="smaller dim" style="margin:0.4em 0 0;">就这一句。没有指定用几个 agent，没有配置任何编排。</p>
+    </div>
+
+    <div class="fragment" style="max-width:700px; margin-top:0.6em;">
+      <p class="small ink" style="margin-bottom:0.4em;">Claude Code 自己决定派出 3 个并行 agent：</p>
+      <div style="display:flex; gap:0.5em;">
+        <div class="cm-card" style="flex:1; text-align:center; padding:0.7em;">
+          <div style="margin:0 auto 0.3em;"><span class="s-icon sec-icon" style="margin:0;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="6" cy="6" r="1"/><circle cx="6" cy="18" r="1"/></svg>
+          </span></div>
+          <div class="smaller bold ink">Backend</div>
+          <div class="tiny dim">schema、service、路由</div>
+        </div>
+        <div class="cm-card" style="flex:1; text-align:center; padding:0.7em;">
+          <div style="margin:0 auto 0.3em;"><span class="s-icon blue-icon" style="margin:0;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+          </span></div>
+          <div class="smaller bold ink">Frontend</div>
+          <div class="tiny dim">页面、组件、路由</div>
+        </div>
+        <div class="cm-card" style="flex:1; text-align:center; padding:0.7em;">
+          <div style="margin:0 auto 0.3em;"><span class="s-icon green-icon" style="margin:0;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </span></div>
+          <div class="smaller bold ink">QA</div>
+          <div class="tiny dim">测试覆盖、边界用例</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout fragment" style="max-width:700px; margin-top:0.6em;">
+      我没有 setup 任何"多 agent 系统"——我只是<span class="ink bold">说了一句话</span>。<br>
+      <span class="smaller dim">编排是工具的事。你的工作是知道<span class="warm">什么时候该 review、review 什么</span>。</span>
+    </div>
+  </section>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 8 — 迭代成本趋近于零之后
+     ════════════════════════════════════════════════════════ -->
+<section>
+  <section>
+    <div class="slide-accent"></div>
+    <h2><span class="s-icon warm-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </span>迭代成本趋近于零之后</h2>
+    <p class="small dim">开发成本 → 0，意味着什么？<span class="warm">每次运营活动都可以随手做个产品。</span></p>
+
+    <div style="max-width:720px; margin-top:0.6em;">
+      <p class="small ink" style="margin-bottom:0.4em;">真实例子——串门儿三月企划：<span class="warm bold">Color Hunting 🎨</span></p>
+      <p class="smaller dim" style="margin-bottom:0.5em;">成员拍下身边的春天颜色，上传到平台，按色系浏览、点赞、评论。</p>
+
+      <div style="display:flex; gap:0.5em; flex-wrap:wrap; margin:0.5em 0;" class="fragment">
+        <span class="tag" style="background:rgba(242,181,200,0.2); color:#F2B5C8;">樱花粉</span>
+        <span class="tag" style="background:rgba(139,200,139,0.2); color:#8BC88B;">新叶绿</span>
+        <span class="tag" style="background:rgba(123,175,212,0.2); color:#7BAFD4;">天空蓝</span>
+        <span class="tag" style="background:rgba(232,224,222,0.15); color:#E8E4DE;">云白</span>
+        <span class="tag" style="background:rgba(232,160,96,0.2); color:#E8A060;">日落橙</span>
+        <span class="tag" style="background:rgba(184,144,106,0.2); color:#B8906A;">泥土棕</span>
+      </div>
+
+      <div class="cm-card fragment" style="margin-top:0.5em;">
+        <p class="smaller" style="margin:0; color:var(--text2); line-height:1.8;">
+          这个"产品"有：<span class="warm">独立页面</span>、<span class="warm">拍照上传</span>、<span class="warm">色系筛选</span>、<span class="warm">点赞评论</span>、<span class="warm">瀑布流展示</span>、<span class="warm">Lightbox 看大图</span><br>
+          从提出想法到上线：<span class="warm bold">不到一天</span>。代码已经在跑了。
+        </p>
+      </div>
+    </div>
+
+    <div class="fragment callout" style="max-width:720px; margin-top:0.5em;">
+      以前"做个产品"是立项级别的事。现在是"下午有个想法，晚上就上线了"。
+    </div>
+  </section>
+
+  <section>
+    <h3>但数据不能"用后即焚"</h3>
+
+    <div class="cm-card" style="max-width:680px; margin:0.8em 0;">
+      <p class="small ink" style="margin:0 0 0.3em;">Color Hunting 结束之后：</p>
+      <ul class="disc smaller" style="color:var(--text2); line-height:2;">
+        <li>谁拍了最多照片？谁的作品点赞最多？——<span class="warm">参与记录</span></li>
+        <li>谁和谁互相给对方点了赞？——<span class="warm">互动关系</span></li>
+        <li>下个月做"音乐漂流瓶"，还是同一批人——<span class="warm">跨企划的社群连接</span></li>
+        <li>年底回顾，谁参与了几个企划、最活跃的是谁——<span class="warm">成长轨迹</span></li>
+      </ul>
+    </div>
+
+    <div class="callout fragment" style="max-width:680px;">
+      Color Hunting 的页面可以下线。但<span class="ink bold">谁参与了、谁互动了</span>，这些数据要永远留着。
+    </div>
+  </section>
+
+  <section>
+    <h3>产品变成<span class="warm">运营</span>了</h3>
+    <p class="small dim">实现成本趋近于零之后，价值在哪里？</p>
+
+    <div class="cm-card glow" style="max-width:700px; margin:0.6em 0;">
+      <p class="small ink" style="margin:0 0 0.4em;">类比：公众号 / 小红书</p>
+      <p class="smaller" style="color:var(--text2); line-height:1.8; margin:0;">
+        任何人都能发内容。发布成本是零。<br>
+        但真正赚钱的人是谁？
+      </p>
+      <div style="display:flex; gap:0.5em; margin-top:0.6em; flex-wrap:wrap;">
+        <span class="tag warm fragment">有体系</span>
+        <span class="tag warm fragment">有目标受众</span>
+        <span class="tag warm fragment">有市场需求洞察</span>
+        <span class="tag warm fragment">有转化工具</span>
+      </div>
+    </div>
+
+    <div class="fragment" style="max-width:700px;">
+      <p class="small ink" style="margin:0 0 0.3em;">同样的事正在发生在软件开发上：</p>
+      <div class="two-col" style="max-width:700px;">
+        <div class="cm-card">
+          <p class="smaller dim" style="margin:0 0 0.2em;">过去稀缺的</p>
+          <p class="smaller" style="margin:0; color:var(--text2); text-decoration:line-through;">写代码的能力</p>
+          <p class="smaller" style="margin:0; color:var(--text2); text-decoration:line-through;">实现功能的速度</p>
+          <p class="smaller" style="margin:0; color:var(--text2); text-decoration:line-through;">技术选型的经验</p>
+        </div>
+        <div class="cm-card warm-border">
+          <p class="smaller warm" style="margin:0 0 0.2em;">现在稀缺的</p>
+          <p class="smaller" style="margin:0; color:var(--ink);">需求识别——知道该做什么</p>
+          <p class="smaller" style="margin:0; color:var(--ink);">数据资产——用户行为和关系</p>
+          <p class="smaller" style="margin:0; color:var(--ink);">资源资产——社群、渠道、信任</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="cm-card fragment" style="max-width:700px; margin-top:0.5em;">
+      <p class="smaller ink" style="margin:0 0 0.2em;">串门儿的例子：</p>
+      <p class="tiny" style="color:var(--text2); line-height:1.7; margin:0;">
+        代码 48K 行，开源了，任何人都可以 fork。<br>
+        但没有人能 fork 走的是：40 个真实成员、29 场已办活动、200+ 张感谢卡、成员之间的互动历史和信任关系。<br>
+        这些是 <code>git clone</code> 克隆不走的。
+      </p>
+    </div>
+
+    <div class="callout fragment" style="max-width:700px; margin-top:0.4em;">
+      <span class="ink bold">需求识别比什么都重要。</span>因为实现已经不是瓶颈了。<br>
+      <span class="smaller dim">壁垒不是代码——是数据资产（用户行为）和资源资产（社群信任）。</span>
+    </div>
+  </section>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 9 — 前端是皮，后端是骨
+     ════════════════════════════════════════════════════════ -->
+<section>
+  <section>
+    <div class="slide-accent"></div>
+    <h2><span class="s-icon warm-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    </span>前端是皮，后端是骨</h2>
+    <p class="small dim">如果迭代成本为零，产品架构会长什么样？</p>
+
+    <div class="two-col" style="max-width:750px; margin-top:0.8em;">
+      <div class="cm-card fragment">
+        <p style="margin:0 0 0.4em;"><span class="ink-light bold">前端 = 皮肤 🎨</span></p>
+        <ul class="disc smaller" style="color:var(--text2); line-height:2;">
+          <li>可以随时变化任何展示形式</li>
+          <li>每个月度企划长得完全不同</li>
+          <li>一次性的、情绪化的、有温度的</li>
+          <li>开发成本趋近于零</li>
+        </ul>
+        <div class="tiny dim" style="margin-top:0.4em;">对白墙是砖墙风，深夜酒馆是霓虹风，私人书架是木质风——无所谓，随便换。</div>
+      </div>
+      <div class="cm-card warm-border fragment">
+        <p style="margin:0 0 0.4em;"><span class="warm bold">后端 = 骨骼 🦴</span></p>
+        <ul class="disc smaller" style="color:var(--text2); line-height:2;">
+          <li>记录谁参与了什么</li>
+          <li>记录谁和谁产生了连接</li>
+          <li>跨越每一个临时前端</li>
+          <li>积累成<span class="warm bold">社区的共同记忆</span></li>
+        </ul>
+        <div class="tiny dim" style="margin-top:0.4em;">今天的对白墙数据，明天的深夜酒馆数据，后天的年度报告——都在同一个后端里。</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3>真正的挑战</h3>
+    <p class="small" style="color:var(--text2);">一次性前端产生的数据，如何保持<span class="warm">一致性</span>和<span class="warm">整合性</span>？</p>
+
+    <div class="cm-card glow" style="max-width:650px; margin:0.8em 0;">
+      <p class="small ink" style="margin:0 0 0.3em;">串门儿正在做的事：</p>
+      <div style="margin:0.5em 0;">
+        <div class="diagram-box">统一的 <code>Submission</code> + <code>Reaction</code> 数据模型</div>
+        <div class="diagram-arrow">↕</div>
+        <div style="display:flex; gap:0.5em;">
+          <div class="diagram-box" style="flex:1;">Color Hunting</div>
+          <div class="diagram-box" style="flex:1;">四月企划</div>
+          <div class="diagram-box" style="flex:1;">五月企划</div>
+          <div class="diagram-box" style="flex:1;">…</div>
+        </div>
+      </div>
+      <p class="tiny dim" style="margin:0.4em 0 0;">不管前端长什么样，后端都用同一套 submission/reaction 接口。数据天然互通。</p>
+    </div>
+
+    <div class="fragment" style="max-width:650px; margin-top:0.5em;">
+      <p class="tiny dim" style="margin:0 0 0.3em;">Color Hunting 的测试代码——后端不关心"樱花粉"是什么颜色：</p>
+      <pre style="margin:0;"><code class="language-typescript" data-trim data-noescape>
+// tests/api/projects.test.ts — 已经在跑的真实测试
+await seedTestProjectSubmission(project.id, user.id,
+  { category: '樱花粉' });
+await seedTestProjectSubmission(project.id, user.id,
+  { category: '天空蓝' });
+// 后端只管：谁提交了、属于哪个分类、多少人点赞
+// 下个月换成音乐漂流瓶，同样的接口，category 变成曲风
+      </code></pre>
+    </div>
+
+    <div class="callout fragment" style="max-width:650px;">
+      未来产品架构：<span class="ink bold">持久后端 + 一次性前端</span><br>
+      <span class="smaller dim">后端是河床，前端是水——水的形状一直在变，但河床在那里。</span>
+    </div>
+  </section>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 10 — 结尾
+     ════════════════════════════════════════════════════════ -->
+<section data-transition="fade">
+  <div class="slide-accent"></div>
+  <h2 style="text-align:center;"><span class="glow-underline">Takeaway</span></h2>
+
+  <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:0.7em; max-width:850px; margin:1em auto;">
+    <div class="takeaway-item fragment">
+      <div class="tk-circle" style="background:linear-gradient(135deg, rgba(107,203,119,0.15), rgba(107,203,119,0.05));">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6BCB77" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div class="tk-title">地基</div>
+      <div class="tk-desc">安全 Playground + CI/CD<br><span style="color:var(--text3);">让 AI 放心试，搞坏了上不了线</span></div>
+    </div>
+    <div class="takeaway-item fragment">
+      <div class="tk-circle" style="background:linear-gradient(135deg, rgba(91,141,239,0.15), rgba(91,141,239,0.05));">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5B8DEF" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <div class="tk-title">心法</div>
+      <div class="tk-desc">工具链越简单越好<br><span style="color:var(--text3);">角色 + 上下文 + 任务 = 够了</span></div>
+    </div>
+    <div class="takeaway-item fragment">
+      <div class="tk-circle" style="background:linear-gradient(135deg, rgba(212,165,116,0.15), rgba(212,165,116,0.05));">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D4A574" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      </div>
+      <div class="tk-title">核心</div>
+      <div class="tk-desc">需求识别比实现重要<br><span style="color:var(--text3);">壁垒是数据和资源，不是代码</span></div>
+    </div>
+    <div class="takeaway-item fragment">
+      <div class="tk-circle" style="background:linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05));">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="tk-title">未来</div>
+      <div class="tk-desc">持久后端 + 一次性前端<br><span style="color:var(--text3);">后端是河床，前端是水</span></div>
+    </div>
+  </div>
+
+  <div class="fragment" style="text-align:center; margin-top:2em;">
+    <div class="sep" style="margin:0 auto 0.8em;"></div>
+    <p style="font-size:0.85em; color:var(--ink-light); font-family:Georgia,'Noto Serif SC',serif;">
+      串门儿 · <span class="warm mono">chuanmener.club</span>
+    </p>
+    <p class="tiny dim" style="margin-top:0.3em;">
+      交个真正的朋友。
+    </p>
+  </div>
+</section>
+
+</div><!-- .slides -->
+</div><!-- .reveal -->
+
+<script src="https://unpkg.com/reveal.js@4.6.1/dist/reveal.js"></script>
+<script src="https://unpkg.com/reveal.js@4.6.1/plugin/highlight/highlight.js"></script>
+<script>
+Reveal.initialize({
+  hash: true,
+  transition: 'slide',
+  transitionSpeed: 'default',
+  backgroundTransition: 'fade',
+  center: true,
+  width: 1100,
+  height: 700,
+  margin: 0.04,
+  plugins: [RevealHighlight],
+});
+</script>
+</body>
+</html>

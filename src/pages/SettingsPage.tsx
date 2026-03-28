@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Alert,
@@ -24,6 +24,8 @@ import {
 } from '@mui/material';
 import { useAuth } from '@/auth/AuthContext';
 import { ImageUpload } from '@/components/ImageUpload';
+import { type RichTextEditorHandle } from '@/components/RichTextEditor';
+const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 import { updateUserSettings, fetchPostcardsApi, fetchTitleRules, fetchMembersWithTitles } from '@/lib/domainApi';
 import type { AuthUser } from '@/types/auth';
 
@@ -39,6 +41,9 @@ export default function SettingsPage() {
   const [bio, setBio] = useState(user?.bio ?? '');
   const [selfAsFriend, setSelfAsFriend] = useState(user?.selfAsFriend ?? '');
   const [idealFriend, setIdealFriend] = useState(user?.idealFriend ?? '');
+  const bioRef = useRef<RichTextEditorHandle>(null);
+  const selfRef = useRef<RichTextEditorHandle>(null);
+  const idealRef = useRef<RichTextEditorHandle>(null);
   const [participationPlan, setParticipationPlan] = useState<string[]>(
     user?.participationPlan ? user.participationPlan.split(', ').filter(Boolean) : [],
   );
@@ -133,9 +138,9 @@ export default function SettingsPage() {
         city: city || undefined,
         state: state || undefined,
         zipCode: zipCode || undefined,
-        bio: bio || undefined,
-        selfAsFriend: selfAsFriend || undefined,
-        idealFriend: idealFriend || undefined,
+        bio: (bioRef.current?.getHTML() ?? bio) || undefined,
+        selfAsFriend: (selfRef.current?.getHTML() ?? selfAsFriend) || undefined,
+        idealFriend: (idealRef.current?.getHTML() ?? idealFriend) || undefined,
         participationPlan: participationPlan.length > 0 ? participationPlan.join(', ') : undefined,
         email: email || undefined,
         defaultHouseRules: defaultHouseRules || undefined,
@@ -221,9 +226,24 @@ export default function SettingsPage() {
               autoComplete="street-address"
               helperText="仅在你作为 Host 发起在家活动时，向报名成功的参与者公开"
             />
-            <TextField label="自我介绍" multiline minRows={2} value={bio} onChange={(e) => setBio(e.target.value)} />
-            <TextField label="你觉得自己是一个什么样的朋友？" multiline minRows={2} value={selfAsFriend} onChange={(e) => setSelfAsFriend(e.target.value)} />
-            <TextField label="你最好的朋友是什么样子的？" multiline minRows={2} value={idealFriend} onChange={(e) => setIdealFriend(e.target.value)} />
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>自我介绍</Typography>
+              <Suspense fallback={<TextField multiline minRows={2} value={bio} onChange={(e) => setBio(e.target.value)} fullWidth />}>
+                <RichTextEditorLazy content={bio} onChange={setBio} editorRef={bioRef} compact />
+              </Suspense>
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>你觉得自己是一个什么样的朋友？</Typography>
+              <Suspense fallback={<TextField multiline minRows={2} value={selfAsFriend} onChange={(e) => setSelfAsFriend(e.target.value)} fullWidth />}>
+                <RichTextEditorLazy content={selfAsFriend} onChange={setSelfAsFriend} editorRef={selfRef} compact />
+              </Suspense>
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>你最好的朋友是什么样子的？</Typography>
+              <Suspense fallback={<TextField multiline minRows={2} value={idealFriend} onChange={(e) => setIdealFriend(e.target.value)} fullWidth />}>
+                <RichTextEditorLazy content={idealFriend} onChange={setIdealFriend} editorRef={idealRef} compact />
+              </Suspense>
+            </Box>
             <FormControl>
               <FormLabel sx={{ fontWeight: 600, mb: 0.5 }}>你可能会怎样参与串门儿？</FormLabel>
               <FormGroup>

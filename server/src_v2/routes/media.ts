@@ -2,12 +2,13 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createUploadUrl, createDownloadUrl, deleteObject, uploadObject, s3Configured } from '../services/s3Service.js';
+import { createUploadUrl, createDownloadUrl, deleteObject, uploadObject, getObject, s3Configured } from '../services/s3Service.js';
+import { compressImage, compressAvatar, generateThumbnail } from '../services/imageCompression.js';
 
 /* ────────── helpers ────────── */
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 /**
  * Normalize mobile browser content types to standard MIME types.
@@ -92,7 +93,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.badRequest(`不支持的文件类型: ${payload.contentType}。允许: ${ALLOWED_IMAGE_TYPES.join(', ')}`);
     }
     if (payload.fileSize > MAX_FILE_SIZE) {
-      return reply.badRequest(`文件过大 (${(payload.fileSize / 1024 / 1024).toFixed(1)} MB)。最大: 10 MB`);
+      return reply.badRequest(`文件过大 (${(payload.fileSize / 1024 / 1024).toFixed(1)} MB)。最大: 20 MB`);
     }
 
     const key = buildKey(payload.category, payload.ownerId, payload.contentType);
@@ -148,16 +149,54 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.badRequest(`不支持的文件类型: ${rawType}。允许: ${ALLOWED_IMAGE_TYPES.join(', ')}, image/heic, image/heif`);
     }
     if (fileSize > MAX_FILE_SIZE) {
-      return reply.badRequest(`文件过大 (${(fileSize / 1024 / 1024).toFixed(1)} MB)。最大: 10 MB`);
+      return reply.badRequest(`文件过大 (${(fileSize / 1024 / 1024).toFixed(1)} MB)。最大: 20 MB`);
     }
 
-    const body = request.body as Buffer;
+    let body = request.body as Buffer;
     if (!body || !Buffer.isBuffer(body) || body.length === 0) {
       return reply.badRequest('请求体为空');
     }
 
-    const key = buildKey(category, ownerId, contentType);
-    const { publicUrl } = await uploadObject(key, body, contentType);
+    const originalBody = body; // keep original for thumbnail generation
+    let finalContentType = contentType;
+
+    // Compress image via sharp (graceful fallback: upload original if compression fails)
+    try {
+      if (category === 'avatar') {
+        const compressed = await compressAvatar(body);
+        body = compressed.buffer;
+        finalContentType = compressed.contentType;
+      } else {
+        const compressed = await compressImage(body, contentType);
+        body = compressed.buffer;
+        finalContentType = compressed.contentType;
+      }
+    } catch (err) {
+      // sharp failed — log and upload original file as-is
+      request.log.warn({ err, contentType, category, bodyLen: body.length }, 'Image compression failed, uploading original');
+      // If content type is still octet-stream, default to jpeg for S3
+      if (finalContentType === 'application/octet-stream') {
+        finalContentType = 'image/jpeg';
+      }
+    }
+
+    const key = buildKey(category, ownerId, finalContentType);
+    const { publicUrl } = await uploadObject(key, body, finalContentType);
+
+    // Generate thumbnail from ORIGINAL buffer (skip if thumb would be larger)
+    let thumbnailUrl: string | undefined;
+    if (category === 'event-recap') {
+      try {
+        const thumb = await generateThumbnail(originalBody);
+        if (thumb) {
+          const thumbKey = key.replace(/(\.\w+)$/, '_thumb$1');
+          const thumbResult = await uploadObject(thumbKey, thumb.buffer, thumb.contentType);
+          thumbnailUrl = thumbResult.publicUrl;
+        }
+      } catch (err) {
+        request.log.warn({ err, category }, 'Thumbnail generation failed, skipping');
+      }
+    }
 
     // Validate ownerId exists before setting FK (walkthrough/demo users may not exist)
     let validOwnerId = ownerId;
@@ -170,14 +209,14 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       data: {
         key,
         ownerId: validOwnerId,
-        contentType,
+        contentType: finalContentType,
         fileSize: body.length,
         status: 'uploaded',
         url: publicUrl,
       },
     });
 
-    return reply.send({ publicUrl, asset });
+    return reply.send({ publicUrl, thumbnailUrl, asset });
   });
 
   /**
@@ -188,10 +227,35 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
   app.get('/s3/*', async (request, reply) => {
     const key = (request.params as { '*': string })['*'];
     if (!key) return reply.badRequest('Missing S3 key');
+
+    // Avatars: serve directly with long cache headers for CDN caching
+    if (key.startsWith('avatars/')) {
+      try {
+        const obj = await getObject(key);
+        return reply
+          .header('content-type', obj.contentType)
+          .header('cache-control', 'public, max-age=604800, s-maxage=604800')
+          .send(obj.buffer);
+      } catch (err: any) {
+        request.log.error({ err, key }, 'Failed to fetch avatar from S3');
+        return reply.code(404).send({ message: 'Media not found' });
+      }
+    }
+
     try {
       const url = await createDownloadUrl(key);
       return reply.redirect(url);
     } catch (err: any) {
+      // Thumbnail fallback: if _thumb key not found, try original
+      if (key.includes('_thumb')) {
+        const originalKey = key.replace('_thumb', '');
+        try {
+          const url = await createDownloadUrl(originalKey);
+          return reply.redirect(url);
+        } catch {
+          // fall through to 404
+        }
+      }
       request.log.error({ err, key }, 'Failed to presign S3 download URL');
       return reply.code(404).send({ message: 'Media not found' });
     }

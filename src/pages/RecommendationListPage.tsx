@@ -24,7 +24,7 @@ const categoryMap: Record<RecommendationCategory, { title: string; icon: string 
   recipe: { title: '菜谱推荐', icon: '🍜' },
   music: { title: '音乐推荐', icon: '🎵' },
   place: { title: '好店推荐', icon: '📍' },
-  external_event: { title: '演出和其他', icon: '🎭' },
+  external_event: { title: '演出与展览', icon: '🎭' },
 };
 
 function isCategory(value: string | undefined): value is RecommendationCategory {
@@ -124,8 +124,14 @@ export default function RecommendationListPage() {
                     )}
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography fontWeight={700}>{title}</Typography>
+                      {currentCategory === 'external_event' && item.eventDate != null && (
+                        <Typography variant="body2" sx={{ mt: 0.25, color: 'warning.main', fontSize: 12 }}>
+                          {'📅 '}{new Date(String(item.eventDate)).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
+                          {item.eventEndDate != null ? ` — ${new Date(String(item.eventEndDate)).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}` : ''}
+                        </Typography>
+                      )}
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {String(item.description ?? '')}
+                        {String(item.description ?? '').replace(/<[^>]*>/g, '')}
                       </Typography>
                     </Box>
                   </Stack>

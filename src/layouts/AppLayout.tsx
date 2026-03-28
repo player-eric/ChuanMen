@@ -24,6 +24,7 @@ import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import EventRoundedIcon from '@mui/icons-material/EventRounded';
 import ThumbUpRoundedIcon from '@mui/icons-material/ThumbUpRounded';
 import MailRoundedIcon from '@mui/icons-material/MailRounded';
+import RateReviewRoundedIcon from '@mui/icons-material/RateReviewRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
@@ -70,7 +71,7 @@ function getTitle(pathname: string): string {
   if (pathname === '/discover/recipe/add') return '添加菜谱';
   if (pathname === '/discover/music/add') return '添加音乐';
   if (pathname === '/discover/place/add') return '添加好店';
-  if (pathname === '/discover/external_event/add') return '添加演出';
+  if (pathname === '/discover/external_event/add') return '添加演出/展览';
   if (pathname.startsWith('/discover/movies/')) return '电影详情';
   if (pathname.startsWith('/discover/books/')) return '图书详情';
   if (/^\/discover\/(book|recipe|music|place|external_event)\/.+/.test(pathname) && !pathname.endsWith('/add')) return '推荐详情';
@@ -192,6 +193,12 @@ export default function AppLayout() {
           <ListItemIcon><InfoOutlinedIcon /></ListItemIcon>
           <ListItemText primary="关于串门儿" />
         </ListItemButton>
+        {user && (
+          <ListItemButton onClick={() => { setDrawerOpen(false); setFeedbackOpen(true); }}>
+            <ListItemIcon><RateReviewRoundedIcon /></ListItemIcon>
+            <ListItemText primary="反馈 & 建议" />
+          </ListItemButton>
+        )}
       </List>
       <Divider />
 
@@ -212,10 +219,6 @@ export default function AppLayout() {
           </List>
           <Divider />
           <List>
-            <ListItemButton onClick={() => { setDrawerOpen(false); setFeedbackOpen(true); }}>
-              <ListItemIcon><MailRoundedIcon /></ListItemIcon>
-              <ListItemText primary="联系管理员" />
-            </ListItemButton>
             <ListItemButton onClick={() => { setDrawerOpen(false); setUser(null); navigate('/'); }}>
               <ListItemIcon><LogoutRoundedIcon /></ListItemIcon>
               <ListItemText primary="退出登录" />
@@ -236,7 +239,7 @@ export default function AppLayout() {
         inset: 0,
         pointerEvents: 'none',
         zIndex: 9999,
-        opacity: mode === 'dark' ? 0.12 : 0.18,
+        opacity: mode === 'dark' ? 0.12 : 0.06,
         backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
         backgroundRepeat: 'repeat',
         backgroundSize: '200px 200px',
@@ -284,6 +287,12 @@ export default function AppLayout() {
                 <ListItemIcon><InfoOutlinedIcon /></ListItemIcon>
                 <ListItemText primary="关于串门儿" />
               </ListItemButton>
+              {user && (
+                <ListItemButton onClick={() => setFeedbackOpen(true)}>
+                  <ListItemIcon><RateReviewRoundedIcon /></ListItemIcon>
+                  <ListItemText primary="反馈 & 建议" />
+                </ListItemButton>
+              )}
               {user && (
                 <ListItemButton selected={pathname === '/settings'} onClick={() => navigate('/settings')}>
                   <ListItemIcon><SettingsRoundedIcon /></ListItemIcon>
@@ -335,6 +344,24 @@ export default function AppLayout() {
               >
                 {title}
               </Typography>
+              {import.meta.env.VITE_APP_ENV === 'dev' && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    ml: 1,
+                    px: 0.8,
+                    py: 0.2,
+                    borderRadius: 1,
+                    bgcolor: 'warning.main',
+                    color: 'warning.contrastText',
+                    fontWeight: 700,
+                    fontSize: '0.65rem',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  DEV
+                </Typography>
+              )}
             </Stack>
             <Box id="presence-slot" sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end', mx: 1 }} />
             <Stack direction="row" spacing={1} alignItems="center">

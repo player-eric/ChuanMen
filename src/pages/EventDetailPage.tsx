@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLoaderData, useNavigate, useParams } from 'react-router';
-import { firstNonEmoji } from '@/components/Atoms';
+import { Ava, firstNonEmoji } from '@/components/Atoms';
 import {
   Avatar,
   Box,
@@ -34,7 +34,7 @@ import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EditIcon from '@mui/icons-material/Edit';
 import ImageIcon from '@mui/icons-material/Image';
 import type { EventData, EventPhoto, EventTaskData, FoodOption, SignupStatus, TaskRole } from '@/types';
-import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, approveApplication, rejectApplication, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask, addCoHost, removeCoHost, toggleMovieVote, toggleRecommendationVote, getEventExclusions, setEventExclusions } from '@/lib/domainApi';
+import { getEventById, signupEvent, cancelSignup, inviteToEvent, uploadMedia, addEventRecapPhoto, removeEventRecapPhoto, deleteMediaAsset, fetchMembersApi, fetchMoviesApi, fetchRecommendationsApi, linkEventRecommendation, linkEventMovie, unlinkEventRecommendation, unlinkEventMovie, selectEventRecommendation, updateEvent, removeParticipant, acceptOffer, declineOffer, hostApproveWaitlist, hostRejectWaitlist, approveApplication, rejectApplication, fetchEventTasks, claimEventTask, unclaimEventTask, volunteerEventTask, createEventTasks, deleteEventTask, addCoHost, removeCoHost, toggleMovieVote, toggleRecommendationVote, getEventExclusions, setEventExclusions, thumbnailUrl } from '@/lib/domainApi';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import CommentSection from '@/components/CommentSection';
 import { useAuth } from '@/auth/AuthContext';
@@ -180,6 +180,7 @@ export default function EventDetailPage() {
   const [assignTaskId, setAssignTaskId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<EventPhoto[]>(loadedEvent?.photos ?? []);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const [showOriginal, setShowOriginal] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadPreviews, setUploadPreviews] = useState<{ file: File; preview: string; caption: string }[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -490,6 +491,7 @@ export default function EventDetailPage() {
       const signupDetails = signups.map((s: any) => ({
         userId: s.user?.id ?? s.userId,
         name: s.user?.name ?? '?',
+        avatar: s.user?.avatar ?? undefined,
         status: s.status,
         offeredAt: s.offeredAt ?? undefined,
         note: s.note || undefined,
@@ -535,10 +537,10 @@ export default function EventDetailPage() {
   const isAdmin = user?.role === 'admin';
 
   /** Convert a photo URL to a CSS background value — handles both gradient strings and real URLs */
-  const photoBg = (url: string) =>
+  const photoBg = (url: string, useThumb = false) =>
     url.startsWith('linear-gradient') || url.startsWith('radial-gradient')
       ? url
-      : `url(${url}) center/cover no-repeat`;
+      : `url(${useThumb ? thumbnailUrl(url) : url}) center/cover no-repeat`;
 
   return (
     <Box sx={{ maxWidth: isImageUrl(event.scene) ? 800 : 680, mx: 'auto' }}>
@@ -821,7 +823,8 @@ export default function EventDetailPage() {
                         const eventTag = resolveEventTag(event.scene, (event as any).tags);
                         const recs = event.linkedRecommendations ?? [];
                         const primaryRec = recs.find((r) => r.isSelected) ?? recs.find((r) => r.coverUrl) ?? recs[0];
-                        const coverImageUrl = primaryRec?.coverUrl || event.filmPoster || (isImageUrl(event.scene) ? event.scene : undefined);
+                        const eventCover = isImageUrl(event.scene) ? event.scene : undefined;
+                        const coverImageUrl = eventCover || primaryRec?.coverUrl || event.filmPoster;
                         const isMovie = eventTag === 'movie';
                         const movieRec = isMovie ? (recs.find((r) => r.category === 'movie') ?? primaryRec) : undefined;
                         const blob = await generateEventPoster({
@@ -863,7 +866,8 @@ export default function EventDetailPage() {
                       const eventTag = resolveEventTag(event.scene, (event as any).tags);
                       const recs = event.linkedRecommendations ?? [];
                       const primaryRec = recs.find((r) => r.isSelected) ?? recs.find((r) => r.coverUrl) ?? recs[0];
-                      const coverImageUrl = primaryRec?.coverUrl || event.filmPoster || (isImageUrl(event.scene) ? event.scene : undefined);
+                      const eventCover = isImageUrl(event.scene) ? event.scene : undefined;
+                      const coverImageUrl = eventCover || primaryRec?.coverUrl || event.filmPoster;
                       const isMovie = eventTag === 'movie';
                       const movieRec = isMovie ? (recs.find((r) => r.category === 'movie') ?? primaryRec) : undefined;
                       const blob = await generateEventPoster({
@@ -1008,7 +1012,7 @@ export default function EventDetailPage() {
               if (!showSection) return null;
 
               const catIcon: Record<string, string> = { movie: '🍿', book: '📚', recipe: '🍳', place: '📍', music: '🎵', external_event: '🎭' };
-              const catLabel: Record<string, string> = { movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' };
+              const catLabel: Record<string, string> = { movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出/展览' };
 
               // Determine which categories to show: configured cats, or unique cats from linked recs
               const displayCats = cats.length > 0 ? cats : [...new Set(recs.map((r) => r.category))];
@@ -1164,7 +1168,7 @@ export default function EventDetailPage() {
                           { key: 'recipe', label: '🍳 食谱' },
                           { key: 'place', label: '📍 地方' },
                           { key: 'music', label: '🎵 音乐' },
-                          { key: 'external_event', label: '🎭 演出' },
+                          { key: 'external_event', label: '🎭 演出与展览' },
                         ].map((cat) => (
                           <Chip key={cat.key} label={cat.label} size="small" variant="outlined" clickable
                             onClick={() => { setRecCategory(cat.key); setRecLinkOpen(true); }} />
@@ -1180,7 +1184,7 @@ export default function EventDetailPage() {
 
         {/* Link/Nominate Recommendation dialog */}
         <Dialog open={recLinkOpen} onClose={() => { setRecLinkOpen(false); setRecSearch(''); setRecCategory('all'); }} maxWidth="xs" fullWidth>
-          <DialogTitle>{(event.recSelectionMode === 'nominate') ? '提名推荐' : '关联推荐'}{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出' }[recCategory] ?? ''}` : ''}</DialogTitle>
+          <DialogTitle>{(event.recSelectionMode === 'nominate') ? '提名推荐' : '关联推荐'}{recCategory !== 'all' ? ` · ${{ movie: '电影', book: '书', recipe: '食谱', place: '地方', music: '音乐', external_event: '演出/展览' }[recCategory] ?? ''}` : ''}</DialogTitle>
           <DialogContent>
             <TextField
               size="small"
@@ -1200,7 +1204,7 @@ export default function EventDetailPage() {
                 if (rq && !(r.title ?? '').toLowerCase().includes(rq) && !(r.description ?? '').toLowerCase().includes(rq)) return false;
                 return true;
               });
-              const categoryLabel: Record<string, string> = { book: '书', recipe: '食谱', place: '地方', movie: '电影', music: '音乐', external_event: '演出' };
+              const categoryLabel: Record<string, string> = { book: '书', recipe: '食谱', place: '地方', movie: '电影', music: '音乐', external_event: '演出/展览' };
               return filtered.length > 0 ? (
                 <Stack spacing={1}>
                   {filtered.slice(0, 20).map((r: any) => (
@@ -1209,20 +1213,30 @@ export default function EventDetailPage() {
                         if (!eventId) return;
                         const isNom = event.recSelectionMode === 'nominate';
                         const isMovie = r._fromMovieTable;
+                        const autoSelect = !isNom && !isMovie;
                         try {
                           if (isMovie) {
                             await linkEventMovie(eventId, r.id);
                           } else {
                             await linkEventRecommendation(eventId, r.id, user?.id, isNom);
                           }
+                          // Auto-select when mode is "直接选定" (not nominate)
+                          if (autoSelect) {
+                            await selectEventRecommendation(eventId, r.id);
+                          }
                           setEvent((prev) => {
                             if (!prev) return prev;
-                            const linked = [...(prev.linkedRecommendations ?? []), {
+                            // If auto-selecting, deselect other recs of same category first
+                            let existing = prev.linkedRecommendations ?? [];
+                            if (autoSelect) {
+                              existing = existing.map((lr) => lr.category === r.category ? { ...lr, isSelected: false } : lr);
+                            }
+                            const linked = [...existing, {
                               id: r.id, title: r.title, category: r.category,
                               linkedById: isMovie ? undefined : user?.id,
                               linkedByName: isMovie ? undefined : user?.name,
-                              isSelected: false, isNomination: isNom,
-                              globalVotes: r.voteCount ?? 0, attendeeVotes: 0, attendeeTotal: 0,
+                              isSelected: autoSelect, isNomination: isNom,
+                              globalVotes: r._count?.votes ?? r.voteCount ?? 0, attendeeVotes: 0, attendeeTotal: 0,
                               _fromMovieTable: isMovie || undefined,
                             }];
                             return { ...prev, linkedRecommendations: linked };
@@ -1230,7 +1244,7 @@ export default function EventDetailPage() {
                           setRecLinkOpen(false);
                           setRecSearch('');
                           setRecCategory('all');
-                          setFlash({ open: true, severity: 'success', message: isNom ? `已提名「${r.title}」` : `已关联「${r.title}」` });
+                          setFlash({ open: true, severity: 'success', message: autoSelect ? `已选定「${r.title}」` : isNom ? `已提名「${r.title}」` : `已关联「${r.title}」` });
                         } catch {
                           setFlash({ open: true, severity: 'error', message: '操作失败' });
                         }
@@ -1445,12 +1459,7 @@ export default function EventDetailPage() {
                       </Typography>
                       {invitedPeople.map((s) => (
                         <Stack key={s.userId} direction="row" alignItems="center" spacing={1}>
-                          <Avatar
-                            sx={{ cursor: 'pointer', width: 30, height: 30, opacity: 0.6 }}
-                            onClick={() => navigate(`/members/${encodeURIComponent(s.name)}`)}
-                          >
-                            {firstNonEmoji(s.name)}
-                          </Avatar>
+                          <Ava name={s.name} src={s.avatar} size={30} onTap={() => navigate(`/members/${encodeURIComponent(s.name)}`)} />
                           <Typography variant="body2" sx={{ flex: 1, opacity: 0.6 }}>{s.name}</Typography>
                           <Chip size="small" label="待接受" variant="outlined" sx={{ opacity: 0.6 }} />
                           <IconButton
@@ -1589,7 +1598,7 @@ export default function EventDetailPage() {
                     const mins = Math.floor((remaining % 3600000) / 60000);
                     return (
                       <Stack key={s.userId} direction="row" alignItems="center" spacing={1}>
-                        <Avatar sx={{ width: 30, height: 30 }}>{firstNonEmoji(s.name)}</Avatar>
+                        <Ava name={s.name} src={s.avatar} size={30} />
                         <Typography variant="body2" sx={{ flex: 1 }}>{s.name}</Typography>
                         <Chip size="small" color="warning" label={`已递补 · 剩余${hours}:${String(mins).padStart(2, '0')}`} />
                       </Stack>
@@ -1597,7 +1606,7 @@ export default function EventDetailPage() {
                   })}
                   {waitlistPeople.map((s) => (
                     <Stack key={s.userId} direction="row" alignItems="center" spacing={1}>
-                      <Avatar sx={{ width: 30, height: 30 }}>{firstNonEmoji(s.name)}</Avatar>
+                      <Ava name={s.name} src={s.avatar} size={30} />
                       <Typography variant="body2" sx={{ flex: 1 }}>{s.name}</Typography>
                       <Chip size="small" variant="outlined" label="等位中" />
                       <Button
@@ -1656,7 +1665,7 @@ export default function EventDetailPage() {
                   {pendingPeople.map((s) => (
                     <Stack key={s.userId} spacing={0.5}>
                       <Stack direction="row" alignItems="center" spacing={1}>
-                        <Avatar sx={{ width: 30, height: 30 }}>{firstNonEmoji(s.name)}</Avatar>
+                        <Ava name={s.name} src={s.avatar} size={30} />
                         <Typography variant="body2" sx={{ flex: 1 }}>{s.name}</Typography>
                         <Button
                           size="small"
@@ -2018,7 +2027,7 @@ export default function EventDetailPage() {
                       borderRadius: 1,
                       overflow: 'hidden',
                       cursor: 'pointer',
-                      background: photoBg(photo.url),
+                      background: photoBg(photo.url, true),
                       filter: 'saturate(0.85) contrast(1.05)',
                       transition: 'transform 0.15s',
                       '&:hover': { transform: 'scale(1.03)' },
@@ -2089,7 +2098,7 @@ export default function EventDetailPage() {
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', px: 6 }}>
                   {lightboxIndex > 0 && (
                     <IconButton
-                      onClick={() => setLightboxIndex((i) => i - 1)}
+                      onClick={() => { setLightboxIndex((i) => i - 1); setShowOriginal(false); }}
                       sx={{ position: 'absolute', left: 8, color: '#fff' }}
                     >
                       <ArrowBackIosNewIcon />
@@ -2097,7 +2106,7 @@ export default function EventDetailPage() {
                   )}
                     <Box
                     component="img"
-                    src={photo.url.startsWith('linear-gradient') || photo.url.startsWith('radial-gradient') ? undefined : photo.url}
+                    src={photo.url.startsWith('linear-gradient') || photo.url.startsWith('radial-gradient') ? undefined : (showOriginal ? photo.url : thumbnailUrl(photo.url))}
                     alt={photo.caption || '照片'}
                     sx={{
                       maxWidth: '90%',
@@ -2109,7 +2118,7 @@ export default function EventDetailPage() {
                   />
                   {lightboxIndex < photos.length - 1 && (
                     <IconButton
-                      onClick={() => setLightboxIndex((i) => i + 1)}
+                      onClick={() => { setLightboxIndex((i) => i + 1); setShowOriginal(false); }}
                       sx={{ position: 'absolute', right: 8, color: '#fff' }}
                     >
                       <ArrowForwardIosIcon />
@@ -2125,6 +2134,20 @@ export default function EventDetailPage() {
                   <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
                     {photo.uploadedBy} · {photo.createdAt}
                   </Typography>
+                  {!showOriginal && !photo.url.startsWith('linear-gradient') && !photo.url.startsWith('radial-gradient') && (
+                    <Button
+                      size="small"
+                      onClick={() => setShowOriginal(true)}
+                      sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5, fontSize: '0.75rem' }}
+                    >
+                      查看原图
+                    </Button>
+                  )}
+                  {showOriginal && (
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mt: 0.5, display: 'block' }}>
+                      已加载原图
+                    </Typography>
+                  )}
                 </Box>
               </Box>
             );

@@ -276,7 +276,7 @@ export default function EventsPage() {
                 <div style={{ padding: '10px 14px' }}>
                   {/* Author + time */}
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
-                    <Ava name={proposal.name} size={24} onTap={() => goMember(proposal.name)} />
+                    <Ava name={proposal.name} src={proposal.avatar} size={24} onTap={() => goMember(proposal.name)} />
                     <b onClick={(e) => { e.stopPropagation(); goMember(proposal.name); }} style={{ cursor: 'pointer', fontSize: 13 }}>{proposal.name}</b>
                     <span style={{ fontSize: 12, color: c.text3 }}>· {proposal.time}</span>
                   </div>

@@ -11,7 +11,10 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
   // Admin: list users with detail counts (host count, event count, operator roles)
   app.get('/admin/list', async () => service.listUsersDetailed());
 
-  app.get('/', async () => service.listUsers());
+  app.get('/', async (request) => {
+    const viewerId = (request.headers['x-user-id'] as string) || '';
+    return service.listUsers(viewerId || undefined);
+  });
 
   // Search approved users by name (for @mention autocomplete)
   app.get('/search', async (request) => {

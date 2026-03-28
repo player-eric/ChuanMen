@@ -45,6 +45,7 @@ export type SignupStatus = 'invited' | 'offered' | 'accepted' | 'waitlist' | 'pe
 export interface SignupInfo {
   userId: string;
   name: string;
+  avatar?: string;
   status: SignupStatus;
   offeredAt?: string;
   note?: string;
@@ -122,6 +123,7 @@ export interface PastEvent {
 export interface Proposal {
   id: string;
   name: string;
+  avatar?: string;
   authorId?: string;
   title: string;
   description?: string;
@@ -145,6 +147,7 @@ export interface MoviePool {
   status?: string;
   by: string;
   poster?: string;
+  commentCount?: number;
 }
 
 export interface MovieScreened {
@@ -166,6 +169,7 @@ export interface BookPool {
   status?: string;
   by: string;
   coverUrl?: string;
+  commentCount?: number;
 }
 
 export interface BookRead {
@@ -184,12 +188,13 @@ export interface BookDetailData {
   v: number;
   voterIds: string[];
   by: string;
+  byAvatar?: string;
   status?: string;
   genre?: string;
   pages?: string;
   rating?: string;
   synopsis?: string;
-  voters: string[];
+  voters: (string | { name: string; avatar?: string })[];
   discussions: { date: string; host: string; eventTitle: string; eventId?: string }[];
   comments: { name: string; text: string; date: string }[];
 }
@@ -219,6 +224,7 @@ export interface Collaborator {
 // Feed comment (shared shape with EventComment / MovieDetailData.comments)
 export interface FeedComment {
   name: string;
+  avatar?: string;
   text: string;
   date: string;
 }
@@ -471,9 +477,12 @@ export interface RecommendationItem {
   authorId: string;
   coverUrl?: string;
   sourceUrl?: string;
+  eventDate?: string;
+  eventEndDate?: string;
   voteCount: number;
   voterIds: string[];
   category: string;
+  commentCount?: number;
 }
 
 export interface DiscoverPageData {

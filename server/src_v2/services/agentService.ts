@@ -11,6 +11,7 @@ import {
   sendConsecutiveEventsReminder,
   sendSameDayReminder,
   sendFirstEventFollowup,
+  sendNewEventNotif,
   sendOnboardingCheckin,
   sendSecondRecall,
   sendMilestoneNotif,
@@ -455,14 +456,14 @@ export async function runAgentCycle(app: FastifyInstance) {
     log.error({ err }, 'Agent: sendDailyDigest failed');
   }
 
-  // P4-A: Milestone notification (uses milestones from Phase 1)
-  if (milestones.length > 0) {
-    try {
-      await sendMilestoneNotif(prisma, log, milestones);
-    } catch (err) {
-      log.error({ err }, 'Agent: sendMilestoneNotif failed');
-    }
-  }
+  // P4-A: Milestone notification — disabled, included in daily digest (announcements section) instead
+  // if (milestones.length > 0) {
+  //   try {
+  //     await sendMilestoneNotif(prisma, log, milestones);
+  //   } catch (err) {
+  //     log.error({ err }, 'Agent: sendMilestoneNotif failed');
+  //   }
+  // }
 
   // P4-C: Host tribute notification (uses tribute from Phase 1)
   if (tribute) {

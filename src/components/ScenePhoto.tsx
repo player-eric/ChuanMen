@@ -204,7 +204,7 @@ export function ScenePhoto({ scene = 'movieNight', h = 190, children, style = {}
   if (isImageUrl(scene)) {
     return (
       <div style={{ width: '100%', height: h, borderRadius: 8, background: isDark ? '#1a1225' : '#e8e0d4', position: 'relative', overflow: 'hidden', ...style }}>
-        <img src={scene} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: `blur(20px) brightness(${isDark ? 0.4 : 0.85})`, transform: 'scale(1.1)' }} />
+        <img src={scene} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: `blur(20px) brightness(${isDark ? 0.4 : 1.1}) saturate(${isDark ? 1 : 0.6})`, transform: 'scale(1.1)' }} />
         <img src={scene} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit }} />
         {children}
       </div>

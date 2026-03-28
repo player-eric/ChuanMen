@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { USER_BRIEF_SELECT } from '../utils/prisma-selects.js';
 /**
  * GET /api/profile?userId=xxx  OR  ?name=xxx
  * Optional: viewerId (via query or x-user-id header) for mutual computation
@@ -34,6 +35,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
       votedMovies,
       upcomingEvents,
       pastEvents,
+      userRecommendations,
       galleryEvents,
     ] = await Promise.all([
       // Events user hosted (as host or co-host)
@@ -73,7 +75,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         orderBy: { createdAt: 'desc' },
         take: 10,
         include: {
-          to: { select: { id: true, name: true, avatar: true } },
+          to: { select: USER_BRIEF_SELECT },
           tags: true,
         },
       }),
@@ -93,7 +95,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         orderBy: { createdAt: 'desc' },
         take: 10,
         include: {
-          from: { select: { id: true, name: true, avatar: true } },
+          from: { select: USER_BRIEF_SELECT },
           tags: true,
         },
       }),
@@ -112,7 +114,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         include: {
           movie: {
             include: {
-              recommendedBy: { select: { id: true, name: true } },
+              recommendedBy: { select: USER_BRIEF_SELECT },
               _count: { select: { votes: true } },
             },
           },
@@ -136,7 +138,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         orderBy: { startsAt: 'asc' },
         take: 10,
         include: {
-          host: { select: { id: true, name: true } },
+          host: { select: USER_BRIEF_SELECT },
           coHosts: { select: { userId: true } },
         },
       }),
@@ -160,10 +162,18 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           hostId: true,
           tags: true,
           status: true,
-          host: { select: { id: true, name: true } },
+          host: { select: USER_BRIEF_SELECT },
           coHosts: { select: { userId: true } },
           recapPhotoUrls: true,
         },
+      }),
+
+      // Recommendations by this user
+      prisma.recommendation.findMany({
+        where: { authorId: targetId },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+        include: { _count: { select: { votes: true } } },
       }),
 
       // Events with photos that user participated in (hide events viewer is excluded from)
@@ -191,8 +201,9 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
     // Mutual computation (when viewing someone else's profile)
     let mutual = undefined;
     if (viewerId && !isOwnProfile) {
-      const [viewerSignups, viewerVotes, viewerRecVotes, targetRecVotes, mutualCardsSent, mutualCardsReceived] = await Promise.all([
+      const [viewerSignups, viewerHosted, viewerVotes, viewerRecVotes, targetRecVotes, mutualCardsSent, mutualCardsReceived] = await Promise.all([
         prisma.eventSignup.findMany({ where: { userId: viewerId, status: 'accepted' }, select: { eventId: true } }),
+        prisma.event.findMany({ where: { hostId: viewerId }, select: { id: true } }),
         prisma.movieVote.findMany({ where: { userId: viewerId }, select: { movieId: true } }),
         prisma.recommendationVote.findMany({ where: { userId: viewerId }, select: { recommendationId: true } }),
         prisma.recommendationVote.findMany({
@@ -203,7 +214,10 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         prisma.postcard.count({ where: { fromId: targetId, toId: viewerId } }),
       ]);
 
-      const viewerEventIds = new Set(viewerSignups.map((s) => s.eventId));
+      const viewerEventIds = new Set([
+        ...viewerSignups.map((s) => s.eventId),
+        ...viewerHosted.map((e) => e.id),
+      ]);
       const viewerMovieIds = new Set(viewerVotes.map((v) => v.movieId));
 
       // Find mutual events from pastEvents (already fetched)
@@ -306,6 +320,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
             createdAt: e.startsAt.toISOString(),
           }));
       }),
+      recommendations: userRecommendations,
       isOwnProfile,
       mutual,
     };

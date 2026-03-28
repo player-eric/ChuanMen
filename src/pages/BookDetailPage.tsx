@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLoaderData, useNavigate } from 'react-router';
 import {
+  Autocomplete,
   Avatar,
-  AvatarGroup,
   Box,
   Button,
   Card,
@@ -21,15 +21,19 @@ import {
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import EditIcon from '@mui/icons-material/Edit';
 import type { BookDetailData, BookPool } from '@/types';
 import { useAuth } from '@/auth/AuthContext';
 import { posters } from '@/theme';
 import { useColors } from '@/hooks/useColors';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
-import { toggleRecommendationVote, updateRecommendation, deleteRecommendation } from '@/lib/domainApi';
-import { RichTextViewer } from '@/components/RichTextEditor';
-import { firstNonEmoji } from '@/components/Atoms';
+import { toggleRecommendationVote, updateRecommendation, deleteRecommendation, fetchMembersApi } from '@/lib/domainApi';
+import { RichTextViewer, type RichTextEditorHandle } from '@/components/RichTextEditor';
+import { Ava, firstNonEmoji, AvaStack } from '@/components/Atoms';
+import { ImageUpload } from '@/components/ImageUpload';
 import CommentSection from '@/components/CommentSection';
+
+const RichTextEditorLazy = lazy(() => import('@/components/RichTextEditor'));
 
 export default function BookDetailPage() {
   const navigate = useNavigate();
@@ -47,6 +51,31 @@ export default function BookDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string>(() => (raw as any)?.coverUrl ?? '');
+  const [expandVoters, setExpandVoters] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editCoverUrl, setEditCoverUrl] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const descEditorRef = useRef<RichTextEditorHandle>(null);
+  const [bookTitle, setBookTitle] = useState<string>((raw as any)?.title ?? '');
+  const [bookSynopsis, setBookSynopsis] = useState<string>((raw as any)?.synopsis ?? '');
+  const [bookBy, setBookBy] = useState<string>((raw as any)?.by ?? '');
+
+  // Admin: change author
+  const isAdmin = user?.role === 'admin';
+  const [members, setMembers] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
+  const [editAuthor, setEditAuthor] = useState<{ id: string; name: string; avatar: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetchMembersApi().then((list) => {
+      const mapped = (list as { id: string; name: string; avatar?: string | null }[]).map((m) => ({
+        id: m.id, name: m.name, avatar: m.avatar ?? null,
+      }));
+      setMembers(mapped);
+    });
+  }, [isAdmin]);
 
   const bookIdForUpload = raw && 'id' in raw ? String((raw as any).id) : '';
   const { pickFile: pickCover, upload: uploadCover, isUploading: coverUploading } = useMediaUpload({
@@ -89,14 +118,16 @@ export default function BookDetailPage() {
   const isDetail = 'voters' in raw;
   const book = raw as BookDetailData;
   const basic = raw as BookPool;
-  const title = isDetail ? book.title : basic.title;
+  const title = bookTitle || (isDetail ? book.title : basic.title);
   const year = isDetail ? book.year : basic.year;
   const author = isDetail ? book.author : basic.author;
-  const by = isDetail ? book.by : basic.by;
+  const by = bookBy || (isDetail ? book.by : basic.by);
+  const byAvatar = isDetail ? book.byAvatar : undefined;
   const status = isDetail ? book.status : basic.status;
-  const v = isDetail ? book.v : basic.v;
+  const serverV = isDetail ? book.v : basic.v;
   const authorId = (raw as any).authorId ?? '';
   const bookId = (raw as any).id ?? '';
+  const [voteCount, setVoteCount] = useState(serverV);
 
   const canEditLink = user && (
     (authorId && authorId === user.id) || user.role === 'admin'
@@ -111,6 +142,7 @@ export default function BookDetailPage() {
   const poster = {
     ...posterGradient,
     bg: coverUrl ? `url(${coverUrl}) center/cover no-repeat` : posterGradient.bg,
+    accent: '#fff',
   };
 
   return (
@@ -147,7 +179,7 @@ export default function BookDetailPage() {
               sx={{
                 position: 'absolute',
                 inset: 0,
-                background: 'linear-gradient(transparent 30%, rgba(0,0,0,0.7) 100%)',
+                background: 'linear-gradient(transparent 20%, rgba(0,0,0,0.75) 100%)',
               }}
             />
             {canEditLink && (
@@ -168,7 +200,7 @@ export default function BookDetailPage() {
                 fontWeight={800}
                 sx={{
                   color: poster.accent,
-                  textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+                  textShadow: '0 2px 12px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)',
                   lineHeight: 1.2,
                 }}
               >
@@ -179,7 +211,7 @@ export default function BookDetailPage() {
                 sx={{
                   color: 'rgba(255,255,255,0.6)',
                   mt: 0.5,
-                  textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                  textShadow: '0 1px 4px rgba(0,0,0,0.7)',
                 }}
               >
                 {year} · {author}
@@ -194,9 +226,22 @@ export default function BookDetailPage() {
               )}
               </Box>
               {canEditLink && (
-                <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => setConfirmDelete(true)}>
-                  <DeleteOutlineIcon />
-                </IconButton>
+                <Stack direction="row" spacing={0.5}>
+                  <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => {
+                    setEditTitle(title);
+                    setEditDesc(bookSynopsis);
+                    setEditCoverUrl(coverUrl);
+                    if (isAdmin) {
+                      setEditAuthor(members.find((m) => m.id === authorId) ?? null);
+                    }
+                    setEditing(true);
+                  }}>
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }} onClick={() => setConfirmDelete(true)}>
+                    <DeleteOutlineIcon />
+                  </IconButton>
+                </Stack>
               )}
               </Stack>
             </Box>
@@ -255,7 +300,7 @@ export default function BookDetailPage() {
             <CardContent>
               <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>推荐人</Typography>
               <Stack direction="row" spacing={1.5} alignItems="center">
-                <Avatar sx={{ width: 36, height: 36 }}>{by[0]}</Avatar>
+                <Ava name={by} src={byAvatar} size={36} />
                 <Typography variant="body1">{by}</Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto !important' }}>查看主页 →</Typography>
               </Stack>
@@ -268,13 +313,15 @@ export default function BookDetailPage() {
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
               <Typography variant="subtitle1" fontWeight={700}>
-                投票 ({v + (voted ? 1 : 0)})
+                投票 ({voteCount})
               </Typography>
               <Button
                 variant={voted ? 'contained' : 'outlined'}
                 size="small"
                 onClick={async () => {
-                  setVoted(!voted);
+                  const newVoted = !voted;
+                  setVoted(newVoted);
+                  setVoteCount((c) => c + (newVoted ? 1 : -1));
                   if (user?.id && bookId) {
                     try { await toggleRecommendationVote(bookId, user.id); } catch { /* optimistic */ }
                   }
@@ -284,17 +331,15 @@ export default function BookDetailPage() {
               </Button>
             </Stack>
             {isDetail && book.voters.length > 0 && (
-              <AvatarGroup max={10} sx={{ justifyContent: 'flex-start' }}>
-                {book.voters.map((name) => (
-                  <Avatar
-                    key={name}
-                    sx={{ width: 32, height: 32, cursor: 'pointer' }}
-                    onClick={() => navigate(`/members/${encodeURIComponent(name)}`)}
-                  >
-                    {firstNonEmoji(name)}
-                  </Avatar>
-                ))}
-              </AvatarGroup>
+              <Box sx={{ cursor: book.voters.length > 5 ? 'pointer' : undefined }} onClick={book.voters.length > 5 ? () => setExpandVoters((v) => !v) : undefined}>
+                <AvaStack
+                  names={book.voters}
+                  tooltips={book.voters.map((v) => typeof v === 'string' ? v : v.name)}
+                  size={32}
+                  max={expandVoters ? book.voters.length : 5}
+                  onClickItem={(i) => { const v = book.voters[i]; navigate(`/members/${encodeURIComponent(typeof v === 'string' ? v : v.name)}`); }}
+                />
+              </Box>
             )}
           </CardContent>
         </Card>
@@ -327,6 +372,72 @@ export default function BookDetailPage() {
 
         {/* 6. Comments */}
         {bookId && <CommentSection entityType="recommendation" entityId={String(bookId)} />}
+
+        <Dialog open={editing} onClose={() => setEditing(false)} fullWidth maxWidth="md" fullScreen={window.innerWidth < 600}>
+          <DialogTitle>编辑图书</DialogTitle>
+          <DialogContent>
+            {isAdmin && (
+              <Autocomplete
+                options={members}
+                value={editAuthor}
+                onChange={(_, v) => setEditAuthor(v)}
+                getOptionLabel={(o) => o.name}
+                isOptionEqualToValue={(a, b) => a.id === b.id}
+                renderOption={(props, option) => (
+                  <li {...props} key={option.id}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Ava name={option.name} src={option.avatar ?? undefined} size={24} />
+                      <span>{option.name}</span>
+                    </Stack>
+                  </li>
+                )}
+                renderInput={(params) => <TextField {...params} label="推荐人" />}
+                sx={{ mt: 1, mb: 2 }}
+              />
+            )}
+            <TextField label="标题" fullWidth value={editTitle} onChange={(e) => setEditTitle(e.target.value)} sx={{ mt: isAdmin ? 0 : 1, mb: 2 }} />
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>封面（可选）</Typography>
+              <ImageUpload
+                value={editCoverUrl}
+                onChange={setEditCoverUrl}
+                category="recommendation"
+                ownerId={user?.id ?? ''}
+                width="100%"
+                height={160}
+                shape="rect"
+                maxSize={10 * 1024 * 1024}
+              />
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>简介</Typography>
+            <Suspense fallback={<Typography color="text.secondary">加载编辑器...</Typography>}>
+              <RichTextEditorLazy content={editDesc} onChange={setEditDesc} editorRef={descEditorRef} />
+            </Suspense>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditing(false)}>取消</Button>
+            <Button variant="contained" disabled={editSaving || !editTitle.trim()} onClick={async () => {
+              if (!user?.id || !bookId) return;
+              setEditSaving(true);
+              const html = descEditorRef.current?.getHTML() ?? editDesc;
+              const patch: Parameters<typeof updateRecommendation>[2] = {
+                title: editTitle,
+                description: html,
+                coverUrl: editCoverUrl || undefined,
+                ...(isAdmin && editAuthor ? { authorId: editAuthor.id } : {}),
+              };
+              try {
+                await updateRecommendation(bookId, user.id, patch);
+                setBookTitle(editTitle);
+                setBookSynopsis(html);
+                setCoverUrl(editCoverUrl);
+                if (editAuthor) setBookBy(editAuthor.name);
+                setEditing(false);
+              } catch { /* ignore */ }
+              setEditSaving(false);
+            }}>{editSaving ? '保存中...' : '保存'}</Button>
+          </DialogActions>
+        </Dialog>
 
         <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
           <DialogTitle>确认删除</DialogTitle>

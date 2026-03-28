@@ -1,10 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 enum MembershipStatus {
@@ -276,6 +278,7 @@ model UserPreference {
   notifyCards     Boolean    @default(true)
   notifyOps       Boolean    @default(true)
   notifyAnnounce  Boolean    @default(true)
+  notifReadAt     DateTime?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
@@ -404,7 +407,9 @@ model Recommendation {
   description String                 @default("")
   authorId    String
   sourceUrl   String                 @default("")
-  coverUrl    String                 @default("")
+  coverUrl     String                 @default("")
+  eventDate    DateTime?
+  eventEndDate DateTime?
   voteCount   Int                    @default(0)
   status      RecommendationStatus   @default(candidate)
   createdAt   DateTime               @default(now())
@@ -722,6 +727,7 @@ model Announcement {
   authorId   String
   title      String
   body       String
+  url        String   @default("")
   type       String   @default("announcement")
   pinned     Boolean  @default(false)
   published  Boolean  @default(false)

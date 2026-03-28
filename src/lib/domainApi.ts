@@ -95,12 +95,14 @@ export async function deleteMediaAsset(assetId: string): Promise<void> {
   });
 }
 
+/** Vercel serverless body limit */
+const VERCEL_BODY_LIMIT = 4 * 1024 * 1024; // 4 MB (safe margin under 4.5MB)
+
 /**
- * Upload a file via the server-side upload endpoint (avoids browser→S3 CORS).
- * Sends the raw file bytes to /api/media/upload with metadata in query params.
- * Returns the public URL of the uploaded file.
+ * Upload via server (browser → Vercel serverless → S3).
+ * Only for files under Vercel's 4.5MB limit.
  */
-export async function uploadMedia(
+async function uploadViaServer(
   file: File,
   category: MediaCategory,
   ownerId?: string,
@@ -114,8 +116,6 @@ export async function uploadMedia(
   if (ownerId) params.set('ownerId', ownerId);
 
   const arrayBuffer = await file.arrayBuffer();
-  // Always send as application/octet-stream to avoid mobile browser Content-Type issues
-  // (e.g. image/heic, image/jpg, charset suffixes). Actual type is in query param.
   const response = await fetch(getApiUrl(`/api/media/upload?${params}`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/octet-stream' },
@@ -126,6 +126,83 @@ export async function uploadMedia(
     throw new Error(data?.message ?? '上传失败');
   }
   return data as { publicUrl: string; asset: MediaAsset };
+}
+
+/**
+ * Upload via presigned URL (browser → S3 direct, bypasses Vercel limit).
+ * Used for large files to preserve original quality.
+ */
+async function uploadViaPresign(
+  file: File,
+  category: MediaCategory,
+  ownerId?: string,
+): Promise<{ publicUrl: string; asset: MediaAsset }> {
+  const contentType = file.type || 'application/octet-stream';
+
+  // 1. Get presigned URL
+  const { uploadUrl, publicUrl, asset } = await requestJson<{
+    uploadUrl: string; publicUrl: string; asset: MediaAsset;
+  }>('/api/media/presign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category, contentType, fileSize: file.size, ownerId }),
+  });
+
+  // 2. PUT directly to S3
+  const putRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType },
+    body: file,
+  });
+  if (!putRes.ok) {
+    throw new Error(`S3 上传失败: ${putRes.status}`);
+  }
+
+  // 3. Confirm
+  const { asset: confirmed } = await requestJson<{ asset: MediaAsset }>('/api/media/confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ assetId: asset.id }),
+  });
+
+  return { publicUrl, asset: confirmed };
+}
+
+/**
+ * Upload a file with automatic routing:
+ * - Avatars: compress in browser (400×400) → server upload
+ * - ≤ 4MB: original via server upload (preserves quality)
+ * - > 4MB: original via presign direct to S3 (bypasses Vercel limit, preserves quality)
+ */
+export async function uploadMedia(
+  file: File,
+  category: MediaCategory,
+  ownerId?: string,
+  onProgress?: (progress: number) => void,
+): Promise<{ publicUrl: string; asset: MediaAsset }> {
+  let toUpload = file;
+
+  // Avatars: always compress (don't need originals for 400×400 thumbnails)
+  if (category === 'avatar') {
+    const { compressImageInBrowser } = await import('@/lib/imageCompression');
+    toUpload = await compressImageInBrowser(file, 'avatar');
+  }
+  onProgress?.(0.2);
+
+  let result: { publicUrl: string; asset: MediaAsset };
+
+  if (toUpload.size <= VERCEL_BODY_LIMIT) {
+    // Small enough: server upload (preserves original, server does thumbnails)
+    onProgress?.(0.4);
+    result = await uploadViaServer(toUpload, category, ownerId);
+  } else {
+    // Too large for Vercel: presign direct to S3 (preserves original)
+    onProgress?.(0.3);
+    result = await uploadViaPresign(toUpload, category, ownerId);
+  }
+
+  onProgress?.(1);
+  return result;
 }
 
 export type RecommendationCategory = 'movie' | 'book' | 'recipe' | 'music' | 'place' | 'external_event';
@@ -227,6 +304,8 @@ export async function createRecommendation(payload: {
   description: string;
   sourceUrl?: string;
   coverUrl?: string;
+  eventDate?: string;
+  eventEndDate?: string;
   tags?: string[];
   authorId: string;
 }) {
@@ -409,7 +488,9 @@ export async function selectEventRecommendation(eventId: string, recommendationI
    ═══════════════════════════════════════════════════════════════ */
 
 export async function fetchFeedApi(userId?: string) {
-  return requestJson<EntityMap>(`/api/feed${toQueryString({ userId: userId ?? '' })}`);
+  const headers: Record<string, string> = {};
+  if (userId) headers['x-user-id'] = userId;
+  return requestJson<EntityMap>(`/api/feed${toQueryString({ userId: userId ?? '' })}`, { headers });
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -554,7 +635,7 @@ export async function toggleProposalVote(proposalId: string, userId: string) {
   });
 }
 
-export async function updateProposal(proposalId: string, payload: { description?: string; status?: string }) {
+export async function updateProposal(proposalId: string, payload: { description?: string; status?: string; authorId?: string }) {
   return requestJson<EntityMap>(`/api/proposals/${proposalId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -658,7 +739,7 @@ export async function fetchAnnouncementByIdApi(id: string) {
    ═══════════════════════════════════════════════════════════════ */
 
 export async function fetchProfileApi(userId: string) {
-  return requestJson<EntityMap>(`/api/profile${toQueryString({ userId })}`);
+  return requestJson<EntityMap>(`/api/profile${toQueryString({ userId, viewerId: userId })}`);
 }
 
 export async function fetchProfileByNameApi(name: string, viewerId?: string) {
@@ -1043,7 +1124,7 @@ export async function deleteRecommendation(id: string, userId: string) {
   });
 }
 
-export async function updateRecommendation(id: string, userId: string, data: { title?: string; description?: string; sourceUrl?: string; coverUrl?: string }) {
+export async function updateRecommendation(id: string, userId: string, data: { title?: string; description?: string; sourceUrl?: string; coverUrl?: string; eventDate?: string | null; eventEndDate?: string | null; authorId?: string }) {
   return requestJson<EntityMap>(`/api/recommendations/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
@@ -1147,7 +1228,7 @@ export async function fetchCancelledEventsApi() {
    Admin: Movie operations
    ═══════════════════════════════════════════════════════════════ */
 
-export async function updateMovie(movieId: string, payload: { title?: string; status?: string; director?: string; synopsis?: string; doubanUrl?: string; poster?: string }) {
+export async function updateMovie(movieId: string, payload: { title?: string; status?: string; director?: string; synopsis?: string; doubanUrl?: string; poster?: string; recommendedById?: string }) {
   return requestJson<{ ok: boolean; movie: EntityMap }>(`/api/movies/${movieId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -1175,7 +1256,7 @@ export async function fetchAnnouncementsAdminApi() {
   return requestJson<EntityMap[]>('/api/about/announcements/admin/list');
 }
 
-export async function createAnnouncement(payload: { title: string; body: string; type: string; pinned: boolean; authorId: string }) {
+export async function createAnnouncement(payload: { title: string; body: string; url?: string; type: string; pinned: boolean; authorId: string }) {
   return requestJson<EntityMap>('/api/about/announcements', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1183,7 +1264,7 @@ export async function createAnnouncement(payload: { title: string; body: string;
   });
 }
 
-export async function updateAnnouncement(id: string, payload: { title?: string; body?: string; type?: string; pinned?: boolean }) {
+export async function updateAnnouncement(id: string, payload: { title?: string; body?: string; url?: string; type?: string; pinned?: boolean }) {
   return requestJson<{ ok: boolean; announcement: EntityMap }>(`/api/about/announcements/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -1838,6 +1919,12 @@ export async function updateHostCandidate(userId: string, hostCandidate: boolean
   });
 }
 
+/* ── Notifications ── */
+
+export async function markNotificationsRead() {
+  return requestJson<{ ok: boolean }>('/api/feed/mark-read', { method: 'POST' });
+}
+
 /* ── Activity Signals ── */
 
 export async function fetchMySignals() {
@@ -1855,4 +1942,11 @@ export async function saveSignals(
   });
 }
 
-
+/**
+ * Convert a media URL to its thumbnail variant.
+ * Thumbnail keys use a `_thumb` suffix before the extension.
+ * Falls back to original URL if pattern doesn't match.
+ */
+export function thumbnailUrl(url: string): string {
+  return url.replace(/(\.\w+)$/, '_thumb$1');
+}

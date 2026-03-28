@@ -64,6 +64,7 @@ import {
   fetchSiteConfig,
 } from '@/lib/domainApi';
 import { eventTagToScene, hostMilestoneBadge, type HostBadgeTier } from '@/lib/mappings';
+import { mapUser, mapPeople } from '@/lib/mappers';
 
 /* ── Loader helpers (call real backend) ── */
 
@@ -77,7 +78,10 @@ const PERSONAL_ACTIONS = new Set([
 ]);
 
 /** Transform raw feed API data into FeedItem[] for the timeline */
-function buildFeedItems(data: any): { items: any[]; personalNotifications: any[] } {
+function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalIds: string[]; recommendationIds: string[] }): { items: any[]; personalNotifications: any[] } {
+  const votedMovies = new Set(myVotedIds?.movieIds ?? []);
+  const votedProposals = new Set(myVotedIds?.proposalIds ?? []);
+  const votedRecs = new Set(myVotedIds?.recommendationIds ?? []);
   const items: any[] = [];
   const personalNotifications: any[] = [];
 
@@ -101,6 +105,13 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
     return [sort, label];
   };
 
+  /** Pick the more recent of createdAt and latestCommentAt for feed sorting */
+  const activityDate = (item: { createdAt?: string; latestCommentAt?: string }): string | undefined => {
+    if (!item.latestCommentAt) return item.createdAt;
+    if (!item.createdAt) return item.latestCommentAt;
+    return item.latestCommentAt > item.createdAt ? item.latestCommentAt : item.createdAt;
+  };
+
   // Events → activity items (grouped by real activity time)
   for (const e of (data.events ?? [])) {
     const [sortKey, sortLabel] = dateParts(e.activityAt ?? e.createdAt);
@@ -113,12 +124,12 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
     const allSignups = (e.signups ?? []) as any[];
     const feedOccupying = allSignups.filter((s: any) => ['accepted', 'invited', 'offered'].includes(s.status));
     const feedWaitlist = allSignups.filter((s: any) => s.status === 'waitlist');
-    const feedCoHosts: { name: string; avatar?: string }[] = (e.coHosts ?? []).map((ch: any) => ({ name: ch.user?.name, avatar: ch.user?.avatar })).filter((x: any) => x.name);
+    const feedCoHosts: { name: string; avatar?: string }[] = mapPeople(e.coHosts ?? []);
     // People displayed: host + co-hosts + accepted/offered (invited hidden)
     const feedAccepted = allSignups.filter((s: any) => ['accepted', 'offered'].includes(s.status));
-    const people: { name: string; avatar?: string }[] = feedAccepted.map((s: any) => ({ name: s.user?.name, avatar: s.user?.avatar })).filter((x: any) => x.name);
+    const people: { name: string; avatar?: string }[] = mapPeople(feedAccepted);
     // Host 默认也是参与者之一
-    const hostAvatar = e.host?.avatar ?? undefined;
+    const hostAvatar = mapUser(e.host).avatar;
     if (hostName && !people.some(p => p.name === hostName)) {
       people.unshift({ name: hostName, avatar: hostAvatar });
     }
@@ -164,6 +175,7 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
       likedBy: e.likedBy ?? [],
       comments: [],
       commentCount: e.commentCount ?? 0,
+      newComments: e.newCommentCount ?? 0,
       photoCount: e.photoCount ?? 0,
       taskSummary: feedTasks.length > 0 ? feedTasks : undefined,
     }, e.activityAt ?? e.createdAt);
@@ -171,7 +183,8 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
 
   // Postcards → card items
   for (const p of (data.postcards ?? [])) {
-    const [sk, d] = dateParts(p.createdAt);
+    const ad = activityDate(p);
+    const [sk, d] = dateParts(ad);
     addToDate(sk, d, {
       _key: `card-${p.id}`,
       type: 'card',
@@ -188,30 +201,36 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
       likedBy: p.likedBy ?? [],
       comments: [],
       commentCount: p.commentCount ?? 0,
-    }, p.createdAt);
+      newComments: p.newCommentCount ?? 0,
+      cardId: p.id,
+    }, ad);
   }
 
   // Movies → compactMovie items
   for (const m of (data.recentMovies ?? [])) {
-    const [sk, d] = dateParts(m.createdAt);
+    const ad = activityDate(m);
+    const [sk, d] = dateParts(ad);
     const time = m.createdAt ? timeAgo(m.createdAt) : '';
     addToDate(sk, d, {
       _key: `movie-${m.id}`,
       type: 'compactMovie',
-      name: m.recommendedBy?.name ?? '',
-      avatar: m.recommendedBy?.avatar ?? undefined,
+      entityId: m.id,
+      name: mapUser(m.recommendedBy).name,
+      avatar: mapUser(m.recommendedBy).avatar,
       title: m.title,
       year: String(m.year ?? ''),
       dir: m.director ?? '',
       poster: m.poster || undefined,
       votes: m._count?.votes ?? 0,
+      voted: votedMovies.has(m.id),
       time,
       navTarget: `/discover/movies/${m.id}`,
       likes: m.likes ?? 0,
       likedBy: m.likedBy ?? [],
       comments: [],
       commentCount: m.commentCount ?? 0,
-    }, m.createdAt);
+      newComments: m.newCommentCount ?? 0,
+    }, ad);
   }
 
   // New members → newMember items (introducing + welcomed)
@@ -219,7 +238,8 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
     const isAnnounced = m.userStatus === 'announced';
     const phase = isAnnounced ? 'introducing' : 'welcomed';
     const dateStr = isAnnounced ? m.announcedAt : m.approvedAt;
-    const [sk, d] = dateParts(dateStr);
+    const ad = m.latestCommentAt && m.latestCommentAt > (dateStr ?? '') ? m.latestCommentAt : dateStr;
+    const [sk, d] = dateParts(ad);
     addToDate(sk, d, {
       _key: `newMember-${m.id}`,
       type: 'newMember',
@@ -239,7 +259,8 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
       likedBy: m.likedBy ?? [],
       comments: [],
       commentCount: m.commentCount ?? 0,
-    }, dateStr);
+      newComments: m.newCommentCount ?? 0,
+    }, ad);
   }
 
   // Birthday users → collected separately to pin at top
@@ -264,26 +285,30 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
     book: '📖', recipe: '🍽️', place: '📍', music: '🎵', external_event: '🎭', movie: '🎬',
   };
   for (const r of (data.recommendations ?? [])) {
-    const [sk, d] = dateParts(r.createdAt);
+    const ad = activityDate(r);
+    const [sk, d] = dateParts(ad);
     const time = r.createdAt ? timeAgo(r.createdAt) : '';
     const cat = r.category ?? 'book';
     addToDate(sk, d, {
       _key: `rec-${r.id}`,
       type: 'compactRecommendation',
-      name: r.author?.name ?? '',
-      avatar: r.author?.avatar ?? undefined,
+      entityId: r.id,
+      name: mapUser(r.author).name,
+      avatar: mapUser(r.author).avatar,
       title: r.title,
       category: cat,
       categoryIcon: categoryIcons[cat] ?? '📖',
       coverUrl: r.coverUrl || undefined,
-      votes: r.voteCount ?? r._count?.votes ?? 0,
+      votes: r._count?.votes ?? r.voteCount ?? 0,
+      voted: votedRecs.has(r.id),
       time,
-      navTarget: `/discover/recommendations/${r.id}`,
+      navTarget: `/discover/${cat}/${r.id}`,
       likes: r.likes ?? 0,
       likedBy: r.likedBy ?? [],
       comments: [],
       commentCount: r.commentCount ?? 0,
-    }, r.createdAt);
+      newComments: r.newCommentCount ?? 0,
+    }, ad);
   }
 
   // Announcements → milestone items
@@ -294,11 +319,14 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
       _key: `announce-${a.id}`,
       type: 'milestone',
       text: a.title ?? '',
+      body: a.body ?? '',
+      url: a.url ?? '',
       emoji: emojiMap[a.type] ?? '📣',
       likes: a.likes ?? 0,
       likedBy: a.likedBy ?? [],
       comments: [],
       commentCount: a.commentCount ?? 0,
+      newComments: a.newCommentCount ?? 0,
     }, a.createdAt);
   }
 
@@ -336,23 +364,26 @@ function buildFeedItems(data: any): { items: any[]; personalNotifications: any[]
 
   // Proposals → compactProposal items
   for (const p of (data.recentProposals ?? [])) {
-    const [sk, d] = dateParts(p.createdAt);
+    const ad = activityDate(p);
+    const [sk, d] = dateParts(ad);
     const time = p.createdAt ? timeAgo(p.createdAt) : '';
     addToDate(sk, d, {
       _key: `proposal-${p.id}`,
       type: 'compactProposal',
-      name: p.author?.name ?? '',
-      avatar: p.author?.avatar ?? undefined,
+      entityId: p.id,
+      name: mapUser(p.author).name,
+      avatar: mapUser(p.author).avatar,
       title: p.title,
       votes: p._count?.votes ?? 0,
-      interested: [],
+      voted: votedProposals.has(p.id),
+      interested: Array.isArray(p.votes) ? mapPeople(p.votes) : [],
       time,
       navTarget: `/events/proposals/${p.id}`,
       likes: p.likes ?? 0,
       likedBy: p.likedBy ?? [],
       comments: [],
       commentCount: p.commentCount ?? 0,
-    }, p.createdAt);
+    }, ad);
   }
 
   // Sort dates descending (YYYY-MM-DD keys sort correctly)
@@ -400,7 +431,7 @@ async function feedLoader() {
       fetchFeedApi(userId || undefined),
       userId ? fetchCoAttendees(userId).catch(() => []) : Promise.resolve([]),
     ]);
-    const { items, personalNotifications } = buildFeedItems(data);
+    const { items, personalNotifications } = buildFeedItems(data, (data as any).myVotedIds);
     let members = ((data as any).members ?? []).map((m: any) => ({
       ...m,
       lastActiveLabel: m.lastActiveAt ? timeAgo(m.lastActiveAt) : '',
@@ -462,16 +493,19 @@ function mapApiEvent(e: any): any {
 
   // People displayed: host + co-hosts + accepted/offered only (invited hidden from display)
   const accepted = signups.filter((s: any) => ['accepted', 'offered'].includes(s.status));
-  const people: { name: string; avatar?: string }[] = accepted.map((s: any) => ({ name: s.user?.name ?? s.userName ?? '?', avatar: s.user?.avatar }));
+  const people: { name: string; avatar?: string }[] = accepted.map((s: any) => {
+    const u = mapUser(s.user);
+    return { name: u.name !== '?' ? u.name : (s.userName ?? '?'), avatar: u.avatar };
+  });
   // Host 默认也是参与者之一
-  const hostAvatar = typeof e.host === 'string' ? undefined : e.host?.avatar;
+  const hostAvatar = typeof e.host === 'string' ? undefined : mapUser(e.host).avatar;
   if (hostName && hostName !== '?' && !people.some(p => p.name === hostName)) {
     people.unshift({ name: hostName, avatar: hostAvatar });
   }
   // Add co-hosts to people list
   for (const ch of (e.coHosts ?? []) as any[]) {
-    const chName = ch.user?.name;
-    if (chName && !people.some((p: any) => p.name === chName)) people.push({ name: chName, avatar: ch.user?.avatar });
+    const chUser = mapUser(ch.user);
+    if (chUser.name !== '?' && !people.some((p: any) => p.name === chUser.name)) people.push({ name: chUser.name, avatar: chUser.avatar });
   }
 
   // Collect signup user IDs for visibility checks (invite phase) — include all non-removed
@@ -490,6 +524,7 @@ function mapApiEvent(e: any): any {
   const signupDetails = signups.map((s: any) => ({
     userId: s.user?.id ?? s.userId,
     name: s.user?.name ?? '?',
+    avatar: s.user?.avatar ?? undefined,
     status: s.status,
     offeredAt: s.offeredAt ?? undefined,
     note: s.note || undefined,
@@ -602,12 +637,13 @@ async function eventsLoader() {
         const effectiveStatus = (p.status === 'discussing' && hasEvents) ? 'scheduled' : (p.status ?? 'discussing');
         return {
           id: p.id,
-          name: p.author?.name ?? p.name ?? '?',
+          name: mapUser(p.author).name !== '?' ? mapUser(p.author).name : (p.name ?? '?'),
+          avatar: mapUser(p.author).avatar,
           title: p.title ?? '',
           description: p.description ?? '',
           status: effectiveStatus,
           votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
-          interested: Array.isArray(p.votes) ? p.votes.map((v: any) => v.user?.name ?? '?') : p.interested ?? [],
+          interested: Array.isArray(p.votes) ? mapPeople(p.votes) : p.interested ?? [],
           time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
         };
       }),
@@ -683,14 +719,17 @@ async function proposalDetailLoader({ params }: { params: Record<string, string 
     if (!p) return null;
     return {
       id: p.id,
-      name: p.author?.name ?? p.name ?? '?',
-      authorId: p.author?.id ?? p.authorId ?? '',
+      name: mapUser(p.author).name !== '?' ? mapUser(p.author).name : (p.name ?? '?'),
+      authorId: mapUser(p.author).id || (p.authorId ?? ''),
+      authorAvatar: mapUser(p.author).avatar ?? '',
       title: p.title ?? '',
       description: p.description ?? '',
       descriptionHtml: p.descriptionHtml ?? p.description ?? '',
       status: p.status ?? 'discussing',
       votes: p._count?.votes ?? (Array.isArray(p.votes) ? p.votes.length : p.votes ?? 0),
-      interested: Array.isArray(p.votes) ? p.votes.map((v: any) => v.user?.name ?? '?') : p.interested ?? [],
+      interested: Array.isArray(p.votes)
+        ? mapPeople(p.votes)
+        : p.interested ?? [],
       time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
       comments: p.comments ?? [],
       likes: p.likes ?? 0,
@@ -714,13 +753,16 @@ function mapRecommendation(r: any) {
     id: r.id,
     title: r.title ?? '',
     description: r.description ?? '',
-    authorName: r.author?.name ?? '',
-    authorId: r.author?.id ?? r.authorId ?? '',
+    authorName: mapUser(r.author).name !== '?' ? mapUser(r.author).name : '',
+    authorId: mapUser(r.author).id || (r.authorId ?? ''),
     coverUrl: r.coverUrl || undefined,
     sourceUrl: r.sourceUrl || undefined,
+    eventDate: r.eventDate || undefined,
+    eventEndDate: r.eventEndDate || undefined,
     voteCount: r._count?.votes ?? r.voteCount ?? 0,
     voterIds: (r.votes ?? []).map((v: any) => v.userId ?? v.user?.id).filter(Boolean),
     category: r.category ?? '',
+    commentCount: r.commentCount ?? 0,
   };
 }
 
@@ -743,8 +785,9 @@ async function discoverLoader() {
       v: m._count?.votes ?? 0,
       voterIds: (m.votes ?? []).map((v: any) => v.user?.id ?? v.userId).filter(Boolean),
       status: m.status === 'candidate' ? undefined : m.status,
-      by: m.recommendedBy?.name ?? '',
+      by: mapUser(m.recommendedBy).name !== '?' ? mapUser(m.recommendedBy).name : '',
       poster: m.poster || undefined,
+      commentCount: m.commentCount ?? 0,
     }));
     const screened = (rawScreened as any[]).map((s: any) => {
       const ev = s.screenedEvents?.[0]?.event;
@@ -756,6 +799,7 @@ async function discoverLoader() {
         date: ev?.startsAt ? new Date(ev.startsAt).toLocaleDateString('zh-CN', { timeZone: 'America/New_York' }) : '',
         host: ev?.host?.name ?? '',
         poster: s.poster || undefined,
+        commentCount: s.commentCount ?? 0,
       };
     });
     const bookPool = (rawBooks as any[]).map((b: any) => ({
@@ -765,9 +809,10 @@ async function discoverLoader() {
       author: b.author?.name ?? b.description ?? '',
       v: b._count?.votes ?? b.voteCount ?? 0,
       voterIds: (b.votes ?? []).map((v: any) => v.userId ?? v.user?.id).filter(Boolean),
-      by: b.author?.name ?? '',
+      by: mapUser(b.author).name !== '?' ? mapUser(b.author).name : '',
       status: b.status === 'candidate' ? undefined : b.status,
       coverUrl: b.coverUrl || undefined,
+      commentCount: b.commentCount ?? 0,
     }));
     return {
       pool, screened, bookPool, bookRead: [],
@@ -805,13 +850,17 @@ async function bookDetailLoader({ params }: { params: Record<string, string | un
       author: (rec.tags ?? []).find((t: any) => !(/^\d{4}$/.test(t.value)))?.value ?? rec.author?.name ?? '',
       v: rec._count?.votes ?? rec.voteCount ?? 0,
       voterIds: (rec.votes ?? []).map((v: any) => v.userId ?? v.user?.id).filter(Boolean),
+      voters: mapPeople(rec.votes ?? []),
       status: rec.status ?? 'candidate',
-      by: rec.author?.name ?? '',
+      by: mapUser(rec.author).name !== '?' ? mapUser(rec.author).name : '',
+      byAvatar: rec.author?.avatar ?? undefined,
       synopsis: rec.description ?? '',
       genre: (rec.tags ?? []).map((t: any) => t.value).join(', '),
       sourceUrl: rec.sourceUrl ?? '',
       coverUrl: rec.coverUrl ?? '',
       authorId: rec.authorId ?? rec.author?.id ?? '',
+      discussions: [],
+      comments: [],
     };
   } catch {
     return null;
@@ -931,7 +980,7 @@ function isBirthdayWeek(birthday: string): boolean {
 
 function mapApiMember(m: any, badgeTiers?: HostBadgeTier[]) {
   const raw = m.mutual ?? {};
-  const hostCount = m.host ?? m.hostCount ?? 0;
+  const hostCount = ((m._count?.hostedEvents ?? 0) + (m._count?.coHostedEvents ?? 0)) || (m.host ?? m.hostCount ?? 0);
   // Birthday badge overrides host milestone badge during birthday week
   const birthdayStr = m.birthday ? (typeof m.birthday === 'string' ? m.birthday : new Date(m.birthday).toISOString()) : '';
   const hasBirthdayBadge = birthdayStr && !m.hideBirthday && isBirthdayWeek(birthdayStr);

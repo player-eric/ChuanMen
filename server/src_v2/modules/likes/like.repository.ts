@@ -1,4 +1,5 @@
 import type { PrismaClient, InteractionEntityType } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 export class LikeRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -7,7 +8,7 @@ export class LikeRepository {
     return this.prisma.like.findMany({
       where: { entityType, entityId },
       orderBy: { createdAt: 'desc' },
-      include: { user: { select: { id: true, name: true, avatar: true } } },
+      include: { user: { select: USER_BRIEF_SELECT } },
     });
   }
 

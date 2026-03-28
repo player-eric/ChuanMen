@@ -1,3 +1,14 @@
+echo "🔍 Linting frontend..."
+npx eslint src/ --quiet || exit 1
+
+echo "🔍 Linting backend..."
+cd server && npx eslint src_v2/ --max-warnings 0 || exit 1
+cd ..
+
+echo "🔍 Running structural tests..."
+cd server && npx vitest run --config vitest.structural.config.ts --reporter=dot 2>&1 | tail -5 || exit 1
+cd ..
+
 echo "🔍 Type-checking frontend..."
 npx tsc --noEmit || exit 1
 

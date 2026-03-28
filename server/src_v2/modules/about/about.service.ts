@@ -23,11 +23,11 @@ export class AboutService {
     return this.repository.listAnnouncementsAdmin();
   }
 
-  createAnnouncement(data: { title: string; body: string; type: string; pinned: boolean; authorId: string }) {
+  createAnnouncement(data: { title: string; body: string; url?: string; type: string; pinned: boolean; authorId: string }) {
     return this.repository.createAnnouncement(data);
   }
 
-  updateAnnouncement(id: string, data: { title?: string; body?: string; type?: string; pinned?: boolean }) {
+  updateAnnouncement(id: string, data: { title?: string; body?: string; url?: string; type?: string; pinned?: boolean }) {
     return this.repository.updateAnnouncement(id, data);
   }
 

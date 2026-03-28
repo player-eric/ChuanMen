@@ -400,6 +400,8 @@ export function renderDigestBlock(sections: DigestSection[]): string {
 function richify(p: string): string {
   // Escape HTML first
   let html = escapeHtml(p);
+  // Convert **bold** to <strong>
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   // Convert markdown links: [label](url)
   html = html.replace(
     /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,

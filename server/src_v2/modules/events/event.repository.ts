@@ -1,4 +1,5 @@
 import type { PrismaClient, EventStatus, EventPhase, EventSignupStatus } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 /** Statuses that "occupy" a seat (count toward capacity). */
 const OCCUPYING_STATUSES: EventSignupStatus[] = ['accepted', 'invited', 'offered'];
@@ -18,7 +19,7 @@ export class EventRepository {
         },
         signups: {
           where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } },
-          include: { user: { select: { id: true, name: true, avatar: true } } },
+          include: { user: { select: USER_BRIEF_SELECT } },
         },
         screenedMovies: {
           include: { movie: { select: { id: true, title: true, poster: true, year: true, director: true, _count: { select: { votes: true } } } } },
@@ -27,11 +28,11 @@ export class EventRepository {
         recommendations: {
           include: {
             recommendation: { select: { id: true, title: true, category: true, coverUrl: true, voteCount: true, description: true } },
-            linkedBy: { select: { id: true, name: true } },
+            linkedBy: { select: USER_BRIEF_SELECT },
           },
         },
         tasks: {
-          include: { claimedBy: { select: { id: true, name: true } } },
+          include: { claimedBy: { select: USER_BRIEF_SELECT } },
           orderBy: { createdAt: 'asc' as const },
         },
         visibilityExclusions: { select: { userId: true } },
@@ -56,11 +57,11 @@ export class EventRepository {
         recommendations: {
           include: {
             recommendation: { select: { id: true, title: true, category: true, coverUrl: true, voteCount: true, description: true } },
-            linkedBy: { select: { id: true, name: true } },
+            linkedBy: { select: USER_BRIEF_SELECT },
           },
         },
         tasks: {
-          include: { claimedBy: { select: { id: true, name: true, avatar: true } } },
+          include: { claimedBy: { select: USER_BRIEF_SELECT } },
           orderBy: { createdAt: 'asc' },
         },
         visibilityExclusions: { select: { userId: true } },
@@ -204,7 +205,7 @@ export class EventRepository {
   async addCoHost(eventId: string, userId: string) {
     return this.prisma.eventCoHost.create({
       data: { eventId, userId },
-      include: { user: { select: { id: true, name: true, avatar: true } } },
+      include: { user: { select: USER_BRIEF_SELECT } },
     });
   }
 
@@ -240,7 +241,7 @@ export class EventRepository {
       const signup = await this.prisma.eventSignup.update({
         where: { eventId_userId: { eventId, userId } },
         data: { status: 'accepted', ...(isEnded ? { participated: true } : {}) },
-        include: { user: { select: { id: true, name: true, avatar: true } } },
+        include: { user: { select: USER_BRIEF_SELECT } },
       });
       return { ...signup, wasWaitlisted: false, wasPending: false };
     }
@@ -251,7 +252,7 @@ export class EventRepository {
         where: { eventId_userId: { eventId, userId } },
         create: { eventId, userId, status: 'pending', note: note ?? '', intendedTaskId: intendedTaskId ?? null },
         update: { status: 'pending', note: note ?? '', intendedTaskId: intendedTaskId ?? null },
-        include: { user: { select: { id: true, name: true, avatar: true } } },
+        include: { user: { select: USER_BRIEF_SELECT } },
       });
       this.touchUpdatedAt(eventId);
       return { ...signup, wasWaitlisted: false, wasPending: true };
@@ -267,7 +268,7 @@ export class EventRepository {
       where: { eventId_userId: { eventId, userId } },
       create: { eventId, userId, status, participated: isEnded, note: note ?? '' },
       update: { status, ...(isEnded ? { participated: true } : {}), ...(note ? { note } : {}) },
-      include: { user: { select: { id: true, name: true, avatar: true } } },
+      include: { user: { select: USER_BRIEF_SELECT } },
     });
 
     this.touchUpdatedAt(eventId);
@@ -335,7 +336,7 @@ export class EventRepository {
       if (existing && ['accepted', 'offered'].includes(existing.status)) {
         const signup = await this.prisma.eventSignup.findUnique({
           where: { eventId_userId: { eventId, userId } },
-          include: { user: { select: { id: true, name: true, avatar: true } } },
+          include: { user: { select: USER_BRIEF_SELECT } },
         });
         if (signup) results.push(signup);
         continue;
@@ -346,7 +347,7 @@ export class EventRepository {
         where: { eventId_userId: { eventId, userId } },
         create: { eventId, userId, invitedById, status, invitedAt: new Date() },
         update: { invitedById, status, invitedAt: new Date() },
-        include: { user: { select: { id: true, name: true, avatar: true } } },
+        include: { user: { select: USER_BRIEF_SELECT } },
       });
       results.push(signup);
     }
@@ -465,8 +466,8 @@ export class EventRepository {
       where: { status: 'completed' },
       orderBy: { startsAt: 'desc' },
       include: {
-        host: { select: { id: true, name: true, avatar: true } },
-        coHosts: { include: { user: { select: { id: true, name: true } } } },
+        host: { select: USER_BRIEF_SELECT },
+        coHosts: { include: { user: { select: USER_BRIEF_SELECT } } },
         visibilityExclusions: { select: { userId: true } },
         _count: { select: { signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } } } } },
       },
@@ -478,7 +479,7 @@ export class EventRepository {
       where: { status: 'cancelled' },
       orderBy: { startsAt: 'desc' },
       include: {
-        host: { select: { id: true, name: true, avatar: true } },
+        host: { select: USER_BRIEF_SELECT },
         _count: { select: { signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } } } } },
       },
     });

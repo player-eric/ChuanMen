@@ -63,9 +63,10 @@ export default function AdminAnnouncementsPage() {
   const [formType, setFormType] = useState<AnnouncementType>('announcement');
   const [formTitle, setFormTitle] = useState('');
   const [formBody, setFormBody] = useState('');
+  const [formUrl, setFormUrl] = useState('');
   const [formPinned, setFormPinned] = useState(false);
 
-  const resetForm = () => { setFormType('announcement'); setFormTitle(''); setFormBody(''); setFormPinned(false); };
+  const resetForm = () => { setFormType('announcement'); setFormTitle(''); setFormBody(''); setFormUrl(''); setFormPinned(false); };
 
   const loadData = async () => {
     setLoading(true);
@@ -88,13 +89,14 @@ export default function AdminAnnouncementsPage() {
     setFormType((item.type as AnnouncementType) ?? 'announcement');
     setFormTitle(item.title ?? '');
     setFormBody(item.body ?? '');
+    setFormUrl(item.url ?? '');
     setFormPinned(item.pinned ?? false);
   };
 
   const saveCreate = async () => {
     if (!formTitle || !formBody || !user?.id) return;
     try {
-      await createAnnouncement({ title: formTitle, body: formBody, type: formType, pinned: formPinned, authorId: user.id });
+      await createAnnouncement({ title: formTitle, body: formBody, url: formUrl, type: formType, pinned: formPinned, authorId: user.id });
       setCreateOpen(false); resetForm(); loadData();
     } catch (e) { console.error(e); }
   };
@@ -102,7 +104,7 @@ export default function AdminAnnouncementsPage() {
   const saveEdit = async () => {
     if (!editItem) return;
     try {
-      await updateAnnouncement(editItem.id, { title: formTitle, body: formBody, type: formType, pinned: formPinned });
+      await updateAnnouncement(editItem.id, { title: formTitle, body: formBody, url: formUrl, type: formType, pinned: formPinned });
       setEditItem(null); resetForm(); loadData();
     } catch (e) { console.error(e); }
   };
@@ -154,6 +156,7 @@ export default function AdminAnnouncementsPage() {
                 </Stack>
                 <Typography fontWeight={600}>{item.title}</Typography>
                 <Typography variant="body2" mt={0.5} sx={{ opacity: 0.85 }}>{item.body}</Typography>
+                {item.url && <Typography variant="caption" color="primary" mt={0.5} component="a" href={item.url} target="_blank" rel="noopener noreferrer" sx={{ display: 'block' }}>🔗 {item.url}</Typography>}
               </Box>
               <Stack direction="row">
                 <IconButton size="small" onClick={() => handleTogglePin(item)} color={item.pinned ? 'warning' : 'default'}>
@@ -193,6 +196,7 @@ export default function AdminAnnouncementsPage() {
             </TextField>
             <TextField label="标题" value={formTitle} onChange={e => setFormTitle(e.target.value)} fullWidth />
             <TextField label="内容" value={formBody} onChange={e => setFormBody(e.target.value)} fullWidth multiline rows={4} />
+            <TextField label="链接 URL（可选）" value={formUrl} onChange={e => setFormUrl(e.target.value)} fullWidth placeholder="https://..." />
             <Button
               variant={formPinned ? 'contained' : 'outlined'}
               size="small"
@@ -221,6 +225,7 @@ export default function AdminAnnouncementsPage() {
             </TextField>
             <TextField label="标题" value={formTitle} onChange={e => setFormTitle(e.target.value)} fullWidth />
             <TextField label="内容" value={formBody} onChange={e => setFormBody(e.target.value)} fullWidth multiline rows={4} />
+            <TextField label="链接 URL（可选）" value={formUrl} onChange={e => setFormUrl(e.target.value)} fullWidth placeholder="https://..." />
             <Button
               variant={formPinned ? 'contained' : 'outlined'}
               size="small"

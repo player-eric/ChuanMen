@@ -159,8 +159,51 @@ export class UserService {
     return user;
   }
 
-  listUsers() {
-    return this.repository.list();
+  async listUsers(viewerId?: string) {
+    const users = await this.repository.list();
+    if (!viewerId) return users;
+
+    // Compute mutual event counts for the viewer
+    const viewerActivity = await this.repository.getActivityIds(viewerId);
+    if (!viewerActivity) return users;
+
+    // Viewer's events: signups + hosted
+    const viewerHosted = await this.repository.getHostedEventIds(viewerId);
+    const viewerEventIds = new Set([
+      ...viewerActivity.eventSignups.map((s) => s.eventId),
+      ...viewerHosted,
+    ]);
+    if (viewerEventIds.size === 0) return users;
+
+    const eventIdArr = [...viewerEventIds];
+    const userIds = users.map((u) => u.id);
+
+    // Get signups + hosted events for all listed users, filtered to viewer's events
+    const [allSignups, allHosted] = await Promise.all([
+      this.repository.getEventSignupsForUsers(userIds, eventIdArr),
+      this.repository.getHostedEventsForUsers(userIds, eventIdArr),
+    ]);
+
+    // Build userId → set of mutual event IDs (dedup signup + host for same event)
+    const mutualMap = new Map<string, Set<string>>();
+    for (const s of allSignups) {
+      if (!mutualMap.has(s.userId)) mutualMap.set(s.userId, new Set());
+      mutualMap.get(s.userId)!.add(s.eventId);
+    }
+    for (const h of allHosted) {
+      if (!mutualMap.has(h.hostId)) mutualMap.set(h.hostId, new Set());
+      mutualMap.get(h.hostId)!.add(h.id);
+    }
+
+    const mutualCountMap = new Map<string, number>();
+    for (const [userId, events] of mutualMap) {
+      mutualCountMap.set(userId, events.size);
+    }
+
+    return users.map((u) => ({
+      ...u,
+      mutual: { evtCount: mutualCountMap.get(u.id) ?? 0 },
+    }));
   }
 
   searchUsers(q: string) {
@@ -202,12 +245,28 @@ export class UserService {
     if (viewerId && viewerId !== member.id) {
       const viewer = await this.repository.getActivityIds(viewerId);
       if (viewer) {
-        const viewerEventIds = new Set(viewer.eventSignups.map((s) => s.eventId));
+        // Viewer's events: signups + hosted
+        const viewerHostedIds = await this.repository.getHostedEventIds(viewerId);
+        const viewerEventIds = new Set([
+          ...viewer.eventSignups.map((s) => s.eventId),
+          ...viewerHostedIds,
+        ]);
         const viewerMovieIds = new Set(viewer.movieVotes.map((v) => v.movieId));
 
-        const mutualEvents = member.eventSignups
-          .filter((s) => viewerEventIds.has(s.event.id))
-          .map((s) => s.event.title);
+        // Member's events: signups + hosted (dedup by event ID)
+        const memberEventMap = new Map<string, string>();
+        for (const s of member.eventSignups) {
+          memberEventMap.set(s.event.id, s.event.title);
+        }
+        for (const e of member.hostedEvents) {
+          memberEventMap.set(e.id, e.title);
+        }
+
+        const mutualEvents: string[] = [];
+        for (const [eventId, title] of memberEventMap) {
+          if (viewerEventIds.has(eventId)) mutualEvents.push(title);
+        }
+
         const mutualMovies = member.movieVotes
           .filter((v) => viewerMovieIds.has(v.movie.id))
           .map((v) => v.movie.title);
@@ -230,7 +289,7 @@ export class UserService {
 
     return {
       ...profile,
-      hostCount: _count.hostedEvents,
+      hostCount: _count.hostedEvents + (_count.coHostedEvents ?? 0),
       activities: {
         events: allEvents,
         movies: allMovies,

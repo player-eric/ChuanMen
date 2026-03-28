@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 const createTaskSchema = z.object({
   role: z.string().min(1),
@@ -32,7 +33,7 @@ export class EventTaskService {
   async listTasks(eventId: string) {
     return this.prisma.eventTask.findMany({
       where: { eventId },
-      include: { claimedBy: { select: { id: true, name: true, avatar: true } } },
+      include: { claimedBy: { select: USER_BRIEF_SELECT } },
       orderBy: { createdAt: 'asc' },
     });
   }
@@ -48,7 +49,7 @@ export class EventTaskService {
           role: t.role,
           description: t.description ?? '',
         },
-        include: { claimedBy: { select: { id: true, name: true, avatar: true } } },
+        include: { claimedBy: { select: USER_BRIEF_SELECT } },
       });
       created.push(task);
     }
@@ -66,7 +67,7 @@ export class EventTaskService {
     return this.prisma.eventTask.update({
       where: { id: taskId },
       data: { claimedById: userId },
-      include: { claimedBy: { select: { id: true, name: true, avatar: true } } },
+      include: { claimedBy: { select: USER_BRIEF_SELECT } },
     });
   }
 
@@ -79,7 +80,7 @@ export class EventTaskService {
     return this.prisma.eventTask.update({
       where: { id: taskId },
       data: { claimedById: null },
-      include: { claimedBy: { select: { id: true, name: true, avatar: true } } },
+      include: { claimedBy: { select: USER_BRIEF_SELECT } },
     });
   }
 
@@ -94,7 +95,7 @@ export class EventTaskService {
         claimedById: userId,
         isCustom: true,
       },
-      include: { claimedBy: { select: { id: true, name: true, avatar: true } } },
+      include: { claimedBy: { select: USER_BRIEF_SELECT } },
     });
   }
 
@@ -108,7 +109,7 @@ export class EventTaskService {
     return this.prisma.eventTask.update({
       where: { id: taskId },
       data,
-      include: { claimedBy: { select: { id: true, name: true, avatar: true } } },
+      include: { claimedBy: { select: USER_BRIEF_SELECT } },
     });
   }
 
@@ -134,7 +135,7 @@ export class EventTaskService {
       const description = typeof r === 'string' ? '' : (r.description ?? '');
       const task = await this.prisma.eventTask.create({
         data: { eventId, role, description },
-        include: { claimedBy: { select: { id: true, name: true, avatar: true } } },
+        include: { claimedBy: { select: USER_BRIEF_SELECT } },
       });
       tasks.push(task);
     }

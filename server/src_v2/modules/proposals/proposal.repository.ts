@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 export class ProposalRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -7,8 +8,8 @@ export class ProposalRepository {
     return this.prisma.proposal.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        author: { select: { id: true, name: true, avatar: true } },
-        votes: { include: { user: { select: { id: true, name: true } } } },
+        author: { select: USER_BRIEF_SELECT },
+        votes: { include: { user: { select: USER_BRIEF_SELECT } } },
         _count: { select: { votes: true, events: true } },
       },
     });
@@ -18,8 +19,8 @@ export class ProposalRepository {
     return this.prisma.proposal.findUnique({
       where: { id },
       include: {
-        author: { select: { id: true, name: true, avatar: true } },
-        votes: { include: { user: { select: { id: true, name: true } } } },
+        author: { select: USER_BRIEF_SELECT },
+        votes: { include: { user: { select: USER_BRIEF_SELECT } } },
         _count: { select: { votes: true } },
       },
     });
@@ -32,11 +33,11 @@ export class ProposalRepository {
         description: input.description ?? '',
         authorId: input.authorId,
       },
-      include: { author: { select: { id: true, name: true, avatar: true } } },
+      include: { author: { select: USER_BRIEF_SELECT } },
     });
   }
 
-  update(id: string, data: { title?: string; description?: string; status?: string }) {
+  update(id: string, data: { title?: string; description?: string; status?: string; authorId?: string }) {
     return this.prisma.proposal.update({ where: { id }, data: data as any });
   }
 
@@ -62,7 +63,7 @@ export class ProposalRepository {
       },
       orderBy: { createdAt: 'desc' },
       include: {
-        author: { select: { id: true, name: true, avatar: true } },
+        author: { select: USER_BRIEF_SELECT },
         _count: { select: { votes: true } },
       },
     });

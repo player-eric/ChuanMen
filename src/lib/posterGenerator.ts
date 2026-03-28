@@ -570,7 +570,7 @@ function drawLayoutWithImage(
   const MAX_IMG_H = Math.min(580, availH - textAndGapsH - availH * 0.12);
 
   // Adaptive image frame — fit to natural aspect ratio
-  const imgR = img.width / img.height;
+  const imgR = img.naturalWidth / img.naturalHeight || img.width / img.height;
   let frameW: number, frameH: number;
   if (imgR >= 1) {
     frameW = MAX_IMG_W;
@@ -622,7 +622,20 @@ function drawLayoutWithImage(
   ctx.save();
   roundRect(ctx, frameX, frameY, frameW, frameH, radius);
   ctx.clip();
-  ctx.drawImage(img, frameX, frameY, frameW, frameH);
+  // Contain fit: center image within frame, preserving aspect ratio (no crop, no stretch)
+  const imgAR = img.width / img.height;
+  const frameAR = frameW / frameH;
+  let dx = frameX, dy = frameY, dw = frameW, dh = frameH;
+  if (imgAR > frameAR) {
+    // Image wider than frame — fit to width, center vertically
+    dh = frameW / imgAR;
+    dy = frameY + (frameH - dh) / 2;
+  } else if (imgAR < frameAR) {
+    // Image taller than frame — fit to height, center horizontally
+    dw = frameH * imgAR;
+    dx = frameX + (frameW - dw) / 2;
+  }
+  ctx.drawImage(img, dx, dy, dw, dh);
 
   // Bottom fade overlay
   const fadeY = frameY + frameH * 0.65;
@@ -885,64 +898,47 @@ function drawAccentDiamond(
 /* ── Image loading ── */
 
 async function loadImage(url: string): Promise<HTMLImageElement> {
-  // For local API media URLs (e.g. /api/media/s3/...), fetch as blob to avoid
-  // cross-origin canvas tainting from S3 redirects
+  const blob = await fetchImageBlob(url);
+  // Use createImageBitmap for guaranteed correct dimensions
+  const bitmap = await createImageBitmap(blob);
+  // Draw bitmap to a canvas → export as HTMLImageElement with correct width/height
+  const c = document.createElement('canvas');
+  c.width = bitmap.width;
+  c.height = bitmap.height;
+  c.getContext('2d')!.drawImage(bitmap, 0, 0);
+  bitmap.close();
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to create image from canvas'));
+    img.src = c.toDataURL();
+  });
+}
+
+async function fetchImageBlob(url: string): Promise<Blob> {
+  // Local API media URLs — fetch as blob to avoid CORS tainting from S3 redirects
   if (url.startsWith('/api/media/')) {
-    const res = await fetch(url);
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error(`Media fetch failed: ${res.status}`);
-    const blob = await res.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    try {
-      const img = await imgFromSrc(objectUrl);
-      URL.revokeObjectURL(objectUrl);
-      return img;
-    } catch {
-      URL.revokeObjectURL(objectUrl);
-      throw new Error(`Failed to load media image: ${url}`);
-    }
+    return res.blob();
   }
 
   if (url.startsWith('/') && !url.startsWith('//')) {
-    return imgFromSrc(url);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Local fetch failed: ${res.status}`);
+    return res.blob();
   }
 
+  // External URL — try direct CORS first, fallback to proxy
   try {
     const res = await fetch(url, { mode: 'cors' });
-    if (res.ok) {
-      const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      try {
-        const img = await imgFromSrc(objectUrl);
-        URL.revokeObjectURL(objectUrl);
-        return img;
-      } catch {
-        URL.revokeObjectURL(objectUrl);
-      }
-    }
-  } catch { /* CORS blocked — try proxy */ }
+    if (res.ok) return res.blob();
+  } catch { /* CORS blocked */ }
 
   const proxyUrl = `/api/media/proxy?url=${encodeURIComponent(url)}`;
   const res = await fetch(proxyUrl);
   if (!res.ok) throw new Error(`Proxy fetch failed: ${res.status}`);
-  const blob = await res.blob();
-  const objectUrl = URL.createObjectURL(blob);
-  try {
-    const img = await imgFromSrc(objectUrl);
-    URL.revokeObjectURL(objectUrl);
-    return img;
-  } catch {
-    URL.revokeObjectURL(objectUrl);
-    throw new Error(`Failed to load image: ${url}`);
-  }
-}
-
-function imgFromSrc(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`Image load error: ${src}`));
-    img.src = src;
-  });
+  return res.blob();
 }
 
 /* ── Depth & atmosphere layers ── */

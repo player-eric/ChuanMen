@@ -29,6 +29,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { useColors } from '@/hooks/useColors';
 import { photos } from '@/theme';
 import { hostMilestoneBadge } from '@/lib/mappings';
+import { thumbnailUrl } from '@/lib/domainApi';
 
 const sceneEmoji: Record<string, string> = {
   movieNight: '🎬',
@@ -69,11 +70,13 @@ export default function MemberDetailPage() {
       ...m,
       v: m._count?.votes ?? m.v ?? 0,
       dir: m.director ?? m.dir ?? '',
+      poster: m.poster,
     })),
     votedMovies: (raw.votedMovies ?? []).map((m: any) => ({
       ...m,
       v: m._count?.votes ?? m.v ?? 0,
       dir: m.director ?? m.dir ?? '',
+      poster: m.poster,
       by: m.recommendedBy?.name ?? m.by ?? '',
     })),
     upcomingEvents: (raw.upcomingEvents ?? []).map((e: any) => ({
@@ -120,7 +123,9 @@ export default function MemberDetailPage() {
   const [tab, setTab] = useState(0);
   const [eventFilter, setEventFilter] = useState<'all' | 'host'>('all');
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const [showOriginal, setShowOriginal] = useState(false);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
 
   const rawCover = member.coverImageUrl || photos.cozy;
   const isGradient = rawCover.startsWith('linear-gradient') || rawCover.startsWith('radial-gradient');
@@ -129,9 +134,18 @@ export default function MemberDetailPage() {
   const allGalleryPhotos = data.galleryPhotos ?? [];
   const galleryPhotos = showAllPhotos ? allGalleryPhotos : allGalleryPhotos.slice(0, 9);
 
-  // Tab labels — add "我们的交集" if there's mutual data
-  const tabs = ['活动记忆', '电影', '感谢卡', '关于TA'];
+  // Recommendations by this member (grouped by category)
+  const recommendations = (raw.recommendations ?? []) as any[];
+  const recsByCategory: Record<string, any[]> = {};
+  for (const rec of recommendations) {
+    const cat = rec.category ?? 'other';
+    (recsByCategory[cat] ??= []).push(rec);
+  }
+
+  // Tab labels — 关于TA and 我们的交集 first
+  const tabs: string[] = ['关于TA'];
   if (hasMutual) tabs.push('我们的交集');
+  tabs.push('活动记忆', '品味', '感谢卡');
 
   return (
     <Stack spacing={0}>
@@ -159,10 +173,10 @@ export default function MemberDetailPage() {
             alignItems="flex-end"
             sx={{ position: 'absolute', bottom: 12, left: 16, right: 16 }}
           >
-            <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+            <Box sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0, cursor: member.avatar ? 'pointer' : 'default' }} onClick={() => member.avatar && setAvatarOpen(true)}>
               <Avatar
                 src={member.avatar}
-                sx={{ width: 64, height: 64, border: '3px solid rgba(255,255,255,0.8)', fontSize: 24 }}
+                sx={{ width: 72, height: 72, border: '3px solid rgba(255,255,255,0.8)', fontSize: 28 }}
               >
                 {member.name?.[0]}
               </Avatar>
@@ -223,14 +237,14 @@ export default function MemberDetailPage() {
             sx={{ mb: 1.5 }}
           >
             {[
-              { value: data.participationStats.eventCount, label: '场活动', action: () => { setTab(0); setEventFilter('all'); } },
-              { value: data.participationStats.hostCount, label: '次Host', action: () => { setTab(0); setEventFilter('host'); } },
-              { value: data.participationStats.movieCount, label: '部电影', action: () => { setTab(1); } },
+              { value: data.participationStats.eventCount, label: '场活动', action: () => { setTab(tabs.indexOf('活动记忆')); setEventFilter('all'); } },
+              { value: data.participationStats.hostCount, label: '次Host', action: () => { setTab(tabs.indexOf('活动记忆')); setEventFilter('host'); } },
+              { value: data.participationStats.movieCount, label: '部电影', action: () => { setTab(tabs.indexOf('品味')); } },
             ].map((stat) => {
               const active =
-                (stat.label === '场活动' && tab === 0 && eventFilter === 'all') ||
-                (stat.label === '次Host' && tab === 0 && eventFilter === 'host') ||
-                (stat.label === '部电影' && tab === 1);
+                (stat.label === '场活动' && tabs[tab] === '活动记忆' && eventFilter === 'all') ||
+                (stat.label === '次Host' && tabs[tab] === '活动记忆' && eventFilter === 'host') ||
+                (stat.label === '部电影' && tabs[tab] === '品味');
               return (
                 <Box
                   key={stat.label}
@@ -284,335 +298,8 @@ export default function MemberDetailPage() {
         </Tabs>
       </Box>
 
-      {/* ══════ Tab 0: 活动记忆 ══════ */}
-      {tab === 0 && (() => {
-        const filteredUpcoming = eventFilter === 'host'
-          ? data.upcomingEvents.filter((e) => e.role === 'Host')
-          : data.upcomingEvents;
-        const filteredPast = eventFilter === 'host'
-          ? data.myEvents.filter((e) => e.role === 'Host')
-          : data.myEvents;
-
-        return (
-        <Stack spacing={2}>
-          {data.upcomingEvents.length === 0 && allGalleryPhotos.length === 0 && data.myEvents.length === 0 && (
-            <EmptyState
-              icon="📅"
-              title={`${member.name} 还没有参加过活动`}
-            />
-          )}
-
-          {eventFilter === 'host' && (
-            <Chip
-              label="只看Host的"
-              onDelete={() => setEventFilter('all')}
-              color="warning"
-              size="small"
-              sx={{ alignSelf: 'flex-start' }}
-            />
-          )}
-
-          {/* Upcoming Events */}
-          {filteredUpcoming.length > 0 && (
-            <Box>
-              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-                📅 即将参加
-              </Typography>
-              <Grid container spacing={1.5}>
-                {filteredUpcoming.map((event) => (
-                  <Grid key={event.id} size={{ xs: 12, sm: 6 }}>
-                    <Card variant="outlined">
-                      <CardActionArea onClick={() => navigate(`/events/${event.id}`)}>
-                        <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-                          <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Box sx={{ minWidth: 0 }}>
-                              <Typography variant="body2" fontWeight={600} noWrap>
-                                {sceneEmoji[event.scene] ?? '📅'} {event.title}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">{event.date}</Typography>
-                            </Box>
-                            {event.role === 'Host' && <Chip size="small" color="warning" label="🏠 Host" />}
-                            {event.role === 'Co-Host' && <Chip size="small" color="secondary" label="🤝 Co-Host" />}
-                          </Stack>
-                        </CardContent>
-                      </CardActionArea>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          )}
-
-          {/* Photo Gallery */}
-          {allGalleryPhotos.length > 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
-                  活动记忆 ({allGalleryPhotos.length})
-                </Typography>
-
-                <Box sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gridAutoRows: '1fr',
-                  gap: 0.5,
-                }}>
-                  {galleryPhotos.map((photo, idx) => (
-                    <Box
-                      key={photo.id}
-                      onClick={() => setLightboxIndex(idx)}
-                      sx={{
-                        position: 'relative',
-                        aspectRatio: '1',
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                        ...(idx === 0 ? {
-                          gridColumn: 'span 2',
-                          gridRow: 'span 2',
-                        } : {}),
-                      }}
-                    >
-                      <Box
-                        component="img"
-                        src={photo.url}
-                        alt={photo.eventTitle}
-                        sx={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          display: 'block',
-                          filter: 'saturate(0.85) contrast(1.05)',
-                        }}
-                      />
-                      <Box sx={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        p: 0.5,
-                        background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)',
-                      }}>
-                        <Typography variant="caption" sx={{ color: '#fff', fontSize: 10, lineHeight: 1.2 }} noWrap>
-                          {photo.eventTitle}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  ))}
-                </Box>
-
-                {!showAllPhotos && allGalleryPhotos.length > 9 && (
-                  <Button size="small" sx={{ mt: 1 }} onClick={() => setShowAllPhotos(true)}>
-                    查看全部 →
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Past Events */}
-          {filteredPast.length > 0 && (
-            <Box>
-              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-                📅 参加过的活动
-              </Typography>
-              <Grid container spacing={1.5}>
-                {filteredPast.slice(0, 8).map((event) => (
-                  <Grid key={event.id} size={{ xs: 12, sm: 6 }}>
-                    <Card variant="outlined">
-                      <CardActionArea onClick={() => navigate(`/events/${event.id}`)}>
-                        <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-                          <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Box sx={{ minWidth: 0 }}>
-                              <Typography variant="body2" fontWeight={600} noWrap>
-                                {sceneEmoji[event.scene] ?? '📅'} {event.title}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">{event.date}</Typography>
-                            </Box>
-                            {event.role === 'Host' && <Chip size="small" color="warning" label="🏠 Host" />}
-                            {event.role === 'Co-Host' && <Chip size="small" color="secondary" label="🤝 Co-Host" />}
-                          </Stack>
-                        </CardContent>
-                      </CardActionArea>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-              {filteredPast.length > 8 && (
-                <Button size="small" sx={{ mt: 1 }} onClick={() => navigate('/events')}>
-                  查看全部 →
-                </Button>
-              )}
-            </Box>
-          )}
-        </Stack>
-        );
-      })()}
-
-      {/* ══════ Tab 1: 电影 ══════ */}
-      {tab === 1 && (
-        <Stack spacing={2}>
-          {data.myMovies.length === 0 && data.votedMovies.length === 0 && (
-            <EmptyState
-              icon="🎬"
-              title={`${member.name} 还没有推荐或投票过电影`}
-            />
-          )}
-
-          {data.myMovies.length > 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-                  🎬 推荐的电影 ({data.myMovies.length})
-                </Typography>
-                <Grid container spacing={1.5}>
-                  {data.myMovies.map((movie) => (
-                    <Grid key={movie.id} size={{ xs: 12, sm: 6 }}>
-                      <CardActionArea
-                        onClick={() => navigate(`/discover/movies/${movie.id}`)}
-                        sx={{ borderRadius: 2 }}
-                      >
-                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
-                          <Poster title={movie.title} w={40} h={56} />
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {movie.year} · {movie.dir}
-                            </Typography>
-                            <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
-                              <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
-                              {movie.status && (
-                                <Chip
-                                  size="small"
-                                  label={movie.status}
-                                  color={movie.status === '本周放映' ? 'warning' : 'default'}
-                                  sx={{ height: 20, fontSize: 11 }}
-                                />
-                              )}
-                            </Stack>
-                          </Box>
-                        </Stack>
-                      </CardActionArea>
-                    </Grid>
-                  ))}
-                </Grid>
-              </CardContent>
-            </Card>
-          )}
-
-          {data.votedMovies.length > 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-                  👍 投票的电影 ({data.votedMovies.length})
-                </Typography>
-                <Grid container spacing={1.5}>
-                  {data.votedMovies.map((movie) => (
-                    <Grid key={movie.id} size={{ xs: 12, sm: 6 }}>
-                      <CardActionArea
-                        onClick={() => navigate(`/discover/movies/${movie.id}`)}
-                        sx={{ borderRadius: 2 }}
-                      >
-                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
-                          <Poster title={movie.title} w={40} h={56} />
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {movie.year} · {movie.dir} · 推荐人: {movie.by}
-                            </Typography>
-                            <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
-                              <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
-                              {movie.status && (
-                                <Chip
-                                  size="small"
-                                  label={movie.status}
-                                  color={movie.status === '本周放映' ? 'warning' : 'default'}
-                                  sx={{ height: 20, fontSize: 11 }}
-                                />
-                              )}
-                            </Stack>
-                          </Box>
-                        </Stack>
-                      </CardActionArea>
-                    </Grid>
-                  ))}
-                </Grid>
-              </CardContent>
-            </Card>
-          )}
-        </Stack>
-      )}
-
-      {/* ══════ Tab 2: 感谢卡 ══════ */}
-      {tab === 2 && (
-        <Stack spacing={2}>
-          {data.recentCards.length > 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-                  💌 收到的感谢卡 ({data.recentCards.length})
-                </Typography>
-                <Grid container spacing={1.5}>
-                  {data.recentCards.map((card, index) => (
-                    <Grid key={index} size={{ xs: 12, sm: 6 }}>
-                      <PostCard
-                        from={card.from}
-                        to={member.name}
-                        fromAvatar={card.fromAvatar}
-                        toAvatar={member.avatar || undefined}
-                        message={card.message}
-                        stamp={card.stamp}
-                        date={card.date}
-                        photo={card.photo}
-                        layout="horizontal"
-                        eventCtx={card.eventCtx}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </CardContent>
-            </Card>
-          )}
-
-          {data.sentCards.length > 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
-                  ✉️ 寄出的感谢卡 ({data.sentCards.length})
-                </Typography>
-                <Grid container spacing={1.5}>
-                  {data.sentCards.map((card, index) => (
-                    <Grid key={index} size={{ xs: 12, sm: 6 }}>
-                      <PostCard
-                        from={member.name}
-                        to={(card as any).to ?? ''}
-                        fromAvatar={member.avatar || undefined}
-                        toAvatar={(card as any).toAvatar}
-                        message={card.message}
-                        stamp={card.stamp}
-                        date={card.date}
-                        photo={card.photo}
-                        layout="horizontal"
-                        eventCtx={card.eventCtx}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </CardContent>
-            </Card>
-          )}
-
-          {data.recentCards.length === 0 && data.sentCards.length === 0 && (
-            <EmptyState
-              icon="💌"
-              title={`${member.name} 还没有公开的感谢卡`}
-            />
-          )}
-        </Stack>
-      )}
-
-      {/* ══════ Tab 3: 关于TA ══════ */}
-      {tab === 3 && (
+      {/* ══════ 关于TA ══════ */}
+      {tabs[tab] === '关于TA' && (
         <Stack spacing={2}>
           {(member.bio || member.selfAsFriend || member.idealFriend || member.participationPlan) ? (
             <Card>
@@ -623,25 +310,29 @@ export default function MemberDetailPage() {
                     <RichTextViewer html={member.bio} />
                   </>
                 )}
-                {member.selfAsFriend && (
+                {(member.selfAsFriend || member.idealFriend || member.participationPlan) && (
                   <>
-                    <Divider sx={{ my: 1.5 }} />
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>作为朋友</Typography>
-                    <RichTextViewer html={member.selfAsFriend} />
-                  </>
-                )}
-                {member.idealFriend && (
-                  <>
-                    <Divider sx={{ my: 1.5 }} />
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>理想中的朋友</Typography>
-                    <RichTextViewer html={member.idealFriend} />
-                  </>
-                )}
-                {member.participationPlan && (
-                  <>
-                    <Divider sx={{ my: 1.5 }} />
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>参与计划</Typography>
-                    <RichTextViewer html={member.participationPlan} />
+                    {member.selfAsFriend && (
+                      <>
+                        <Divider sx={{ my: 1.5 }} />
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>作为朋友</Typography>
+                        <RichTextViewer html={member.selfAsFriend} />
+                      </>
+                    )}
+                    {member.idealFriend && (
+                      <>
+                        <Divider sx={{ my: 1.5 }} />
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>理想中的朋友</Typography>
+                        <RichTextViewer html={member.idealFriend} />
+                      </>
+                    )}
+                    {member.participationPlan && (
+                      <>
+                        <Divider sx={{ my: 1.5 }} />
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>参与计划</Typography>
+                        <RichTextViewer html={member.participationPlan} />
+                      </>
+                    )}
                   </>
                 )}
               </CardContent>
@@ -655,13 +346,13 @@ export default function MemberDetailPage() {
         </Stack>
       )}
 
-      {/* ══════ Tab 4: 我们的交集 ══════ */}
-      {hasMutual && tab === 4 && (() => {
+      {/* ══════ 我们的交集 ══════ */}
+      {tabs[tab] === '我们的交集' && hasMutual && (() => {
         const catEmoji: Record<string, string> = {
           book: '📚', recipe: '🍜', music: '🎵', place: '📍', external_event: '🎭',
         };
         const catLabel: Record<string, string> = {
-          book: '图书', recipe: '食谱', music: '音乐', place: '地点', external_event: '演出',
+          book: '图书', recipe: '食谱', music: '音乐', place: '地点', external_event: '演出/展览',
         };
         const recs = mutual.recommendations ?? {};
         const recCategories = Object.keys(recs).filter((cat) => recs[cat].length > 0);
@@ -761,7 +452,6 @@ export default function MemberDetailPage() {
                 <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>互寄感谢卡</Typography>
                 <Typography variant="body2" color="text.secondary">
                   你们之间互寄了 {mutual.cards} 张感谢卡
-                  {/* TODO: 展示最近 2-3 张卡片预览（需要额外后端查询） */}
                 </Typography>
               </CardContent>
             </Card>
@@ -769,6 +459,377 @@ export default function MemberDetailPage() {
         </Stack>
         );
       })()}
+
+      {/* ══════ 活动记忆 ══════ */}
+      {tabs[tab] === '活动记忆' && (() => {
+        const filteredUpcoming = eventFilter === 'host'
+          ? data.upcomingEvents.filter((e) => e.role === 'Host')
+          : data.upcomingEvents;
+        const filteredPast = eventFilter === 'host'
+          ? data.myEvents.filter((e) => e.role === 'Host')
+          : data.myEvents;
+
+        return (
+        <Stack spacing={2}>
+          {data.upcomingEvents.length === 0 && allGalleryPhotos.length === 0 && data.myEvents.length === 0 && (
+            <EmptyState
+              icon="📅"
+              title={`${member.name} 还没有参加过活动`}
+            />
+          )}
+
+          {eventFilter === 'host' && (
+            <Chip
+              label="只看Host的"
+              onDelete={() => setEventFilter('all')}
+              color="warning"
+              size="small"
+              sx={{ alignSelf: 'flex-start' }}
+            />
+          )}
+
+          {/* Upcoming Events */}
+          {filteredUpcoming.length > 0 && (
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                📅 即将参加
+              </Typography>
+              <Grid container spacing={1.5}>
+                {filteredUpcoming.map((event) => (
+                  <Grid key={event.id} size={{ xs: 12, sm: 6 }}>
+                    <Card variant="outlined">
+                      <CardActionArea onClick={() => navigate(`/events/${event.id}`)}>
+                        <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography variant="body2" fontWeight={600} noWrap>
+                                {sceneEmoji[event.scene] ?? '📅'} {event.title}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">{event.date}</Typography>
+                            </Box>
+                            {event.role === 'Host' && <Chip size="small" color="warning" label="🏠 Host" />}
+                            {event.role === 'Co-Host' && <Chip size="small" color="secondary" label="🤝 Co-Host" />}
+                          </Stack>
+                        </CardContent>
+                      </CardActionArea>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
+
+          {/* Photo Gallery */}
+          {allGalleryPhotos.length > 0 && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
+                  活动记忆 ({allGalleryPhotos.length})
+                </Typography>
+
+                <Box sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridAutoRows: '1fr',
+                  gap: 0.5,
+                }}>
+                  {galleryPhotos.map((photo, idx) => (
+                    <Box
+                      key={photo.id}
+                      onClick={() => setLightboxIndex(idx)}
+                      sx={{
+                        position: 'relative',
+                        aspectRatio: '1',
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        ...(idx === 0 ? {
+                          gridColumn: 'span 2',
+                          gridRow: 'span 2',
+                        } : {}),
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={thumbnailUrl(photo.url)}
+                        alt={photo.eventTitle}
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          display: 'block',
+                          filter: 'saturate(0.85) contrast(1.05)',
+                        }}
+                      />
+                      <Box sx={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        p: 0.5,
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)',
+                      }}>
+                        <Typography variant="caption" sx={{ color: '#fff', fontSize: 10, lineHeight: 1.2 }} noWrap>
+                          {photo.eventTitle}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+
+                {!showAllPhotos && allGalleryPhotos.length > 9 && (
+                  <Button size="small" sx={{ mt: 1 }} onClick={() => setShowAllPhotos(true)}>
+                    查看全部 →
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Past Events */}
+          {filteredPast.length > 0 && (
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                📅 参加过的活动
+              </Typography>
+              <Grid container spacing={1.5}>
+                {filteredPast.slice(0, 8).map((event) => (
+                  <Grid key={event.id} size={{ xs: 12, sm: 6 }}>
+                    <Card variant="outlined">
+                      <CardActionArea onClick={() => navigate(`/events/${event.id}`)}>
+                        <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography variant="body2" fontWeight={600} noWrap>
+                                {sceneEmoji[event.scene] ?? '📅'} {event.title}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">{event.date}</Typography>
+                            </Box>
+                            {event.role === 'Host' && <Chip size="small" color="warning" label="🏠 Host" />}
+                            {event.role === 'Co-Host' && <Chip size="small" color="secondary" label="🤝 Co-Host" />}
+                          </Stack>
+                        </CardContent>
+                      </CardActionArea>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+              {filteredPast.length > 8 && (
+                <Button size="small" sx={{ mt: 1 }} onClick={() => navigate('/events')}>
+                  查看全部 →
+                </Button>
+              )}
+            </Box>
+          )}
+        </Stack>
+        );
+      })()}
+
+      {/* ══════ 品味 (movies + recommendations) ══════ */}
+      {tabs[tab] === '品味' && (
+        <Stack spacing={2}>
+          {data.myMovies.length === 0 && data.votedMovies.length === 0 && recommendations.length === 0 && (
+            <EmptyState
+              icon="✨"
+              title={`${member.name} 还没有推荐或投票过内容`}
+            />
+          )}
+
+          {data.myMovies.length > 0 && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                  🎬 推荐的电影 ({data.myMovies.length})
+                </Typography>
+                <Grid container spacing={1.5}>
+                  {data.myMovies.map((movie) => (
+                    <Grid key={movie.id} size={{ xs: 12, sm: 6 }}>
+                      <CardActionArea
+                        onClick={() => navigate(`/discover/movies/${movie.id}`)}
+                        sx={{ borderRadius: 2 }}
+                      >
+                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
+                          <Poster title={movie.title} src={movie.poster} w={40} h={56} />
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
+                            {(movie.year || movie.dir) && (
+                              <Typography variant="caption" color="text.secondary">
+                                {[movie.year, movie.dir].filter(Boolean).join(' · ')}
+                              </Typography>
+                            )}
+                            <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
+                              <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
+                              {movie.status && (
+                                <Chip
+                                  size="small"
+                                  label={movie.status}
+                                  color={movie.status === '本周放映' ? 'warning' : 'default'}
+                                  sx={{ height: 20, fontSize: 11 }}
+                                />
+                              )}
+                            </Stack>
+                          </Box>
+                        </Stack>
+                      </CardActionArea>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+
+          {data.votedMovies.length > 0 && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                  👍 投票的电影 ({data.votedMovies.length})
+                </Typography>
+                <Grid container spacing={1.5}>
+                  {data.votedMovies.map((movie) => (
+                    <Grid key={movie.id} size={{ xs: 12, sm: 6 }}>
+                      <CardActionArea
+                        onClick={() => navigate(`/discover/movies/${movie.id}`)}
+                        sx={{ borderRadius: 2 }}
+                      >
+                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
+                          <Poster title={movie.title} src={movie.poster} w={40} h={56} />
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
+                            {(movie.year || movie.dir || movie.by) && (
+                              <Typography variant="caption" color="text.secondary">
+                                {[movie.year, movie.dir, movie.by ? `推荐人: ${movie.by}` : ''].filter(Boolean).join(' · ')}
+                              </Typography>
+                            )}
+                            <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
+                              <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
+                              {movie.status && (
+                                <Chip
+                                  size="small"
+                                  label={movie.status}
+                                  color={movie.status === '本周放映' ? 'warning' : 'default'}
+                                  sx={{ height: 20, fontSize: 11 }}
+                                />
+                              )}
+                            </Stack>
+                          </Box>
+                        </Stack>
+                      </CardActionArea>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Recommendations by category */}
+          {Object.entries(recsByCategory).map(([cat, items]) => {
+            const catEmoji: Record<string, string> = { book: '📚', recipe: '🍜', music: '🎵', place: '📍', external_event: '🎭', movie: '🎬' };
+            const catLabel: Record<string, string> = { book: '图书', recipe: '食谱', music: '音乐', place: '好店', external_event: '演出/展览', movie: '电影推荐' };
+            return (
+              <Card key={cat}>
+                <CardContent>
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                    {catEmoji[cat] ?? '📌'} {catLabel[cat] ?? cat} ({items.length})
+                  </Typography>
+                  <Grid container spacing={1.5}>
+                    {items.map((rec: any) => (
+                      <Grid key={rec.id} size={{ xs: 12, sm: 6 }}>
+                        <CardActionArea
+                          onClick={() => navigate(`/discover/${cat}/${rec.id}`)}
+                          sx={{ borderRadius: 2 }}
+                        >
+                          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 1 }}>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography variant="body2" fontWeight={700} noWrap>{rec.title}</Typography>
+                              {rec.description && (
+                                <Typography variant="caption" color="text.secondary" noWrap>
+                                  {String(rec.description).replace(/<[^>]*>/g, '')}
+                                </Typography>
+                              )}
+                              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.3, display: 'block' }}>
+                                {rec._count?.votes ?? 0} 票
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </CardActionArea>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </Stack>
+      )}
+
+      {/* ══════ 感谢卡 ══════ */}
+      {tabs[tab] === '感谢卡' && (
+        <Stack spacing={2}>
+          {data.recentCards.length > 0 && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                  💌 收到的感谢卡 ({data.recentCards.length})
+                </Typography>
+                <Grid container spacing={1.5}>
+                  {data.recentCards.map((card, index) => (
+                    <Grid key={index} size={{ xs: 12, sm: 6 }}>
+                      <PostCard
+                        from={card.from}
+                        to={member.name}
+                        fromAvatar={card.fromAvatar}
+                        toAvatar={member.avatar || undefined}
+                        message={card.message}
+                        stamp={card.stamp}
+                        date={card.date}
+                        photo={card.photo}
+                        layout="horizontal"
+                        eventCtx={card.eventCtx}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+
+          {data.sentCards.length > 0 && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.2 }}>
+                  ✉️ 寄出的感谢卡 ({data.sentCards.length})
+                </Typography>
+                <Grid container spacing={1.5}>
+                  {data.sentCards.map((card, index) => (
+                    <Grid key={index} size={{ xs: 12, sm: 6 }}>
+                      <PostCard
+                        from={member.name}
+                        to={(card as any).to ?? ''}
+                        fromAvatar={member.avatar || undefined}
+                        toAvatar={(card as any).toAvatar}
+                        message={card.message}
+                        stamp={card.stamp}
+                        date={card.date}
+                        photo={card.photo}
+                        layout="horizontal"
+                        eventCtx={card.eventCtx}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+
+          {data.recentCards.length === 0 && data.sentCards.length === 0 && (
+            <EmptyState
+              icon="💌"
+              title={`${member.name} 还没有公开的感谢卡`}
+            />
+          )}
+        </Stack>
+      )}
+
 
       {/* ══════ Lightbox Dialog ══════ */}
       <Dialog
@@ -790,7 +851,7 @@ export default function MemberDetailPage() {
               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', px: 6 }}>
                 {lightboxIndex > 0 && (
                   <IconButton
-                    onClick={() => setLightboxIndex((i) => i - 1)}
+                    onClick={() => { setLightboxIndex((i) => i - 1); setShowOriginal(false); }}
                     sx={{ position: 'absolute', left: 8, color: '#fff' }}
                   >
                     <ArrowBackIosNewIcon />
@@ -798,7 +859,7 @@ export default function MemberDetailPage() {
                 )}
                 <Box
                   component="img"
-                  src={photo.url}
+                  src={showOriginal ? photo.url : thumbnailUrl(photo.url)}
                   alt={photo.caption || '照片'}
                   sx={{
                     maxWidth: '90%',
@@ -810,7 +871,7 @@ export default function MemberDetailPage() {
                 />
                 {lightboxIndex < allGalleryPhotos.length - 1 && (
                   <IconButton
-                    onClick={() => setLightboxIndex((i) => i + 1)}
+                    onClick={() => { setLightboxIndex((i) => i + 1); setShowOriginal(false); }}
                     sx={{ position: 'absolute', right: 8, color: '#fff' }}
                   >
                     <ArrowForwardIosIcon />
@@ -821,10 +882,31 @@ export default function MemberDetailPage() {
                 <Typography variant="body2" sx={{ color: '#fff' }}>
                   {photo.eventTitle}
                 </Typography>
+                {!showOriginal && (
+                  <Button
+                    size="small"
+                    onClick={() => setShowOriginal(true)}
+                    sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5, fontSize: '0.75rem' }}
+                  >
+                    查看原图
+                  </Button>
+                )}
+                {showOriginal && (
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mt: 0.5, display: 'block' }}>
+                    已加载原图
+                  </Typography>
+                )}
               </Box>
             </Box>
           );
         })()}
+      </Dialog>
+      {/* ══════ Avatar Lightbox ══════ */}
+      <Dialog open={avatarOpen} onClose={() => setAvatarOpen(false)} maxWidth="sm" PaperProps={{ sx: { bgcolor: 'transparent', boxShadow: 'none', overflow: 'visible' } }}>
+        <Box sx={{ position: 'relative' }}>
+          <IconButton onClick={() => setAvatarOpen(false)} sx={{ position: 'absolute', top: -40, right: 0, color: '#fff' }}><CloseIcon /></IconButton>
+          <Box component="img" src={member.avatar} sx={{ width: '100%', maxWidth: 400, borderRadius: 2 }} />
+        </Box>
       </Dialog>
     </Stack>
   );

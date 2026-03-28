@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { USER_BRIEF_SELECT } from '../../utils/prisma-selects.js';
 
 export class AboutRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -28,7 +29,7 @@ export class AboutRepository {
   getAnnouncement(id: string) {
     return this.prisma.announcement.findUnique({
       where: { id },
-      include: { author: { select: { id: true, name: true, avatar: true } } },
+      include: { author: { select: USER_BRIEF_SELECT } },
     });
   }
 
@@ -36,7 +37,7 @@ export class AboutRepository {
     return this.prisma.announcement.findMany({
       where: { published: true },
       orderBy: { createdAt: 'desc' },
-      include: { author: { select: { id: true, name: true, avatar: true } } },
+      include: { author: { select: USER_BRIEF_SELECT } },
     });
   }
 
@@ -44,22 +45,22 @@ export class AboutRepository {
   listAnnouncementsAdmin() {
     return this.prisma.announcement.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { author: { select: { id: true, name: true, avatar: true } } },
+      include: { author: { select: USER_BRIEF_SELECT } },
     });
   }
 
-  createAnnouncement(data: { title: string; body: string; type: string; pinned: boolean; authorId: string }) {
+  createAnnouncement(data: { title: string; body: string; url?: string; type: string; pinned: boolean; authorId: string }) {
     return this.prisma.announcement.create({
       data: { ...data, published: true },
-      include: { author: { select: { id: true, name: true, avatar: true } } },
+      include: { author: { select: USER_BRIEF_SELECT } },
     });
   }
 
-  updateAnnouncement(id: string, data: { title?: string; body?: string; type?: string; pinned?: boolean }) {
+  updateAnnouncement(id: string, data: { title?: string; body?: string; url?: string; type?: string; pinned?: boolean }) {
     return this.prisma.announcement.update({
       where: { id },
       data,
-      include: { author: { select: { id: true, name: true, avatar: true } } },
+      include: { author: { select: USER_BRIEF_SELECT } },
     });
   }
 

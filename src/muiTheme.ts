@@ -16,7 +16,7 @@ export function createAppTheme(mode: AppColorMode = 'dark') {
             paper: '#1E1E22',
           }
         : {
-            default: '#F7F6F4',
+            default: '#F9F8F6',
             paper: '#FFFFFF',
           },
       text: isDark
@@ -43,15 +43,16 @@ export function createAppTheme(mode: AppColorMode = 'dark') {
       MuiCard: {
         styleOverrides: {
           root: {
-            border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.12)',
+            border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
             backgroundImage: 'none',
+            ...(isDark ? {} : { backgroundColor: '#FFFFFF' }),
           },
         },
       },
       MuiAppBar: {
         styleOverrides: {
           colorTransparent: {
-            backgroundColor: isDark ? '#17171ccc' : '#F7F6F4cc',
+            backgroundColor: isDark ? '#17171ccc' : '#F9F8F6cc',
           },
         },
       },

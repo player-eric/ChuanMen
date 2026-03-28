@@ -1,0 +1,2 @@
+-- Config-only change: add directUrl for Neon pooled/unpooled connection split
+-- No schema changes needed

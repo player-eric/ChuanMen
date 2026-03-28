@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/auth/AuthContext';
-import { signupEvent, cancelSignup, addComment, fetchCommentsApi, fetchMembersApi, fetchEventTasks, claimEventTask, volunteerEventTask } from '@/lib/domainApi';
+import { signupEvent, cancelSignup, addComment, fetchCommentsApi, fetchMembersApi, fetchEventTasks, claimEventTask, volunteerEventTask, toggleMovieVote, toggleProposalVote, toggleRecommendationVote, toggleLike } from '@/lib/domainApi';
 import type { EventTaskData } from '@/types';
 import TaskClaimDialog from '@/components/TaskClaimDialog';
 import type { FeedComment } from '@/types';
@@ -31,6 +31,8 @@ function extractEntity(navTarget?: string): { entityType: string; entityId: stri
   if (m) return { entityType: 'event', entityId: m[1] };
   m = navTarget.match(/^\/discover\/movies\/([^/]+)$/);
   if (m) return { entityType: 'movie', entityId: m[1] };
+  m = navTarget.match(/^\/postcards\/([^/]+)$/);
+  if (m) return { entityType: 'postcard', entityId: m[1] };
   return undefined;
 }
 import { PostCard } from './PostCard';
@@ -88,10 +90,26 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   const c = useColors();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [likedLocal, setLikedLocal] = useState(false);
+  const alreadyLiked = !!(user && likedBy.includes(user.name));
+  const [likedLocal, setLikedLocal] = useState(alreadyLiked);
   const liked = likedProp ?? likedLocal;
-  const setLiked = onLike ?? (() => setLikedLocal((v) => !v));
+  const setLiked = onLike ?? (() => {
+    setLikedLocal((v) => !v);
+    if (entityType && entityId && user) {
+      toggleLike(entityType, entityId, user.id).catch(() => {});
+    }
+  });
   const [expanded, setExpanded] = useState(defaultExpanded ?? false);
+  const [badgeDismissed, setBadgeDismissed] = useState(() => {
+    // Check localStorage for persisted read timestamp
+    if (!entityType || !entityId) return false;
+    try {
+      const raw = localStorage.getItem('chuanmen.commentRead');
+      if (!raw) return false;
+      const map = JSON.parse(raw);
+      return !!map[`${entityType}:${entityId}`];
+    } catch { return false; }
+  });
   const [likesExpanded, setLikesExpanded] = useState(false);
   const [localComments, setLocalComments] = useState(comments ?? []);
   const [canSend, setCanSend] = useState(false);
@@ -99,19 +117,41 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   const editorRef = useRef<{ clear: () => void; getHTML: () => string; insertImage: (src: string) => void } | null>(null);
   const members = useFeedMembers();
 
+  // Persist "read" to localStorage when comments section is opened
+  useEffect(() => {
+    if (expanded && !badgeDismissed && entityType && entityId) {
+      setBadgeDismissed(true);
+      try {
+        const raw = localStorage.getItem('chuanmen.commentRead');
+        const map = raw ? JSON.parse(raw) : {};
+        map[`${entityType}:${entityId}`] = Date.now();
+        // Prune old entries (keep last 200)
+        const entries = Object.entries(map);
+        if (entries.length > 200) {
+          entries.sort((a, b) => (b[1] as number) - (a[1] as number));
+          const pruned = Object.fromEntries(entries.slice(0, 200));
+          localStorage.setItem('chuanmen.commentRead', JSON.stringify(pruned));
+        } else {
+          localStorage.setItem('chuanmen.commentRead', JSON.stringify(map));
+        }
+      } catch { /* localStorage full or unavailable */ }
+    }
+  }, [expanded, badgeDismissed, entityType, entityId]);
+
   // Load persisted comments from API when section is first expanded
   useEffect(() => {
     if (expanded && !loaded && entityType && entityId) {
       setLoaded(true);
       fetchCommentsApi(entityType, entityId).then((list) => {
         if (Array.isArray(list) && list.length > 0) {
-          setLocalComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '' })));
+          setLocalComments(list.map((c: any) => ({ name: c.author?.name ?? '匿名', avatar: c.author?.avatar ?? undefined, text: c.content ?? '', date: c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '' })));
         }
       }).catch(() => {});
     }
   }, [expanded, loaded, entityType, entityId]);
 
-  const likeCount = likes + (liked ? 1 : 0);
+  // likes from API already includes current user's like, so adjust delta
+  const likeCount = likes + (liked === alreadyLiked ? 0 : liked ? 1 : -1);
   const px = compact ? 10 : 14;
 
   const isEmptyHtml = (html: string) => html.replace(/<[^>]*>/g, '').trim().length === 0;
@@ -119,7 +159,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   const handleSubmit = async () => {
     const html = editorRef.current?.getHTML() ?? '';
     if (isEmptyHtml(html) || !user) return;
-    setLocalComments(prev => [...prev, { name: user.name, text: html, date: '刚刚' }]);
+    setLocalComments(prev => [...prev, { name: user.name, avatar: user.avatar, text: html, date: '刚刚' }]);
     editorRef.current?.clear();
     setCanSend(false);
     if (entityType && entityId) {
@@ -134,7 +174,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
   return (
     <div onClick={e => e.stopPropagation()}>
       {/* New comment badge */}
-      {newComments && newComments > 0 && (
+      {!badgeDismissed && newComments != null && newComments > 0 && (
         <div
           onClick={() => setExpanded(true)}
           style={{
@@ -198,7 +238,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
           )}
           {localComments.map((cm, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <Ava name={cm.name} size={compact ? 20 : 24} onTap={() => goMember(cm.name)} />
+              <Ava name={cm.name} src={cm.avatar} size={compact ? 20 : 24} onTap={() => goMember(cm.name)} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12 }}>
                   <b onClick={() => goMember(cm.name)} style={{ cursor: 'pointer' }}>{cm.name}</b>
@@ -222,7 +262,7 @@ export function FeedActions({ likes = 0, likedBy = [], comments = [], compact, n
           {/* Comment input */}
           {user && (
             <div style={{ display: 'flex', gap: 8, marginTop: localComments.length > 0 ? 4 : 0, alignItems: 'flex-start' }}>
-              <Ava name={user.name} size={compact ? 20 : 24} />
+              <Ava name={user.name} src={user.avatar} size={compact ? 20 : 24} />
               <div style={{ flex: 1 }}>
                 <RichTextEditor
                   content=""
@@ -429,16 +469,16 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
         </div>
       )}
 
-      {isImageUrl(scene) ? (
+      {(isImageUrl(scene) || filmPoster) ? (
         /* ── Poster hero layout: blur-fill bg + centered poster ── */
         <>
           <div style={{ position: 'relative', overflow: 'hidden', display: 'flex', justifyContent: 'center', padding: '16px 0' }}>
             {/* Blurred poster background fill */}
-            <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${scene})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px) brightness(0.5)', transform: 'scale(1.3)' }} />
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${isImageUrl(scene) ? scene : filmPoster})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px) brightness(0.5)', transform: 'scale(1.3)' }} />
             {/* Bottom gradient for text readability */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', zIndex: 1 }} />
             {/* Centered poster — no cropping, auto height */}
-            <img src={scene} alt="" style={{ position: 'relative', zIndex: 2, display: 'block', maxHeight: 220, maxWidth: '85%', objectFit: 'contain', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }} />
+            <img src={isImageUrl(scene) ? scene : filmPoster!} alt="" style={{ position: 'relative', zIndex: 2, display: 'block', maxHeight: 220, maxWidth: '85%', objectFit: 'contain', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }} />
             {/* Chips top-right */}
             <div style={{ position: 'absolute', top: 8, right: 10, display: 'flex', gap: 6, zIndex: 3 }}>
               {pc && (
@@ -533,7 +573,7 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
         /* ── Gradient banner layout (unchanged) ── */
         <>
           {scene && (
-            <ScenePhoto scene={scene} h={90}>
+            <ScenePhoto scene={scene} h={90} style={{ borderRadius: '10px 10px 0 0' }}>
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(transparent, rgba(0,0,0,0.45))' }} />
               <div style={{ position: 'absolute', top: 8, right: 10, display: 'flex', gap: 6 }}>
                 {isList && pc ? (
@@ -722,10 +762,10 @@ export function FeedActivity({ name, hostAvatar, title, date, location, spots, t
 /* ═══ FeedCard ═══ */
 interface FeedCardProps extends InteractionProps {
   from: string; to: string; fromAvatar?: string; toAvatar?: string; message: string; photo?: string; stamp?: string; navTarget?: string;
-  time?: string; visibility?: string;
+  time?: string; visibility?: string; cardId?: string;
 }
 
-export function FeedCard({ from, to, fromAvatar, toAvatar, message, photo, stamp, navTarget, likes, likedBy, comments, newComments, commentCount, time, visibility }: FeedCardProps) {
+export function FeedCard({ from, to, fromAvatar, toAvatar, message, photo, stamp, navTarget, likes, likedBy, comments, newComments, commentCount, time, visibility, cardId }: FeedCardProps) {
   const c = useColors();
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
@@ -746,7 +786,7 @@ export function FeedCard({ from, to, fromAvatar, toAvatar, message, photo, stamp
         </div>
         <PostCard from={from} to={to} fromAvatar={fromAvatar} toAvatar={toAvatar} message={message} stamp={stamp} photo={photo} layout="horizontal" />
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...(cardId ? { entityType: 'postcard', entityId: cardId } : extractEntity(navTarget))} />
     </Card>
   );
 }
@@ -754,15 +794,28 @@ export function FeedCard({ from, to, fromAvatar, toAvatar, message, photo, stamp
 /* ═══ FeedMovie ═══ */
 interface FeedMovieProps extends InteractionProps {
   name: string; avatar?: string; title: string; year: string; dir: string; poster?: string; votes: number;
-  navTarget?: string; time?: string;
+  entityId?: string; voted?: boolean; navTarget?: string; time?: string;
 }
 
-export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedMovieProps) {
+export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV, entityId, voted: initVoted, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedMovieProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleMovieVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <Card>
@@ -780,19 +833,9 @@ export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV
             <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
             <div style={{ fontSize: 12, color: c.text3, marginTop: 2 }}>{year}  {dir}</div>
             <div style={{ marginTop: 6 }}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setV(!v); }}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  padding: '4px 12px', borderRadius: 6,
-                  background: v ? c.warm + '15' : c.s2,
-                  border: `1px solid ${v ? c.warm + '40' : c.line}`,
-                  color: v ? c.warm : c.text2,
-                  fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                ▲ {initV + (v ? 1 : 0)}
-              </button>
+              <Button onClick={handleVote} variant={v ? 'contained' : 'outlined'} size="small">
+                ▲ {count}
+              </Button>
             </div>
           </div>
         </div>
@@ -804,15 +847,25 @@ export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV
 
 /* ═══ FeedMilestone ═══ */
 interface FeedMilestoneProps extends InteractionProps {
-  text: string; emoji: string;
+  text: string; emoji: string; body?: string; url?: string;
 }
 
-export function FeedMilestone({ text, emoji, likes, likedBy, comments, newComments, commentCount }: FeedMilestoneProps) {
+export function FeedMilestone({ text, emoji, body, url, likes, likedBy, comments, newComments, commentCount }: FeedMilestoneProps) {
+  const c = useColors();
   return (
     <Card glow>
       <div style={{ padding: 16, textAlign: 'center' }}>
         <div style={{ fontSize: 28, marginBottom: 6 }}>{emoji}</div>
-        <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{text}</div>
+        {url ? (
+          <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6, color: c.warm, textDecoration: 'underline' }}>
+            {text}
+          </a>
+        ) : (
+          <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{text}</div>
+        )}
+        {body && (
+          <div style={{ fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-line', marginTop: 8, opacity: 0.8 }}>{body}</div>
+        )}
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
     </Card>
@@ -822,15 +875,28 @@ export function FeedMilestone({ text, emoji, likes, likedBy, comments, newCommen
 /* ═══ FeedProposal ═══ */
 interface FeedProposalProps extends InteractionProps {
   name: string; avatar?: string; title: string; votes: number; interested: string[];
-  navTarget?: string; time?: string;
+  entityId?: string; voted?: boolean; navTarget?: string; time?: string;
 }
 
-export function FeedProposal({ name, avatar, title, votes: initV, interested, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedProposalProps) {
+export function FeedProposal({ name, avatar, title, votes: initV, interested, entityId, voted: initVoted, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedProposalProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleProposalVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <Card>
@@ -848,7 +914,7 @@ export function FeedProposal({ name, avatar, title, votes: initV, interested, na
           <span style={{ fontSize: 12, color: c.text3 }}>{interested.length} 人感兴趣</span>
         </div>
         <button
-          onClick={(e) => { e.stopPropagation(); setV(!v); }}
+          onClick={handleVote}
           style={{
             padding: '6px 16px', borderRadius: 6,
             background: v ? c.blue + '15' : c.s2,
@@ -857,7 +923,7 @@ export function FeedProposal({ name, avatar, title, votes: initV, interested, na
             fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}
         >
-          {v ? '✓ 我也感兴趣' : '我感兴趣'} · {initV + (v ? 1 : 0)}
+          {v ? '✓ 我也感兴趣' : '我感兴趣'} · {count}
         </button>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
@@ -868,15 +934,28 @@ export function FeedProposal({ name, avatar, title, votes: initV, interested, na
 /* ═══ FeedCompactMovie ═══ */
 interface FeedCompactMovieProps extends InteractionProps {
   name: string; avatar?: string; title: string; year: string; dir: string;
-  poster?: string; votes: number; time: string; navTarget?: string;
+  poster?: string; votes: number; entityId?: string; voted?: boolean; time: string; navTarget?: string;
 }
 
-export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactMovieProps) {
+export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV, entityId, voted: initVoted, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactMovieProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleMovieVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
@@ -893,17 +972,9 @@ export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV,
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flexShrink: 0 }}>
-          <button
-            onClick={(e) => { e.stopPropagation(); setV(!v); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
-              background: v ? c.warm + '15' : c.s2,
-              border: `1px solid ${v ? c.warm + '40' : c.line}`,
-              color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
-            ▲ {initV + (v ? 1 : 0)}
-          </button>
+          <Button onClick={handleVote} variant={v ? 'contained' : 'outlined'} size="small">
+            ▲ {count}
+          </Button>
         </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact {...extractEntity(navTarget)} />
@@ -914,15 +985,28 @@ export function FeedCompactMovie({ name, title, year, dir, poster, votes: initV,
 /* ═══ FeedCompactProposal ═══ */
 interface FeedCompactProposalProps extends InteractionProps {
   name: string; avatar?: string; title: string; votes: number;
-  interested: string[]; time: string; navTarget?: string;
+  entityId?: string; voted?: boolean; interested: string[]; time: string; navTarget?: string;
 }
 
-export function FeedCompactProposal({ name, avatar, title, votes: initV, interested, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactProposalProps) {
+export function FeedCompactProposal({ name, avatar, title, votes: initV, entityId, voted: initVoted, interested, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactProposalProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleProposalVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
@@ -938,7 +1022,7 @@ export function FeedCompactProposal({ name, avatar, title, votes: initV, interes
             <AvaStack names={interested} size={16} />
           </div>
           <button
-            onClick={(e) => { e.stopPropagation(); setV(!v); }}
+            onClick={handleVote}
             style={{
               padding: '3px 10px', borderRadius: 5,
               background: v ? c.blue + '15' : c.s2,
@@ -946,7 +1030,7 @@ export function FeedCompactProposal({ name, avatar, title, votes: initV, interes
               color: v ? c.blue : c.text3, fontSize: 12, fontWeight: 600, cursor: 'pointer',
             }}
           >
-            {v ? '✓' : '🙋'} {initV + (v ? 1 : 0)}
+            {v ? '✓' : '🙋'} {count}
           </button>
         </div>
       </div>
@@ -958,19 +1042,32 @@ export function FeedCompactProposal({ name, avatar, title, votes: initV, interes
 /* ═══ FeedRecommendation (compact) ═══ */
 interface FeedRecommendationProps extends InteractionProps {
   name: string; avatar?: string; title: string; category: string; categoryIcon: string;
-  coverUrl?: string; votes: number; time: string; navTarget?: string;
+  coverUrl?: string; votes: number; entityId?: string; voted?: boolean; time: string; navTarget?: string;
 }
 
 const categoryLabel: Record<string, string> = {
-  movie: '🎬 电影', book: '📖 读书', music: '🎵 音乐', recipe: '🍳 菜谱', place: '📍 好店', external_event: '🎭 演出',
+  movie: '🎬 电影', book: '📖 读书', music: '🎵 音乐', recipe: '🍳 菜谱', place: '📍 好店', external_event: '🎭 演出与展览',
 };
 
-export function FeedRecommendation({ name, title, category, categoryIcon, coverUrl, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedRecommendationProps) {
+export function FeedRecommendation({ name, title, category, categoryIcon, coverUrl, votes: initV, entityId, voted: initVoted, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedRecommendationProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleRecommendationVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
@@ -992,17 +1089,9 @@ export function FeedRecommendation({ name, title, category, categoryIcon, coverU
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flexShrink: 0 }}>
-          <button
-            onClick={(e) => { e.stopPropagation(); setV(!v); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
-              background: v ? c.warm + '15' : c.s2,
-              border: `1px solid ${v ? c.warm + '40' : c.line}`,
-              color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
-            ▲ {initV + (v ? 1 : 0)}
-          </button>
+          <Button onClick={handleVote} variant={v ? 'contained' : 'outlined'} size="small">
+            ▲ {count}
+          </Button>
         </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
@@ -1013,15 +1102,28 @@ export function FeedRecommendation({ name, title, category, categoryIcon, coverU
 /* ═══ FeedBook ═══ */
 interface FeedBookProps extends InteractionProps {
   name: string; avatar?: string; title: string; year: string; author: string; coverUrl?: string; votes: number;
-  navTarget?: string; time?: string;
+  entityId?: string; voted?: boolean; navTarget?: string; time?: string;
 }
 
-export function FeedBook({ name, avatar, title, year, author, coverUrl, votes: initV, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedBookProps) {
+export function FeedBook({ name, avatar, title, year, author, coverUrl, votes: initV, entityId, voted: initVoted, navTarget, likes, likedBy, comments, newComments, commentCount, time }: FeedBookProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleRecommendationVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <Card>
@@ -1039,19 +1141,9 @@ export function FeedBook({ name, avatar, title, year, author, coverUrl, votes: i
             <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
             <div style={{ fontSize: 12, color: c.text3, marginTop: 2 }}>{year} · {author}</div>
             <div style={{ marginTop: 6 }}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setV(!v); }}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  padding: '4px 12px', borderRadius: 6,
-                  background: v ? c.warm + '15' : c.s2,
-                  border: `1px solid ${v ? c.warm + '40' : c.line}`,
-                  color: v ? c.warm : c.text2,
-                  fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                ▲ {initV + (v ? 1 : 0)}
-              </button>
+              <Button onClick={handleVote} variant={v ? 'contained' : 'outlined'} size="small">
+                ▲ {count}
+              </Button>
             </div>
           </div>
         </div>
@@ -1245,8 +1337,8 @@ export function FeedCompactSmallGroup({ name, avatar, title, date, location, wee
             onClick={handleSignup}
             style={{
               padding: '3px 10px', borderRadius: 5,
-              background: joined ? c.warm + '15' : c.s2,
-              border: `1px solid ${joined ? c.warm + '40' : c.line}`,
+              background: joined ? c.warm + '26' : c.s2,
+              border: `1px solid ${joined ? c.warm + '66' : c.line}`,
               color: joined ? c.warm : c.text3, fontSize: 12, fontWeight: 600, cursor: 'pointer',
             }}
           >
@@ -1272,15 +1364,28 @@ export function FeedCompactSmallGroup({ name, avatar, title, date, location, wee
 /* ═══ FeedCompactBook ═══ */
 interface FeedCompactBookProps extends InteractionProps {
   name: string; avatar?: string; title: string; year: string; author: string;
-  coverUrl?: string; votes: number; time: string; navTarget?: string;
+  coverUrl?: string; votes: number; entityId?: string; voted?: boolean; time: string; navTarget?: string;
 }
 
-export function FeedCompactBook({ name, title, year, author, coverUrl, votes: initV, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactBookProps) {
+export function FeedCompactBook({ name, title, year, author, coverUrl, votes: initV, entityId, voted: initVoted, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedCompactBookProps) {
   const c = useColors();
-  const [v, setV] = useState(false);
+  const { user } = useAuth();
+  const [v, setV] = useState(initVoted ?? false);
+  const [count, setCount] = useState(initV);
+  useEffect(() => { setV(initVoted ?? false); }, [initVoted]);
+  useEffect(() => { setCount(initV); }, [initV]);
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entityId || !user?.id) return;
+    const prev = v;
+    setV(!prev);
+    setCount(c => c + (prev ? -1 : 1));
+    try { await toggleRecommendationVote(entityId, user.id); } catch { setV(prev); setCount(c => c + (prev ? 1 : -1)); }
+  };
 
   return (
     <div style={{ background: c.s1, borderRadius: 10, border: `1px solid ${c.line}`, overflow: 'hidden' }}>
@@ -1297,17 +1402,9 @@ export function FeedCompactBook({ name, title, year, author, coverUrl, votes: in
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flexShrink: 0 }}>
-          <button
-            onClick={(e) => { e.stopPropagation(); setV(!v); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 6,
-              background: v ? c.warm + '15' : c.s2,
-              border: `1px solid ${v ? c.warm + '40' : c.line}`,
-              color: v ? c.warm : c.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
-            ▲ {initV + (v ? 1 : 0)}
-          </button>
+          <Button onClick={handleVote} variant={v ? 'contained' : 'outlined'} size="small">
+            ▲ {count}
+          </Button>
         </div>
       </div>
       <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />

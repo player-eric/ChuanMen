@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import type { FastifyBaseLogger } from 'fastify';
+import { USER_BRIEF_SELECT } from '../utils/prisma-selects.js';
 import { sendTemplatedEmail } from '../services/emailService.js';
 import { filterByCooldown, filterByRefId, ELIGIBLE_USER_WHERE } from './helpers.js';
 import type { HostTributeResult } from './contentAutomation.js';
@@ -133,7 +134,7 @@ export async function sendEventReminder(
         include: { user: { select: { id: true, name: true, email: true } } },
       },
       tasks: {
-        include: { claimedBy: { select: { id: true, name: true } } },
+        include: { claimedBy: { select: USER_BRIEF_SELECT } },
         orderBy: { createdAt: 'asc' },
       },
     },
@@ -752,7 +753,7 @@ async function buildDigestSections(
   if (isSourceEnabled('new_events')) {
     const newEvents = await prisma.event.findMany({
       where: {
-        phase: { not: 'cancelled' },
+        phase: { notIn: ['cancelled', 'ended'] },
         OR: [
           { createdAt: { gte: cutoff } },
           { updatedAt: { gte: cutoff } },
@@ -767,7 +768,7 @@ async function buildDigestSections(
       sortedSections.push({
         sortOrder: sourceMap.get('new_events')?.sortOrder ?? 0,
         section: {
-          icon: '🎬',
+          icon: '📅',
           title: '新活动',
           items: newEvents.map((e) => {
             const d = e.startsAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'America/New_York' });
@@ -835,7 +836,7 @@ async function buildDigestSections(
         section: {
           icon: '💌',
           title: '感谢卡',
-          items: [{ text: `社区本周发出了 ${postcardCount} 张新感谢卡` }],
+          items: [{ text: `社区最近发出了 ${postcardCount} 张新感谢卡` }],
         },
       });
     }
@@ -928,6 +929,7 @@ async function buildDigestSections(
       const items: { text: string; url?: string }[] = [];
       for (const e of topEntities) {
         let title = '';
+        let recCat = 'book';
         if (e.entityType === 'event') {
           const ev = await prisma.event.findUnique({ where: { id: e.entityId }, select: { title: true } });
           title = ev?.title ?? '';
@@ -938,15 +940,16 @@ async function buildDigestSections(
           const pr = await prisma.proposal.findUnique({ where: { id: e.entityId }, select: { title: true } });
           title = pr?.title ?? '';
         } else if (e.entityType === 'recommendation') {
-          const rc = await prisma.recommendation.findUnique({ where: { id: e.entityId }, select: { title: true } });
+          const rc = await prisma.recommendation.findUnique({ where: { id: e.entityId }, select: { title: true, category: true } });
           title = rc?.title ?? '';
+          recCat = rc?.category ?? 'book';
         }
         if (title) {
           const pathMap: Record<string, string> = {
             event: `/events/${e.entityId}`,
             movie: `/discover/movies/${e.entityId}`,
             proposal: `/events/proposals/${e.entityId}`,
-            recommendation: `/discover/recommendations/${e.entityId}`,
+            recommendation: `/discover/${recCat}/${e.entityId}`,
           };
           items.push({
             text: `「${title}」收到 ${e.count} 条新评论`,
@@ -1155,8 +1158,11 @@ export async function sendDailyDigest(
   const digestCfgRow = await prisma.siteConfig.findUnique({ where: { key: 'emailConfig.digest' } });
   const digestCfg = parseDigestConfig(digestCfgRow?.value);
 
-  // Removed sendTime window check — Render starter plan cold starts often miss
-  // the ±30 min window. 1-day cooldown per user already prevents duplicates.
+  // ── Send-time window check: only send within ±30 min of configured time ──
+  if (!isWithinSendWindow(digestCfg.sendTime, digestCfg.timezone)) {
+    log.info(`DIGEST: outside send window (configured: ${digestCfg.sendTime} ${digestCfg.timezone}), skipping`);
+    return 0;
+  }
 
   // ── Frequency check: daily / weekdays / custom ──
   if (!isSendDay(digestCfg.frequency, digestCfg.customDays, digestCfg.timezone)) {
@@ -1496,7 +1502,7 @@ export async function sendSameDayReminder(
         include: { user: { select: { id: true, name: true, email: true } } },
       },
       tasks: {
-        include: { claimedBy: { select: { id: true, name: true } } },
+        include: { claimedBy: { select: USER_BRIEF_SELECT } },
         orderBy: { createdAt: 'asc' },
       },
     },
@@ -1568,7 +1574,7 @@ export async function sendNewEventNotif(
       phase: { not: 'cancelled' },
     },
     include: {
-      host: { select: { id: true, name: true } },
+      host: { select: USER_BRIEF_SELECT },
     },
   });
 
@@ -1632,7 +1638,7 @@ export async function sendNewRecNotif(
 
   const newRecs = await prisma.recommendation.findMany({
     where: { createdAt: { gte: twentyMinAgo, lte: tenMinAgo } },
-    include: { author: { select: { id: true, name: true } } },
+    include: { author: { select: USER_BRIEF_SELECT } },
   });
 
   if (newRecs.length === 0) return 0;
@@ -1658,7 +1664,7 @@ export async function sendNewRecNotif(
             recTitle: rec.title,
           },
           ctaLabel: '查看推荐',
-          ctaUrl: `https://chuanmener.club/discover/recommendations/${rec.id}`,
+          ctaUrl: `https://chuanmener.club/discover/${rec.category}/${rec.id}`,
         });
         await prisma.emailLog.create({
           data: { userId: user.id, ruleId: 'P2-B', refId: rec.id, messageId: result.MessageId },
@@ -1868,7 +1874,7 @@ export async function sendRecDigest(
   const categoryIcons: Record<string, string> = {
     book: '📖', recipe: '🍽', place: '📍', music: '🎵', external_event: '🎭', movie: '🎬',
   };
-  const recList = newRecs.map((r) => `${categoryIcons[r.category] ?? '📖'} [${r.title}](https://chuanmener.club/discover/recommendations/${r.id})`).join('\n');
+  const recList = newRecs.map((r) => `${categoryIcons[r.category] ?? '📖'} [${r.title}](https://chuanmener.club/discover/${r.category}/${r.id})`).join('\n');
 
   const allUsers: UserRow[] = await prisma.user.findMany({
     where: ELIGIBLE_USER_WHERE,

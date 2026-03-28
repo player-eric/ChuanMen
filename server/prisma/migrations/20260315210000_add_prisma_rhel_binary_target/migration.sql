@@ -1,0 +1,1 @@
+-- Generator-only change (binaryTargets), no database schema changes needed.

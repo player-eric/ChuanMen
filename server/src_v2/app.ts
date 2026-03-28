@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
@@ -16,7 +17,7 @@ export async function createApp() {
   const app = Fastify({
     logger: env.NODE_ENV !== 'test',
     trustProxy: env.TRUST_PROXY,
-    bodyLimit: 10 * 1024 * 1024, // 10 MB — matches image upload limit
+    bodyLimit: 20 * 1024 * 1024, // 20 MB — matches image upload limit
   });
 
   await app.register(sensible);
@@ -24,19 +25,23 @@ export async function createApp() {
   await app.register(cors, {
     origin: env.FRONTEND_ORIGIN,
     credentials: true,
+    allowedHeaders: ['Content-Type', 'x-user-id', 'x-migration-secret'],
   });
   await app.register(prismaPlugin);
 
-  app.register(fastifyStatic, {
-    root: path.resolve(__dirname, '../public/system-test'),
-    prefix: '/system-test/',
-  });
+  const staticRoot = path.resolve(__dirname, '../public/system-test');
+  if (fs.existsSync(staticRoot)) {
+    app.register(fastifyStatic, {
+      root: staticRoot,
+      prefix: '/system-test/',
+    });
+  }
 
   // Parse image/* content types as raw Buffer (for direct file upload, up to 10MB)
   // Parse image content types as raw Buffer for direct file upload
   app.addContentTypeParser(
     ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'image/jpg', 'application/octet-stream'],
-    { parseAs: 'buffer', bodyLimit: 10 * 1024 * 1024 },
+    { parseAs: 'buffer', bodyLimit: 20 * 1024 * 1024 },
     (_req, body, done) => { done(null, body); },
   );
 

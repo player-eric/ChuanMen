@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { USER_BRIEF_SELECT } from '../utils/prisma-selects.js';
 import { sendTemplatedEmail } from '../services/emailService.js';
 
 function safeParse<T>(schema: z.ZodSchema<T>, data: unknown): T {
@@ -30,7 +31,7 @@ export const feedbackRoutes: FastifyPluginAsync = async (app) => {
         take,
         skip,
         orderBy: { createdAt: 'desc' },
-        include: { author: { select: { id: true, name: true, avatar: true } } },
+        include: { author: { select: USER_BRIEF_SELECT } },
       }),
       app.prisma.feedback.count({ where }),
     ]);
@@ -54,7 +55,7 @@ export const feedbackRoutes: FastifyPluginAsync = async (app) => {
     const updated = await app.prisma.feedback.update({
       where: { id },
       data,
-      include: { author: { select: { id: true, name: true, avatar: true } } },
+      include: { author: { select: USER_BRIEF_SELECT } },
     });
     return updated;
   });
