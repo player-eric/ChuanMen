@@ -122,6 +122,7 @@ export default function BookDetailPage() {
   const year = isDetail ? book.year : basic.year;
   const author = isDetail ? book.author : basic.author;
   const by = bookBy || (isDetail ? book.by : basic.by);
+  const byAvatar = isDetail ? book.byAvatar : undefined;
   const status = isDetail ? book.status : basic.status;
   const serverV = isDetail ? book.v : basic.v;
   const authorId = (raw as any).authorId ?? '';
@@ -298,7 +299,7 @@ export default function BookDetailPage() {
             <CardContent>
               <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>推荐人</Typography>
               <Stack direction="row" spacing={1.5} alignItems="center">
-                <Avatar sx={{ width: 36, height: 36 }}>{by[0]}</Avatar>
+                <Ava name={by} src={byAvatar} size={36} />
                 <Typography variant="body1">{by}</Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto !important' }}>查看主页 →</Typography>
               </Stack>

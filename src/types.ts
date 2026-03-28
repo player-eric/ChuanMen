@@ -45,6 +45,7 @@ export type SignupStatus = 'invited' | 'offered' | 'accepted' | 'waitlist' | 'pe
 export interface SignupInfo {
   userId: string;
   name: string;
+  avatar?: string;
   status: SignupStatus;
   offeredAt?: string;
   note?: string;
@@ -187,6 +188,7 @@ export interface BookDetailData {
   v: number;
   voterIds: string[];
   by: string;
+  byAvatar?: string;
   status?: string;
   genre?: string;
   pages?: string;

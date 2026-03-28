@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLoaderData, useNavigate, useParams } from 'react-router';
-import { firstNonEmoji } from '@/components/Atoms';
+import { Ava, firstNonEmoji } from '@/components/Atoms';
 import {
   Avatar,
   Box,
@@ -491,6 +491,7 @@ export default function EventDetailPage() {
       const signupDetails = signups.map((s: any) => ({
         userId: s.user?.id ?? s.userId,
         name: s.user?.name ?? '?',
+        avatar: s.user?.avatar ?? undefined,
         status: s.status,
         offeredAt: s.offeredAt ?? undefined,
         note: s.note || undefined,
@@ -1458,12 +1459,7 @@ export default function EventDetailPage() {
                       </Typography>
                       {invitedPeople.map((s) => (
                         <Stack key={s.userId} direction="row" alignItems="center" spacing={1}>
-                          <Avatar
-                            sx={{ cursor: 'pointer', width: 30, height: 30, opacity: 0.6 }}
-                            onClick={() => navigate(`/members/${encodeURIComponent(s.name)}`)}
-                          >
-                            {firstNonEmoji(s.name)}
-                          </Avatar>
+                          <Ava name={s.name} src={s.avatar} size={30} onTap={() => navigate(`/members/${encodeURIComponent(s.name)}`)} />
                           <Typography variant="body2" sx={{ flex: 1, opacity: 0.6 }}>{s.name}</Typography>
                           <Chip size="small" label="待接受" variant="outlined" sx={{ opacity: 0.6 }} />
                           <IconButton
@@ -1602,7 +1598,7 @@ export default function EventDetailPage() {
                     const mins = Math.floor((remaining % 3600000) / 60000);
                     return (
                       <Stack key={s.userId} direction="row" alignItems="center" spacing={1}>
-                        <Avatar sx={{ width: 30, height: 30 }}>{firstNonEmoji(s.name)}</Avatar>
+                        <Ava name={s.name} src={s.avatar} size={30} />
                         <Typography variant="body2" sx={{ flex: 1 }}>{s.name}</Typography>
                         <Chip size="small" color="warning" label={`已递补 · 剩余${hours}:${String(mins).padStart(2, '0')}`} />
                       </Stack>
@@ -1610,7 +1606,7 @@ export default function EventDetailPage() {
                   })}
                   {waitlistPeople.map((s) => (
                     <Stack key={s.userId} direction="row" alignItems="center" spacing={1}>
-                      <Avatar sx={{ width: 30, height: 30 }}>{firstNonEmoji(s.name)}</Avatar>
+                      <Ava name={s.name} src={s.avatar} size={30} />
                       <Typography variant="body2" sx={{ flex: 1 }}>{s.name}</Typography>
                       <Chip size="small" variant="outlined" label="等位中" />
                       <Button
@@ -1669,7 +1665,7 @@ export default function EventDetailPage() {
                   {pendingPeople.map((s) => (
                     <Stack key={s.userId} spacing={0.5}>
                       <Stack direction="row" alignItems="center" spacing={1}>
-                        <Avatar sx={{ width: 30, height: 30 }}>{firstNonEmoji(s.name)}</Avatar>
+                        <Ava name={s.name} src={s.avatar} size={30} />
                         <Typography variant="body2" sx={{ flex: 1 }}>{s.name}</Typography>
                         <Button
                           size="small"

@@ -524,6 +524,7 @@ function mapApiEvent(e: any): any {
   const signupDetails = signups.map((s: any) => ({
     userId: s.user?.id ?? s.userId,
     name: s.user?.name ?? '?',
+    avatar: s.user?.avatar ?? undefined,
     status: s.status,
     offeredAt: s.offeredAt ?? undefined,
     note: s.note || undefined,
@@ -852,6 +853,7 @@ async function bookDetailLoader({ params }: { params: Record<string, string | un
       voters: mapPeople(rec.votes ?? []),
       status: rec.status ?? 'candidate',
       by: mapUser(rec.author).name !== '?' ? mapUser(rec.author).name : '',
+      byAvatar: rec.author?.avatar ?? undefined,
       synopsis: rec.description ?? '',
       genre: (rec.tags ?? []).map((t: any) => t.value).join(', '),
       sourceUrl: rec.sourceUrl ?? '',
