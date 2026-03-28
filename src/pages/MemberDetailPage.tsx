@@ -652,9 +652,11 @@ export default function MemberDetailPage() {
                           <Poster title={movie.title} src={movie.poster} w={40} h={56} />
                           <Box sx={{ flex: 1, minWidth: 0 }}>
                             <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {movie.year} · {movie.dir}
-                            </Typography>
+                            {(movie.year || movie.dir) && (
+                              <Typography variant="caption" color="text.secondary">
+                                {[movie.year, movie.dir].filter(Boolean).join(' · ')}
+                              </Typography>
+                            )}
                             <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
                               <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
                               {movie.status && (
@@ -693,9 +695,11 @@ export default function MemberDetailPage() {
                           <Poster title={movie.title} src={movie.poster} w={40} h={56} />
                           <Box sx={{ flex: 1, minWidth: 0 }}>
                             <Typography variant="body2" fontWeight={700} noWrap>{movie.title}</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {movie.year} · {movie.dir} · 推荐人: {movie.by}
-                            </Typography>
+                            {(movie.year || movie.dir || movie.by) && (
+                              <Typography variant="caption" color="text.secondary">
+                                {[movie.year, movie.dir, movie.by ? `推荐人: ${movie.by}` : ''].filter(Boolean).join(' · ')}
+                              </Typography>
+                            )}
                             <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.3 }}>
                               <Typography variant="caption" color="text.secondary">{movie.v} 票</Typography>
                               {movie.status && (
