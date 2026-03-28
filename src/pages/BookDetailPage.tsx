@@ -142,6 +142,7 @@ export default function BookDetailPage() {
   const poster = {
     ...posterGradient,
     bg: coverUrl ? `url(${coverUrl}) center/cover no-repeat` : posterGradient.bg,
+    accent: '#fff',
   };
 
   return (
@@ -178,7 +179,7 @@ export default function BookDetailPage() {
               sx={{
                 position: 'absolute',
                 inset: 0,
-                background: 'linear-gradient(transparent 30%, rgba(0,0,0,0.7) 100%)',
+                background: 'linear-gradient(transparent 20%, rgba(0,0,0,0.75) 100%)',
               }}
             />
             {canEditLink && (
@@ -199,7 +200,7 @@ export default function BookDetailPage() {
                 fontWeight={800}
                 sx={{
                   color: poster.accent,
-                  textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+                  textShadow: '0 2px 12px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)',
                   lineHeight: 1.2,
                 }}
               >
@@ -210,7 +211,7 @@ export default function BookDetailPage() {
                 sx={{
                   color: 'rgba(255,255,255,0.6)',
                   mt: 0.5,
-                  textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                  textShadow: '0 1px 4px rgba(0,0,0,0.7)',
                 }}
               >
                 {year} · {author}

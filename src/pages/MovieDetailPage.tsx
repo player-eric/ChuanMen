@@ -144,6 +144,7 @@ export default function MovieDetailPage() {
   const poster = {
     ...posterGradient,
     bg: posterUrl ? `url(${posterUrl}) center/cover no-repeat` : posterGradient.bg,
+    accent: '#fff',
   };
 
   // Event connections — from API data
@@ -239,7 +240,7 @@ export default function MovieDetailPage() {
               sx={{
                 position: 'absolute',
                 inset: 0,
-                background: 'linear-gradient(transparent 30%, rgba(0,0,0,0.7) 100%)',
+                background: 'linear-gradient(transparent 20%, rgba(0,0,0,0.75) 100%)',
               }}
             />
             {/* Upload poster button */}
@@ -262,7 +263,7 @@ export default function MovieDetailPage() {
                 fontWeight={800}
                 sx={{
                   color: poster.accent,
-                  textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+                  textShadow: '0 2px 12px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)',
                   lineHeight: 1.2,
                 }}
               >
