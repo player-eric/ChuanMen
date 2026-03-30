@@ -339,7 +339,7 @@ function MoviesSection() {
           <Grid container spacing={1.5}>
             {filteredScreened.map((m: any, i: number) => {
               return (
-                <Grid key={i} size={{ xs: 12, md: 6 }}>
+                <Grid key={m.id} size={{ xs: 12, md: 6 }}>
                   <Card>
                     <CardActionArea
                       onClick={() => m.id && navigate(`/discover/movies/${m.id}`)}
@@ -599,6 +599,12 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
                           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{b.year} · {b.author}</Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{b.by} 推荐</Typography>
                           {b.status && <Chip sx={{ mt: 0.75, alignSelf: 'flex-start' }} size="small" color="success" label={`✓ ${b.status}`} />}
+                          {(b.commentCount ?? 0) > 0 && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                              <ChatBubbleOutlineRounded sx={{ fontSize: 14, color: 'text.secondary' }} />
+                              <Typography variant="caption" color="text.secondary">{b.commentCount}</Typography>
+                            </Box>
+                          )}
                         </Box>
                         <Button
                           onClick={(event) => { event.stopPropagation(); toggle(b.id); }}
@@ -610,12 +616,6 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
                           ▲ {b.v + (votes[b.id] && !b.voterIds.includes(user?.id ?? '') ? 1 : !votes[b.id] && b.voterIds.includes(user?.id ?? '') ? -1 : 0)}
                         </Button>
                       </Stack>
-                      {(b.commentCount ?? 0) > 0 && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1, color: 'text.secondary' }}>
-                          <ChatBubbleOutlineRounded sx={{ fontSize: 14 }} />
-                          <Typography variant="caption" color="text.secondary">{b.commentCount}</Typography>
-                        </Box>
-                      )}
                     </CardContent>
                   </CardActionArea>
                 </Card>
@@ -860,6 +860,12 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
                           <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description.replace(/<[^>]*>/g, '')}</Typography>
                         )}
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{r.authorName} 推荐</Typography>
+                        {(r.commentCount ?? 0) > 0 && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                            <ChatBubbleOutlineRounded sx={{ fontSize: 14, color: 'text.secondary' }} />
+                            <Typography variant="caption" color="text.secondary">{r.commentCount}</Typography>
+                          </Box>
+                        )}
                       </Box>
                       <Button
                         onClick={(event) => { event.stopPropagation(); toggle(r.id); }}
@@ -871,12 +877,6 @@ function MusicSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
                         ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
                       </Button>
                     </Stack>
-                    {(r.commentCount ?? 0) > 0 && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1, color: 'text.secondary' }}>
-                        <ChatBubbleOutlineRounded sx={{ fontSize: 14 }} />
-                        <Typography variant="caption" color="text.secondary">{r.commentCount}</Typography>
-                      </Box>
-                    )}
                   </CardContent>
                 </CardActionArea>
               </Card>
@@ -1024,6 +1024,12 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
                             <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>{r.description.replace(/<[^>]*>/g, '')}</Typography>
                           )}
                           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{r.authorName} 推荐</Typography>
+                          {(r.commentCount ?? 0) > 0 && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                              <ChatBubbleOutlineRounded sx={{ fontSize: 14, color: 'text.secondary' }} />
+                              <Typography variant="caption" color="text.secondary">{r.commentCount}</Typography>
+                            </Box>
+                          )}
                         </Box>
                         <Button
                           onClick={(event) => { event.stopPropagation(); toggle(r.id); }}
@@ -1035,12 +1041,6 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
                           ▲ {r.voteCount + (votes[r.id] && !r.voterIds.includes(user?.id ?? '') ? 1 : !votes[r.id] && r.voterIds.includes(user?.id ?? '') ? -1 : 0)}
                         </Button>
                       </Stack>
-                      {(r.commentCount ?? 0) > 0 && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1, color: 'text.secondary' }}>
-                          <ChatBubbleOutlineRounded sx={{ fontSize: 14 }} />
-                          <Typography variant="caption" color="text.secondary">{r.commentCount}</Typography>
-                        </Box>
-                      )}
                     </CardContent>
                   </CardActionArea>
                 </Card>
