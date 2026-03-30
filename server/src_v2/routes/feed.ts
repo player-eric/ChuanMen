@@ -569,7 +569,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const proposalIds = recentProposals.map((p) => p.id);
     const newMemberIds = newMembers.map((m) => m.id);
     const recommendationIds = recommendations.map((r) => r.id);
-    const allEntityIds = [...eventIds, ...postcardIds, ...movieIds, ...proposalIds, ...newMemberIds, ...recommendationIds];
+    const announcementIds = announcements.map((a) => a.id);
+    const allEntityIds = [...eventIds, ...postcardIds, ...movieIds, ...proposalIds, ...newMemberIds, ...recommendationIds, ...announcementIds];
 
     // Batch fetch likes, comment counts, and latest comment time for events
     const [allLikes, commentCounts, newCommentCounts, latestCommentTimes, latestEventComments, latestEventSignups] = await Promise.all([
@@ -785,7 +786,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     return {
       events: enrichedEvents.slice(0, 20),
       notifReadAt: notifReadAtISO,
-      announcements,
+      announcements: announcements.map(withInteraction),
       recommendations: recommendations.map(withInteraction),
       members,
       postcards: postcards.filter((p) => canSeePostcard(p, userId)).slice(0, 10).map(({ event: _evt, ...p }) => withInteraction(p as any)),

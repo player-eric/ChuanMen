@@ -842,17 +842,17 @@ export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV
           </div>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
     </Card>
   );
 }
 
 /* ═══ FeedMilestone ═══ */
 interface FeedMilestoneProps extends InteractionProps {
-  text: string; emoji: string; body?: string; url?: string;
+  text: string; emoji: string; body?: string; url?: string; entityType?: string; entityId?: string;
 }
 
-export function FeedMilestone({ text, emoji, body, url, likes, likedBy, comments, newComments, commentCount }: FeedMilestoneProps) {
+export function FeedMilestone({ text, emoji, body, url, likes, likedBy, comments, newComments, commentCount, entityType, entityId }: FeedMilestoneProps) {
   const c = useColors();
   return (
     <Card glow>
@@ -869,7 +869,7 @@ export function FeedMilestone({ text, emoji, body, url, likes, likedBy, comments
           <div style={{ fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-line', marginTop: 8, opacity: 0.8 }}>{body}</div>
         )}
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...(entityType && entityId ? { entityType, entityId } : {})} />
     </Card>
   );
 }
