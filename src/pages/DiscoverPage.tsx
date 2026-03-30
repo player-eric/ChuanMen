@@ -351,7 +351,7 @@ function MoviesSection() {
                           <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                             <Typography fontWeight={700} sx={{ fontSize: 15 }}>{m.title}</Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{m.year}  {m.dir}</Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{m.by || m.host} 推荐</Typography>
+                            {(m.by || m.host) && <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{m.by || m.host} 推荐</Typography>}
                             {(m.commentCount ?? 0) > 0 && (
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
                                 <ChatBubbleOutlineRounded sx={{ fontSize: 14, color: 'text.secondary' }} />

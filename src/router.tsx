@@ -303,7 +303,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       votes: r._count?.votes ?? r.voteCount ?? 0,
       voted: votedRecs.has(r.id),
       time,
-      navTarget: `/discover/${cat}/${r.id}`,
+      navTarget: `/discover/${cat === 'book' ? 'books' : cat}/${r.id}`,
       likes: r.likes ?? 0,
       likedBy: r.likedBy ?? [],
       comments: [],

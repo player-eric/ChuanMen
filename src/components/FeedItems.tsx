@@ -33,7 +33,7 @@ function extractEntity(navTarget?: string): { entityType: string; entityId: stri
   if (m) return { entityType: 'movie', entityId: m[1] };
   m = navTarget.match(/^\/postcards\/([^/]+)$/);
   if (m) return { entityType: 'postcard', entityId: m[1] };
-  m = navTarget.match(/^\/discover\/(?:book|recipe|music|place|external_event)\/([^/]+)$/);
+  m = navTarget.match(/^\/discover\/(?:books?|recipe|music|place|external_event)\/([^/]+)$/);
   if (m) return { entityType: 'recommendation', entityId: m[1] };
   return undefined;
 }
