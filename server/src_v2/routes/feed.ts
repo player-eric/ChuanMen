@@ -25,7 +25,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const todayDay = today.getUTCDate();
 
     // Pre-fetch: entity IDs with recent comments (so old items with new activity get included)
-    const [recentCommentEventIds, recentSignupEventIds, recentCommentMovieIds] = await Promise.all([
+    const [recentCommentEventIds, recentSignupEventIds] = await Promise.all([
       prisma.comment.findMany({
         where: { entityType: 'event', createdAt: { gte: sevenDaysAgo } },
         select: { entityId: true },
@@ -36,13 +36,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         select: { eventId: true },
         distinct: ['eventId'],
       }),
-      prisma.comment.findMany({
-        where: { entityType: 'movie', createdAt: { gte: sevenDaysAgo } },
-        select: { entityId: true },
-        distinct: ['entityId'],
-      }),
     ]);
-    const activeMovieIds = recentCommentMovieIds.map((r) => r.entityId);
     const activeEventIds = [
       ...new Set([
         ...recentCommentEventIds.map((r) => r.entityId),
@@ -96,10 +90,9 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           include: { author: { select: USER_BRIEF_SELECT } },
         }),
 
-        // Recent recommendations
+        // All recommendations (timeline sorts by date naturally)
         prisma.recommendation.findMany({
           orderBy: { createdAt: 'desc' },
-          take: 10,
           include: {
             author: { select: USER_BRIEF_SELECT },
             tags: true,
@@ -152,16 +145,9 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           },
         }),
 
-        // Recently active movies (any status, including old ones with recent comments)
+        // All movies (timeline sorts by date naturally)
         prisma.movie.findMany({
-          where: {
-            OR: [
-              { createdAt: { gte: sevenDaysAgo } },
-              ...(activeMovieIds.length > 0 ? [{ id: { in: activeMovieIds } }] : []),
-            ],
-          },
           orderBy: { createdAt: 'desc' },
-          take: 20,
           include: {
             recommendedBy: { select: USER_BRIEF_SELECT },
             _count: { select: { votes: true } },
@@ -582,7 +568,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
     const movieIds = recentMovies.map((m) => m.id);
     const proposalIds = recentProposals.map((p) => p.id);
     const newMemberIds = newMembers.map((m) => m.id);
-    const allEntityIds = [...eventIds, ...postcardIds, ...movieIds, ...proposalIds, ...newMemberIds];
+    const recommendationIds = recommendations.map((r) => r.id);
+    const allEntityIds = [...eventIds, ...postcardIds, ...movieIds, ...proposalIds, ...newMemberIds, ...recommendationIds];
 
     // Batch fetch likes, comment counts, and latest comment time for events
     const [allLikes, commentCounts, newCommentCounts, latestCommentTimes, latestEventComments, latestEventSignups] = await Promise.all([
@@ -799,7 +786,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       events: enrichedEvents.slice(0, 20),
       notifReadAt: notifReadAtISO,
       announcements,
-      recommendations,
+      recommendations: recommendations.map(withInteraction),
       members,
       postcards: postcards.filter((p) => canSeePostcard(p, userId)).slice(0, 10).map(({ event: _evt, ...p }) => withInteraction(p as any)),
       recentMovies: recentMovies.map(withInteraction),
