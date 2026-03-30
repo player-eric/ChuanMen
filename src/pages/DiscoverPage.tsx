@@ -552,10 +552,12 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
         </Card>
       )}
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 1.5 }}>
-        <Tab value="pool" label="候选中" />
-        <Tab value="read" label="已读完" />
-      </Tabs>
+      {data.bookRead.length > 0 && (
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 1.5 }}>
+          <Tab value="pool" label="候选中" />
+          <Tab value="read" label="已读完" />
+        </Tabs>
+      )}
 
       {tab === 'pool' && (
         sortedPool.length === 0 ? (

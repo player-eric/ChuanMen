@@ -419,7 +419,7 @@ export async function sendSecondRecall(
 
   // Find upcoming events to recommend
   const upcomingEvents = await prisma.event.findMany({
-    where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() } },
+    where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() }, isPrivate: false },
     select: { title: true },
     orderBy: { startsAt: 'asc' },
     take: 3,
@@ -753,6 +753,7 @@ async function buildDigestSections(
     const newEvents = await prisma.event.findMany({
       where: {
         phase: { notIn: ['cancelled', 'ended'] },
+        isPrivate: false,
         OR: [
           { createdAt: { gte: cutoff } },
           { updatedAt: { gte: cutoff } },
@@ -784,6 +785,7 @@ async function buildDigestSections(
       where: {
         startsAt: { gte: now, lte: in7Days },
         phase: { in: ['open', 'invite'] },
+        isPrivate: false,
         id: { notIn: newEventIds },
       },
       select: { id: true, title: true, startsAt: true },
@@ -971,6 +973,7 @@ async function buildDigestSections(
       where: {
         phase: 'ended',
         updatedAt: { gte: cutoff },
+        isPrivate: false,
       },
       select: { id: true, title: true, startsAt: true, recapPhotoUrls: true },
       orderBy: { startsAt: 'desc' },
@@ -1085,7 +1088,7 @@ async function buildPersonalNudge(
   if (user.approvedAt && user.approvedAt >= fourteenDaysAgo && user.participationCount === 0) {
     if (!(await hasCooldown('P3-C', 3))) {
       const upcoming = await prisma.event.findMany({
-        where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() } },
+        where: { phase: { in: ['open', 'invite'] }, isPrivate: false, startsAt: { gte: new Date() } },
         select: { title: true, id: true, startsAt: true },
         orderBy: { startsAt: 'asc' },
         take: 3,
@@ -1570,6 +1573,7 @@ export async function sendNewEventNotif(
     where: {
       createdAt: { gte: twentyMinAgo, lte: tenMinAgo },
       phase: { not: 'cancelled' },
+      isPrivate: false,
     },
     include: {
       host: { select: USER_BRIEF_SELECT },
@@ -1815,7 +1819,7 @@ export async function sendNewMemberNudge(
 
   // Get upcoming events for the email
   const upcomingEvents = await prisma.event.findMany({
-    where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() } },
+    where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() }, isPrivate: false },
     select: { title: true },
     orderBy: { startsAt: 'asc' },
     take: 3,
