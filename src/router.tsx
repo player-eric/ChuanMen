@@ -720,9 +720,10 @@ async function proposalDetailLoader({ params }: { params: Record<string, string 
         ? mapPeople(p.votes)
         : p.interested ?? [],
       time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
-      comments: p.comments ?? [],
+      comments: [],
+      commentCount: p.commentCount ?? 0,
       likes: p.likes ?? 0,
-      likedBy: p.likedBy ?? [],
+      likedBy: (p.likedBy ?? []).map((u: any) => u.name ?? '?'),
     };
   } catch {
     return null;
@@ -854,7 +855,12 @@ async function bookDetailLoader({ params }: { params: Record<string, string | un
       sourceUrl: rec.sourceUrl ?? '',
       coverUrl: rec.coverUrl ?? '',
       authorId: rec.authorId ?? rec.author?.id ?? '',
-      discussions: [],
+      discussions: ((rec.events ?? []) as any[]).map((er: any) => ({
+        eventId: er.event?.id,
+        eventTitle: er.event?.title ?? '',
+        date: er.event?.startsAt ? new Date(er.event.startsAt).toLocaleDateString('zh-CN', { timeZone: 'America/New_York' }) : '',
+        host: er.event?.host?.name ?? '',
+      })),
       comments: [],
     };
   } catch {
