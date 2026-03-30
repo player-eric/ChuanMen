@@ -928,7 +928,7 @@ export function FeedProposal({ name, avatar, title, votes: initV, interested, en
           {v ? '✓ 我也感兴趣' : '我感兴趣'} · {count}
         </button>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
     </Card>
   );
 }
@@ -1096,7 +1096,7 @@ export function FeedRecommendation({ name, title, category, categoryIcon, coverU
           </Button>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact {...extractEntity(navTarget)} />
     </div>
   );
 }
@@ -1150,7 +1150,7 @@ export function FeedBook({ name, avatar, title, year, author, coverUrl, votes: i
           </div>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
     </Card>
   );
 }
@@ -1409,7 +1409,7 @@ export function FeedCompactBook({ name, title, year, author, coverUrl, votes: in
           </Button>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact {...extractEntity(navTarget)} />
     </div>
   );
 }
@@ -1493,7 +1493,7 @@ export function FeedActionNotice(props: FeedActionNoticeProps) {
           )}
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact {...extractEntity(navTarget)} />
     </div>
   );
 }
@@ -1681,7 +1681,7 @@ export function FeedCommentNotice({ name, text, targetTitle, time, navTarget, li
           </div>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} compact {...extractEntity(navTarget)} />
     </div>
   );
 }
