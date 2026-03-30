@@ -842,7 +842,7 @@ export function FeedMovie({ name, avatar, title, year, dir, poster, votes: initV
           </div>
         </div>
       </div>
-      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} />
+      <FeedActions likes={likes} likedBy={likedBy} comments={comments} newComments={newComments} commentCount={commentCount} {...extractEntity(navTarget)} />
     </Card>
   );
 }

@@ -277,6 +277,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       likedBy: [],
       comments: [],
       commentCount: 0,
+      newComments: 0,
     });
   }
 
