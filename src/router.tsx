@@ -319,6 +319,8 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
     addToDate(sk, d, {
       _key: `announce-${a.id}`,
       type: 'milestone',
+      entityType: 'announcement',
+      entityId: a.id,
       text: a.title ?? '',
       body: a.body ?? '',
       url: a.url ?? '',
@@ -359,6 +361,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
         likedBy: [],
         comments: [],
         commentCount: 0,
+        newComments: 0,
       }, n.createdAt);
     }
   }
@@ -384,6 +387,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       likedBy: p.likedBy ?? [],
       comments: [],
       commentCount: p.commentCount ?? 0,
+      newComments: p.newCommentCount ?? 0,
     }, ad);
   }
 
