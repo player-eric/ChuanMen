@@ -33,7 +33,7 @@ const categoryTabs: { key: Category; label: string }[] = [
   { key: 'movie', label: '🎬 电影' },
   { key: 'book', label: '📖 读书' },
   { key: 'music', label: '🎵 音乐' },
-  { key: 'recipe', label: '🍜 菜谱' },
+  { key: 'recipe', label: '🍜 食谱与调酒' },
   { key: 'place', label: '📍 好店' },
   { key: 'external_event', label: '🎭 演出与展览' },
 ];
@@ -41,14 +41,14 @@ const categoryTabs: { key: Category; label: string }[] = [
 const categoryAddLabels: Record<Category, string> = {
   movie: '添加电影',
   book: '添加图书',
-  recipe: '添加菜谱',
+  recipe: '添加食谱/调酒',
   music: '添加音乐',
   place: '添加好店',
   external_event: '添加演出/展览',
 };
 
 const mineEmptyLabel: Record<string, string> = {
-  recipe: '菜谱',
+  recipe: '食谱与调酒',
   place: '好店',
   external_event: '演出/展览',
 };
@@ -552,10 +552,12 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
         </Card>
       )}
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 1.5 }}>
-        <Tab value="pool" label="候选中" />
-        <Tab value="read" label="已读完" />
-      </Tabs>
+      {data.bookRead.length > 0 && (
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 1.5 }}>
+          <Tab value="pool" label="候选中" />
+          <Tab value="read" label="已读完" />
+        </Tabs>
+      )}
 
       {tab === 'pool' && (
         sortedPool.length === 0 ? (
@@ -920,7 +922,7 @@ function RecommendationSection({ category, onVoteSnack }: { category: 'recipe' |
   const sortedItems = sort === 'votes' ? [...displayed].sort((a, b) => b.voteCount - a.voteCount) : displayed;
 
   const emptyMap: Record<string, { icon: string; title: string; desc: string }> = {
-    recipe: { icon: '🍜', title: '还没有推荐菜谱', desc: '分享你的拿手菜或发现的好菜谱。' },
+    recipe: { icon: '🍜', title: '还没有推荐食谱与调酒', desc: '分享你的拿手菜或好喝的鸡尾酒配方。' },
     place: { icon: '📍', title: '还没有推荐好店', desc: '分享你发现的好店好去处。' },
     external_event: { icon: '🎭', title: '还没有推荐演出与展览', desc: '分享你发现的演出、展览或其他活动。' },
   };

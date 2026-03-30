@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
   Alert,
@@ -14,14 +14,16 @@ import {
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useAuth } from '@/auth/AuthContext';
-import { createRecommendation, createMovie, fetchMembersApi, type RecommendationCategory } from '@/lib/domainApi';
+import { createRecommendation, createMovie, fetchMembersApi, uploadMedia, type RecommendationCategory } from '@/lib/domainApi';
 import { ImageUpload } from '@/components/ImageUpload';
 import { Ava } from '@/components/Atoms';
+
+const RichTextEditor = lazy(() => import('@/components/RichTextEditor'));
 
 const categoryMap: Record<string, string> = {
   movie: '电影',
   book: '图书',
-  recipe: '菜谱',
+  recipe: '食谱与调酒',
   music: '音乐',
   place: '好店',
   external_event: '演出与展览',
@@ -82,6 +84,7 @@ export default function RecommendationCreatePage() {
   const isBook = currentCategory === 'book';
   const isPlace = currentCategory === 'place';
   const isExternalEvent = currentCategory === 'external_event';
+  const isRecipe = currentCategory === 'recipe';
 
   const onSubmit = async () => {
     if (!user?.id) {
@@ -159,7 +162,24 @@ export default function RecommendationCreatePage() {
           )}
 
           <TextField label={isPlace ? '店名' : '标题'} value={title} onChange={(e) => setTitle(e.target.value)} fullWidth placeholder={isBook ? '书名' : isPlace ? '店名' : undefined} />
-          <TextField label="描述" value={description} onChange={(e) => setDescription(e.target.value)} multiline minRows={4} fullWidth placeholder={isBook ? '作者、推荐理由…' : isExternalEvent ? '地点、票价、推荐理由…' : isPlace ? '推荐理由、特色菜…' : undefined} />
+          {isRecipe ? (
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>描述</Typography>
+              <Suspense fallback={<div>加载编辑器...</div>}>
+                <RichTextEditor
+                  content={description}
+                  onChange={setDescription}
+                  placeholder="食材、做法、推荐理由…"
+                  onUploadImage={async (file) => {
+                    const { publicUrl } = await uploadMedia(file, 'recommendation', user!.id);
+                    return publicUrl;
+                  }}
+                />
+              </Suspense>
+            </Box>
+          ) : (
+            <TextField label="描述" value={description} onChange={(e) => setDescription(e.target.value)} multiline minRows={4} fullWidth placeholder={isBook ? '作者、推荐理由…' : isExternalEvent ? '地点、票价、推荐理由…' : isPlace ? '推荐理由、特色菜…' : undefined} />
+          )}
 
           {/* Date fields for external_event */}
           {isExternalEvent && (

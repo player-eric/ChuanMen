@@ -501,8 +501,8 @@ export default function ProfilePage() {
             </Box>
           )}
 
-          {/* Photo Gallery — grouped by event */}
-          {allGalleryPhotos.length > 0 && (
+          {/* Photo Gallery — grouped by event (login only) */}
+          {user && allGalleryPhotos.length > 0 && (
             <Card>
               <CardContent>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
@@ -866,8 +866,8 @@ export default function ProfilePage() {
         </Stack>
       )}
 
-      {/* ══════ Lightbox Dialog ══════ */}
-      <Dialog
+      {/* ══════ Lightbox Dialog (login only) ══════ */}
+      {user && <Dialog
         open={lightboxIndex >= 0}
         onClose={() => setLightboxIndex(-1)}
         maxWidth={false}
@@ -940,7 +940,7 @@ export default function ProfilePage() {
             </Box>
           );
         })()}
-      </Dialog>
+      </Dialog>}
     </Stack>
   );
 }

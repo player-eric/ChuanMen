@@ -251,11 +251,11 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     // 1. Find all events where the user participated (accepted signup or host)
     const [signedUpEvents, hostedEvents] = await Promise.all([
       app.prisma.eventSignup.findMany({
-        where: { userId: id, status: 'accepted' },
+        where: { userId: id, status: 'accepted', event: { isPrivate: false } },
         select: { eventId: true },
       }),
       app.prisma.event.findMany({
-        where: { hostId: id },
+        where: { hostId: id, isPrivate: false },
         select: { id: true },
       }),
     ]);

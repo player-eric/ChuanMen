@@ -40,7 +40,7 @@ const TARGET_CATEGORIES = [
   { value: 'place', label: '地点' },
   { value: 'movie', label: '电影' },
   { value: 'book', label: '图书' },
-  { value: 'recipe', label: '菜谱' },
+  { value: 'recipe', label: '食谱与调酒' },
   { value: 'external_event', label: '演出/展览' },
 ];
 
@@ -51,7 +51,7 @@ const TARGET_ENTITY_TYPES = [
 ];
 
 const typeLabelMap: Record<string, string> = { recommendation: '推荐', proposal: '提案', comment: '评论' };
-const catLabelMap: Record<string, string> = { music: '音乐', place: '地点', movie: '电影', book: '图书', recipe: '菜谱', external_event: '演出/展览' };
+const catLabelMap: Record<string, string> = { music: '音乐', place: '地点', movie: '电影', book: '图书', recipe: '食谱与调酒', external_event: '演出/展览' };
 const entityLabelMap: Record<string, string> = { event: '活动', recommendation: '推荐' };
 
 function typeChip(q: DailyQuestionRow) {

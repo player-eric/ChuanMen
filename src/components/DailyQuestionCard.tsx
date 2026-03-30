@@ -62,7 +62,7 @@ const searchPlaceholders: Record<string, string> = {
   movie: '搜电影名...',
   book: '搜书名、作者...',
   music: '搜歌名、歌手...',
-  recipe: '搜菜名...',
+  recipe: '搜菜名、酒名...',
   place: '搜店名...',
   external_event: '搜演出/展览名...',
 };

@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { MovieRepository } from './movie.repository.js';
 import { MovieService } from './movie.service.js';
+import { canSeeScreenedEvent } from '../../utils/eventVisibility.js';
 
 export const movieRoutes: FastifyPluginAsync = async (app) => {
   const service = new MovieService(new MovieRepository(app.prisma));
@@ -28,13 +29,14 @@ export const movieRoutes: FastifyPluginAsync = async (app) => {
       : [];
     const ccMap = new Map(commentCounts.map((c) => [c.entityId, c._count]));
     const withComments = (movies as any[]).map((m: any) => ({ ...m, commentCount: ccMap.get(m.id) ?? 0 }));
-    if (!userId) return withComments;
-    // Filter out screenedEvents the user is excluded from
+    // Filter out screenedEvents the user is excluded from or can't see (private)
     return withComments.map((m: any) => ({
       ...m,
-      screenedEvents: m.screenedEvents?.filter((se: any) =>
-        !se.event?.visibilityExclusions?.some((ex: any) => ex.userId === userId),
-      ),
+      screenedEvents: m.screenedEvents?.filter((se: any) => {
+        if (!canSeeScreenedEvent(se, userId)) return false;
+        if (userId && se.event?.visibilityExclusions?.some((ex: any) => ex.userId === userId)) return false;
+        return true;
+      }),
     }));
   });
 
@@ -56,13 +58,15 @@ export const movieRoutes: FastifyPluginAsync = async (app) => {
     const userId = request.headers['x-user-id'] as string | undefined;
     const movie = await service.getById(id);
     if (!movie) return reply.notFound('电影不存在');
-    if (!userId || !(movie as any).screenedEvents?.length) return movie;
-    // Filter out screenedEvents the user is excluded from
+    if (!(movie as any).screenedEvents?.length) return movie;
+    // Filter out screenedEvents the user is excluded from or can't see (private)
     return {
       ...movie,
-      screenedEvents: (movie as any).screenedEvents.filter((se: any) =>
-        !se.event?.visibilityExclusions?.some((ex: any) => ex.userId === userId),
-      ),
+      screenedEvents: (movie as any).screenedEvents.filter((se: any) => {
+        if (!canSeeScreenedEvent(se, userId)) return false;
+        if (userId && se.event?.visibilityExclusions?.some((ex: any) => ex.userId === userId)) return false;
+        return true;
+      }),
     };
   });
 

@@ -145,7 +145,8 @@ export default function MemberDetailPage() {
   // Tab labels — 关于TA and 我们的交集 first
   const tabs: string[] = ['关于TA'];
   if (hasMutual) tabs.push('我们的交集');
-  tabs.push('活动记忆', '品味', '感谢卡');
+  if (!activityHidden) tabs.push('活动记忆');
+  tabs.push('品味', '感谢卡');
 
   return (
     <Stack spacing={0}>
@@ -237,8 +238,10 @@ export default function MemberDetailPage() {
             sx={{ mb: 1.5 }}
           >
             {[
-              { value: data.participationStats.eventCount, label: '场活动', action: () => { setTab(tabs.indexOf('活动记忆')); setEventFilter('all'); } },
-              { value: data.participationStats.hostCount, label: '次Host', action: () => { setTab(tabs.indexOf('活动记忆')); setEventFilter('host'); } },
+              ...(!activityHidden ? [
+                { value: data.participationStats.eventCount, label: '场活动', action: () => { setTab(tabs.indexOf('活动记忆')); setEventFilter('all'); } },
+                { value: data.participationStats.hostCount, label: '次Host', action: () => { setTab(tabs.indexOf('活动记忆')); setEventFilter('host'); } },
+              ] : []),
               { value: data.participationStats.movieCount, label: '部电影', action: () => { setTab(tabs.indexOf('品味')); } },
             ].map((stat) => {
               const active =
@@ -352,7 +355,7 @@ export default function MemberDetailPage() {
           book: '📚', recipe: '🍜', music: '🎵', place: '📍', external_event: '🎭',
         };
         const catLabel: Record<string, string> = {
-          book: '图书', recipe: '食谱', music: '音乐', place: '地点', external_event: '演出/展览',
+          book: '图书', recipe: '食谱与调酒', music: '音乐', place: '地点', external_event: '演出/展览',
         };
         const recs = mutual.recommendations ?? {};
         const recCategories = Object.keys(recs).filter((cat) => recs[cat].length > 0);
@@ -519,8 +522,8 @@ export default function MemberDetailPage() {
             </Box>
           )}
 
-          {/* Photo Gallery */}
-          {allGalleryPhotos.length > 0 && (
+          {/* Photo Gallery (login only) */}
+          {user && allGalleryPhotos.length > 0 && (
             <Card>
               <CardContent>
                 <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
@@ -724,7 +727,7 @@ export default function MemberDetailPage() {
           {/* Recommendations by category */}
           {Object.entries(recsByCategory).map(([cat, items]) => {
             const catEmoji: Record<string, string> = { book: '📚', recipe: '🍜', music: '🎵', place: '📍', external_event: '🎭', movie: '🎬' };
-            const catLabel: Record<string, string> = { book: '图书', recipe: '食谱', music: '音乐', place: '好店', external_event: '演出/展览', movie: '电影推荐' };
+            const catLabel: Record<string, string> = { book: '图书', recipe: '食谱与调酒', music: '音乐', place: '好店', external_event: '演出/展览', movie: '电影推荐' };
             return (
               <Card key={cat}>
                 <CardContent>
@@ -831,8 +834,8 @@ export default function MemberDetailPage() {
       )}
 
 
-      {/* ══════ Lightbox Dialog ══════ */}
-      <Dialog
+      {/* ══════ Lightbox Dialog (login only) ══════ */}
+      {user && <Dialog
         open={lightboxIndex >= 0}
         onClose={() => setLightboxIndex(-1)}
         maxWidth={false}
@@ -900,7 +903,7 @@ export default function MemberDetailPage() {
             </Box>
           );
         })()}
-      </Dialog>
+      </Dialog>}
       {/* ══════ Avatar Lightbox ══════ */}
       <Dialog open={avatarOpen} onClose={() => setAvatarOpen(false)} maxWidth="sm" PaperProps={{ sx: { bgcolor: 'transparent', boxShadow: 'none', overflow: 'visible' } }}>
         <Box sx={{ position: 'relative' }}>

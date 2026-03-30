@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { USER_BRIEF_SELECT } from '../utils/prisma-selects.js';
+import { canSeeEvent, canSeePostcard } from '../utils/eventVisibility.js';
 /**
  * GET /api/profile?userId=xxx  OR  ?name=xxx
  * Optional: viewerId (via query or x-user-id header) for mutual computation
@@ -60,7 +61,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         where: { movie: { recommendedById: targetId } },
       }),
 
-      // Postcards sent (for non-owner: only public ones, hide event-linked cards viewer is excluded from)
+      // Postcards sent (for non-owner: only public ones, hide event-linked cards viewer is excluded from or private)
       prisma.postcard.findMany({
         where: {
           fromId: targetId,
@@ -73,14 +74,15 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           } : {}),
         },
         orderBy: { createdAt: 'desc' },
-        take: 10,
+        take: 20,
         include: {
           to: { select: USER_BRIEF_SELECT },
           tags: true,
+          event: { select: { isPrivate: true, hostId: true, coHosts: { select: { userId: true } }, signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } }, select: { userId: true } } } },
         },
       }),
 
-      // Postcards received (for non-owner: only public ones, hide event-linked cards viewer is excluded from)
+      // Postcards received (for non-owner: only public ones, hide event-linked cards viewer is excluded from or private)
       prisma.postcard.findMany({
         where: {
           toId: targetId,
@@ -93,10 +95,11 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           } : {}),
         },
         orderBy: { createdAt: 'desc' },
-        take: 10,
+        take: 20,
         include: {
           from: { select: USER_BRIEF_SELECT },
           tags: true,
+          event: { select: { isPrivate: true, hostId: true, coHosts: { select: { userId: true } }, signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } }, select: { userId: true } } } },
         },
       }),
 
@@ -123,7 +126,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         take: 20,
       }),
 
-      // Upcoming events where user is host or signed up (hide events viewer is excluded from)
+      // Upcoming events where user is host or signed up (hide events viewer is excluded from or private)
       prisma.event.findMany({
         where: {
           status: 'scheduled',
@@ -140,10 +143,11 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         include: {
           host: { select: USER_BRIEF_SELECT },
           coHosts: { select: { userId: true } },
+          signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } }, select: { userId: true } },
         },
       }),
 
-      // Past events where user participated (hide events viewer is excluded from)
+      // Past events where user participated (hide events viewer is excluded from or private)
       prisma.event.findMany({
         where: {
           ...(viewerId && !isOwnProfile ? { NOT: { visibilityExclusions: { some: { userId: viewerId } } } } : {}),
@@ -157,6 +161,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         take: 20,
         select: {
           id: true,
+          isPrivate: true,
           title: true,
           startsAt: true,
           hostId: true,
@@ -164,6 +169,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
           status: true,
           host: { select: USER_BRIEF_SELECT },
           coHosts: { select: { userId: true } },
+          signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } }, select: { userId: true } },
           recapPhotoUrls: true,
         },
       }),
@@ -176,7 +182,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         include: { _count: { select: { votes: true } } },
       }),
 
-      // Events with photos that user participated in (hide events viewer is excluded from)
+      // Events with photos that user participated in (hide events viewer is excluded from or private)
       prisma.event.findMany({
         where: {
           recapPhotoUrls: { isEmpty: false },
@@ -190,13 +196,25 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         take: 10,
         select: {
           id: true,
+          isPrivate: true,
+          hostId: true,
           title: true,
           recapPhotoUrls: true,
           description: true,
           startsAt: true,
+          coHosts: { select: { userId: true } },
+          signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } }, select: { userId: true } },
         },
       }),
     ]);
+
+    // Filter out private events the viewer can't see (own profile always shows everything)
+    const effectiveViewerId = isOwnProfile ? undefined : viewerId;
+    const visibleUpcoming = upcomingEvents.filter((e: any) => canSeeEvent(e, effectiveViewerId));
+    const visiblePast = pastEvents.filter((e: any) => canSeeEvent(e, effectiveViewerId));
+    const visibleGallery = galleryEvents.filter((e: any) => canSeeEvent(e, effectiveViewerId));
+    const visibleSentCards = postcardsSent.filter((p: any) => canSeePostcard(p, effectiveViewerId)).map(({ event: _e, ...p }: any) => p);
+    const visibleReceivedCards = postcardsReceived.filter((p: any) => canSeePostcard(p, effectiveViewerId)).map(({ event: _e, ...p }: any) => p);
 
     // Mutual computation (when viewing someone else's profile)
     let mutual = undefined;
@@ -221,11 +239,11 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
       const viewerMovieIds = new Set(viewerVotes.map((v) => v.movieId));
 
       // Find mutual events from pastEvents (already fetched)
-      const mutualEvents = pastEvents
+      const mutualEvents = visiblePast
         .filter((e) => viewerEventIds.has(e.id))
         .map((e) => ({ id: e.id, title: e.title, scene: (e as any).tags?.[0] ?? '' }));
       // Also check upcoming
-      const mutualUpcoming = upcomingEvents
+      const mutualUpcoming = visibleUpcoming
         .filter((e) => viewerEventIds.has(e.id))
         .map((e) => ({ id: e.id, title: e.title, scene: (e as any).tags?.[0] ?? '' }));
 
@@ -299,16 +317,16 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         screenedCount: screenedMovieCount,
         proposalCount,
         voteCount,
-        cardsSent: postcardsSent.length,
-        cardsReceived: postcardsReceived.length,
+        cardsSent: visibleSentCards.length,
+        cardsReceived: visibleReceivedCards.length,
       },
       recentMovies,
       votedMovies: votedMovies.map((v) => v.movie),
-      upcomingEvents,
-      pastEvents,
-      postcardsSent,
-      postcardsReceived,
-      galleryPhotos: galleryEvents.flatMap((e) => {
+      upcomingEvents: visibleUpcoming,
+      pastEvents: visiblePast,
+      postcardsSent: visibleSentCards,
+      postcardsReceived: visibleReceivedCards,
+      galleryPhotos: visibleGallery.flatMap((e) => {
         const desc = e.description ?? '';
         return e.recapPhotoUrls
           .filter((url) => !desc.includes(url))

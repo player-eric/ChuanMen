@@ -170,10 +170,10 @@ export async function sendEventReminder(
         let taskInfo = '';
         if (myTasks.length > 0) {
           const taskList = myTasks.map((t: any) => t.role + (t.description ? `（${t.description}）` : '')).join('、');
-          taskInfo = `你认领了：${taskList}，记得提前准备哦 🙌`;
+          taskInfo = `你认领了「${taskList}」，记得提前做些准备！`;
         } else if (unclaimedTasks.length > 0) {
           const t = unclaimedTasks[0];
-          taskInfo = `「${t.role}」还没有人认领${t.description ? `（${t.description}）` : ''}，你要来吗？`;
+          taskInfo = `「${t.role}」还没人认领，如果你有兴趣的话，可以问一下要不要帮忙 😊`;
         }
         const result = await sendTemplatedEmail(prisma, {
           to: user.email,
@@ -419,7 +419,7 @@ export async function sendSecondRecall(
 
   // Find upcoming events to recommend
   const upcomingEvents = await prisma.event.findMany({
-    where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() } },
+    where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() }, isPrivate: false },
     select: { title: true },
     orderBy: { startsAt: 'asc' },
     take: 3,
@@ -754,6 +754,7 @@ async function buildDigestSections(
     const newEvents = await prisma.event.findMany({
       where: {
         phase: { notIn: ['cancelled', 'ended'] },
+        isPrivate: false,
         OR: [
           { createdAt: { gte: cutoff } },
           { updatedAt: { gte: cutoff } },
@@ -785,6 +786,7 @@ async function buildDigestSections(
       where: {
         startsAt: { gte: now, lte: in7Days },
         phase: { in: ['open', 'invite'] },
+        isPrivate: false,
         id: { notIn: newEventIds },
       },
       select: { id: true, title: true, startsAt: true },
@@ -972,6 +974,7 @@ async function buildDigestSections(
       where: {
         phase: 'ended',
         updatedAt: { gte: cutoff },
+        isPrivate: false,
       },
       select: { id: true, title: true, startsAt: true, recapPhotoUrls: true },
       orderBy: { startsAt: 'desc' },
@@ -1086,7 +1089,7 @@ async function buildPersonalNudge(
   if (user.approvedAt && user.approvedAt >= fourteenDaysAgo && user.participationCount === 0) {
     if (!(await hasCooldown('P3-C', 3))) {
       const upcoming = await prisma.event.findMany({
-        where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() } },
+        where: { phase: { in: ['open', 'invite'] }, isPrivate: false, startsAt: { gte: new Date() } },
         select: { title: true, id: true, startsAt: true },
         orderBy: { startsAt: 'asc' },
         take: 3,
@@ -1526,7 +1529,7 @@ export async function sendSameDayReminder(
         let taskInfo = '';
         if (myTasks.length > 0) {
           const taskList = myTasks.map((t: any) => t.role + (t.description ? `（${t.description}）` : '')).join('、');
-          taskInfo = `你认领了：${taskList}，记得提前准备哦 🙌`;
+          taskInfo = `你认领了「${taskList}」，记得提前做些准备！`;
         }
         const result = await sendTemplatedEmail(prisma, {
           to: user.email,
@@ -1572,6 +1575,7 @@ export async function sendNewEventNotif(
     where: {
       createdAt: { gte: twentyMinAgo, lte: tenMinAgo },
       phase: { not: 'cancelled' },
+      isPrivate: false,
     },
     include: {
       host: { select: USER_BRIEF_SELECT },
@@ -1817,7 +1821,7 @@ export async function sendNewMemberNudge(
 
   // Get upcoming events for the email
   const upcomingEvents = await prisma.event.findMany({
-    where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() } },
+    where: { phase: { in: ['open', 'invite'] }, startsAt: { gte: new Date() }, isPrivate: false },
     select: { title: true },
     orderBy: { startsAt: 'asc' },
     take: 3,

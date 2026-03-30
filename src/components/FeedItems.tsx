@@ -1046,7 +1046,7 @@ interface FeedRecommendationProps extends InteractionProps {
 }
 
 const categoryLabel: Record<string, string> = {
-  movie: '🎬 电影', book: '📖 读书', music: '🎵 音乐', recipe: '🍳 菜谱', place: '📍 好店', external_event: '🎭 演出与展览',
+  movie: '🎬 电影', book: '📖 读书', music: '🎵 音乐', recipe: '🍳 食谱与调酒', place: '📍 好店', external_event: '🎭 演出与展览',
 };
 
 export function FeedRecommendation({ name, title, category, categoryIcon, coverUrl, votes: initV, entityId, voted: initVoted, time, navTarget, likes, likedBy, comments, newComments, commentCount }: FeedRecommendationProps) {
@@ -1458,6 +1458,7 @@ const actionConfig: Record<ActionNoticeAction, { emoji: string; text: (p: FeedAc
 export function FeedActionNotice(props: FeedActionNoticeProps) {
   const { action, name, avatar, time, photoUrls, navTarget, likes, likedBy, comments, newComments, commentCount } = props;
   const c = useColors();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const goNav = navTarget ? () => navigate(navTarget) : undefined;
   const goMember = (n: string) => navigate(`/members/${encodeURIComponent(n)}`);
@@ -1472,7 +1473,7 @@ export function FeedActionNotice(props: FeedActionNoticeProps) {
             {cfg.emoji}{' '}{cfg.text(props)}
             <span style={{ color: c.text3, marginLeft: 6 }}>{time}</span>
           </div>
-          {action === 'photo_upload' && photoUrls && photoUrls.length > 0 && (
+          {user && action === 'photo_upload' && photoUrls && photoUrls.length > 0 && (
             <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
               {photoUrls.slice(0, 3).map((url, i) => (
                 <div key={i} style={{ width: 36, height: 36, borderRadius: 4, background: url, overflow: 'hidden' }} />

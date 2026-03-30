@@ -44,7 +44,7 @@ import { firstNonEmoji } from '@/components/Atoms';
 /* ── Bottom Tab 栏: 5 tabs (v2.1 §4.0) ── */
 const bottomTabs = [
   { id: '', icon: <HomeRoundedIcon />, label: '动态', auth: true },
-  { id: 'discover', icon: <ThumbUpRoundedIcon />, label: '推荐', auth: true },
+  { id: 'discover', icon: <ThumbUpRoundedIcon />, label: '好东西', auth: true },
   { id: 'events', icon: <EventRoundedIcon />, label: '活动', auth: true },
   { id: 'cards', icon: <MailRoundedIcon />, label: '感谢卡', auth: true },
   { id: 'profile', icon: <PersonRoundedIcon />, label: '我', auth: true },
@@ -65,10 +65,10 @@ function getTitle(pathname: string): string {
     if (pathname === '/events/small-group/new') return '发起小聚';
     return '活动详情';
   }
-  if (pathname === '/discover') return '推荐';
+  if (pathname === '/discover') return '好东西';
   if (pathname === '/discover/movie/add') return '添加电影';
   if (pathname === '/discover/book/add') return '添加图书';
-  if (pathname === '/discover/recipe/add') return '添加菜谱';
+  if (pathname === '/discover/recipe/add') return '添加食谱/调酒';
   if (pathname === '/discover/music/add') return '添加音乐';
   if (pathname === '/discover/place/add') return '添加好店';
   if (pathname === '/discover/external_event/add') return '添加演出/展览';

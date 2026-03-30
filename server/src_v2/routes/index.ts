@@ -527,7 +527,7 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // ── Recent Activity ──
-    const [recentEvents, recentApplicantsLog, recentCards] = await Promise.all([
+    const [recentEvents, recentApplicantsLog, recentCards, recentSignups, recentRecs, recentProposals, recentApproved] = await Promise.all([
       prisma.event.findMany({
         orderBy: { createdAt: 'desc' }, take: 5,
         select: { title: true, createdAt: true, host: { select: { name: true } } },
@@ -537,16 +537,40 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
         select: { name: true, createdAt: true },
       }),
       prisma.postcard.findMany({
-        orderBy: { createdAt: 'desc' }, take: 3,
+        orderBy: { createdAt: 'desc' }, take: 5,
         select: { createdAt: true, from: { select: { name: true } }, to: { select: { name: true } } },
       }),
+      prisma.eventSignup.findMany({
+        where: { status: 'accepted' },
+        orderBy: { createdAt: 'desc' }, take: 5,
+        select: { createdAt: true, user: { select: { name: true } }, event: { select: { title: true } } },
+      }),
+      prisma.recommendation.findMany({
+        orderBy: { createdAt: 'desc' }, take: 5,
+        select: { title: true, category: true, createdAt: true, author: { select: { name: true } } },
+      }),
+      prisma.proposal.findMany({
+        orderBy: { createdAt: 'desc' }, take: 5,
+        select: { title: true, createdAt: true, author: { select: { name: true } } },
+      }),
+      prisma.user.findMany({
+        where: { userStatus: 'approved', approvedAt: { not: null } },
+        orderBy: { approvedAt: 'desc' }, take: 5,
+        select: { name: true, approvedAt: true },
+      }),
     ]);
+
+    const recCategoryLabel: Record<string, string> = { movie: '电影', book: '书', recipe: '食谱与调酒', place: '好店', music: '音乐', external_event: '演出/展览' };
 
     const recentActivity = [
       ...recentApplicantsLog.map(u => ({ text: `${u.name} 提交了入社申请`, time: u.createdAt.toISOString() })),
       ...recentEvents.map(e => ({ text: `${e.host.name} 创建了活动「${e.title}」`, time: e.createdAt.toISOString() })),
       ...recentCards.map(c => ({ text: `${c.from.name} 给 ${c.to.name} 寄了感谢卡`, time: c.createdAt.toISOString() })),
-    ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 8);
+      ...recentSignups.map(s => ({ text: `${s.user.name} 报名了「${s.event.title}」`, time: s.createdAt.toISOString() })),
+      ...recentRecs.map(r => ({ text: `${r.author.name} 推荐了${recCategoryLabel[r.category] ?? ''}「${r.title}」`, time: r.createdAt.toISOString() })),
+      ...recentProposals.map(p => ({ text: `${p.author.name} 发起了提案「${p.title}」`, time: p.createdAt.toISOString() })),
+      ...recentApproved.filter(u => u.approvedAt).map(u => ({ text: `${u.name} 加入了社区`, time: u.approvedAt!.toISOString() })),
+    ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 12);
 
     // ── Recently Active Members (sorted by lastActiveAt desc, nulls last) ──
     const recentlyActiveMembers = [...allMembers]
