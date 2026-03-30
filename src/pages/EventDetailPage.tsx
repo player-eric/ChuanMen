@@ -1996,14 +1996,15 @@ export default function EventDetailPage() {
           </DialogActions>
         </Dialog>
 
-        {/* Photo Gallery — always visible */}
+        {/* Photo Gallery — login only */}
+        {user && (
         <Card>
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
               <Typography variant="subtitle1" fontWeight={700}>
                 📷 活动照片{photos.length > 0 ? ` (${photos.length})` : ''}
               </Typography>
-              {user && photos.length > 0 && (
+              {photos.length > 0 && (
                 <Button size="small" onClick={() => setUploadOpen(true)}>
                   上传照片
                 </Button>
@@ -2027,14 +2028,18 @@ export default function EventDetailPage() {
                       borderRadius: 1,
                       overflow: 'hidden',
                       cursor: 'pointer',
-                      background: photoBg(photo.url, true),
-                      filter: 'saturate(0.85) contrast(1.05)',
                       transition: 'transform 0.15s',
                       '&:hover': { transform: 'scale(1.03)' },
                       '&:hover .photo-delete': { opacity: 1 },
                     }}
                   >
-                    {user && photo.uploadedBy === user.name && (
+                    <img
+                      src={thumbnailUrl(photo.url)}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'saturate(0.85) contrast(1.05)' }}
+                      loading="lazy"
+                    />
+                    {photo.uploadedBy === user.name && (
                       <IconButton
                         className="photo-delete"
                         size="small"
@@ -2064,22 +2069,21 @@ export default function EventDetailPage() {
                 还没有照片
               </Typography>
             )}
-            {user && (
-              <Button
-                variant="outlined"
-                fullWidth
-                size="small"
-                onClick={() => setUploadOpen(true)}
-                sx={{ mt: 1.5 }}
-              >
-                📷 上传照片
-              </Button>
-            )}
+            <Button
+              variant="outlined"
+              fullWidth
+              size="small"
+              onClick={() => setUploadOpen(true)}
+              sx={{ mt: 1.5 }}
+            >
+              📷 上传照片
+            </Button>
           </CardContent>
         </Card>
+        )}
 
-        {/* Lightbox Dialog */}
-        <Dialog
+        {/* Lightbox Dialog (login only) */}
+        {user && <Dialog
           open={lightboxIndex >= 0}
           onClose={() => setLightboxIndex(-1)}
           maxWidth={false}
@@ -2152,7 +2156,7 @@ export default function EventDetailPage() {
               </Box>
             );
           })()}
-        </Dialog>
+        </Dialog>}
 
         {/* Upload Dialog */}
         <Dialog open={uploadOpen} onClose={() => { setUploadOpen(false); setUploadPreviews([]); }} maxWidth="sm" fullWidth>

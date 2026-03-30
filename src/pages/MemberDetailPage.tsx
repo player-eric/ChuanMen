@@ -519,8 +519,8 @@ export default function MemberDetailPage() {
             </Box>
           )}
 
-          {/* Photo Gallery */}
-          {allGalleryPhotos.length > 0 && (
+          {/* Photo Gallery (login only) */}
+          {user && allGalleryPhotos.length > 0 && (
             <Card>
               <CardContent>
                 <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
@@ -831,8 +831,8 @@ export default function MemberDetailPage() {
       )}
 
 
-      {/* ══════ Lightbox Dialog ══════ */}
-      <Dialog
+      {/* ══════ Lightbox Dialog (login only) ══════ */}
+      {user && <Dialog
         open={lightboxIndex >= 0}
         onClose={() => setLightboxIndex(-1)}
         maxWidth={false}
@@ -900,7 +900,7 @@ export default function MemberDetailPage() {
             </Box>
           );
         })()}
-      </Dialog>
+      </Dialog>}
       {/* ══════ Avatar Lightbox ══════ */}
       <Dialog open={avatarOpen} onClose={() => setAvatarOpen(false)} maxWidth="sm" PaperProps={{ sx: { bgcolor: 'transparent', boxShadow: 'none', overflow: 'visible' } }}>
         <Box sx={{ position: 'relative' }}>
