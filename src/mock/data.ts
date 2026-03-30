@@ -491,12 +491,12 @@ export const moviePool: MoviePool[] = [
 ];
 
 export const movieScreened: MovieScreened[] = [
-  { title: '寄生虫', year: '2019', dir: '奉俊昊', date: '02.08', host: '白开水' },
-  { title: '千与千寻', year: '2001', dir: '宫崎骏', date: '02.01', host: 'Yuan' },
-  { title: '春光乍泄', year: '1997', dir: '王家卫', date: '01.25', host: '白开水' },
-  { title: '东京物语', year: '1953', dir: '小津安二郎', date: '12.15', host: 'Yuan' },
-  { title: '坠落的审判', year: '2023', dir: '茹斯汀·特里耶', date: '11.30', host: '星星' },
-  { title: '完美的日子', year: '2023', dir: '维姆·文德斯', date: '11.10', host: 'Yuan' },
+  { id: 'ms1', title: '寄生虫', year: '2019', dir: '奉俊昊', v: 5, voterIds: [], by: '白开水', date: '02.08', host: '白开水', commentCount: 0 },
+  { id: 'ms2', title: '千与千寻', year: '2001', dir: '宫崎骏', v: 3, voterIds: [], by: 'Yuan', date: '02.01', host: 'Yuan', commentCount: 0 },
+  { id: 'ms3', title: '春光乍泄', year: '1997', dir: '王家卫', v: 4, voterIds: [], by: '白开水', date: '01.25', host: '白开水', commentCount: 0 },
+  { id: 'ms4', title: '东京物语', year: '1953', dir: '小津安二郎', v: 2, voterIds: [], by: 'Yuan', date: '12.15', host: 'Yuan', commentCount: 0 },
+  { id: 'ms5', title: '坠落的审判', year: '2023', dir: '茹斯汀·特里耶', v: 6, voterIds: [], by: '星星', date: '11.30', host: '星星', commentCount: 0 },
+  { id: 'ms6', title: '完美的日子', year: '2023', dir: '维姆·文德斯', v: 4, voterIds: [], by: 'Yuan', date: '11.10', host: 'Yuan', commentCount: 0 },
 ];
 
 /** ===== Cards ===== */

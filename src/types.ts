@@ -151,12 +151,17 @@ export interface MoviePool {
 }
 
 export interface MovieScreened {
+  id: string;
   title: string;
   year: string;
   dir: string;
+  v: number;
+  voterIds: string[];
+  by: string;
   date: string;
   host: string;
   poster?: string;
+  commentCount: number;
 }
 
 export interface BookPool {

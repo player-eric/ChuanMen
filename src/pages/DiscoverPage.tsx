@@ -106,6 +106,9 @@ function MoviesSection() {
     for (const m of pool) {
       if (m.voterIds.includes(user.id)) init[m.id] = true;
     }
+    for (const m of screened) {
+      if (m.voterIds?.includes(user.id)) init[m.id] = true;
+    }
     return init;
   });
 
@@ -348,22 +351,24 @@ function MoviesSection() {
                           <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                             <Typography fontWeight={700} sx={{ fontSize: 15 }}>{m.title}</Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{m.year}  {m.dir}</Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{[m.date, m.by || m.host].filter(Boolean).join(' · ')}</Typography>
-                          </Box>
-                        </Stack>
-                        {((m.v ?? 0) > 0 || (m.commentCount ?? 0) > 0) && (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1, color: 'text.secondary' }}>
-                            {(m.v ?? 0) > 0 && (
-                              <Typography variant="caption" color="text.secondary">▲ {m.v}</Typography>
-                            )}
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{m.by || m.host} 推荐</Typography>
                             {(m.commentCount ?? 0) > 0 && (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <ChatBubbleOutlineRounded sx={{ fontSize: 14 }} />
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                                <ChatBubbleOutlineRounded sx={{ fontSize: 14, color: 'text.secondary' }} />
                                 <Typography variant="caption" color="text.secondary">{m.commentCount}</Typography>
                               </Box>
                             )}
                           </Box>
-                        )}
+                          <Button
+                            onClick={(event) => { event.stopPropagation(); toggle(m.id); }}
+                            variant={votes[m.id] ? 'contained' : 'outlined'}
+                            size="small"
+                            disabled={!user}
+                            sx={{ alignSelf: 'flex-start', flexShrink: 0 }}
+                          >
+                            ▲ {m.v + (votes[m.id] && !m.voterIds?.includes(user?.id ?? '') ? 1 : !votes[m.id] && m.voterIds?.includes(user?.id ?? '') ? -1 : 0)}
+                          </Button>
+                        </Stack>
                       </CardContent>
                     </CardActionArea>
                   </Card>
