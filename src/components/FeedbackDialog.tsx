@@ -79,7 +79,7 @@ export function FeedbackDialog({ open, onClose, defaultName = '', defaultEmail =
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>反馈 & 建议</DialogTitle>
+      <DialogTitle>Bug & 新功能</DialogTitle>
       <DialogContent>
         {sent ? (
           <Alert severity="success" sx={{ mt: 1 }}>

@@ -196,7 +196,7 @@ export default function AppLayout() {
         {user && (
           <ListItemButton onClick={() => { setDrawerOpen(false); setFeedbackOpen(true); }}>
             <ListItemIcon><RateReviewRoundedIcon /></ListItemIcon>
-            <ListItemText primary="反馈 & 建议" />
+            <ListItemText primary="Bug & 新功能" />
           </ListItemButton>
         )}
       </List>
@@ -290,7 +290,7 @@ export default function AppLayout() {
               {user && (
                 <ListItemButton onClick={() => setFeedbackOpen(true)}>
                   <ListItemIcon><RateReviewRoundedIcon /></ListItemIcon>
-                  <ListItemText primary="反馈 & 建议" />
+                  <ListItemText primary="Bug & 新功能" />
                 </ListItemButton>
               )}
               {user && (
