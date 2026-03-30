@@ -21,7 +21,7 @@ export async function detectMilestones(
 ): Promise<string[]> {
   const [eventCount, memberCount, movieCount, totalParticipations] =
     await Promise.all([
-      prisma.event.count({ where: { status: 'completed' } }),
+      prisma.event.count({ where: { status: { not: 'cancelled' }, startsAt: { lt: new Date() } } }),
       prisma.user.count({ where: { userStatus: 'approved' } }),
       prisma.movie.count({ where: { status: 'screened' } }),
       prisma.eventSignup.count({ where: { participated: true } }),
@@ -133,7 +133,7 @@ export async function generateHostTribute(
 
   const events = await prisma.event.findMany({
     where: {
-      status: 'completed',
+      status: { not: 'cancelled' },
       startsAt: { gte: monthStart, lt: monthEnd },
     },
     select: { hostId: true, host: { select: { name: true } } },

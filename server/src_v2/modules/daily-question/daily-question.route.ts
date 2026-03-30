@@ -44,7 +44,7 @@ export const dailyQuestionRoutes: FastifyPluginAsync = async (app) => {
         if (pick.targetEntityType === 'event') {
           const evt = userId
             ? await app.prisma.event.findFirst({
-                where: { status: 'completed', signups: { some: { userId, status: 'accepted' } } },
+                where: { status: { not: 'cancelled' }, startsAt: { lt: new Date() }, signups: { some: { userId, status: 'accepted' } } },
                 orderBy: { startsAt: 'desc' },
                 select: { id: true, title: true },
               })
