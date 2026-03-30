@@ -93,7 +93,6 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         // All recommendations (timeline sorts by date naturally)
         prisma.recommendation.findMany({
           orderBy: { createdAt: 'desc' },
-          take: 30,
           include: {
             author: { select: USER_BRIEF_SELECT },
             tags: true,
@@ -149,7 +148,6 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
         // All movies (timeline sorts by date naturally)
         prisma.movie.findMany({
           orderBy: { createdAt: 'desc' },
-          take: 30,
           include: {
             recommendedBy: { select: USER_BRIEF_SELECT },
             _count: { select: { votes: true } },
