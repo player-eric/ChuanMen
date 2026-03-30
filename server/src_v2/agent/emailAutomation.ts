@@ -170,10 +170,10 @@ export async function sendEventReminder(
         let taskInfo = '';
         if (myTasks.length > 0) {
           const taskList = myTasks.map((t: any) => t.role + (t.description ? `（${t.description}）` : '')).join('、');
-          taskInfo = `你认领了：${taskList}，记得提前准备哦 🙌`;
+          taskInfo = `你认领了「${taskList}」，记得提前做些准备！`;
         } else if (unclaimedTasks.length > 0) {
           const t = unclaimedTasks[0];
-          taskInfo = `「${t.role}」还没有人认领${t.description ? `（${t.description}）` : ''}，你要来吗？`;
+          taskInfo = `「${t.role}」还没人认领，如果你有兴趣的话，可以问一下要不要帮忙 😊`;
         }
         const result = await sendTemplatedEmail(prisma, {
           to: user.email,
@@ -1527,7 +1527,7 @@ export async function sendSameDayReminder(
         let taskInfo = '';
         if (myTasks.length > 0) {
           const taskList = myTasks.map((t: any) => t.role + (t.description ? `（${t.description}）` : '')).join('、');
-          taskInfo = `你认领了：${taskList}，记得提前准备哦 🙌`;
+          taskInfo = `你认领了「${taskList}」，记得提前做些准备！`;
         }
         const result = await sendTemplatedEmail(prisma, {
           to: user.email,

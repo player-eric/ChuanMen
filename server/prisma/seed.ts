@@ -1324,7 +1324,7 @@ async function seedEmailRulesAndTemplates() {
     { ruleId: 'TXN-6', variantKey: 'default', subject: '【串门儿】恭喜中签！🎊', body: '你好 {userName}，\n\n抽签结果出来啦——你中签了！🎊\n\n赶紧去确认一下你的参加意愿吧，位子给你留着呢～' },
     { ruleId: 'TXN-7', variantKey: 'default', subject: '【串门儿】{fromName} 给你寄了一张感谢卡 💌', body: '你好 {toName}，\n\n{fromName} 给你寄了一张感谢卡 💌' },
     { ruleId: 'P0-A', variantKey: 'default', subject: '【串门儿】{hostName} 喊你来「{eventTitle}」', body: '你好 {userName}，\n\n{hostName} 组了个局——「{eventTitle}」，想叫你一起来！\n\n时间：{eventDate}\n地点：{eventLocation}\n\n感兴趣的话赶紧报名呀～' },
-    { ruleId: 'P0-B', variantKey: 'default', subject: '【串门儿】明天见！「{eventTitle}」', body: '你好 {userName}，\n\n提醒一下，你报名的「{eventTitle}」明天就开始啦！\n\n时间：{eventDate}\n地点：{eventLocation}\nHost：{hostName}\n已报名：{attendeeCount} 人\n\n记得来哦，大家都等着你呢 👋' },
+    { ruleId: 'P0-B', variantKey: 'default', subject: '【串门儿】明天见！「{eventTitle}」', body: '你好 {userName}，\n\n提醒一下，你报名的「{eventTitle}」明天就开始啦！\n\n时间：{eventDate}\n地点：{eventLocation}\nHost：{hostName}\n已报名：{attendeeCount} 人\n\n{taskInfo}\n\n记得来哦，大家都等着你呢 👋' },
     { ruleId: 'P1', variantKey: 'default', subject: '【串门儿】{eventTitle} — 回顾今天的活动 🎬', body: '你好 {userName}，\n\n感谢参加「{eventTitle}」！希望你今天玩得开心 😊\n\n{recMention}\n\n你可以：\n📷 上传活动照片，留住美好瞬间\n✉️ 给同伴寄一张感谢卡\n💬 聊聊今天的活动' },
     { ruleId: 'P3-F', variantKey: 'default', subject: '【串门儿】{userName}，好久不见！', body: '你好 {userName}，\n\n好久没在串门儿看到你了，最近忙什么呢？\n\n你不在的时候，社区又新增了 {newEventCount} 场活动、{newMemberCount} 位新成员，还有 {newRecCount} 条新推荐。\n\n有空来看看吧，大家都挺想你的 😊' },
     { ruleId: 'P3-G', variantKey: 'default', subject: '【串门儿】{userName}，我们真的想你了', body: '你好 {userName}，\n\n距离上次见到你已经有一段时间了，真的很想你！\n\n最近有这些活动你可能感兴趣：{upcomingEvents}\n\n不管什么时候，串门儿都欢迎你回来 ❤️' },
@@ -1332,7 +1332,7 @@ async function seedEmailRulesAndTemplates() {
     { ruleId: 'P3-E', variantKey: 'default', subject: '【串门儿】{userName}，大家想念你组的局了', body: '你好 {userName}，\n\n好久没看到你组活动了，好多人都在问呢！\n\n之前你组的活动大家都玩得特别开心。如果最近有时间和想法，随时再来一次吧，我们都期待着 🙌' },
     { ruleId: 'P4-A', variantKey: 'default', subject: '【串门儿】{milestoneTitle}', body: '你好 {userName}，\n\n告诉你一个好消息——{milestoneTitle} 🎉\n\n这是咱们每个人一起做到的，感谢你一直以来的参与和支持！' },
     { ruleId: 'P4-C', variantKey: 'default', subject: '【串门儿】谢谢你，{userName}！', body: '你好 {userName}，\n\n谢谢你上个月为大家组织的活动！每一次的精心准备大家都看在眼里 ❤️\n\n有你在，串门儿才这么有意思。期待你下次的精彩活动！' },
-    { ruleId: 'P0-D', variantKey: 'default', subject: '【串门儿】今天见！「{eventTitle}」', body: '你好 {userName}，\n\n提醒一下，「{eventTitle}」就在今天啦！\n\n时间：{eventDate}\n地点：{eventLocation}\n\n准备好了吗？今天见 🤗' },
+    { ruleId: 'P0-D', variantKey: 'default', subject: '【串门儿】今天见！「{eventTitle}」', body: '你好 {userName}，\n\n提醒一下，「{eventTitle}」就在今天啦！\n\n时间：{eventDate}\n地点：{eventLocation}\n\n{taskInfo}\n\n准备好了吗？今天见 🤗' },
     { ruleId: 'P2-A', variantKey: 'default', subject: '【串门儿】新活动来了！{hostName} 组了「{eventTitle}」', body: '你好 {userName}，\n\n{hostName} 刚发布了一个新活动——「{eventTitle}」🎉\n\n时间：{eventDate}\n地点：{eventLocation}\n\n感兴趣的话快去报名吧，名额有限哦～' },
     { ruleId: 'P2-B', variantKey: 'default', subject: '【串门儿】{authorName} 推荐了「{recTitle}」', body: '你好 {userName}，\n\n{authorName} 刚分享了一个新推荐——「{recTitle}」✨\n\n快去看看有没有兴趣吧～' },
     { ruleId: 'P3-A', variantKey: 'default', subject: '【串门儿】{userName}，加入一周啦！', body: '你好 {userName}，\n\n不知不觉你加入串门儿已经一周了！还习惯吗？😊\n\n如果还没参加过活动的话，可以看看最近有什么感兴趣的，第一次参加会格外开心哦～\n\n有任何问题随时问，大家都很友善的！' },
@@ -1363,6 +1363,18 @@ async function seedEmailRulesAndTemplates() {
     });
   }
   console.log(`  ✅ EmailTemplates (${templates.length})`);
+
+  // Patch existing P0-B / P0-D templates to include {taskInfo} (for DBs seeded before this change)
+  for (const ruleId of ['P0-B', 'P0-D'] as const) {
+    const tpl = templates.find((t) => t.ruleId === ruleId && t.variantKey === 'default');
+    if (tpl) {
+      await prisma.emailTemplate.updateMany({
+        where: { ruleId, variantKey: 'default' },
+        data: { body: tpl.body },
+      });
+    }
+  }
+  console.log('  ✅ Patched P0-B/P0-D templates with {taskInfo}');
 }
 
 /* ═══════════════════════════════════════════════════════════

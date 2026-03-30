@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createUploadUrl, createDownloadUrl, deleteObject, uploadObject, getObject, s3Configured } from '../services/s3Service.js';
+import { createUploadUrl, deleteObject, uploadObject, getObject, s3Configured } from '../services/s3Service.js';
 import { compressImage, compressAvatar, generateThumbnail } from '../services/imageCompression.js';
 
 /* ────────── helpers ────────── */
@@ -220,43 +220,39 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
   });
 
   /**
-   * GET /s3/* — serve an S3 object via presigned URL redirect.
+   * GET /s3/* — serve an S3 object by streaming it through the server.
    * This keeps the bucket private while allowing media access.
-   * Example: GET /api/media/s3/avatars/abc123.jpg → 302 → presigned S3 URL
+   * Example: GET /api/media/s3/avatars/abc123.jpg → 200 (streamed)
    */
   app.get('/s3/*', async (request, reply) => {
     const key = (request.params as { '*': string })['*'];
     if (!key) return reply.badRequest('Missing S3 key');
 
-    // Avatars: serve directly with long cache headers for CDN caching
-    if (key.startsWith('avatars/')) {
-      try {
-        const obj = await getObject(key);
-        return reply
-          .header('content-type', obj.contentType)
-          .header('cache-control', 'public, max-age=604800, s-maxage=604800')
-          .send(obj.buffer);
-      } catch (err: any) {
-        request.log.error({ err, key }, 'Failed to fetch avatar from S3');
-        return reply.code(404).send({ message: 'Media not found' });
-      }
-    }
+    const cacheControl = key.startsWith('avatars/')
+      ? 'public, max-age=604800, s-maxage=604800'
+      : 'public, max-age=3600, s-maxage=86400';
 
     try {
-      const url = await createDownloadUrl(key);
-      return reply.redirect(url);
+      const obj = await getObject(key);
+      return reply
+        .header('content-type', obj.contentType)
+        .header('cache-control', cacheControl)
+        .send(obj.buffer);
     } catch (err: any) {
       // Thumbnail fallback: if _thumb key not found, try original
       if (key.includes('_thumb')) {
         const originalKey = key.replace('_thumb', '');
         try {
-          const url = await createDownloadUrl(originalKey);
-          return reply.redirect(url);
+          const obj = await getObject(originalKey);
+          return reply
+            .header('content-type', obj.contentType)
+            .header('cache-control', cacheControl)
+            .send(obj.buffer);
         } catch {
           // fall through to 404
         }
       }
-      request.log.error({ err, key }, 'Failed to presign S3 download URL');
+      request.log.error({ err, key }, 'Failed to fetch from S3');
       return reply.code(404).send({ message: 'Media not found' });
     }
   });
