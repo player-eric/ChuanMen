@@ -352,7 +352,7 @@ export default function MemberDetailPage() {
           book: '📚', recipe: '🍜', music: '🎵', place: '📍', external_event: '🎭',
         };
         const catLabel: Record<string, string> = {
-          book: '图书', recipe: '食谱', music: '音乐', place: '地点', external_event: '演出/展览',
+          book: '图书', recipe: '食谱与调酒', music: '音乐', place: '地点', external_event: '演出/展览',
         };
         const recs = mutual.recommendations ?? {};
         const recCategories = Object.keys(recs).filter((cat) => recs[cat].length > 0);
@@ -724,7 +724,7 @@ export default function MemberDetailPage() {
           {/* Recommendations by category */}
           {Object.entries(recsByCategory).map(([cat, items]) => {
             const catEmoji: Record<string, string> = { book: '📚', recipe: '🍜', music: '🎵', place: '📍', external_event: '🎭', movie: '🎬' };
-            const catLabel: Record<string, string> = { book: '图书', recipe: '食谱', music: '音乐', place: '好店', external_event: '演出/展览', movie: '电影推荐' };
+            const catLabel: Record<string, string> = { book: '图书', recipe: '食谱与调酒', music: '音乐', place: '好店', external_event: '演出/展览', movie: '电影推荐' };
             return (
               <Card key={cat}>
                 <CardContent>

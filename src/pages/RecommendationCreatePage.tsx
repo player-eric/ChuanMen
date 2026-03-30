@@ -21,7 +21,7 @@ import { Ava } from '@/components/Atoms';
 const categoryMap: Record<string, string> = {
   movie: '电影',
   book: '图书',
-  recipe: '菜谱',
+  recipe: '食谱与调酒',
   music: '音乐',
   place: '好店',
   external_event: '演出与展览',

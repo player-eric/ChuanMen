@@ -560,7 +560,7 @@ export const apiRoutes: FastifyPluginAsync = async (app) => {
       }),
     ]);
 
-    const recCategoryLabel: Record<string, string> = { movie: '电影', book: '书', recipe: '食谱', place: '好店', music: '音乐', external_event: '演出/展览' };
+    const recCategoryLabel: Record<string, string> = { movie: '电影', book: '书', recipe: '食谱与调酒', place: '好店', music: '音乐', external_event: '演出/展览' };
 
     const recentActivity = [
       ...recentApplicantsLog.map(u => ({ text: `${u.name} 提交了入社申请`, time: u.createdAt.toISOString() })),
