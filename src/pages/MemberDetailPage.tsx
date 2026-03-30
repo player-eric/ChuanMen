@@ -145,7 +145,8 @@ export default function MemberDetailPage() {
   // Tab labels — 关于TA and 我们的交集 first
   const tabs: string[] = ['关于TA'];
   if (hasMutual) tabs.push('我们的交集');
-  tabs.push('活动记忆', '品味', '感谢卡');
+  if (!activityHidden) tabs.push('活动记忆');
+  tabs.push('品味', '感谢卡');
 
   return (
     <Stack spacing={0}>
@@ -237,8 +238,10 @@ export default function MemberDetailPage() {
             sx={{ mb: 1.5 }}
           >
             {[
-              { value: data.participationStats.eventCount, label: '场活动', action: () => { setTab(tabs.indexOf('活动记忆')); setEventFilter('all'); } },
-              { value: data.participationStats.hostCount, label: '次Host', action: () => { setTab(tabs.indexOf('活动记忆')); setEventFilter('host'); } },
+              ...(!activityHidden ? [
+                { value: data.participationStats.eventCount, label: '场活动', action: () => { setTab(tabs.indexOf('活动记忆')); setEventFilter('all'); } },
+                { value: data.participationStats.hostCount, label: '次Host', action: () => { setTab(tabs.indexOf('活动记忆')); setEventFilter('host'); } },
+              ] : []),
               { value: data.participationStats.movieCount, label: '部电影', action: () => { setTab(tabs.indexOf('品味')); } },
             ].map((stat) => {
               const active =
