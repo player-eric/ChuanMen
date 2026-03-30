@@ -95,6 +95,9 @@ export class MovieRepository {
       where: { status: 'screened' },
       orderBy: { updatedAt: 'desc' },
       include: {
+        recommendedBy: { select: USER_BRIEF_SELECT },
+        votes: { include: { user: { select: USER_BRIEF_SELECT } } },
+        _count: { select: { votes: true } },
         screenedEvents: {
           orderBy: { event: { startsAt: 'desc' } },
           take: 1,

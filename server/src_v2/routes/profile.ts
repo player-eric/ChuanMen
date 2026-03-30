@@ -147,14 +147,18 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         },
       }),
 
-      // Past events where user participated (hide events viewer is excluded from or private)
+      // Past events where user participated (completed or started before now)
       prisma.event.findMany({
         where: {
           ...(viewerId && !isOwnProfile ? { NOT: { visibilityExclusions: { some: { userId: viewerId } } } } : {}),
+          status: { not: 'cancelled' },
           OR: [
-            { hostId: targetId, status: 'completed' },
-            { coHosts: { some: { userId: targetId } }, status: 'completed' },
-            { signups: { some: { userId: targetId, status: 'accepted' } }, status: 'completed' },
+            { hostId: targetId },
+            { coHosts: { some: { userId: targetId } } },
+            { signups: { some: { userId: targetId, status: 'accepted' } } },
+          ],
+          AND: [
+            { OR: [{ status: 'completed' }, { startsAt: { lt: new Date() } }] },
           ],
         },
         orderBy: { startsAt: 'desc' },

@@ -348,13 +348,23 @@ function MoviesSection() {
                           <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                             <Typography fontWeight={700} sx={{ fontSize: 15 }}>{m.title}</Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{m.year}  {m.dir}</Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{m.date} · {m.host} Host</Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{[m.date, m.by || m.host].filter(Boolean).join(' · ')}</Typography>
                           </Box>
                         </Stack>
-                        {(m.commentCount ?? 0) > 0 && (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1, color: 'text.secondary' }}>
-                            <ChatBubbleOutlineRounded sx={{ fontSize: 14 }} />
-                            <Typography variant="caption" color="text.secondary">{m.commentCount}</Typography>
+                        {((m.v ?? 0) > 0 || (m.commentCount ?? 0) > 0) && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1, color: 'text.secondary' }}>
+                            {(m.v ?? 0) > 0 && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <FavoriteRoundedIcon sx={{ fontSize: 14 }} />
+                                <Typography variant="caption" color="text.secondary">{m.v}</Typography>
+                              </Box>
+                            )}
+                            {(m.commentCount ?? 0) > 0 && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <ChatBubbleOutlineRounded sx={{ fontSize: 14 }} />
+                                <Typography variant="caption" color="text.secondary">{m.commentCount}</Typography>
+                              </Box>
+                            )}
                           </Box>
                         )}
                       </CardContent>
