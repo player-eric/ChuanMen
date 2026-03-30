@@ -1151,10 +1151,10 @@ export const bookPool: BookPool[] = [
 ];
 
 export const bookRead: BookRead[] = [
-  { title: '小王子', year: '1943', author: '圣埃克苏佩里', date: '02.10', host: 'Tiffy' },
-  { title: '围城', year: '1947', author: '钱钟书', date: '01.20', host: 'Yuan' },
-  { title: '解忧杂货店', year: '2012', author: '东野圭吾', date: '12.28', host: '星星' },
-  { title: '活着', year: '1993', author: '余华', date: '11.15', host: 'Yuan' },
+  { id: 'br1', title: '小王子', year: '1943', author: '圣埃克苏佩里', v: 8, voterIds: [], by: 'Tiffy', status: 'featured', commentCount: 2 },
+  { id: 'br2', title: '围城', year: '1947', author: '钱钟书', v: 5, voterIds: [], by: 'Yuan', status: 'featured', commentCount: 0 },
+  { id: 'br3', title: '解忧杂货店', year: '2012', author: '东野圭吾', v: 7, voterIds: [], by: '星星', status: 'archived', commentCount: 1 },
+  { id: 'br4', title: '活着', year: '1993', author: '余华', v: 11, voterIds: [], by: 'Yuan', status: 'featured', commentCount: 3 },
 ];
 
 export const bookDetailMap: Record<string, BookDetailData> = {

@@ -399,7 +399,7 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
   const [votes, setVotes] = useState<Record<string, boolean>>(() => {
     if (!user?.id) return {};
     const init: Record<string, boolean> = {};
-    for (const b of data.bookPool) {
+    for (const b of [...data.bookPool, ...data.bookRead]) {
       if (b.voterIds.includes(user.id)) init[b.id] = true;
     }
     return init;
@@ -634,19 +634,36 @@ function BooksSection({ onVoteSnack }: { onVoteSnack: (msg: string) => void }) {
           />
         ) : (
           <Grid container spacing={1.5}>
-            {filteredRead.map((b, i) => (
-              <Grid key={i} size={{ xs: 12, md: 6 }}>
+            {filteredRead.map((b) => (
+              <Grid key={b.id} size={{ xs: 12, md: 6 }}>
                 <Card>
-                  <CardContent>
-                    <Stack direction="row" spacing={2} alignItems="stretch">
-                      <Poster title={b.title} w={72} h={100} hideTitle />
-                      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                        <Typography fontWeight={700} sx={{ fontSize: 15 }}>{b.title}</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{b.year} · {b.author}</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{b.date} · {b.host} Host</Typography>
-                      </Box>
-                    </Stack>
-                  </CardContent>
+                  <CardActionArea onClick={() => navigate(`/discover/books/${b.id}`)}>
+                    <CardContent>
+                      <Stack direction="row" spacing={2} alignItems="stretch">
+                        <Poster title={b.title} src={b.coverUrl} w={72} h={100} hideTitle />
+                        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <Typography fontWeight={700} sx={{ fontSize: 15 }}>{b.title}</Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{b.year} · {b.author}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{b.by} 推荐</Typography>
+                          {(b.commentCount ?? 0) > 0 && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                              <ChatBubbleOutlineRounded sx={{ fontSize: 14, color: 'text.secondary' }} />
+                              <Typography variant="caption" color="text.secondary">{b.commentCount}</Typography>
+                            </Box>
+                          )}
+                        </Box>
+                        <Button
+                          onClick={(event) => { event.stopPropagation(); toggle(b.id); }}
+                          variant={votes[b.id] ? 'contained' : 'outlined'}
+                          size="small"
+                          disabled={!user}
+                          sx={{ alignSelf: 'flex-start', flexShrink: 0 }}
+                        >
+                          ▲ {b.v + (votes[b.id] && !b.voterIds.includes(user?.id ?? '') ? 1 : !votes[b.id] && b.voterIds.includes(user?.id ?? '') ? -1 : 0)}
+                        </Button>
+                      </Stack>
+                    </CardContent>
+                  </CardActionArea>
                 </Card>
               </Grid>
             ))}

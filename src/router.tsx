@@ -794,7 +794,7 @@ async function discoverLoader() {
         commentCount: s.commentCount ?? 0,
       };
     });
-    const bookPool = (rawBooks as any[]).map((b: any) => ({
+    const mapBook = (b: any) => ({
       id: b.id,
       title: b.title ?? '',
       year: '',
@@ -805,9 +805,12 @@ async function discoverLoader() {
       status: b.status === 'candidate' ? undefined : b.status,
       coverUrl: b.coverUrl || undefined,
       commentCount: b.commentCount ?? 0,
-    }));
+    });
+    const allBooks = (rawBooks as any[]);
+    const bookPool = allBooks.filter((b: any) => !b.status || b.status === 'candidate').map(mapBook);
+    const bookRead = allBooks.filter((b: any) => b.status === 'featured' || b.status === 'archived').map(mapBook);
     return {
-      pool, screened, bookPool, bookRead: [],
+      pool, screened, bookPool, bookRead,
       recipes: (rawRecipes as any[]).map(mapRecommendation),
       music: (rawMusic as any[]).map(mapRecommendation),
       places: (rawPlaces as any[]).map(mapRecommendation),
