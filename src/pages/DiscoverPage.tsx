@@ -299,6 +299,12 @@ function MoviesSection() {
                           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{m.year}  {m.dir}</Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>{m.by} 推荐</Typography>
                           {m.status && <Chip sx={{ mt: 0.75, alignSelf: 'flex-start' }} size="small" color="success" label={`✓ ${m.status}`} />}
+                          {(m.commentCount ?? 0) > 0 && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                              <ChatBubbleOutlineRounded sx={{ fontSize: 14, color: 'text.secondary' }} />
+                              <Typography variant="caption" color="text.secondary">{m.commentCount}</Typography>
+                            </Box>
+                          )}
                         </Box>
                         <Button
                           onClick={(event) => { event.stopPropagation(); toggle(m.id); }}
@@ -310,12 +316,6 @@ function MoviesSection() {
                           ▲ {m.v + (votes[m.id] && !m.voterIds.includes(user?.id ?? '') ? 1 : !votes[m.id] && m.voterIds.includes(user?.id ?? '') ? -1 : 0)}
                         </Button>
                       </Stack>
-                      {(m.commentCount ?? 0) > 0 && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1, color: 'text.secondary' }}>
-                          <ChatBubbleOutlineRounded sx={{ fontSize: 14 }} />
-                          <Typography variant="caption" color="text.secondary">{m.commentCount}</Typography>
-                        </Box>
-                      )}
                     </CardContent>
                   </CardActionArea>
                 </Card>
@@ -354,10 +354,7 @@ function MoviesSection() {
                         {((m.v ?? 0) > 0 || (m.commentCount ?? 0) > 0) && (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1, color: 'text.secondary' }}>
                             {(m.v ?? 0) > 0 && (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <FavoriteRoundedIcon sx={{ fontSize: 14 }} />
-                                <Typography variant="caption" color="text.secondary">{m.v}</Typography>
-                              </Box>
+                              <Typography variant="caption" color="text.secondary">▲ {m.v}</Typography>
                             )}
                             {(m.commentCount ?? 0) > 0 && (
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
