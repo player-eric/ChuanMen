@@ -4,6 +4,7 @@ import { EventService } from './event.service.js';
 import { sendEmail, sendTemplatedEmail } from '../../services/emailService.js';
 import { renderNotificationEmail } from '../../emails/template.js';
 import { awardCreditsForEvent, getCreditConfig } from '../../services/agentService.js';
+import { canSeeEvent } from '../../utils/eventVisibility.js';
 
 export const eventRoutes: FastifyPluginAsync = async (app) => {
   const service = new EventService(new EventRepository(app.prisma), app.prisma);
@@ -30,6 +31,8 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
       if (userId && e.hostId !== userId && !e.coHosts?.some((ch: any) => ch.userId === userId)) {
         if (e.visibilityExclusions?.some((ex: any) => ex.userId === userId)) return false;
       }
+      // Private events: only visible to participants
+      if (!canSeeEvent(e, userId)) return false;
       if (e.phase !== 'invite') return true;
       if (!userId) return false;
       if (e.hostId === userId) return true;
@@ -44,6 +47,7 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     const userId = request.headers['x-user-id'] as string | undefined;
     const events = await service.listPast();
     const visible = events.filter((e: any) => {
+      if (!canSeeEvent(e, userId)) return false;
       if (!userId) return true;
       if (e.hostId === userId || e.coHosts?.some((ch: any) => ch.userId === userId)) return true;
       return !e.visibilityExclusions?.some((ex: any) => ex.userId === userId);
@@ -56,8 +60,11 @@ export const eventRoutes: FastifyPluginAsync = async (app) => {
     const event = await service.getEventById(id);
     if (!event) return reply.notFound('活动不存在');
 
-    // Check exclusion: blocked users get 404 (unless host/coHost)
+    // Check exclusion + private: blocked/unauthorized users get 404
     const requestUserId = request.headers['x-user-id'] as string | undefined;
+    if (!canSeeEvent(event, requestUserId)) {
+      return reply.notFound('活动不存在');
+    }
     if (requestUserId && (event as any).hostId !== requestUserId && !(event as any).coHosts?.some((ch: any) => ch.userId === requestUserId)) {
       if ((event as any).visibilityExclusions?.some((ex: any) => ex.userId === requestUserId)) {
         return reply.notFound('活动不存在');

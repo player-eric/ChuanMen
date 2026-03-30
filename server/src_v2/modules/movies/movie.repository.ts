@@ -26,8 +26,10 @@ export class MovieRepository {
           include: {
             event: {
               select: {
-                id: true, title: true, startsAt: true, status: true,
+                id: true, title: true, startsAt: true, status: true, isPrivate: true, hostId: true,
                 host: { select: { name: true } },
+                coHosts: { select: { userId: true } },
+                signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } }, select: { userId: true } },
                 _count: { select: { signups: true } },
                 visibilityExclusions: { select: { userId: true } },
               },
@@ -99,8 +101,10 @@ export class MovieRepository {
           include: {
             event: {
               select: {
-                id: true, title: true, startsAt: true,
+                id: true, title: true, startsAt: true, isPrivate: true, hostId: true,
                 host: { select: { name: true } },
+                coHosts: { select: { userId: true } },
+                signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } }, select: { userId: true } },
                 visibilityExclusions: { select: { userId: true } },
               },
             },

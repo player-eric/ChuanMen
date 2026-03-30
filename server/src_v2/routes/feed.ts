@@ -4,6 +4,7 @@ import { getWeekKey } from '../utils/weekKey.js';
 import { getFutureWeekKeys, weekKeyToLabel } from '../utils/weekKey.js';
 import { getSignalSummary, getMySignals } from '../modules/signals/signal.service.js';
 import { DailyQuestionService } from '../modules/daily-question/daily-question.service.js';
+import { canSeeEvent, canSeePostcard } from '../utils/eventVisibility.js';
 
 /**
  * GET /api/feed?userId=xxx
@@ -130,7 +131,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
           }));
         }),
 
-        // Recent public postcards (exclude those linked to events user is excluded from)
+        // Recent public postcards (exclude those linked to events user is excluded from or private)
         prisma.postcard.findMany({
           where: {
             visibility: 'public',
@@ -142,11 +143,12 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
             } : {}),
           },
           orderBy: { createdAt: 'desc' },
-          take: 10,
+          take: 20, // fetch extra to account for private event filtering
           include: {
             from: { select: USER_BRIEF_SELECT },
             to: { select: USER_BRIEF_SELECT },
             tags: true,
+            event: { select: { isPrivate: true, hostId: true, coHosts: { select: { userId: true } }, signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } }, select: { userId: true } } } },
           },
         }),
 
@@ -747,8 +749,9 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       mySignals: mySignals.map((s) => ({ tag: s.tag, weekKey: s.weekKey })),
     };
 
-    // Filter out invite-phase events unless user is host or has a signup
+    // Filter out private events + invite-phase events unless user is a participant
     const visibleEvents = events.filter((e) => {
+      if (!canSeeEvent(e, userId)) return false;
       if (e.phase !== 'invite') return true;
       if (!userId) return false;
       if (e.hostId === userId) return true;
@@ -798,7 +801,7 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       announcements,
       recommendations,
       members,
-      postcards: postcards.map(withInteraction),
+      postcards: postcards.filter((p) => canSeePostcard(p, userId)).slice(0, 10).map(({ event: _evt, ...p }) => withInteraction(p as any)),
       recentMovies: recentMovies.map(withInteraction),
       recentProposals: recentProposals.map(withInteraction),
       newMembers: newMembers.map(withInteraction),

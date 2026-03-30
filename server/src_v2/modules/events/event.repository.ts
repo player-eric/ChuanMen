@@ -468,6 +468,7 @@ export class EventRepository {
       include: {
         host: { select: USER_BRIEF_SELECT },
         coHosts: { include: { user: { select: USER_BRIEF_SELECT } } },
+        signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } }, select: { userId: true } },
         visibilityExclusions: { select: { userId: true } },
         _count: { select: { signups: { where: { status: { notIn: ['cancelled', 'declined', 'rejected'] } } } } },
       },
