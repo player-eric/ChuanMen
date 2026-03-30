@@ -18,7 +18,19 @@ export const proposalRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.params as { id: string };
     const proposal = await service.getById(id);
     if (!proposal) return reply.notFound('创意不存在');
-    return proposal;
+    const [likes, commentCount] = await Promise.all([
+      app.prisma.like.findMany({
+        where: { entityId: id },
+        include: { user: { select: { id: true, name: true, avatar: true } } },
+      }),
+      app.prisma.comment.count({ where: { entityType: 'proposal', entityId: id } }),
+    ]);
+    return {
+      ...proposal,
+      likes: likes.length,
+      likedBy: likes.map((l) => ({ id: l.user.id, name: l.user.name, avatar: l.user.avatar })),
+      commentCount,
+    };
   });
 
   app.post('/', async (request, reply) => {

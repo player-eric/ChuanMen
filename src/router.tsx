@@ -303,7 +303,7 @@ function buildFeedItems(data: any, myVotedIds?: { movieIds: string[]; proposalId
       votes: r._count?.votes ?? r.voteCount ?? 0,
       voted: votedRecs.has(r.id),
       time,
-      navTarget: `/discover/${cat}/${r.id}`,
+      navTarget: `/discover/${cat === 'book' ? 'books' : cat}/${r.id}`,
       likes: r.likes ?? 0,
       likedBy: r.likedBy ?? [],
       comments: [],
@@ -720,9 +720,10 @@ async function proposalDetailLoader({ params }: { params: Record<string, string 
         ? mapPeople(p.votes)
         : p.interested ?? [],
       time: p.createdAt ? timeAgo(String(p.createdAt)) : p.time ?? '',
-      comments: p.comments ?? [],
+      comments: [],
+      commentCount: p.commentCount ?? 0,
       likes: p.likes ?? 0,
-      likedBy: p.likedBy ?? [],
+      likedBy: (p.likedBy ?? []).map((u: any) => u.name ?? '?'),
     };
   } catch {
     return null;
@@ -794,7 +795,7 @@ async function discoverLoader() {
         commentCount: s.commentCount ?? 0,
       };
     });
-    const bookPool = (rawBooks as any[]).map((b: any) => ({
+    const mapBook = (b: any) => ({
       id: b.id,
       title: b.title ?? '',
       year: '',
@@ -805,9 +806,12 @@ async function discoverLoader() {
       status: b.status === 'candidate' ? undefined : b.status,
       coverUrl: b.coverUrl || undefined,
       commentCount: b.commentCount ?? 0,
-    }));
+    });
+    const allBooks = (rawBooks as any[]);
+    const bookPool = allBooks.filter((b: any) => !b.status || b.status === 'candidate').map(mapBook);
+    const bookRead = allBooks.filter((b: any) => b.status === 'featured' || b.status === 'archived').map(mapBook);
     return {
-      pool, screened, bookPool, bookRead: [],
+      pool, screened, bookPool, bookRead,
       recipes: (rawRecipes as any[]).map(mapRecommendation),
       music: (rawMusic as any[]).map(mapRecommendation),
       places: (rawPlaces as any[]).map(mapRecommendation),
@@ -851,7 +855,12 @@ async function bookDetailLoader({ params }: { params: Record<string, string | un
       sourceUrl: rec.sourceUrl ?? '',
       coverUrl: rec.coverUrl ?? '',
       authorId: rec.authorId ?? rec.author?.id ?? '',
-      discussions: [],
+      discussions: ((rec.events ?? []) as any[]).map((er: any) => ({
+        eventId: er.event?.id,
+        eventTitle: er.event?.title ?? '',
+        date: er.event?.startsAt ? new Date(er.event.startsAt).toLocaleDateString('zh-CN', { timeZone: 'America/New_York' }) : '',
+        host: er.event?.host?.name ?? '',
+      })),
       comments: [],
     };
   } catch {

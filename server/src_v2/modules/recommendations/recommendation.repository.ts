@@ -25,6 +25,11 @@ export class RecommendationRepository {
         tags: true,
         votes: { select: { userId: true, user: { select: USER_BRIEF_SELECT } } },
         _count: { select: { votes: true } },
+        events: {
+          where: { isSelected: true },
+          include: { event: { select: { id: true, title: true, startsAt: true, host: { select: USER_BRIEF_SELECT } } } },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
   }
