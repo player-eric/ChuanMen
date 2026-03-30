@@ -190,6 +190,8 @@ export default function RichTextEditor({
   const [focused, setFocused] = useState(false);
   const membersRef = useRef<MentionMember[]>(members ?? []);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const onUploadImageRef = useRef(onUploadImage);
+  useEffect(() => { onUploadImageRef.current = onUploadImage; }, [onUploadImage]);
 
   // Keep ref in sync so the suggestion closure always sees latest members
   useEffect(() => {
@@ -269,6 +271,38 @@ export default function RichTextEditor({
     },
     onFocus: () => setFocused(true),
     onBlur: () => setFocused(false),
+    editorProps: {
+      handlePaste: (_view, event) => {
+        const items = event.clipboardData?.items;
+        if (!items || !onUploadImageRef.current) return false;
+        for (const item of items) {
+          if (item.type.startsWith('image/')) {
+            const file = item.getAsFile();
+            if (file) {
+              event.preventDefault();
+              onUploadImageRef.current(file).then((src) => {
+                editor?.chain().focus().setImage({ src }).run();
+              }).catch((err) => console.error('Paste image upload failed:', err));
+              return true;
+            }
+          }
+        }
+        return false;
+      },
+      handleDrop: (_view, event) => {
+        const files = event.dataTransfer?.files;
+        if (!files?.length || !onUploadImageRef.current) return false;
+        const file = files[0];
+        if (file.type.startsWith('image/')) {
+          event.preventDefault();
+          onUploadImageRef.current(file).then((src) => {
+            editor?.chain().focus().setImage({ src }).run();
+          }).catch((err) => console.error('Drop image upload failed:', err));
+          return true;
+        }
+        return false;
+      },
+    },
   });
 
   // Expose imperative methods to parent
