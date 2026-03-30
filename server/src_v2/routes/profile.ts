@@ -152,13 +152,11 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         where: {
           ...(viewerId && !isOwnProfile ? { NOT: { visibilityExclusions: { some: { userId: viewerId } } } } : {}),
           status: { not: 'cancelled' },
+          startsAt: { lt: new Date() },
           OR: [
             { hostId: targetId },
             { coHosts: { some: { userId: targetId } } },
             { signups: { some: { userId: targetId, status: 'accepted' } } },
-          ],
-          AND: [
-            { OR: [{ status: 'completed' }, { startsAt: { lt: new Date() } }] },
           ],
         },
         orderBy: { startsAt: 'desc' },

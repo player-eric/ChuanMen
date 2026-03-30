@@ -133,7 +133,8 @@ export class DailyQuestionService {
         const recentEvent = userId
           ? await this.prisma.event.findFirst({
               where: {
-                status: 'completed',
+                status: { not: 'cancelled' },
+                startsAt: { lt: new Date() },
                 signups: { some: { userId, status: 'accepted' } },
               },
               orderBy: { startsAt: 'desc' },
@@ -290,7 +291,8 @@ export class DailyQuestionService {
       if (entityType === 'event') {
         const recentEvent = await this.prisma.event.findFirst({
           where: {
-            status: 'completed',
+            status: { not: 'cancelled' },
+            startsAt: { lt: new Date() },
             signups: { some: { userId, status: 'accepted' } },
           },
           orderBy: { startsAt: 'desc' },

@@ -463,7 +463,7 @@ export class EventRepository {
 
   listPast() {
     return this.prisma.event.findMany({
-      where: { status: 'completed' },
+      where: { status: { not: 'cancelled' }, startsAt: { lt: new Date() } },
       orderBy: { startsAt: 'desc' },
       include: {
         host: { select: USER_BRIEF_SELECT },
