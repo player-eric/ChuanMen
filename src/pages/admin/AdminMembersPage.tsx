@@ -611,7 +611,7 @@ export default function AdminMembersPage() {
             )}
             {applicantDialog?.idealFriend && (
               <>
-                <Typography variant="body2"><strong>理想朋友：</strong></Typography>
+                <Typography variant="body2"><strong>你最好的朋友是什么样子的？</strong></Typography>
                 <Typography variant="body2" color="text.secondary">{applicantDialog.idealFriend}</Typography>
               </>
             )}
@@ -624,9 +624,9 @@ export default function AdminMembersPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button color="error" disabled={busy} onClick={() => { setConfirmDeny(applicantDialog); setApplicantDialog(null); }}>拒绝</Button>
-          <Button variant="outlined" color="success" disabled={busy} onClick={() => { setConfirmApprove(applicantDialog); setApplicantDialog(null); }}>直接通过</Button>
-          <Button variant="contained" color="primary" disabled={busy} onClick={() => { setConfirmAnnounce(applicantDialog); setApplicantDialog(null); }}>发起介绍</Button>
+          <Button color="error" disabled={busy} onClick={() => { const a = applicantDialog; setApplicantDialog(null); setTimeout(() => setConfirmDeny(a), 150); }}>拒绝</Button>
+          <Button variant="outlined" color="success" disabled={busy} onClick={() => { const a = applicantDialog; setApplicantDialog(null); setTimeout(() => setConfirmApprove(a), 150); }}>直接通过</Button>
+          <Button variant="contained" color="primary" disabled={busy} onClick={() => { const a = applicantDialog; setApplicantDialog(null); setTimeout(() => setConfirmAnnounce(a), 150); }}>发起介绍</Button>
         </DialogActions>
       </Dialog>
 
