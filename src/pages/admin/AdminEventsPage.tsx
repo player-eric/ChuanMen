@@ -248,7 +248,7 @@ export default function AdminEventsPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailEvent(null)}>关闭</Button>
-          <Button variant="outlined" color="error" onClick={() => { setConfirmCancel(detailEvent); setDetailEvent(null); }}>取消活动</Button>
+          <Button variant="outlined" color="error" onClick={() => { const e = detailEvent; setDetailEvent(null); setTimeout(() => setConfirmCancel(e), 150); }}>取消活动</Button>
         </DialogActions>
       </Dialog>
 
