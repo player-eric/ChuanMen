@@ -1516,7 +1516,7 @@ interface FeedNewMemberProps {
   likedBy: string[];
 }
 
-export function FeedNewMember({ phase, id, name, bio, location, selfAsFriend, participationPlan, avatar, likes: initLikes, likedBy: initLikedBy }: FeedNewMemberProps) {
+export function FeedNewMember({ phase, id, name, bio, location, selfAsFriend, idealFriend, participationPlan, avatar, likes: initLikes, likedBy: initLikedBy }: FeedNewMemberProps) {
   const c = useColors();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1585,6 +1585,11 @@ export function FeedNewMember({ phase, id, name, bio, location, selfAsFriend, pa
         {selfAsFriend && (
           <div style={{ fontSize: 13, color: c.text2, marginBottom: 6 }}>
             <span style={{ fontWeight: 600, color: c.text }}>作为朋友：</span>{selfAsFriend}
+          </div>
+        )}
+        {idealFriend && (
+          <div style={{ fontSize: 13, color: c.text2, marginBottom: 6 }}>
+            <span style={{ fontWeight: 600, color: c.text }}>理想中的朋友：</span>{idealFriend}
           </div>
         )}
         {participationPlan && (
